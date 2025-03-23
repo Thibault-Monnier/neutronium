@@ -1,5 +1,5 @@
 #include <iostream>
 
-int main(int arc, char* argv[]) {
+int main(int argc, char* argv[]) {
     return 0;
 }
