@@ -17,53 +17,6 @@ void print_hint(const std::string &message) {
 
 enum class TokenType : uint8_t { IDENTIFIER, NUMBER, PLUS, MINUS, END_OF_FILE };
 
-struct Token {
-    TokenType type;
-    std::optional<std::string> value;
-};
-
-std::vector<Token> tokenize(const std::string &source) {
-    std::vector<Token> tokens;
-
-    size_t current = 0;
-
-    while (current < source.length()) {
-        char c = source[current++];
-
-        if (isspace(c)) {
-            continue;
-        }
-
-        if (isalpha(c)) {
-            std::string identifier;
-            identifier += c;
-            while (current < source.length() && isalnum(source[current])) {
-                identifier += source[current];
-                current++;
-            }
-            tokens.emplace_back(TokenType::IDENTIFIER, identifier);
-
-        } else if (isdigit(c)) {
-            std::string number;
-            number += c;
-            while (current < source.length() && isalnum(source[current])) {
-                number += source[current];
-                current++;
-            }
-            tokens.emplace_back(TokenType::NUMBER, number);
-
-        } else if (c == '+') {
-            tokens.emplace_back(TokenType::PLUS);
-        } else if (c == '-') {
-            tokens.emplace_back(TokenType::MINUS);
-        }
-    }
-
-    tokens.emplace_back(TokenType::END_OF_FILE);
-
-    return tokens;
-}
-
 std::string token_type_to_string(TokenType type) {
     switch (type) {
         case TokenType::IDENTIFIER:
@@ -81,6 +34,58 @@ std::string token_type_to_string(TokenType type) {
     }
 }
 
+struct Token {
+    TokenType type;
+    std::optional<std::string> value;
+};
+
+std::vector<Token> tokenize(const std::string &source) {
+    std::vector<Token> tokens;
+
+    size_t current = 0;
+
+    while (current < source.length()) {
+        char c = source.at(current++);
+
+        if (isspace(c)) {
+            continue;
+        }
+
+        if (isalpha(c)) {
+            std::string identifier;
+            identifier += c;
+            while (current < source.length() && isalnum(source.at(current))) {
+                identifier += source.at(current);
+                current++;
+            }
+            tokens.emplace_back(TokenType::IDENTIFIER, identifier);
+
+        } else if (isdigit(c)) {
+            std::string number;
+            number += c;
+            while (current < source.length() && isalnum(source.at(current))) {
+                number += source.at(current);
+                current++;
+            }
+            tokens.emplace_back(TokenType::NUMBER, number);
+
+        } else if (c == '+') {
+            tokens.emplace_back(TokenType::PLUS);
+        } else if (c == '-') {
+            tokens.emplace_back(TokenType::MINUS);
+        } else {
+            const std::string errorMessage = std::format(
+                "Invalid character at index {}, got '{}' at beginning of word\n", current - 1, c);
+            print_error(errorMessage);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    tokens.emplace_back(TokenType::END_OF_FILE);
+
+    return tokens;
+}
+
 int main(const int argc, char *argv[]) {
     if (argc != 2) {
         const std::string errorMessage =
@@ -90,14 +95,14 @@ int main(const int argc, char *argv[]) {
         const std::string hintMessage = std::format("Usage: {} <filename>\n", argv[0]);
         print_hint(hintMessage);
 
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     std::ifstream fileStream(argv[1]);
     if (!fileStream.is_open()) {
         const std::string errorMessage = "Could not open file " + std::string(argv[1]) + '\n';
         print_error(errorMessage);
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     std::stringstream fileContentsStream;
@@ -110,9 +115,11 @@ int main(const int argc, char *argv[]) {
     std::cout << fileContents << '\n';
 
     std::vector<Token> tokens = tokenize(fileContents);
-    for (Token &tok : tokens) {
-        std::cout << token_type_to_string(tok.type);
-        if (tok.value.has_value()) std::cout << ' ' << tok.value.value();
+    for (const auto &token : tokens) {
+        std::cout << token_type_to_string(token.type);
+        if (token.value.has_value()) {
+            std::cout << ' ' << token.value.value();
+        }
         std::cout << '\n';
     }
 
