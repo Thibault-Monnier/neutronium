@@ -8,14 +8,18 @@ Checks: >
   clang-analyzer-*,
   -modernize-use-trailing-return-type,
   readability-identifier-namingWarningsAsErrors: 'modernize-*'
+
+WarningsAsErrors: 'modernize-*'
+
 FormatStyle: file
+
 CheckOptions:
   - key: readability-identifier-naming.ClassCase
     value: CamelCase
   - key: readability-identifier-naming.StructCase
     value: CamelCase
   - key: readability-identifier-naming.FunctionCase
-    value: CamelCase
+    value: lower_case
   - key: readability-identifier-naming.VariableCase
     value: camelBack
   - key: readability-identifier-naming.MemberCase
@@ -27,6 +31,6 @@ CheckOptions:
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.ConstantCase
-    value: UPPER_CASE
+    value: camelBack
   - key: readability-identifier-naming.ParameterCase
     value: camelBack

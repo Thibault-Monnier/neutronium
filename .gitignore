@@ -23,3 +23,6 @@ cmake-build-*/
 # IDE
 .vscode/
 .idea/
+
+# Misc
+scripts/
