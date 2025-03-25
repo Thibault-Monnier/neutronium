@@ -17,10 +17,9 @@ std::vector<Token> tokenize(const std::string &source) {
         char c = source.at(current++);
 
         if (isspace(c)) {
-            continue;
-        }
+            if (c == '\n') tokens.emplace_back(TokenType::NEWLINE);
 
-        if (isalpha(c)) {
+        } else if (isalpha(c)) {
             std::string identifier;
             identifier += c;
             while (current < source.length() && isalnum(source.at(current))) {

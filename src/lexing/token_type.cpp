@@ -1,5 +1,6 @@
 #include "lexing/token_type.hpp"
 
+#include <stdexcept>
 #include <string>
 
 std::string token_type_to_string(TokenType type) {
@@ -12,9 +13,11 @@ std::string token_type_to_string(TokenType type) {
             return "PLUS";
         case TokenType::MINUS:
             return "MINUS";
+        case TokenType::NEWLINE:
+            return "NEWLINE";
         case TokenType::END_OF_FILE:
             return "END_OF_FILE";
         default:
-            return "UNKNOWN";
+            throw std::invalid_argument("Invalid token type");
     }
 }
