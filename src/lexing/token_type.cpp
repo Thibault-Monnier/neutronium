@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-std::string token_type_to_string(TokenType type) {
+std::string token_type_to_string(const TokenType type) {
     switch (type) {
         case TokenType::IDENTIFIER:
             return "IDENTIFIER";

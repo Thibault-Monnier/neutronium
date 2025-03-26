@@ -1,4 +1,4 @@
-#include <cstdint>
+#include <cstdlib>
 #include <format>
 #include <fstream>
 #include <iostream>
@@ -24,8 +24,7 @@ int main(const int argc, char *argv[]) {
 
     std::ifstream fileStream(argv[1]);
     if (!fileStream.is_open()) {
-        const std::string errorMessage =
-            std::format("Could not open file '{}'", argv[1]);
+        const std::string errorMessage = std::format("Could not open file '{}'", argv[1]);
         print_error(errorMessage);
         exit(EXIT_FAILURE);
     }
@@ -35,14 +34,15 @@ int main(const int argc, char *argv[]) {
 
     fileStream.close();
 
-    std::string fileContents = fileContentsStream.str();
+    const std::string fileContents = fileContentsStream.str();
     std::cout << fileContents << '\n';
 
-    std::vector<Token> tokens = tokenize(fileContents);
+    auto lexer = Lexer(fileContents);
+    const std::vector<Token> tokens = lexer.tokenize();
     for (const auto &token : tokens) {
-        std::cout << token_type_to_string(token.type);
-        if (token.value.has_value()) {
-            std::cout << ' ' << token.value.value();
+        std::cout << token_type_to_string(token.type());
+        if (token.value().has_value()) {
+            std::cout << ' ' << token.value().value();
         }
         std::cout << '\n';
     }
