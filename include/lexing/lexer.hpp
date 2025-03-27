@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <format>
 
 #include "token.hpp"
 #include "token_type.hpp"

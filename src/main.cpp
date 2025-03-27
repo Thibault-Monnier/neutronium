@@ -39,6 +39,7 @@ int main(const int argc, char *argv[]) {
 
     auto lexer = Lexer(fileContents);
     const std::vector<Token> tokens = lexer.tokenize();
+
     for (const auto &token : tokens) {
         std::cout << token_type_to_string(token.type());
         if (token.value().has_value()) {
