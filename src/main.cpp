@@ -9,6 +9,7 @@
 #include "lexing/lexer.hpp"
 #include "lexing/token.hpp"
 #include "lexing/token_type.hpp"
+#include "parsing/parser.hpp"
 #include "utils/log.hpp"
 
 int main(const int argc, char *argv[]) {
@@ -43,6 +44,9 @@ int main(const int argc, char *argv[]) {
     for (const auto &token : tokens) {
         std::cout << token_type_to_string(token.type()) << ": `" << token.lexeme() << "`\n";
     }
+
+    auto parser = Parser(tokens);
+    const auto AST = parser.parse();
 
     return 0;
 }
