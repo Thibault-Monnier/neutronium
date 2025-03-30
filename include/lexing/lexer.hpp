@@ -1,8 +1,8 @@
 #pragma once
 
+#include <format>
 #include <string>
 #include <vector>
-#include <format>
 
 #include "token.hpp"
 #include "token_type.hpp"
@@ -20,7 +20,7 @@ class Lexer {
             buffer_ = c;
 
             if (std::isspace(c)) {
-                if (c == '\n') tokens.emplace_back(TokenType::NEWLINE);
+                if (c == '\n') tokens.emplace_back(TokenType::NEWLINE, "\n");
 
             } else if (std::isalpha(c)) {
                 read_to_buffer_while(isalnum);
@@ -29,9 +29,11 @@ class Lexer {
                 read_to_buffer_while(isdigit);
                 tokens.emplace_back(TokenType::NUMBER, buffer_);
             } else if (c == '+') {
-                tokens.emplace_back(TokenType::PLUS);
+                tokens.emplace_back(TokenType::PLUS, "+");
             } else if (c == '-') {
-                tokens.emplace_back(TokenType::MINUS);
+                tokens.emplace_back(TokenType::MINUS, "-");
+            } else if (c == '=') {
+                tokens.emplace_back(TokenType::EQUAL, "=");
             } else {
                 const std::string errorMessage =
                     std::format("Invalid character at index {}, got '{}' at beginning of word",
@@ -41,7 +43,7 @@ class Lexer {
             }
         }
 
-        tokens.emplace_back(TokenType::END_OF_FILE);
+        tokens.emplace_back(TokenType::END_OF_FILE, "");
         return tokens;
     }
 

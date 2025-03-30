@@ -25,7 +25,7 @@ CheckOptions:
     value: camelBack
   - key: readability-identifier-naming.MemberCase
     value: camelBack
-  - key: readability-identifier-naming.PrivateMemberSuffix
+  - key: readability-identifier-naming.MemberSuffix
     value: _
   - key: readability-identifier-naming.ConstantMemberCase
     value: camelBack

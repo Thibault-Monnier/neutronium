@@ -13,5 +13,5 @@ TEST(LexerTest, SimpleTokenize) {
 
     ASSERT_FALSE(tokens.empty());
     EXPECT_EQ(tokens[0].type(), TokenType::IDENTIFIER);
-    EXPECT_EQ(tokens[0].value().value(), "let");
+    EXPECT_EQ(tokens[0].lexeme(), "let");
 }

@@ -41,11 +41,7 @@ int main(const int argc, char *argv[]) {
     const std::vector<Token> tokens = lexer.tokenize();
 
     for (const auto &token : tokens) {
-        std::cout << token_type_to_string(token.type());
-        if (token.value().has_value()) {
-            std::cout << ' ' << token.value().value();
-        }
-        std::cout << '\n';
+        std::cout << token_type_to_string(token.type()) << ": `" << token.lexeme() << "`\n";
     }
 
     return 0;

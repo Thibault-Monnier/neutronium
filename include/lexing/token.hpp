@@ -6,13 +6,13 @@
 #include "token_type.hpp"
 
 struct Token {
-    explicit Token(const TokenType type, std::string val) : type_(type), value_(std::move(val)) {}
-    explicit Token(const TokenType type) : type_(type), value_(std::nullopt) {}
+    explicit Token(const TokenType type, std::string lexeme)
+        : type_(type), lexeme_(std::move(lexeme)) {}
 
     [[nodiscard]] TokenType type() const { return type_; }
-    [[nodiscard]] const std::optional<std::string> &value() const { return value_; }
+    [[nodiscard]] const std::string &lexeme() const { return lexeme_; }
 
    private:
     TokenType type_;
-    std::optional<std::string> value_;
+    std::string lexeme_;
 };

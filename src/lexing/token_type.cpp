@@ -13,6 +13,8 @@ std::string token_type_to_string(const TokenType type) {
             return "PLUS";
         case TokenType::MINUS:
             return "MINUS";
+        case TokenType::EQUAL:
+            return "EQUAL";
         case TokenType::NEWLINE:
             return "NEWLINE";
         case TokenType::END_OF_FILE:
