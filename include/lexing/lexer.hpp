@@ -38,6 +38,10 @@ class Lexer {
                 tokens.emplace_back(TokenType::SLASH, "/");
             } else if (c == '=') {
                 tokens.emplace_back(TokenType::EQUAL, "=");
+            } else if (c == '(') {
+                tokens.emplace_back(TokenType::LEFT_PAREN, "(");
+            } else if (c == ')') {
+                tokens.emplace_back(TokenType::RIGHT_PAREN, ")");
             } else {
                 const std::string errorMessage =
                     std::format("Invalid character at index {}, got '{}' at beginning of word",

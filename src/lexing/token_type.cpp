@@ -19,6 +19,10 @@ std::string token_type_to_string(const TokenType type) {
             return "DIVIDE";
         case TokenType::EQUAL:
             return "EQUAL";
+        case TokenType::LEFT_PAREN:
+            return "LEFT_PAREN";
+        case TokenType::RIGHT_PAREN:
+            return "RIGHT_PAREN";
         case TokenType::NEWLINE:
             return "NEWLINE";
         case TokenType::END_OF_FILE:

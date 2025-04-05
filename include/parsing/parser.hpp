@@ -64,13 +64,59 @@ class Parser {
             }
         }
 
+        if (tokens_.at(startIndex).type() == TokenType::LEFT_PAREN &&
+            tokens_.at(endIndex - 1).type() == TokenType::RIGHT_PAREN) {
+            int parenCount = 1;
+            size_t i = startIndex + 1;
+            while (parenCount > 0 && i < endIndex) {
+                if (tokens_.at(i).type() == TokenType::LEFT_PAREN) parenCount++;
+                if (tokens_.at(i).type() == TokenType::RIGHT_PAREN) parenCount--;
+                i++;
+            }
+
+            if (i == endIndex) {
+                return parse_expression_recursive(startIndex + 1, endIndex - 1);
+            }
+        }
+
         constexpr std::array operatorsByPrecedenceLevel = {
             AST::Operator::ADD, AST::Operator::SUBTRACT, AST::Operator::MULTIPLY,
             AST::Operator::DIVIDE};
 
         for (auto op : operatorsByPrecedenceLevel) {
-            for (size_t i = startIndex; i < endIndex; i++) {
+            for (size_t i = endIndex - 1; i >= startIndex; i--) {
                 const Token token = tokens_.at(i);
+
+                if (token.type() == TokenType::RIGHT_PAREN) {
+                    size_t parenCount = 1;
+                    while (parenCount > 0 && i < endIndex) {
+                        i--;
+                        if (tokens_.at(i).type() == TokenType::LEFT_PAREN) parenCount--;
+                        if (tokens_.at(i).type() == TokenType::RIGHT_PAREN) parenCount++;
+                    }
+
+                    if (parenCount != 0) {
+                        const std::string errorMessage =
+                            std::format("Unmatched parentheses at index {}", i);
+                        const std::string hintMessage =
+                            std::format("Start index: {}, End index: {}", startIndex, endIndex);
+                        print_error(errorMessage);
+                        print_hint(hintMessage);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    continue;
+                }
+
+                if (token.type() == TokenType::LEFT_PAREN) {
+                    const std::string errorMessage =
+                        std::format("Unmatched parentheses at index {}", i);
+                    const std::string hintMessage =
+                        std::format("Start index: {}, End index: {}", startIndex, endIndex);
+                    print_error(errorMessage);
+                    print_hint(hintMessage);
+                    exit(EXIT_FAILURE);
+                }
 
                 if (AST::token_type_to_AST_operator(token.type()) == op) {
                     return std::make_shared<AST::BinaryExpression>(
