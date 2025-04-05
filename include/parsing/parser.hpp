@@ -17,14 +17,6 @@ class Parser {
     size_t currentIndex_ = 0;
 
     const Token& peek() const { return tokens_.at(currentIndex_); }
-    const Token& peek(size_t amount) const {
-        const size_t index = currentIndex_ + amount;
-        if (index >= tokens_.size()) {
-            throw std::out_of_range("Peek index out of range");
-        }
-
-        return tokens_.at(index);
-    }
 
     const Token& consume(const TokenType expected) {
         const Token& token = peek();
@@ -41,6 +33,10 @@ class Parser {
         return token;
     }
 
+    const bool statement_end() const {
+        return peek().type() == TokenType::NEWLINE || peek().type() == TokenType::END_OF_FILE;
+    }
+
     const AST::Operator token_type_to_AST_operator(const TokenType tokenType) const {
         switch (tokenType) {
             case TokenType::PLUS:
@@ -53,8 +49,19 @@ class Parser {
     }
 
     AST::Expression parse_expression_recursive(size_t startIndex, size_t endIndex) {
+        if (startIndex >= endIndex) {
+            const std::string errorMessage = std::format(
+                "Invalid expression at index {} -> start index is greater than end index",
+                currentIndex_);
+            const std::string hintMessage =
+                std::format("Start index: {}, End index: {}", startIndex, endIndex);
+            print_error(errorMessage);
+            print_hint(hintMessage);
+            exit(EXIT_FAILURE);
+        }
+
         if (endIndex - startIndex == 1) {
-            const Token token = tokens_[startIndex];
+            const Token token = tokens_.at(startIndex);
             switch (token.type()) {
                 case TokenType::NUMBER:
                     return std::make_shared<AST::PrimaryExpression>(std::stoi(token.lexeme()));
@@ -71,53 +78,35 @@ class Parser {
         constexpr std::array operatorsByPrecedenceLevel = {AST::Operator::ADD,
                                                            AST::Operator::SUBTRACT};
 
-        for (AST::Operator const op : operatorsByPrecedenceLevel) {
-            for (size_t i = startIndex; i < endIndex - 1; i+=2) {
-                const Token primaryToken = tokens_[i];
-                const Token opToken = tokens_[i + 1];
+        for (auto op : operatorsByPrecedenceLevel) {
+            for (size_t i = startIndex; i < endIndex; i++) {
+                const Token token = tokens_.at(i);
 
-                if (primaryToken.type() != TokenType::NUMBER) {
-                    const std::string errorMessage =
-                        std::format("Invalid token in primary expression at index {} -> got {}",
-                                    i, token_type_to_string(primaryToken.type()));
-                    const std::string hintMessage =
-                        std::format("Lexeme -> {}", primaryToken.lexeme());
-                    print_error(errorMessage);
-                    print_hint(hintMessage);
-                    exit(EXIT_FAILURE);
-                }
-
-                if (token_type_to_AST_operator(opToken.type()) == op) {
+                if (token_type_to_AST_operator(token.type()) == op) {
                     return std::make_shared<AST::BinaryExpression>(
-                        parse_expression_recursive(startIndex, i+1), op,
-                        parse_expression_recursive(i + 2, endIndex));
+                        parse_expression_recursive(startIndex, i), op,
+                        parse_expression_recursive(i + 1, endIndex));
                 }
             }
         }
 
         const std::string errorMessage =
-            std::format("No binary operator found in binary expression at index {}", startIndex);
-        print_error(errorMessage);
+            std::format("Missing operator in binary expression at index {}", startIndex);
         const std::string hintMessage =
             std::format("Start index: {}, End index: {}", startIndex, endIndex);
+        print_error(errorMessage);
         print_hint(hintMessage);
         exit(EXIT_FAILURE);
     }
 
     AST::Expression parse_expression() {
-        size_t endIndex = currentIndex_;
+        size_t const startIndex = currentIndex_;
 
-        size_t i = 0;
-        while (i < tokens_.size() && peek(i).type() != TokenType::NEWLINE &&
-               peek(i).type() != TokenType::END_OF_FILE) {
-            endIndex++, i++;
+        while (!statement_end()) {
+            consume(peek().type());
         }
 
-        AST::Expression expression = parse_expression_recursive(currentIndex_, endIndex);
-
-        currentIndex_ = endIndex;
-
-        return expression;
+        return parse_expression_recursive(startIndex, currentIndex_);
     }
 
     AST::Assignment parse_assignment() {
@@ -129,18 +118,17 @@ class Parser {
     }
 
     AST::Statement parse_statement() {
-        const Token& token = peek();
+        const Token& firstToken = peek();
 
-        if (token.type() == TokenType::IDENTIFIER) {
+        if (firstToken.type() == TokenType::IDENTIFIER) {
             return parse_assignment();
         }
 
         const std::string errorMessage =
             std::format("Invalid token at index {} -> got {} at beginning of statement",
-                        currentIndex_, token_type_to_string(token.type()));
+                        currentIndex_, token_type_to_string(firstToken.type()));
+        const std::string hintMessage = std::format("Lexeme -> {}", firstToken.lexeme());
         print_error(errorMessage);
-
-        const std::string hintMessage = std::format("Lexeme -> {}", token.lexeme());
         print_hint(hintMessage);
 
         exit(EXIT_FAILURE);
@@ -159,7 +147,6 @@ class Parser {
 
         const std::shared_ptr<AST::ASTNode> programPtr =
             std::make_shared<AST::Program>(std::move(program));
-
         AST::log_node(programPtr);
 
         return program;

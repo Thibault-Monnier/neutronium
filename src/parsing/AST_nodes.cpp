@@ -30,7 +30,7 @@ void log_expression(const Expression& expr, int indent) {
 }
 
 void log_node(const std::shared_ptr<ASTNode>& node, int indent) {
-    if (node->type_ == "Program") {
+    if (node->type_ == PROGRAM) {
         auto program = std::dynamic_pointer_cast<Program>(node);
         if (!program) return;
         std::cout << std::string(indent, ' ') << "Program:\n";

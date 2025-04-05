@@ -13,11 +13,18 @@ enum Operator : uint8_t {
     SUBTRACT,
 };
 
+enum NodeType : uint8_t {
+    PRIMARY_EXPRESSION,
+    BINARY_EXPRESSION,
+    ASSIGNMENT,
+    PROGRAM,
+};
+
 struct ASTNode {
-    explicit ASTNode(std::string type) : type_(std::move(type)) {}
+    explicit ASTNode(NodeType type) : type_(type) {}
     virtual ~ASTNode() = default;
 
-    const std::string type_;
+    const NodeType type_;
 };
 
 struct PrimaryExpression;
@@ -26,15 +33,15 @@ using Expression =
     std::variant<std::shared_ptr<BinaryExpression>, std::shared_ptr<PrimaryExpression>>;
 
 struct PrimaryExpression : ASTNode {
-    PrimaryExpression(int value) : ASTNode{"PrimaryExpression"}, value_(value) {}
+    PrimaryExpression(int value) : ASTNode{PRIMARY_EXPRESSION}, value_(value) {}
 
     int value_;
 };
 
 struct BinaryExpression : ASTNode {
-    BinaryExpression() : ASTNode{"Expression"}, operator_(UNDEFINED_OPERATOR) {}
+    BinaryExpression() : ASTNode{BINARY_EXPRESSION}, operator_(UNDEFINED_OPERATOR) {}
     BinaryExpression(Expression left, Operator op, Expression right)
-        : ASTNode{"Expression"}, left_(std::move(left)), operator_(op), right_(std::move(right)) {}
+        : ASTNode{BINARY_EXPRESSION}, left_(std::move(left)), operator_(op), right_(std::move(right)) {}
 
     Expression left_;
     Operator operator_;
@@ -43,7 +50,7 @@ struct BinaryExpression : ASTNode {
 
 struct Assignment : ASTNode {
     Assignment(std::string identifier, Expression value)
-        : ASTNode{"Assignment"}, identifier_(std::move(identifier)), value_(std::move(value)) {}
+        : ASTNode{ASSIGNMENT}, identifier_(std::move(identifier)), value_(std::move(value)) {}
 
     std::string identifier_;
     Expression value_;
@@ -51,7 +58,7 @@ struct Assignment : ASTNode {
 
 using Statement = std::variant<Assignment, Expression>;
 struct Program : ASTNode {
-    Program() : ASTNode{"Program"} {}
+    Program() : ASTNode{PROGRAM} {}
 
     std::vector<Statement> statements_;
 };
