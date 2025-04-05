@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include <string>
 
 #include "token_type.hpp"

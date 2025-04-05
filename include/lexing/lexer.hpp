@@ -32,6 +32,10 @@ class Lexer {
                 tokens.emplace_back(TokenType::PLUS, "+");
             } else if (c == '-') {
                 tokens.emplace_back(TokenType::MINUS, "-");
+            } else if (c == '*') {
+                tokens.emplace_back(TokenType::STAR, "*");
+            } else if (c == '/') {
+                tokens.emplace_back(TokenType::SLASH, "/");
             } else if (c == '=') {
                 tokens.emplace_back(TokenType::EQUAL, "=");
             } else {

@@ -1,4 +1,4 @@
-#include "parsing/AST_nodes.hpp"
+#include "parsing/AST.hpp"
 
 #include <iostream>
 #include <memory>
@@ -6,7 +6,24 @@
 #include <variant>
 #include <vector>
 
+#include "lexing/token_type.hpp"
+
 namespace AST {
+
+Operator token_type_to_AST_operator(const TokenType tokenType) {
+    switch (tokenType) {
+        case TokenType::PLUS:
+            return Operator::ADD;
+        case TokenType::MINUS:
+            return Operator::SUBTRACT;
+        case TokenType::STAR:
+            return Operator::MULTIPLY;
+        case TokenType::SLASH:
+            return Operator::DIVIDE;
+        default:
+            return Operator::UNDEFINED_OPERATOR;
+    }
+}
 
 void log_expression(const Expression& expr, int indent) {
     std::visit(

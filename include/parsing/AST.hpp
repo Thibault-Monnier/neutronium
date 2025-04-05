@@ -5,12 +5,16 @@
 #include <variant>
 #include <vector>
 
+#include "lexing/token_type.hpp"
+
 namespace AST {
 
 enum Operator : uint8_t {
     UNDEFINED_OPERATOR,
     ADD,
     SUBTRACT,
+    MULTIPLY,
+    DIVIDE,
 };
 
 enum NodeType : uint8_t {
@@ -41,7 +45,10 @@ struct PrimaryExpression : ASTNode {
 struct BinaryExpression : ASTNode {
     BinaryExpression() : ASTNode{BINARY_EXPRESSION}, operator_(UNDEFINED_OPERATOR) {}
     BinaryExpression(Expression left, Operator op, Expression right)
-        : ASTNode{BINARY_EXPRESSION}, left_(std::move(left)), operator_(op), right_(std::move(right)) {}
+        : ASTNode{BINARY_EXPRESSION},
+          left_(std::move(left)),
+          operator_(op),
+          right_(std::move(right)) {}
 
     Expression left_;
     Operator operator_;
@@ -63,6 +70,7 @@ struct Program : ASTNode {
     std::vector<Statement> statements_;
 };
 
+Operator token_type_to_AST_operator(const TokenType tokenType);
 void log_expression(const Expression& expr, int indent = 0);
 void log_node(const std::shared_ptr<ASTNode>& node, int indent = 0);
 

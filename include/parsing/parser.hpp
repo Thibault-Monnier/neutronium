@@ -8,7 +8,7 @@
 
 #include "lexing/token.hpp"
 #include "lexing/token_type.hpp"
-#include "parsing/AST_nodes.hpp"
+#include "parsing/AST.hpp"
 #include "utils/log.hpp"
 
 class Parser {
@@ -35,17 +35,6 @@ class Parser {
 
     const bool statement_end() const {
         return peek().type() == TokenType::NEWLINE || peek().type() == TokenType::END_OF_FILE;
-    }
-
-    const AST::Operator token_type_to_AST_operator(const TokenType tokenType) const {
-        switch (tokenType) {
-            case TokenType::PLUS:
-                return AST::Operator::ADD;
-            case TokenType::MINUS:
-                return AST::Operator::SUBTRACT;
-            default:
-                return AST::Operator::UNDEFINED_OPERATOR;
-        }
     }
 
     AST::Expression parse_expression_recursive(size_t startIndex, size_t endIndex) {
@@ -75,14 +64,15 @@ class Parser {
             }
         }
 
-        constexpr std::array operatorsByPrecedenceLevel = {AST::Operator::ADD,
-                                                           AST::Operator::SUBTRACT};
+        constexpr std::array operatorsByPrecedenceLevel = {
+            AST::Operator::ADD, AST::Operator::SUBTRACT, AST::Operator::MULTIPLY,
+            AST::Operator::DIVIDE};
 
         for (auto op : operatorsByPrecedenceLevel) {
             for (size_t i = startIndex; i < endIndex; i++) {
                 const Token token = tokens_.at(i);
 
-                if (token_type_to_AST_operator(token.type()) == op) {
+                if (AST::token_type_to_AST_operator(token.type()) == op) {
                     return std::make_shared<AST::BinaryExpression>(
                         parse_expression_recursive(startIndex, i), op,
                         parse_expression_recursive(i + 1, endIndex));

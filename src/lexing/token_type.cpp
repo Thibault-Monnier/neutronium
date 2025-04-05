@@ -13,6 +13,10 @@ std::string token_type_to_string(const TokenType type) {
             return "PLUS";
         case TokenType::MINUS:
             return "MINUS";
+        case TokenType::STAR:
+            return "TIMES";
+        case TokenType::SLASH:
+            return "DIVIDE";
         case TokenType::EQUAL:
             return "EQUAL";
         case TokenType::NEWLINE:
@@ -20,6 +24,6 @@ std::string token_type_to_string(const TokenType type) {
         case TokenType::END_OF_FILE:
             return "END_OF_FILE";
         default:
-            throw std::invalid_argument("Invalid token type");
+            throw std::invalid_argument("Invalid token type passed to token_type_to_string");
     }
 }
