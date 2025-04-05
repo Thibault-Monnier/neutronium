@@ -71,7 +71,9 @@ struct Program : ASTNode {
 };
 
 Operator token_type_to_AST_operator(const TokenType tokenType);
-void log_expression(const Expression& expr, int indent = 0);
-void log_node(const std::shared_ptr<ASTNode>& node, int indent = 0);
+std::string operator_to_string(Operator op);
+
+void log_expression(const Expression& expr, const std::string& prefix, bool isLast);
+void log_node(const std::shared_ptr<ASTNode>& node, const std::string& prefix = "", bool isLast = true);
 
 }  // namespace AST
