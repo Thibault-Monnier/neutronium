@@ -18,7 +18,8 @@ cmake --build build/ && ./build/neutronium <path-to-source-file>
 
 ## EBNF Grammar
 
-Neutronium is a C-like language, and will take some inspiration from numerous languages, to try to take advantage of the best parts of each of them.
+Neutronium is a C-like language, and will take some inspiration from numerous languages, to try to take advantage of the
+best parts of each of them.
 
 ### Neutronium currently implemented grammar
 
@@ -30,7 +31,6 @@ The following grammar is the one currently supported by the parser.
 program ::= { statement? '\n' }
 
 statement ::= assignment
-            | expression
 
 assignment ::= identifier '=' expression
 
@@ -42,12 +42,19 @@ additive-expression ::= multiplicative-expression
 multiplicative-expression ::= primary-expression
                             | multiplicative-expression ('*' | '/') primary-expression
                             
-primary-expression ::= literal                 
+primary-expression ::= literal
+                           
+identifier ::= [a-zA-Z][a-zA-Z0-9]*
+
+literal ::= integer-literal
+
+integer-literal ::= [0-9]+
 ```
 
 ### Neutronium target grammar (incomplete)
 
-Neutronium is currently in development. The following grammar is incomplete, and might drastically change in the future. It also isn't fully implemented yet.
+Neutronium is currently in development. The following grammar is incomplete, and might drastically change in the future.
+It also isn't fully implemented yet.
 
 ```
 expr ::= equality-expr
