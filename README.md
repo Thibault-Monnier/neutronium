@@ -18,6 +18,65 @@ cmake --build build/ && ./build/neutronium <path-to-source-file>
 
 ## EBNF Grammar
 
+Neutronium is a C-like language, and will take some inspiration from numerous languages, to try to take advantage of the best parts of each of them.
+
+### Neutronium currently implemented grammar
+
+The following grammar is the one currently supported by the parser.
+
+> Newlines are significant, but all other whitespaces are ignored and are omitted from the following grammar.
+
+```
+program ::= { statement? '\n' }
+
+statement ::= assignment
+            | expression
+
+assignment ::= identifier '=' expression
+
+expression ::= additive-expression
+
+additive-expression ::= multiplicative-expression
+                      | additive-expression ('+' | '-') multiplicative-expression
+
+multiplicative-expression ::= primary-expression
+                            | multiplicative-expression ('*' | '/') primary-expression
+                            
+primary-expression ::= literal                 
+```
+
+### Neutronium target grammar (incomplete)
+
+Neutronium is currently in development. The following grammar is incomplete, and might drastically change in the future. It also isn't fully implemented yet.
+
+```
+expr ::= equality-expr
+
+equality-expr ::= relational-expr
+                | relational-expr ("==" | "!=") relational-expr
+
+relational-expr ::= additive-expr
+                  | additive-expr ("<" | "<=" | ">" | ">=") additive-expr
+
+additive-expr ::= multiplicative-expr
+                | additive-expr ("+" | "-") multiplicative-expr
+
+multiplicative-expr ::= unary-expr
+                      | multiplicative-expr ("*" | "/") unary-expr
+
+unary-expr ::= unary-op? primary-expr
+
+unary-op ::= "-" | "+"
+
+primary-expr ::= identifier
+               | literal
+               | "(" expr ")"
+```
+
+## C99 EBNF Grammar
+
+The following C99 grammar is simply for reference.
+
 ```
 {
     tokens=[
