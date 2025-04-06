@@ -52,14 +52,15 @@ class Parser {
         if (endIndex - startIndex == 1) {
             const Token token = tokens_.at(startIndex);
             switch (token.kind()) {
-                case TokenKind::NUMBER:
-                    return std::make_shared<AST::PrimaryExpression>(std::stoi(token.lexeme()));
+                case TokenKind::NUMBER_LITERAL:
+                    return AST::NumberLiteral(std::stoi(token.lexeme()));
+                case TokenKind::IDENTIFIER:
+                    return AST::Identifier(token.lexeme());
                 default:
                     const std::string errorMessage =
                         std::format("Invalid token in primary expression at index {} -> got {}",
                                     currentIndex_, token_kind_to_string(token.kind()));
                     print_error(errorMessage);
-                    print_hint("Identifiers in expressions are not yet supported");
                     exit(EXIT_FAILURE);
             }
         }

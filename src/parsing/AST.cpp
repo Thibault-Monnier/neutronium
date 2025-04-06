@@ -45,9 +45,18 @@ void log_expression(const Expression& expr, const std::string& prefix, bool isLa
 
     std::visit(
         [&]<typename T0>(const T0& exprPtr) {
-            if constexpr (std::is_same_v<std::decay_t<T0>,
-                                         std::shared_ptr<PrimaryExpression>>) {
-                std::cout << prefix << branch << "PrimaryExpression: " << exprPtr->value_ << "\n";
+            if constexpr (std::is_same_v<std::decay_t<T0>, PrimaryExpression>) {
+                std::visit(
+                    [&](const auto& inner) {
+                        using InnerT = std::decay_t<decltype(inner)>;
+                        if constexpr (std::is_same_v<InnerT, NumberLiteral>) {
+                            std::cout << prefix << branch << "NumberLiteral: " << inner.value_
+                                      << "\n";
+                        } else if constexpr (std::is_same_v<InnerT, Identifier>) {
+                            std::cout << prefix << branch << "Identifier: " << inner.name_ << "\n";
+                        }
+                    },
+                    exprPtr);
             } else if constexpr (std::is_same_v<std::decay_t<T0>,
                                                 std::shared_ptr<BinaryExpression>>) {
                 std::cout << prefix << branch << "BinaryExpression\n";

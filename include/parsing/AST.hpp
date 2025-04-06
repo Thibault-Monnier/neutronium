@@ -18,7 +18,8 @@ enum Operator : uint8_t {
 };
 
 enum NodeKind : uint8_t {
-    PRIMARY_EXPRESSION,
+    NUMBER_LITERAL,
+    IDENTIFIER,
     BINARY_EXPRESSION,
     ASSIGNMENT,
     PROGRAM,
@@ -31,16 +32,22 @@ struct ASTNode {
     const NodeKind kind_;
 };
 
-struct PrimaryExpression;
-struct BinaryExpression;
-using Expression =
-    std::variant<std::shared_ptr<BinaryExpression>, std::shared_ptr<PrimaryExpression>>;
-
-struct PrimaryExpression : ASTNode {
-    PrimaryExpression(int value) : ASTNode{PRIMARY_EXPRESSION}, value_(value) {}
+struct NumberLiteral : ASTNode {
+    NumberLiteral(int value) : ASTNode{NUMBER_LITERAL}, value_(value) {}
 
     int value_;
 };
+
+struct Identifier : ASTNode {
+    Identifier(std::string name) : ASTNode{IDENTIFIER}, name_(std::move(name)) {}
+
+    std::string name_;
+};
+
+using PrimaryExpression = std::variant<NumberLiteral, Identifier>;
+struct BinaryExpression;
+using Expression =
+    std::variant<std::shared_ptr<BinaryExpression>, PrimaryExpression>;
 
 struct BinaryExpression : ASTNode {
     BinaryExpression() : ASTNode{BINARY_EXPRESSION}, operator_(UNDEFINED_OPERATOR) {}
@@ -63,7 +70,7 @@ struct Assignment : ASTNode {
     Expression value_;
 };
 
-using Statement = std::variant<Assignment, Expression>;
+using Statement = std::variant<Assignment>;
 struct Program : ASTNode {
     Program() : ASTNode{PROGRAM} {}
 
@@ -74,6 +81,7 @@ Operator token_kind_to_AST_operator(const TokenKind tokenKind);
 std::string operator_to_string(Operator op);
 
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast);
-void log_node(const std::shared_ptr<ASTNode>& node, const std::string& prefix = "", bool isLast = true);
+void log_node(const std::shared_ptr<ASTNode>& node, const std::string& prefix = "",
+              bool isLast = true);
 
 }  // namespace AST

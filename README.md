@@ -43,6 +43,7 @@ multiplicative-expression ::= primary-expression
                             | multiplicative-expression ('*' | '/') primary-expression
                             
 primary-expression ::= literal
+                     | identifier
                      | '(' expression ')'
                            
 identifier ::= [a-zA-Z][a-zA-Z0-9]*

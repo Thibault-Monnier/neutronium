@@ -7,8 +7,8 @@ std::string token_kind_to_string(const TokenKind kind) {
     switch (kind) {
         case TokenKind::IDENTIFIER:
             return "IDENTIFIER";
-        case TokenKind::NUMBER:
-            return "NUMBER";
+        case TokenKind::NUMBER_LITERAL:
+            return "NUMBER_LITERAL";
         case TokenKind::PLUS:
             return "PLUS";
         case TokenKind::MINUS:

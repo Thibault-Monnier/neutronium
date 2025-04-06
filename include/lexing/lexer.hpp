@@ -27,7 +27,7 @@ class Lexer {
                 tokens.emplace_back(TokenKind::IDENTIFIER, buffer_);
             } else if (std::isdigit(c)) {
                 read_to_buffer_while(isdigit);
-                tokens.emplace_back(TokenKind::NUMBER, buffer_);
+                tokens.emplace_back(TokenKind::NUMBER_LITERAL, buffer_);
             } else if (c == '+') {
                 tokens.emplace_back(TokenKind::PLUS, "+");
             } else if (c == '-') {
