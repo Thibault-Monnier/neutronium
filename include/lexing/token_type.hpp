@@ -1,8 +1,0 @@
-#pragma once
-
-#include <cstdint>
-#include <string>
-
-enum class TokenType : uint8_t { IDENTIFIER, NUMBER, PLUS, MINUS, STAR, SLASH, EQUAL, LEFT_PAREN, RIGHT_PAREN, NEWLINE, END_OF_FILE };
-
-std::string token_type_to_string(TokenType type);

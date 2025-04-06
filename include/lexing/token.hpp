@@ -2,16 +2,16 @@
 
 #include <string>
 
-#include "token_type.hpp"
+#include "token_kind.hpp"
 
 struct Token {
-    explicit Token(const TokenType type, std::string lexeme)
-        : type_(type), lexeme_(std::move(lexeme)) {}
+    explicit Token(const TokenKind kind, std::string lexeme)
+        : kind_(kind), lexeme_(std::move(lexeme)) {}
 
-    [[nodiscard]] TokenType type() const { return type_; }
+    [[nodiscard]] TokenKind kind() const { return kind_; }
     [[nodiscard]] const std::string &lexeme() const { return lexeme_; }
 
    private:
-    TokenType type_;
+    TokenKind kind_;
     std::string lexeme_;
 };

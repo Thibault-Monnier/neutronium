@@ -5,7 +5,7 @@
 #include <variant>
 #include <vector>
 
-#include "lexing/token_type.hpp"
+#include "lexing/token_kind.hpp"
 
 namespace AST {
 
@@ -17,7 +17,7 @@ enum Operator : uint8_t {
     DIVIDE,
 };
 
-enum NodeType : uint8_t {
+enum NodeKind : uint8_t {
     PRIMARY_EXPRESSION,
     BINARY_EXPRESSION,
     ASSIGNMENT,
@@ -25,10 +25,10 @@ enum NodeType : uint8_t {
 };
 
 struct ASTNode {
-    explicit ASTNode(NodeType type) : type_(type) {}
+    explicit ASTNode(NodeKind kind) : kind_(kind) {}
     virtual ~ASTNode() = default;
 
-    const NodeType type_;
+    const NodeKind kind_;
 };
 
 struct PrimaryExpression;
@@ -70,7 +70,7 @@ struct Program : ASTNode {
     std::vector<Statement> statements_;
 };
 
-Operator token_type_to_AST_operator(const TokenType tokenType);
+Operator token_kind_to_AST_operator(const TokenKind tokenKind);
 std::string operator_to_string(Operator op);
 
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast);

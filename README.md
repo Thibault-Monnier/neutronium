@@ -18,7 +18,7 @@ cmake --build build/ && ./build/neutronium <path-to-source-file>
 
 ## EBNF Grammar
 
-Neutronium is a C-like language, and will take some inspiration from numerous languages, to try to take advantage of the
+Neutronium is a C-like language, and will take some inspiration from several languages, to try to take advantage of the
 best parts of each of them.
 
 ### Neutronium currently implemented grammar

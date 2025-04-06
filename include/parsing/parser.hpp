@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "lexing/token.hpp"
-#include "lexing/token_type.hpp"
+#include "lexing/token_kind.hpp"
 #include "parsing/AST.hpp"
 #include "utils/log.hpp"
 
@@ -18,13 +18,13 @@ class Parser {
 
     const Token& peek() const { return tokens_.at(currentIndex_); }
 
-    const Token& consume(const TokenType expected) {
+    const Token& consume(const TokenKind expected) {
         const Token& token = peek();
 
-        if (token.type() != expected) {
+        if (token.kind() != expected) {
             const std::string errorMessage =
                 std::format("Invalid token at index {} -> expected {}, got {}", currentIndex_,
-                            token_type_to_string(expected), token_type_to_string(token.type()));
+                            token_kind_to_string(expected), token_kind_to_string(token.kind()));
             print_error(errorMessage);
             exit(EXIT_FAILURE);
         }
@@ -34,7 +34,7 @@ class Parser {
     }
 
     const bool statement_end() const {
-        return peek().type() == TokenType::NEWLINE || peek().type() == TokenType::END_OF_FILE;
+        return peek().kind() == TokenKind::NEWLINE || peek().kind() == TokenKind::END_OF_FILE;
     }
 
     AST::Expression parse_expression_recursive(size_t startIndex, size_t endIndex) {
@@ -51,26 +51,26 @@ class Parser {
 
         if (endIndex - startIndex == 1) {
             const Token token = tokens_.at(startIndex);
-            switch (token.type()) {
-                case TokenType::NUMBER:
+            switch (token.kind()) {
+                case TokenKind::NUMBER:
                     return std::make_shared<AST::PrimaryExpression>(std::stoi(token.lexeme()));
                 default:
                     const std::string errorMessage =
                         std::format("Invalid token in primary expression at index {} -> got {}",
-                                    currentIndex_, token_type_to_string(token.type()));
+                                    currentIndex_, token_kind_to_string(token.kind()));
                     print_error(errorMessage);
                     print_hint("Identifiers in expressions are not yet supported");
                     exit(EXIT_FAILURE);
             }
         }
 
-        if (tokens_.at(startIndex).type() == TokenType::LEFT_PAREN &&
-            tokens_.at(endIndex - 1).type() == TokenType::RIGHT_PAREN) {
+        if (tokens_.at(startIndex).kind() == TokenKind::LEFT_PAREN &&
+            tokens_.at(endIndex - 1).kind() == TokenKind::RIGHT_PAREN) {
             int parenCount = 1;
             size_t i = startIndex + 1;
             while (parenCount > 0 && i < endIndex) {
-                if (tokens_.at(i).type() == TokenType::LEFT_PAREN) parenCount++;
-                if (tokens_.at(i).type() == TokenType::RIGHT_PAREN) parenCount--;
+                if (tokens_.at(i).kind() == TokenKind::LEFT_PAREN) parenCount++;
+                if (tokens_.at(i).kind() == TokenKind::RIGHT_PAREN) parenCount--;
                 i++;
             }
 
@@ -87,12 +87,12 @@ class Parser {
             for (size_t i = endIndex - 1; i >= startIndex; i--) {
                 const Token token = tokens_.at(i);
 
-                if (token.type() == TokenType::RIGHT_PAREN) {
+                if (token.kind() == TokenKind::RIGHT_PAREN) {
                     size_t parenCount = 1;
                     while (parenCount > 0 && i < endIndex) {
                         i--;
-                        if (tokens_.at(i).type() == TokenType::LEFT_PAREN) parenCount--;
-                        if (tokens_.at(i).type() == TokenType::RIGHT_PAREN) parenCount++;
+                        if (tokens_.at(i).kind() == TokenKind::LEFT_PAREN) parenCount--;
+                        if (tokens_.at(i).kind() == TokenKind::RIGHT_PAREN) parenCount++;
                     }
 
                     if (parenCount != 0) {
@@ -108,7 +108,7 @@ class Parser {
                     continue;
                 }
 
-                if (token.type() == TokenType::LEFT_PAREN) {
+                if (token.kind() == TokenKind::LEFT_PAREN) {
                     const std::string errorMessage =
                         std::format("Unmatched parentheses at index {}", i);
                     const std::string hintMessage =
@@ -118,7 +118,7 @@ class Parser {
                     exit(EXIT_FAILURE);
                 }
 
-                if (AST::token_type_to_AST_operator(token.type()) == op) {
+                if (AST::token_kind_to_AST_operator(token.kind()) == op) {
                     return std::make_shared<AST::BinaryExpression>(
                         parse_expression_recursive(startIndex, i), op,
                         parse_expression_recursive(i + 1, endIndex));
@@ -139,15 +139,15 @@ class Parser {
         size_t const startIndex = currentIndex_;
 
         while (!statement_end()) {
-            consume(peek().type());
+            consume(peek().kind());
         }
 
         return parse_expression_recursive(startIndex, currentIndex_);
     }
 
     AST::Assignment parse_assignment() {
-        const std::string identifier = consume(TokenType::IDENTIFIER).lexeme();
-        consume(TokenType::EQUAL);
+        const std::string identifier = consume(TokenKind::IDENTIFIER).lexeme();
+        consume(TokenKind::EQUAL);
         const AST::Expression value = parse_expression();
 
         return {identifier, value};
@@ -156,13 +156,13 @@ class Parser {
     AST::Statement parse_statement() {
         const Token& firstToken = peek();
 
-        if (firstToken.type() == TokenType::IDENTIFIER) {
+        if (firstToken.kind() == TokenKind::IDENTIFIER) {
             return parse_assignment();
         }
 
         const std::string errorMessage =
             std::format("Invalid token at index {} -> got {} at beginning of statement",
-                        currentIndex_, token_type_to_string(firstToken.type()));
+                        currentIndex_, token_kind_to_string(firstToken.kind()));
         const std::string hintMessage = std::format("Lexeme -> {}", firstToken.lexeme());
         print_error(errorMessage);
         print_hint(hintMessage);
@@ -175,9 +175,9 @@ class Parser {
 
     AST::Program parse() {
         auto program = AST::Program();
-        while (peek().type() != TokenType::END_OF_FILE) {
-            while (peek().type() == TokenType::NEWLINE) consume(TokenType::NEWLINE);
-            if (peek().type() == TokenType::END_OF_FILE) break;
+        while (peek().kind() != TokenKind::END_OF_FILE) {
+            while (peek().kind() == TokenKind::NEWLINE) consume(TokenKind::NEWLINE);
+            if (peek().kind() == TokenKind::END_OF_FILE) break;
             program.statements_.emplace_back(parse_statement());
         }
 

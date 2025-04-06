@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "token.hpp"
-#include "token_type.hpp"
+#include "token_kind.hpp"
 #include "utils/log.hpp"
 
 class Lexer {
@@ -20,28 +20,28 @@ class Lexer {
             buffer_ = c;
 
             if (std::isspace(c)) {
-                if (c == '\n') tokens.emplace_back(TokenType::NEWLINE, "\n");
+                if (c == '\n') tokens.emplace_back(TokenKind::NEWLINE, "\n");
 
             } else if (std::isalpha(c)) {
                 read_to_buffer_while(isalnum);
-                tokens.emplace_back(TokenType::IDENTIFIER, buffer_);
+                tokens.emplace_back(TokenKind::IDENTIFIER, buffer_);
             } else if (std::isdigit(c)) {
                 read_to_buffer_while(isdigit);
-                tokens.emplace_back(TokenType::NUMBER, buffer_);
+                tokens.emplace_back(TokenKind::NUMBER, buffer_);
             } else if (c == '+') {
-                tokens.emplace_back(TokenType::PLUS, "+");
+                tokens.emplace_back(TokenKind::PLUS, "+");
             } else if (c == '-') {
-                tokens.emplace_back(TokenType::MINUS, "-");
+                tokens.emplace_back(TokenKind::MINUS, "-");
             } else if (c == '*') {
-                tokens.emplace_back(TokenType::STAR, "*");
+                tokens.emplace_back(TokenKind::STAR, "*");
             } else if (c == '/') {
-                tokens.emplace_back(TokenType::SLASH, "/");
+                tokens.emplace_back(TokenKind::SLASH, "/");
             } else if (c == '=') {
-                tokens.emplace_back(TokenType::EQUAL, "=");
+                tokens.emplace_back(TokenKind::EQUAL, "=");
             } else if (c == '(') {
-                tokens.emplace_back(TokenType::LEFT_PAREN, "(");
+                tokens.emplace_back(TokenKind::LEFT_PAREN, "(");
             } else if (c == ')') {
-                tokens.emplace_back(TokenType::RIGHT_PAREN, ")");
+                tokens.emplace_back(TokenKind::RIGHT_PAREN, ")");
             } else {
                 const std::string errorMessage =
                     std::format("Invalid character at index {}, got '{}' at beginning of word",
@@ -51,7 +51,7 @@ class Lexer {
             }
         }
 
-        tokens.emplace_back(TokenType::END_OF_FILE, "");
+        tokens.emplace_back(TokenKind::END_OF_FILE, "");
         return tokens;
     }
 

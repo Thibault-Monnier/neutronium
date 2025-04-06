@@ -6,19 +6,19 @@
 #include <variant>
 #include <vector>
 
-#include "lexing/token_type.hpp"
+#include "lexing/token_kind.hpp"
 
 namespace AST {
 
-Operator token_type_to_AST_operator(const TokenType tokenType) {
-    switch (tokenType) {
-        case TokenType::PLUS:
+Operator token_kind_to_AST_operator(const TokenKind tokenKind) {
+    switch (tokenKind) {
+        case TokenKind::PLUS:
             return Operator::ADD;
-        case TokenType::MINUS:
+        case TokenKind::MINUS:
             return Operator::SUBTRACT;
-        case TokenType::STAR:
+        case TokenKind::STAR:
             return Operator::MULTIPLY;
-        case TokenType::SLASH:
+        case TokenKind::SLASH:
             return Operator::DIVIDE;
         default:
             return Operator::UNDEFINED_OPERATOR;
@@ -64,7 +64,7 @@ void log_expression(const Expression& expr, const std::string& prefix, bool isLa
 }
 
 void log_node(const std::shared_ptr<ASTNode>& node, const std::string& prefix, bool isLast) {
-    if (node->type_ == PROGRAM) {
+    if (node->kind_ == PROGRAM) {
         auto program = std::dynamic_pointer_cast<Program>(node);
         if (!program) return;
 

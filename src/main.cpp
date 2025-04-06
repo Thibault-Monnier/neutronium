@@ -8,7 +8,7 @@
 
 #include "lexing/lexer.hpp"
 #include "lexing/token.hpp"
-#include "lexing/token_type.hpp"
+#include "lexing/token_kind.hpp"
 #include "parsing/parser.hpp"
 #include "utils/log.hpp"
 
@@ -42,7 +42,7 @@ int main(const int argc, char *argv[]) {
     const std::vector<Token> tokens = lexer.tokenize();
 
     for (const auto &token : tokens) {
-        std::cout << token_type_to_string(token.type()) << ": `" << token.lexeme() << "`\n";
+        std::cout << token_kind_to_string(token.kind()) << ": `" << token.lexeme() << "`\n";
     }
 
     auto parser = Parser(tokens);
