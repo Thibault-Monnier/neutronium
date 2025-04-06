@@ -155,21 +155,31 @@ class Parser {
         return {identifier, value};
     }
 
+    AST::Exit parse_exit() {
+        consume(TokenKind::EXIT);
+        const AST::Expression exitCode = parse_expression();
+
+        return {exitCode};
+    }
+
     AST::Statement parse_statement() {
         const Token& firstToken = peek();
 
-        if (firstToken.kind() == TokenKind::LET) {
-            return parse_assignment();
+        switch (firstToken.kind()) {
+            case TokenKind::LET:
+                return parse_assignment();
+            case TokenKind::EXIT:
+                return parse_exit();
+            default:
+                const std::string errorMessage =
+                    std::format("Invalid token at index {} -> got {} at beginning of statement",
+                                currentIndex_, token_kind_to_string(firstToken.kind()));
+                const std::string hintMessage = std::format("Lexeme -> {}", firstToken.lexeme());
+                print_error(errorMessage);
+                print_hint(hintMessage);
+
+                exit(EXIT_FAILURE);
         }
-
-        const std::string errorMessage =
-            std::format("Invalid token at index {} -> got {} at beginning of statement",
-                        currentIndex_, token_kind_to_string(firstToken.kind()));
-        const std::string hintMessage = std::format("Lexeme -> {}", firstToken.lexeme());
-        print_error(errorMessage);
-        print_hint(hintMessage);
-
-        exit(EXIT_FAILURE);
     }
 
    public:

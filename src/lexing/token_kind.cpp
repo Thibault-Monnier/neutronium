@@ -30,6 +30,8 @@ std::string token_kind_to_string(const TokenKind kind) {
 
         case TokenKind::LET:
             return "LET";
+        case TokenKind::EXIT:
+            return "EXIT";
 
         case TokenKind::END_OF_FILE:
             return "END_OF_FILE";

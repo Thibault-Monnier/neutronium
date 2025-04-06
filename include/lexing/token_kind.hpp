@@ -22,6 +22,7 @@ enum class TokenKind : uint8_t {
 
     // Keywords
     LET,
+    EXIT,
 
     // Miscellaneous
     END_OF_FILE,

@@ -98,6 +98,10 @@ void log_node(const std::shared_ptr<ASTNode>& node, const std::string& prefix, b
                     } else if constexpr (std::is_same_v<T, Expression>) {
                         std::cout << stmtPrefix << "└── Expression\n";
                         log_expression(s, stmtPrefix + "    ", true);
+                    } else if constexpr (std::is_same_v<T, Exit>) {
+                        std::cout << stmtPrefix << "└── Exit\n";
+                        std::cout << stmtPrefix << "    └── ExitCode\n";
+                        log_expression(s.exitCode_, stmtPrefix + "        ", true);
                     }
                 },
                 stmt);

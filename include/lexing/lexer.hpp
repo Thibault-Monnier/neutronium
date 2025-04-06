@@ -26,6 +26,7 @@ class Lexer {
 
     std::optional<TokenKind> get_keyword_kind() {
         if (buffer_ == "let") return TokenKind::LET;
+        if (buffer_ == "exit") return TokenKind::EXIT;
 
         return std::nullopt;
     }

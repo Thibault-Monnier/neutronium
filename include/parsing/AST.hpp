@@ -22,6 +22,7 @@ enum NodeKind : uint8_t {
     IDENTIFIER,
     BINARY_EXPRESSION,
     ASSIGNMENT,
+    EXIT,
     PROGRAM,
 };
 
@@ -46,8 +47,7 @@ struct Identifier : ASTNode {
 
 using PrimaryExpression = std::variant<NumberLiteral, Identifier>;
 struct BinaryExpression;
-using Expression =
-    std::variant<std::shared_ptr<BinaryExpression>, PrimaryExpression>;
+using Expression = std::variant<std::shared_ptr<BinaryExpression>, PrimaryExpression>;
 
 struct BinaryExpression : ASTNode {
     BinaryExpression() : ASTNode{BINARY_EXPRESSION}, operator_(UNDEFINED_OPERATOR) {}
@@ -70,7 +70,13 @@ struct Assignment : ASTNode {
     Expression value_;
 };
 
-using Statement = std::variant<Assignment>;
+struct Exit : ASTNode {
+    Exit(Expression exitCode) : ASTNode{EXIT}, exitCode_(std::move(exitCode)) {}
+
+    Expression exitCode_;
+};
+
+using Statement = std::variant<Assignment, Exit>;
 struct Program : ASTNode {
     Program() : ASTNode{PROGRAM} {}
 

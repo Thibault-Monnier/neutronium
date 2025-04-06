@@ -31,8 +31,11 @@ The following grammar is the one currently supported by the parser.
 program ::= { statement? '\n' }
 
 statement ::= assignment
+            | exit-statement
 
-assignment ::= identifier '=' expression
+assignment ::= 'let' identifier '=' expression
+
+exit-statement ::= 'exit' expression
 
 expression ::= additive-expression
 
