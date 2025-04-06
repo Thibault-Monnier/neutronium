@@ -9,6 +9,27 @@
 #include "utils/log.hpp"
 
 class Lexer {
+   private:
+    size_t currentIndex_ = 0;
+    const std::string source_;
+    std::string buffer_;
+
+    [[nodiscard]] bool is_at_end() const { return currentIndex_ >= source_.length(); }
+    [[nodiscard]] char peek() const { return is_at_end() ? '\0' : source_.at(currentIndex_); }
+    char advance() { return source_.at(currentIndex_++); }
+
+    void read_to_buffer_while(auto predicate) {
+        while (!is_at_end() && predicate(peek())) {
+            buffer_ += advance();
+        }
+    }
+
+    std::optional<TokenKind> get_keyword_kind() {
+        if (buffer_ == "let") return TokenKind::LET;
+
+        return std::nullopt;
+    }
+
    public:
     explicit Lexer(std::string source) : source_(std::move(source)) {}
 
@@ -24,7 +45,13 @@ class Lexer {
 
             } else if (std::isalpha(c)) {
                 read_to_buffer_while(isalnum);
-                tokens.emplace_back(TokenKind::IDENTIFIER, buffer_);
+                auto keywordKind = get_keyword_kind();
+                if (keywordKind) {
+                    tokens.emplace_back(*keywordKind, buffer_);
+                } else {
+                    tokens.emplace_back(TokenKind::IDENTIFIER, buffer_);
+                }
+
             } else if (std::isdigit(c)) {
                 read_to_buffer_while(isdigit);
                 tokens.emplace_back(TokenKind::NUMBER_LITERAL, buffer_);
@@ -53,20 +80,5 @@ class Lexer {
 
         tokens.emplace_back(TokenKind::END_OF_FILE, "");
         return tokens;
-    }
-
-   private:
-    size_t currentIndex_ = 0;
-    const std::string source_;
-    std::string buffer_;
-
-    [[nodiscard]] bool is_at_end() const { return currentIndex_ >= source_.length(); }
-    [[nodiscard]] char peek() const { return is_at_end() ? '\0' : source_.at(currentIndex_); }
-    char advance() { return source_.at(currentIndex_++); }
-
-    void read_to_buffer_while(auto predicate) {
-        while (!is_at_end() && predicate(peek())) {
-            buffer_ += advance();
-        }
     }
 };

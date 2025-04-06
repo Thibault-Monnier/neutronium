@@ -9,6 +9,7 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "IDENTIFIER";
         case TokenKind::NUMBER_LITERAL:
             return "NUMBER_LITERAL";
+
         case TokenKind::PLUS:
             return "PLUS";
         case TokenKind::MINUS:
@@ -19,12 +20,17 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "DIVIDE";
         case TokenKind::EQUAL:
             return "EQUAL";
+
         case TokenKind::LEFT_PAREN:
             return "LEFT_PAREN";
         case TokenKind::RIGHT_PAREN:
             return "RIGHT_PAREN";
         case TokenKind::NEWLINE:
             return "NEWLINE";
+
+        case TokenKind::LET:
+            return "LET";
+
         case TokenKind::END_OF_FILE:
             return "END_OF_FILE";
         default:

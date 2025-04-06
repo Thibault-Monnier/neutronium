@@ -147,6 +147,7 @@ class Parser {
     }
 
     AST::Assignment parse_assignment() {
+        consume(TokenKind::LET);
         const std::string identifier = consume(TokenKind::IDENTIFIER).lexeme();
         consume(TokenKind::EQUAL);
         const AST::Expression value = parse_expression();
@@ -157,7 +158,7 @@ class Parser {
     AST::Statement parse_statement() {
         const Token& firstToken = peek();
 
-        if (firstToken.kind() == TokenKind::IDENTIFIER) {
+        if (firstToken.kind() == TokenKind::LET) {
             return parse_assignment();
         }
 
