@@ -82,7 +82,7 @@ void log_expression(const Expression& expr, const std::string& prefix, bool isLa
 }
 
 void log_node(const std::shared_ptr<ASTNode>& node, const std::string& prefix, bool isLast) {
-    if (node->kind_ == PROGRAM) {
+    if (node->kind_ == NodeKind::PROGRAM) {
         auto program = std::dynamic_pointer_cast<Program>(node);
         if (!program) return;
 

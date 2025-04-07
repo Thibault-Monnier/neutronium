@@ -2,7 +2,9 @@
 
 #include <cstdlib>
 #include <format>
+#include <functional>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -40,11 +42,11 @@ class Parser {
         return token;
     }
 
-    const bool statement_end() const {
+    const bool is_statement_terminator() const {
         return peek().kind() == TokenKind::NEWLINE || peek().kind() == TokenKind::END_OF_FILE;
     }
 
-    AST::Expression parse_primary_expression() {
+    AST::Expression parse_primary_expression() {  // NOLINT(*-no-recursion)
         const Token& token = peek();
 
         switch (token.kind()) {
@@ -71,7 +73,7 @@ class Parser {
         }
     }
 
-    AST::Expression parse_unary_expression() {
+    AST::Expression parse_unary_expression() {  // NOLINT(*-no-recursion)
         const Token& token = peek();
 
         const AST::Operator op = AST::token_kind_to_AST_operator(token.kind());
@@ -84,15 +86,15 @@ class Parser {
         return parse_primary_expression();
     }
 
-    AST::Expression parse_multiplicative_expression() {
-        AST::Expression left = parse_unary_expression();
-
+    AST::Expression parse_binary_expression(const std::function<AST::Expression()>& parseOperand,
+                                            const std::set<AST::Operator>& allowedOps) {
+        AST::Expression left = parseOperand();
         while (true) {
             const Token& token = peek();
             const AST::Operator op = AST::token_kind_to_AST_operator(token.kind());
-            if (op == AST::Operator::MULTIPLY || op == AST::Operator::DIVIDE) {
+            if (allowedOps.contains(op)) {
                 consume(token.kind());
-                const AST::Expression right = parse_unary_expression();
+                const AST::Expression right = parseOperand();
                 left = std::make_shared<AST::BinaryExpression>(left, op, right);
             } else {
                 break;
@@ -102,22 +104,14 @@ class Parser {
         return left;
     }
 
+    AST::Expression parse_multiplicative_expression() {
+        return parse_binary_expression([this]() { return parse_unary_expression(); },
+                                       std::set{AST::Operator::MULTIPLY, AST::Operator::DIVIDE});
+    }
+
     AST::Expression parse_additive_expression() {
-        AST::Expression left = parse_multiplicative_expression();
-
-        while (true) {
-            const Token& token = peek();
-            const AST::Operator op = AST::token_kind_to_AST_operator(token.kind());
-            if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT) {
-                consume(token.kind());
-                const AST::Expression right = parse_multiplicative_expression();
-                left = std::make_shared<AST::BinaryExpression>(left, op, right);
-            } else {
-                break;
-            }
-        }
-
-        return left;
+        return parse_binary_expression([this]() { return parse_multiplicative_expression(); },
+                                       std::set{AST::Operator::ADD, AST::Operator::SUBTRACT});
     }
 
     AST::Expression parse_expression() { return parse_additive_expression(); }
@@ -163,7 +157,13 @@ class Parser {
         while (peek().kind() != TokenKind::END_OF_FILE) {
             while (peek().kind() == TokenKind::NEWLINE) consume(TokenKind::NEWLINE);
             if (peek().kind() == TokenKind::END_OF_FILE) break;
+
             program.statements_.emplace_back(parse_statement());
+            if (!is_statement_terminator()) {
+                auto msg = std::format("Invalid token at index {} -> expected statement terminator, got {}",
+                                       currentIndex_, token_kind_to_string(peek().kind()));
+                abort(msg);
+            }
         }
 
         const std::shared_ptr<AST::ASTNode> programPtr =

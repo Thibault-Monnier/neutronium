@@ -9,7 +9,7 @@
 
 namespace AST {
 
-enum Operator : uint8_t {
+enum class Operator : uint8_t {
     UNDEFINED_OPERATOR,
     ADD,
     SUBTRACT,
@@ -17,7 +17,7 @@ enum Operator : uint8_t {
     DIVIDE,
 };
 
-enum NodeKind : uint8_t {
+enum class NodeKind : uint8_t {
     NUMBER_LITERAL,
     IDENTIFIER,
     UNARY_EXPRESSION,
@@ -35,13 +35,13 @@ struct ASTNode {
 };
 
 struct NumberLiteral : ASTNode {
-    NumberLiteral(int value) : ASTNode{NUMBER_LITERAL}, value_(value) {}
+    NumberLiteral(int value) : ASTNode{NodeKind::NUMBER_LITERAL}, value_(value) {}
 
     int value_;
 };
 
 struct Identifier : ASTNode {
-    Identifier(std::string name) : ASTNode{IDENTIFIER}, name_(std::move(name)) {}
+    Identifier(std::string name) : ASTNode{NodeKind::IDENTIFIER}, name_(std::move(name)) {}
 
     std::string name_;
 };
@@ -55,16 +55,16 @@ using Expression = std::variant<std::shared_ptr<BinaryExpression>, std::shared_p
 
 struct UnaryExpression : ASTNode {
     UnaryExpression(Operator op, Expression operand)
-        : ASTNode{UNARY_EXPRESSION}, operator_(op), operand_(std::move(operand)) {}
+        : ASTNode{NodeKind::UNARY_EXPRESSION}, operator_(op), operand_(std::move(operand)) {}
 
     Operator operator_;
     Expression operand_;
 };
 
 struct BinaryExpression : ASTNode {
-    BinaryExpression() : ASTNode{BINARY_EXPRESSION}, operator_(UNDEFINED_OPERATOR) {}
+    BinaryExpression() : ASTNode{NodeKind::BINARY_EXPRESSION}, operator_(Operator::UNDEFINED_OPERATOR) {}
     BinaryExpression(Expression left, Operator op, Expression right)
-        : ASTNode{BINARY_EXPRESSION},
+        : ASTNode{NodeKind::BINARY_EXPRESSION},
           left_(std::move(left)),
           operator_(op),
           right_(std::move(right)) {}
@@ -76,21 +76,21 @@ struct BinaryExpression : ASTNode {
 
 struct Assignment : ASTNode {
     Assignment(std::string identifier, Expression value)
-        : ASTNode{ASSIGNMENT}, identifier_(std::move(identifier)), value_(std::move(value)) {}
+        : ASTNode{NodeKind::ASSIGNMENT}, identifier_(std::move(identifier)), value_(std::move(value)) {}
 
     std::string identifier_;
     Expression value_;
 };
 
 struct Exit : ASTNode {
-    Exit(Expression exitCode) : ASTNode{EXIT}, exitCode_(std::move(exitCode)) {}
+    Exit(Expression exitCode) : ASTNode{NodeKind::EXIT}, exitCode_(std::move(exitCode)) {}
 
     Expression exitCode_;
 };
 
 using Statement = std::variant<Assignment, Exit>;
 struct Program : ASTNode {
-    Program() : ASTNode{PROGRAM} {}
+    Program() : ASTNode{NodeKind::PROGRAM} {}
 
     std::vector<Statement> statements_;
 };
