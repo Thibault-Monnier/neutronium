@@ -16,6 +16,14 @@ class Parser {
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
 
+    [[noreturn]] void abort(const std::string& errorMessage, const std::string& hintMessage = "") {
+        print_error(errorMessage);
+        if (!hintMessage.empty()) {
+            print_hint(hintMessage);
+        }
+        exit(EXIT_FAILURE);
+    }
+
     const Token& peek() const { return tokens_.at(currentIndex_); }
 
     const Token& consume(const TokenKind expected) {
@@ -25,8 +33,7 @@ class Parser {
             const std::string errorMessage =
                 std::format("Invalid token at index {} -> expected {}, got {}", currentIndex_,
                             token_kind_to_string(expected), token_kind_to_string(token.kind()));
-            print_error(errorMessage);
-            exit(EXIT_FAILURE);
+            abort(errorMessage);
         }
 
         currentIndex_++;
@@ -37,114 +44,83 @@ class Parser {
         return peek().kind() == TokenKind::NEWLINE || peek().kind() == TokenKind::END_OF_FILE;
     }
 
-    AST::Expression parse_expression_recursive(size_t startIndex, size_t endIndex) {
-        if (startIndex >= endIndex) {
-            const std::string errorMessage = std::format(
-                "Invalid expression at index {} -> start index is greater than end index",
-                currentIndex_);
-            const std::string hintMessage =
-                std::format("Start index: {}, End index: {}", startIndex, endIndex);
-            print_error(errorMessage);
-            print_hint(hintMessage);
-            exit(EXIT_FAILURE);
-        }
+    AST::Expression parse_primary_expression() {
+        const Token& token = peek();
 
-        if (endIndex - startIndex == 1) {
-            const Token token = tokens_.at(startIndex);
-            switch (token.kind()) {
-                case TokenKind::NUMBER_LITERAL:
-                    return AST::NumberLiteral(std::stoi(token.lexeme()));
-                case TokenKind::IDENTIFIER:
-                    return AST::Identifier(token.lexeme());
-                default:
-                    const std::string errorMessage =
-                        std::format("Invalid token in primary expression at index {} -> got {}",
-                                    currentIndex_, token_kind_to_string(token.kind()));
-                    print_error(errorMessage);
-                    exit(EXIT_FAILURE);
-            }
-        }
+        switch (token.kind()) {
+            case TokenKind::NUMBER_LITERAL:
+                consume(TokenKind::NUMBER_LITERAL);
+                return AST::NumberLiteral(std::stoi(token.lexeme()));
 
-        if (tokens_.at(startIndex).kind() == TokenKind::LEFT_PAREN &&
-            tokens_.at(endIndex - 1).kind() == TokenKind::RIGHT_PAREN) {
-            int parenCount = 1;
-            size_t i = startIndex + 1;
-            while (parenCount > 0 && i < endIndex) {
-                if (tokens_.at(i).kind() == TokenKind::LEFT_PAREN) parenCount++;
-                if (tokens_.at(i).kind() == TokenKind::RIGHT_PAREN) parenCount--;
-                i++;
+            case TokenKind::IDENTIFIER:
+                consume(TokenKind::IDENTIFIER);
+                return AST::Identifier(token.lexeme());
+
+            case TokenKind::LEFT_PAREN: {
+                consume(TokenKind::LEFT_PAREN);
+                const AST::Expression inner = parse_expression();
+                consume(TokenKind::RIGHT_PAREN);
+                return inner;
             }
 
-            if (i == endIndex) {
-                return parse_expression_recursive(startIndex + 1, endIndex - 1);
-            }
+            default:
+                const std::string errorMessage = std::format(
+                    "Invalid token at beginning of primary expression at index {} -> got {}",
+                    currentIndex_, token_kind_to_string(token.kind()));
+                abort(errorMessage);
         }
-
-        constexpr std::array operatorsByPrecedenceLevel = {
-            AST::Operator::ADD, AST::Operator::SUBTRACT, AST::Operator::MULTIPLY,
-            AST::Operator::DIVIDE};
-
-        for (auto op : operatorsByPrecedenceLevel) {
-            for (size_t i = endIndex - 1; i >= startIndex; i--) {
-                const Token token = tokens_.at(i);
-
-                if (token.kind() == TokenKind::RIGHT_PAREN) {
-                    size_t parenCount = 1;
-                    while (parenCount > 0 && i < endIndex) {
-                        i--;
-                        if (tokens_.at(i).kind() == TokenKind::LEFT_PAREN) parenCount--;
-                        if (tokens_.at(i).kind() == TokenKind::RIGHT_PAREN) parenCount++;
-                    }
-
-                    if (parenCount != 0) {
-                        const std::string errorMessage =
-                            std::format("Unmatched parentheses at index {}", i);
-                        const std::string hintMessage =
-                            std::format("Start index: {}, End index: {}", startIndex, endIndex);
-                        print_error(errorMessage);
-                        print_hint(hintMessage);
-                        exit(EXIT_FAILURE);
-                    }
-
-                    continue;
-                }
-
-                if (token.kind() == TokenKind::LEFT_PAREN) {
-                    const std::string errorMessage =
-                        std::format("Unmatched parentheses at index {}", i);
-                    const std::string hintMessage =
-                        std::format("Start index: {}, End index: {}", startIndex, endIndex);
-                    print_error(errorMessage);
-                    print_hint(hintMessage);
-                    exit(EXIT_FAILURE);
-                }
-
-                if (AST::token_kind_to_AST_operator(token.kind()) == op) {
-                    return std::make_shared<AST::BinaryExpression>(
-                        parse_expression_recursive(startIndex, i), op,
-                        parse_expression_recursive(i + 1, endIndex));
-                }
-            }
-        }
-
-        const std::string errorMessage =
-            std::format("Missing operator in binary expression at index {}", startIndex);
-        const std::string hintMessage =
-            std::format("Start index: {}, End index: {}", startIndex, endIndex);
-        print_error(errorMessage);
-        print_hint(hintMessage);
-        exit(EXIT_FAILURE);
     }
 
-    AST::Expression parse_expression() {
-        size_t const startIndex = currentIndex_;
+    AST::Expression parse_unary_expression() {
+        const Token& token = peek();
 
-        while (!statement_end()) {
-            consume(peek().kind());
+        const AST::Operator op = AST::token_kind_to_AST_operator(token.kind());
+        if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT) {
+            consume(token.kind());
+            const AST::Expression operand = parse_primary_expression();
+            return std::make_shared<AST::UnaryExpression>(op, operand);
         }
 
-        return parse_expression_recursive(startIndex, currentIndex_);
+        return parse_primary_expression();
     }
+
+    AST::Expression parse_multiplicative_expression() {
+        AST::Expression left = parse_unary_expression();
+
+        while (true) {
+            const Token& token = peek();
+            const AST::Operator op = AST::token_kind_to_AST_operator(token.kind());
+            if (op == AST::Operator::MULTIPLY || op == AST::Operator::DIVIDE) {
+                consume(token.kind());
+                const AST::Expression right = parse_unary_expression();
+                left = std::make_shared<AST::BinaryExpression>(left, op, right);
+            } else {
+                break;
+            }
+        }
+
+        return left;
+    }
+
+    AST::Expression parse_additive_expression() {
+        AST::Expression left = parse_multiplicative_expression();
+
+        while (true) {
+            const Token& token = peek();
+            const AST::Operator op = AST::token_kind_to_AST_operator(token.kind());
+            if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT) {
+                consume(token.kind());
+                const AST::Expression right = parse_multiplicative_expression();
+                left = std::make_shared<AST::BinaryExpression>(left, op, right);
+            } else {
+                break;
+            }
+        }
+
+        return left;
+    }
+
+    AST::Expression parse_expression() { return parse_additive_expression(); }
 
     AST::Assignment parse_assignment() {
         consume(TokenKind::LET);
@@ -175,10 +151,7 @@ class Parser {
                     std::format("Invalid token at index {} -> got {} at beginning of statement",
                                 currentIndex_, token_kind_to_string(firstToken.kind()));
                 const std::string hintMessage = std::format("Lexeme -> {}", firstToken.lexeme());
-                print_error(errorMessage);
-                print_hint(hintMessage);
-
-                exit(EXIT_FAILURE);
+                abort(errorMessage, hintMessage);
         }
     }
 

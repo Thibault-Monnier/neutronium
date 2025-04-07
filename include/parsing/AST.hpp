@@ -20,6 +20,7 @@ enum Operator : uint8_t {
 enum NodeKind : uint8_t {
     NUMBER_LITERAL,
     IDENTIFIER,
+    UNARY_EXPRESSION,
     BINARY_EXPRESSION,
     ASSIGNMENT,
     EXIT,
@@ -46,8 +47,19 @@ struct Identifier : ASTNode {
 };
 
 using PrimaryExpression = std::variant<NumberLiteral, Identifier>;
+
+struct UnaryExpression;
 struct BinaryExpression;
-using Expression = std::variant<std::shared_ptr<BinaryExpression>, PrimaryExpression>;
+using Expression = std::variant<std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>,
+                                PrimaryExpression>;
+
+struct UnaryExpression : ASTNode {
+    UnaryExpression(Operator op, Expression operand)
+        : ASTNode{UNARY_EXPRESSION}, operator_(op), operand_(std::move(operand)) {}
+
+    Operator operator_;
+    Expression operand_;
+};
 
 struct BinaryExpression : ASTNode {
     BinaryExpression() : ASTNode{BINARY_EXPRESSION}, operator_(UNDEFINED_OPERATOR) {}

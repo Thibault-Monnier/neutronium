@@ -67,6 +67,15 @@ void log_expression(const Expression& expr, const std::string& prefix, bool isLa
                 std::cout << newPrefix << "├── Operator: " << operator_to_string(exprPtr->operator_)
                           << "\n";
                 log_expression(exprPtr->right_, newPrefix, true);
+            } else if constexpr (std::is_same_v<std::decay_t<T0>,
+                                          std::shared_ptr<UnaryExpression>>) {
+                std::cout << prefix << branch << "UnaryExpression\n";
+
+                const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
+
+                std::cout << newPrefix << "├── Operator: " << operator_to_string(exprPtr->operator_)
+                          << "\n";
+                log_expression(exprPtr->operand_, newPrefix, true);
             }
         },
         expr);

@@ -42,13 +42,18 @@ expression ::= additive-expression
 additive-expression ::= multiplicative-expression
                       | additive-expression ('+' | '-') multiplicative-expression
 
-multiplicative-expression ::= primary-expression
-                            | multiplicative-expression ('*' | '/') primary-expression
-                            
+multiplicative-expression ::= unary-expression
+                            | multiplicative-expression ('*' | '/') unary-expression
+
+unary-expression ::= primary-expression
+                   | unary-op primary-expression
+
 primary-expression ::= literal
                      | identifier
                      | '(' expression ')'
-                           
+
+unary-op ::= '-' | '+'
+
 identifier ::= [a-zA-Z][a-zA-Z0-9]*
 
 literal ::= integer-literal
