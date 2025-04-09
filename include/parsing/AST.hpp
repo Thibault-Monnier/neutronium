@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <string>
-#include <variant>
 #include <vector>
 
 #include "lexing/token_kind.hpp"
@@ -27,79 +26,92 @@ enum class NodeKind : uint8_t {
     PROGRAM,
 };
 
-struct ASTNode {
-    explicit ASTNode(NodeKind kind) : kind_(kind) {}
-    virtual ~ASTNode() = default;
+struct Node {
+    explicit Node(NodeKind kind) : kind_(kind) {}
+    virtual ~Node() = default;
 
     const NodeKind kind_;
 };
 
-struct NumberLiteral : ASTNode {
-    NumberLiteral(int value) : ASTNode{NodeKind::NUMBER_LITERAL}, value_(value) {}
+struct Expression : Node {
+    using Node::Node;
+};
+
+struct PrimaryExpression : Expression {
+    using Expression::Expression;
+};
+
+struct NumberLiteral : PrimaryExpression {
+    NumberLiteral(int value) : PrimaryExpression{NodeKind::NUMBER_LITERAL}, value_(value) {}
 
     int value_;
 };
 
-struct Identifier : ASTNode {
-    Identifier(std::string name) : ASTNode{NodeKind::IDENTIFIER}, name_(std::move(name)) {}
+struct Identifier : PrimaryExpression {
+    Identifier(std::string name)
+        : PrimaryExpression{NodeKind::IDENTIFIER}, name_(std::move(name)) {}
 
     std::string name_;
 };
 
-using PrimaryExpression = std::variant<NumberLiteral, Identifier>;
-
-struct UnaryExpression;
-struct BinaryExpression;
-using Expression = std::variant<std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>,
-                                PrimaryExpression>;
-
-struct UnaryExpression : ASTNode {
-    UnaryExpression(Operator op, Expression operand)
-        : ASTNode{NodeKind::UNARY_EXPRESSION}, operator_(op), operand_(std::move(operand)) {}
+struct UnaryExpression : Expression {
+    UnaryExpression(Operator op, std::unique_ptr<Expression> operand)
+        : Expression{NodeKind::UNARY_EXPRESSION}, operator_(op), operand_(std::move(operand)) {}
 
     Operator operator_;
-    Expression operand_;
+    std::unique_ptr<Expression> operand_;
 };
 
-struct BinaryExpression : ASTNode {
-    BinaryExpression() : ASTNode{NodeKind::BINARY_EXPRESSION}, operator_(Operator::UNDEFINED_OPERATOR) {}
-    BinaryExpression(Expression left, Operator op, Expression right)
-        : ASTNode{NodeKind::BINARY_EXPRESSION},
+struct BinaryExpression : Expression {
+    BinaryExpression()
+        : Expression{NodeKind::BINARY_EXPRESSION}, operator_(Operator::UNDEFINED_OPERATOR) {}
+    BinaryExpression(std::unique_ptr<Expression> left, Operator op,
+                     std::unique_ptr<Expression> right)
+        : Expression{NodeKind::BINARY_EXPRESSION},
           left_(std::move(left)),
           operator_(op),
           right_(std::move(right)) {}
 
-    Expression left_;
+    std::unique_ptr<Expression> left_;
     Operator operator_;
-    Expression right_;
+    std::unique_ptr<Expression> right_;
 };
 
-struct Assignment : ASTNode {
-    Assignment(std::string identifier, Expression value)
-        : ASTNode{NodeKind::ASSIGNMENT}, identifier_(std::move(identifier)), value_(std::move(value)) {}
+struct Statement : Node {
+    using Node::Node;
+};
+
+struct Assignment final : Statement {
+    Assignment(std::string identifier, std::unique_ptr<Expression> value)
+        : Statement{NodeKind::ASSIGNMENT},
+          identifier_(std::move(identifier)),
+          value_(std::move(value)) {}
 
     std::string identifier_;
-    Expression value_;
+    std::unique_ptr<Expression> value_;
 };
 
-struct Exit : ASTNode {
-    Exit(Expression exitCode) : ASTNode{NodeKind::EXIT}, exitCode_(std::move(exitCode)) {}
+struct Exit final : Statement {
+    Exit(std::unique_ptr<Expression> exitCode)
+        : Statement{NodeKind::EXIT}, exitCode_(std::move(exitCode)) {}
 
-    Expression exitCode_;
+    std::unique_ptr<Expression> exitCode_;
 };
 
-using Statement = std::variant<Assignment, Exit>;
-struct Program : ASTNode {
-    Program() : ASTNode{NodeKind::PROGRAM} {}
+struct Program final : Node {
+    Program() : Node{NodeKind::PROGRAM} {}
 
-    std::vector<Statement> statements_;
+    void append_statement(std::unique_ptr<Statement> statement) {
+        statements_.emplace_back(std::move(statement));
+    }
+
+    std::vector<std::unique_ptr<Statement>> statements_;
 };
 
 Operator token_kind_to_AST_operator(const TokenKind tokenKind);
 std::string operator_to_string(Operator op);
 
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast);
-void log_node(const std::shared_ptr<ASTNode>& node, const std::string& prefix = "",
-              bool isLast = true);
+void log_ast(const Program& node, const std::string& prefix = "", bool isLast = true);
 
 }  // namespace AST
