@@ -4,12 +4,32 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <variant>
 #include <vector>
 
 #include "lexing/token_kind.hpp"
 
 namespace AST {
+
+std::string node_kind_to_string(NodeKind kind) {
+    switch (kind) {
+        case NodeKind::NUMBER_LITERAL:
+            return "NUMBER_LITERAL";
+        case NodeKind::IDENTIFIER:
+            return "IDENTIFIER";
+        case NodeKind::UNARY_EXPRESSION:
+            return "UNARY_EXPRESSION";
+        case NodeKind::BINARY_EXPRESSION:
+            return "BINARY_EXPRESSION";
+        case NodeKind::ASSIGNMENT:
+            return "ASSIGNMENT";
+        case NodeKind::EXIT:
+            return "EXIT";
+        case NodeKind::PROGRAM:
+            return "PROGRAM";
+        default:
+            throw std::invalid_argument("Invalid NodeKind passed to AST::node_kind_to_string");
+    }
+}
 
 Operator token_kind_to_AST_operator(const TokenKind tokenKind) {
     switch (tokenKind) {

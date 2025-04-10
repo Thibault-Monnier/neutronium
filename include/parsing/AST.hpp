@@ -106,6 +106,7 @@ struct Program final : Node {
     std::vector<std::unique_ptr<Statement>> statements_;
 };
 
+std::string node_kind_to_string(NodeKind kind);
 Operator token_kind_to_AST_operator(const TokenKind tokenKind);
 std::string operator_to_string(Operator op);
 
