@@ -9,11 +9,11 @@
 namespace AST {
 
 enum class Operator : uint8_t {
-    UNDEFINED_OPERATOR,
     ADD,
     SUBTRACT,
     MULTIPLY,
     DIVIDE,
+    UNDEFINED_OPERATOR,
 };
 
 enum class NodeKind : uint8_t {
@@ -63,8 +63,6 @@ struct UnaryExpression : Expression {
 };
 
 struct BinaryExpression : Expression {
-    BinaryExpression()
-        : Expression{NodeKind::BINARY_EXPRESSION}, operator_(Operator::UNDEFINED_OPERATOR) {}
     BinaryExpression(std::unique_ptr<Expression> left, Operator op,
                      std::unique_ptr<Expression> right)
         : Expression{NodeKind::BINARY_EXPRESSION},
