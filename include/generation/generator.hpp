@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "parsing/AST.hpp"
+#include "unordered_map"
 #include "utils/log.hpp"
 
 class Generator {
@@ -14,12 +15,14 @@ class Generator {
     int currentStackOffset_ = 0;
     int currentStackSize_ = 0;
 
+    std::unordered_map<std::string, int> variableStackOffset_;
+
     void allocate_stack(const int bytes) {
         output_ << "    sub rsp, " << bytes << "\n";
         currentStackSize_ += bytes;
     }
 
-    int allocate_variable(const int value, const int size = 8) {
+    int allocate_variable(const std::string& name, const int value, const int size = 8) {
         if (currentStackOffset_ + size > currentStackSize_) {
             allocate_stack(size * 8);  // Allocate a little more to do less runtime allocations
         }
@@ -38,24 +41,43 @@ class Generator {
         }
 
         currentStackOffset_ += size;
-        output_ << "    mov " << movDirective << " [rbp - " << currentStackOffset_ << "], "
-                << value << "\n";
+        output_ << "    mov " << movDirective << " [rbp - " << currentStackOffset_ << "], " << value
+                << "\n";
 
-        return currentStackOffset_ - size;
+        if (!variableStackOffset_.emplace(name, currentStackOffset_).second) {
+            const std::string errorMessage =
+                std::format("The following variable cannot be redeclared: a", name);
+            print_error(errorMessage);
+            exit(EXIT_FAILURE);
+        }
+
+        return currentStackOffset_;
+    }
+
+    int get_variable_stack_offset(const std::string& name) {
+        const auto itr = variableStackOffset_.find(name);
+        if (itr == variableStackOffset_.end()) {
+            const std::string errorMessage = std::format("Use of undeclared variable: {}", name);
+            print_error(errorMessage);
+            exit(EXIT_FAILURE);
+        }
+
+        return itr->second;
     }
 
     void generate_exit(const AST::Exit& exitStmt) {
         output_ << "    mov rax, 60\n";  // syscall: exit
         output_ << "    mov rdi, ";      // exit code
-        const int exitCode = static_cast<AST::NumberLiteral*>(exitStmt.exitCode_.get())->value_;
-        output_ << "[rbp - 8]" << "\n";
+        const int exitCode =
+            get_variable_stack_offset(static_cast<AST::Identifier*>(exitStmt.exitCode_.get())->name_);
+        output_ << "[rbp - " << exitCode << "]\n";
         output_ << "    syscall\n";
     }
 
     void generate_assignment(const AST::Assignment& assignmentStmt) {
         const AST::NumberLiteral value =
             *static_cast<AST::NumberLiteral*>(assignmentStmt.value_.get());
-        const int pos = allocate_variable(value.value_, 8);
+        const int pos = allocate_variable(assignmentStmt.identifier_, value.value_, 8);
     }
 
    public:
