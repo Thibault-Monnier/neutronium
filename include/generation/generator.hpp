@@ -153,7 +153,12 @@ class Generator {
     void generate_assignment(const AST::Assignment& assignmentStmt) {
         const AST::Expression& value = *assignmentStmt.value_.get();
         evaluate_expression_to_rax(value);
-        stack_allocate_variable(assignmentStmt.identifier_, "rax");
+        if (assignmentStmt.isDeclaration_) {
+            stack_allocate_variable(assignmentStmt.identifier_, "rax");
+        } else {
+            const int stackOffset = get_variable_stack_offset(assignmentStmt.identifier_);
+            output_ << "    mov [rbp - " << stackOffset << "], rax\n";
+        }
     }
 
     void generate_stmt(const AST::Statement& stmt) {

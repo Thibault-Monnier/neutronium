@@ -31,9 +31,12 @@ The following grammar is the one currently supported by the parser.
 program ::= { statement? '\n' }
 
 statement ::= assignment
+            | declaration-assignment
             | exit-statement
 
-assignment ::= 'let' identifier '=' expression
+assignment ::= identifier '=' expression
+
+declaration-assignment ::= 'let' identifier '=' expression
 
 exit-statement ::= 'exit' expression
 

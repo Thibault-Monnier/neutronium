@@ -80,13 +80,15 @@ struct Statement : Node {
 };
 
 struct Assignment final : Statement {
-    Assignment(std::string identifier, std::unique_ptr<Expression> value)
+    Assignment(std::string identifier, std::unique_ptr<Expression> value, const bool isDeclaration)
         : Statement{NodeKind::ASSIGNMENT},
           identifier_(std::move(identifier)),
-          value_(std::move(value)) {}
+          value_(std::move(value)),
+          isDeclaration_(isDeclaration) {}
 
     std::string identifier_;
     std::unique_ptr<Expression> value_;
+    bool isDeclaration_;
 };
 
 struct Exit final : Statement {

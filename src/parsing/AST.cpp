@@ -77,12 +77,14 @@ void log_expression(const Expression& expr, const std::string& prefix, bool isLa
             const auto& binaryExpr = static_cast<const BinaryExpression&>(expr);
             std::cout << prefix << branch << "BinaryExpression\n";
             log_expression(*binaryExpr.left_, newPrefix, false);
-            std::cout << newPrefix << "├── Operator: " << operator_to_string(binaryExpr.operator_) << "\n";
+            std::cout << newPrefix << "├── Operator: " << operator_to_string(binaryExpr.operator_)
+                      << "\n";
             log_expression(*binaryExpr.right_, newPrefix, true);
         } else if (expr.kind_ == NodeKind::UNARY_EXPRESSION) {
             const auto& unaryExpr = static_cast<const UnaryExpression&>(expr);
             std::cout << prefix << branch << "UnaryExpression\n";
-            std::cout << newPrefix << "├── Operator: " << operator_to_string(unaryExpr.operator_) << "\n";
+            std::cout << newPrefix << "├── Operator: " << operator_to_string(unaryExpr.operator_)
+                      << "\n";
             log_expression(*unaryExpr.operand_, newPrefix, true);
         }
     }
@@ -101,7 +103,11 @@ void log_ast(const Program& programNode, const std::string& prefix, bool isLast)
 
         if (stmt->kind_ == NodeKind::ASSIGNMENT) {
             const auto& assignment = *static_cast<const Assignment*>(stmt.get());
-            std::cout << stmtPrefix << "├── Assignment\n";
+            if (assignment.isDeclaration_) {
+                std::cout << stmtPrefix << "├── Declaration Assignment\n";
+            } else {
+                std::cout << stmtPrefix << "├── Assignment\n";
+            }
             std::cout << stmtPrefix << "│   ├── Identifier: " << assignment.identifier_ << "\n";
             std::cout << stmtPrefix << "│   └── Value\n";
             log_expression(*assignment.value_, stmtPrefix + "│       ", true);

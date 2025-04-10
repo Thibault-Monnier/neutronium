@@ -118,12 +118,14 @@ class Parser {
 
     std::unique_ptr<AST::Expression> parse_expression() { return parse_additive_expression(); }
 
-    std::unique_ptr<AST::Assignment> parse_assignment() {
-        consume(TokenKind::LET);
+    std::unique_ptr<AST::Assignment> parse_assignment(const bool isDeclaration) {
+        if (isDeclaration) {
+            consume(TokenKind::LET);
+        }
         const std::string identifier = consume(TokenKind::IDENTIFIER).lexeme();
         consume(TokenKind::EQUAL);
         auto value = parse_expression();
-        return std::make_unique<AST::Assignment>(identifier, std::move(value));
+        return std::make_unique<AST::Assignment>(identifier, std::move(value), isDeclaration);
     }
 
     std::unique_ptr<AST::Exit> parse_exit() {
@@ -137,7 +139,9 @@ class Parser {
 
         switch (firstToken.kind()) {
             case TokenKind::LET:
-                return parse_assignment();
+                return parse_assignment(true);
+            case TokenKind::IDENTIFIER:
+                return parse_assignment(false);
             case TokenKind::EXIT:
                 return parse_exit();
             default:
