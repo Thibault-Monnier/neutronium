@@ -107,7 +107,7 @@ struct Program final : Node {
 };
 
 std::string node_kind_to_string(NodeKind kind);
-Operator token_kind_to_AST_operator(const TokenKind tokenKind);
+Operator token_kind_to_operator(TokenKind tokenKind);
 std::string operator_to_string(Operator op);
 
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast);

@@ -10,7 +10,7 @@
 
 namespace AST {
 
-std::string node_kind_to_string(NodeKind kind) {
+std::string node_kind_to_string(const NodeKind kind) {
     switch (kind) {
         case NodeKind::NUMBER_LITERAL:
             return "NUMBER_LITERAL";
@@ -31,7 +31,7 @@ std::string node_kind_to_string(NodeKind kind) {
     }
 }
 
-Operator token_kind_to_AST_operator(const TokenKind tokenKind) {
+Operator token_kind_to_operator(const TokenKind tokenKind) {
     switch (tokenKind) {
         case TokenKind::PLUS:
             return Operator::ADD;
@@ -77,14 +77,12 @@ void log_expression(const Expression& expr, const std::string& prefix, bool isLa
             const auto& binaryExpr = static_cast<const BinaryExpression&>(expr);
             std::cout << prefix << branch << "BinaryExpression\n";
             log_expression(*binaryExpr.left_, newPrefix, false);
-            std::cout << newPrefix << "├── Operator: " << operator_to_string(binaryExpr.operator_)
-                      << "\n";
+            std::cout << newPrefix << "├── Operator: " << operator_to_string(binaryExpr.operator_) << "\n";
             log_expression(*binaryExpr.right_, newPrefix, true);
         } else if (expr.kind_ == NodeKind::UNARY_EXPRESSION) {
             const auto& unaryExpr = static_cast<const UnaryExpression&>(expr);
             std::cout << prefix << branch << "UnaryExpression\n";
-            std::cout << newPrefix << "├── Operator: " << operator_to_string(unaryExpr.operator_)
-                      << "\n";
+            std::cout << newPrefix << "├── Operator: " << operator_to_string(unaryExpr.operator_) << "\n";
             log_expression(*unaryExpr.operand_, newPrefix, true);
         }
     }

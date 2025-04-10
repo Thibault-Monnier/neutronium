@@ -76,7 +76,7 @@ class Parser {
     std::unique_ptr<AST::Expression> parse_unary_expression() {  // NOLINT(*-no-recursion)
         const Token& token = peek();
 
-        const AST::Operator op = AST::token_kind_to_AST_operator(token.kind());
+        const AST::Operator op = AST::token_kind_to_operator(token.kind());
         if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT) {
             consume(token.kind());
             auto operand = parse_primary_expression();
@@ -92,11 +92,12 @@ class Parser {
         auto left = parseOperand();
         while (true) {
             const Token& token = peek();
-            const AST::Operator op = AST::token_kind_to_AST_operator(token.kind());
+            const AST::Operator op = AST::token_kind_to_operator(token.kind());
             if (allowedOps.contains(op)) {
                 consume(token.kind());
                 auto right = parseOperand();
-                left = std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right));
+                left =
+                    std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right));
             } else {
                 break;
             }

@@ -19,52 +19,44 @@ class Generator {
 
     int tempVariablesCount_ = 0;
 
-    std::unordered_map<std::string, int> variableStackOffset_;
+    std::unordered_map<std::string, int> variablesStackOffset_;
 
     void allocate_stack(const int bytes) {
         output_ << "    sub rsp, " << bytes << "\n";
         currentStackSize_ += bytes;
     }
 
-    void allocate_variable(const std::string& name, const std::string& asmOperand, const int size) {
-        if (currentStackOffset_ + size > currentStackSize_) {
-            allocate_stack(size * 8);  // Allocate a little more to do less runtime allocations
+    int stack_allocate_variable(const std::string& name, const std::string& source) {
+        constexpr int sizeBytes = 8;
+
+        currentStackOffset_ += sizeBytes;
+        if (currentStackOffset_ > currentStackSize_) {
+            allocate_stack(currentStackOffset_ - currentStackSize_ +
+                           56);  // Allocate more for less runtime allocations
         }
 
-        std::string movDirective;
-        if (size == 1)
-            movDirective = "byte";
-        else if (size == 2)
-            movDirective = "word";
-        else if (size == 4)
-            movDirective = "dword";
-        else if (size == 8)
-            movDirective = "qword";
-        else {
-            throw std::invalid_argument(std::format("Cannot allocate a {} byte variable", size));
-        }
+        output_ << "    mov qword [rbp - " << currentStackOffset_ << "], " << source << "\n";
 
-        currentStackOffset_ += size;
-        output_ << "    mov " << movDirective << " [rbp - " << currentStackOffset_ << "], "
-                << asmOperand << "\n";
-
-        if (!variableStackOffset_.emplace(name, currentStackOffset_).second) {
+        const auto [_, isNewVariable] = variablesStackOffset_.emplace(name, currentStackOffset_);
+        if (!isNewVariable) {
             const std::string errorMessage =
-                std::format("The following variable cannot be redeclared: {}", name);
+                std::format("Redeclaration of the following variable: {}", name);
             print_error(errorMessage);
             exit(EXIT_FAILURE);
         }
+
+        return currentStackOffset_;
     }
 
     int get_variable_stack_offset(const std::string& name) {
-        const auto itr = variableStackOffset_.find(name);
-        if (itr == variableStackOffset_.end()) {
+        const auto iterator = variablesStackOffset_.find(name);
+        if (iterator == variablesStackOffset_.end()) {
             const std::string errorMessage = std::format("Use of undeclared variable: {}", name);
             print_error(errorMessage);
             exit(EXIT_FAILURE);
         }
 
-        return itr->second;
+        return iterator->second;
     }
 
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit) {
@@ -76,9 +68,9 @@ class Generator {
         output_ << "    mov rax, [rbp - " << stackOffset << "]\n";
     }
 
-    void evaluate_unary_expression_to_rax(
-        const AST::UnaryExpression& unaryExpr) {  // NOLINT(*-no-recursion)
+    void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr) {
         evaluate_expression_to_rax(*unaryExpr.operand_);
+
         switch (unaryExpr.operator_) {
             case AST::Operator::ADD:
                 break;
@@ -86,36 +78,36 @@ class Generator {
                 output_ << "    neg rax\n";
                 break;
             default:
-                throw std::invalid_argument(
-                    std::format("Cannot evaluate unary expression with operator {}",
-                                AST::operator_to_string(unaryExpr.operator_)));
+                throw std::invalid_argument("Received unary expression with operator {}" +
+                                            AST::operator_to_string(unaryExpr.operator_));
         }
     }
 
-    void evaluate_binary_expression_to_rax(
-        const AST::BinaryExpression& binaryExpr) {  // NOLINT(*-no-recursion)
-        evaluate_expression_to_rax(*binaryExpr.right_);
-        const std::string name =
+    void evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr) {
+        // First evaluate right side to prevent an additional move in case of division, because the
+        // numerator has to be in rax
+        const std::string rhsVariableName =
             std::format(".temp{}", tempVariablesCount_++);  // Starts with '.' to prevent conflicts
                                                             // with source-code variables
-        allocate_variable(name, "rax", 8);
+        evaluate_expression_to_rax(*binaryExpr.right_);
+        const int rhsVariableStackOffset = stack_allocate_variable(rhsVariableName, "rax");
 
         evaluate_expression_to_rax(*binaryExpr.left_);
 
         switch (binaryExpr.operator_) {
             case AST::Operator::ADD:
-                output_ << "    add rax, [rbp - " << get_variable_stack_offset(name) << "]\n";
+                output_ << "    add rax, [rbp - " << rhsVariableStackOffset << "]\n";
                 break;
             case AST::Operator::SUBTRACT:
-                output_ << "    sub rax, [rbp - " << get_variable_stack_offset(name) << "]\n";
+                output_ << "    sub rax, [rbp - " << rhsVariableStackOffset << "]\n";
                 break;
             case AST::Operator::MULTIPLY:
-                output_ << "    imul rax, [rbp - " << get_variable_stack_offset(name) << "]\n";
+                output_ << "    imul rax, [rbp - " << rhsVariableStackOffset << "]\n";
                 break;
             case AST::Operator::DIVIDE:
-                output_ << "    mov rbx, [rbp - " << get_variable_stack_offset(name) << "]\n";
+                output_ << "    mov rbx, [rbp - " << rhsVariableStackOffset << "]\n";
                 output_ << "    cqo\n";
-                output_ << "    idiv rbx\n";  // The left-side is already in rax
+                output_ << "    idiv rbx\n";
                 break;
             default:
                 throw std::invalid_argument("Invalid operator in binary expression, got " +
@@ -159,9 +151,27 @@ class Generator {
     }
 
     void generate_assignment(const AST::Assignment& assignmentStmt) {
-        const AST::Expression& expr = *assignmentStmt.value_.get();
-        evaluate_expression_to_rax(expr);
-        allocate_variable(assignmentStmt.identifier_, "rax", 8);
+        const AST::Expression& value = *assignmentStmt.value_.get();
+        evaluate_expression_to_rax(value);
+        stack_allocate_variable(assignmentStmt.identifier_, "rax");
+    }
+
+    void generate_stmt(const AST::Statement& stmt) {
+        switch (stmt.kind_) {
+            case AST::NodeKind::EXIT: {
+                const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
+                generate_exit(exitStmt);
+                break;
+            }
+            case AST::NodeKind::ASSIGNMENT: {
+                const auto& assignmentStmt = static_cast<const AST::Assignment&>(stmt);
+                generate_assignment(assignmentStmt);
+                break;
+            }
+            default:
+                throw std::invalid_argument(std::format("Invalid statement kind, {}",
+                                                        AST::node_kind_to_string(stmt.kind_)));
+        }
     }
 
    public:
@@ -176,18 +186,7 @@ class Generator {
         output_ << "    push rbp\n";
         output_ << "    mov rbp, rsp\n\n";
 
-        for (const auto& stmt : program_.statements_) {
-            if (stmt->kind_ == AST::NodeKind::EXIT) {
-                const auto exitStmt = static_cast<AST::Exit*>(stmt.get());
-                generate_exit(*exitStmt);
-            } else if (stmt->kind_ == AST::NodeKind::ASSIGNMENT) {
-                const auto assignmentStmt = static_cast<AST::Assignment*>(stmt.get());
-                generate_assignment(*assignmentStmt);
-            } else {
-                print_error("Unknown statement kind");
-                exit(EXIT_FAILURE);
-            }
-        }
+        for (const auto& stmt : program_.statements_) generate_stmt(*stmt.get());
 
         return std::move(output_);
     }
