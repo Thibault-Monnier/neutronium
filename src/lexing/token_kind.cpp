@@ -25,8 +25,8 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "LEFT_PAREN";
         case TokenKind::RIGHT_PAREN:
             return "RIGHT_PAREN";
-        case TokenKind::NEWLINE:
-            return "NEWLINE";
+        case TokenKind::SEMICOLON:
+            return "SEMICOLON";
 
         case TokenKind::LET:
             return "LET";

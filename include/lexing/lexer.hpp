@@ -41,13 +41,11 @@ class Lexer {
             char c = advance();
             buffer_ = c;
 
-            if (std::isspace(c)) {
-                if (c == '\n') tokens.emplace_back(TokenKind::NEWLINE, "\n");
+            if (std::isspace(c)) continue;
 
-            } else if (std::isalpha(c)) {
+            if (std::isalpha(c)) {
                 read_to_buffer_while(isalnum);
-                auto keywordKind = get_keyword_kind();
-                if (keywordKind) {
+                if (auto keywordKind = get_keyword_kind()) {
                     tokens.emplace_back(*keywordKind, buffer_);
                 } else {
                     tokens.emplace_back(TokenKind::IDENTIFIER, buffer_);
@@ -70,6 +68,8 @@ class Lexer {
                 tokens.emplace_back(TokenKind::LEFT_PAREN, "(");
             } else if (c == ')') {
                 tokens.emplace_back(TokenKind::RIGHT_PAREN, ")");
+            } else if (c == ';') {
+                tokens.emplace_back(TokenKind::SEMICOLON, ";");
             } else {
                 const std::string errorMessage =
                     std::format("Invalid character at index {}, got '{}' at beginning of word",

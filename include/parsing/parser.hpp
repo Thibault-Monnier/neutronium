@@ -42,10 +42,6 @@ class Parser {
         return token;
     }
 
-    const bool is_statement_terminator() const {
-        return peek().kind() == TokenKind::NEWLINE || peek().kind() == TokenKind::END_OF_FILE;
-    }
-
     std::unique_ptr<AST::Expression> parse_primary_expression() {  // NOLINT(*-no-recursion)
         const Token& token = peek();
 
@@ -125,12 +121,14 @@ class Parser {
         const std::string identifier = consume(TokenKind::IDENTIFIER).lexeme();
         consume(TokenKind::EQUAL);
         auto value = parse_expression();
+        consume(TokenKind::SEMICOLON);
         return std::make_unique<AST::Assignment>(identifier, std::move(value), isDeclaration);
     }
 
     std::unique_ptr<AST::Exit> parse_exit() {
         consume(TokenKind::EXIT);
         auto exitCode = parse_expression();
+        consume(TokenKind::SEMICOLON);
         return std::make_unique<AST::Exit>(std::move(exitCode));
     }
 
@@ -159,17 +157,7 @@ class Parser {
     AST::Program parse() {
         auto program = AST::Program();
         while (peek().kind() != TokenKind::END_OF_FILE) {
-            while (peek().kind() == TokenKind::NEWLINE) consume(TokenKind::NEWLINE);
-            if (peek().kind() == TokenKind::END_OF_FILE) break;
-
             program.append_statement(parse_statement());
-
-            if (!is_statement_terminator()) {
-                auto msg = std::format(
-                    "Invalid token at index {} -> expected statement terminator, got {}",
-                    currentIndex_, token_kind_to_string(peek().kind()));
-                abort(msg);
-            }
         }
 
         AST::log_ast(program);

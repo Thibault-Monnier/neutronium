@@ -25,20 +25,20 @@ best parts of each of them.
 
 The following grammar is the one currently supported by the parser.
 
-> Newlines are significant, but all other whitespaces are ignored and are omitted from the following grammar.
+> Whitespaces are insignificant and are omitted from the following grammar.
 
 ```
-program ::= { statement? '\n' }
+program ::= { statement }*
 
 statement ::= assignment
             | declaration-assignment
             | exit-statement
 
-assignment ::= identifier '=' expression
+assignment ::= identifier '=' expression ';'
 
-declaration-assignment ::= 'let' identifier '=' expression
+declaration-assignment ::= 'let' identifier '=' expression ';'
 
-exit-statement ::= 'exit' expression
+exit-statement ::= 'exit' expression ';'
 
 expression ::= additive-expression
 
