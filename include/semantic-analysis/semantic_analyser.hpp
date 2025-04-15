@@ -33,6 +33,10 @@ class SemanticAnalyser {
         }
 
         std::cout << "\033[1;32mAnalysis completed successfully.\033[0m\n";
+
+        for (const auto& [name, type] : variablesTable_) {
+            std::cout << "Variable: " << name << ", Type: " << type_to_string(type) << '\n';
+        }
     }
 
    private:
@@ -66,6 +70,15 @@ class SemanticAnalyser {
         return it->second;
     }
 
+    Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr) {
+        const Type operandType = get_expression_type(*unaryExpr.operand_);
+        if (operandType != Type::INTEGER) {
+            abort("Invalid type for unary operation: expected integer, got " +
+                  type_to_string(operandType));
+        }
+        return Type::INTEGER;
+    }
+
     Type get_binary_expression_type(const AST::BinaryExpression& binaryExpr) {
         const Type leftType = get_expression_type(*binaryExpr.left_);
         const Type rightType = get_expression_type(*binaryExpr.right_);
@@ -80,7 +93,6 @@ class SemanticAnalyser {
                 abort("Invalid type for arithmetic operation: expected integer, got " +
                       type_to_string(leftType));
             }
-
             return Type::INTEGER;
         }
 
@@ -89,7 +101,6 @@ class SemanticAnalyser {
                 abort("Invalid type for comparison operation: expected integer, got " +
                       type_to_string(leftType));
             }
-
             return Type::BOOLEAN;
         }
 
@@ -106,7 +117,7 @@ class SemanticAnalyser {
             }
             case AST::NodeKind::UNARY_EXPRESSION: {
                 const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
-                return get_expression_type(*unaryExpr.operand_);
+                return get_unary_expression_type(unaryExpr);
             }
             case AST::NodeKind::BINARY_EXPRESSION: {
                 const auto& binaryExpr = static_cast<const AST::BinaryExpression&>(expr);
