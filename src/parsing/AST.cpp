@@ -132,7 +132,7 @@ void log_ast(const Program& programNode, const std::string& prefix, bool isLast)
             } else {
                 std::cout << stmtPrefix << "├── Assignment\n";
             }
-            std::cout << stmtPrefix << "│   ├── Identifier: " << assignment.identifier_ << "\n";
+            std::cout << stmtPrefix << "│   ├── Identifier: " << assignment.identifier_->name_ << "\n";
             std::cout << stmtPrefix << "│   └── Value\n";
             log_expression(*assignment.value_, stmtPrefix + "│       ", true);
         } else if (stmt->kind_ == NodeKind::EXIT) {

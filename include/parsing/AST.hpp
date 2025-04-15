@@ -86,13 +86,14 @@ struct Statement : Node {
 };
 
 struct Assignment final : Statement {
-    Assignment(std::string identifier, std::unique_ptr<Expression> value, const bool isDeclaration)
+    Assignment(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value,
+               const bool isDeclaration)
         : Statement{NodeKind::ASSIGNMENT},
           identifier_(std::move(identifier)),
           value_(std::move(value)),
           isDeclaration_(isDeclaration) {}
 
-    std::string identifier_;
+    std::unique_ptr<Identifier> identifier_;
     std::unique_ptr<Expression> value_;
     bool isDeclaration_;
 };

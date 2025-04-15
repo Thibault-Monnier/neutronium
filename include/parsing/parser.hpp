@@ -132,11 +132,12 @@ class Parser {
         if (isDeclaration) {
             consume(TokenKind::LET);
         }
-        const std::string identifier = consume(TokenKind::IDENTIFIER).lexeme();
+        const std::string identifierName = consume(TokenKind::IDENTIFIER).lexeme();
+        auto identifier = std::make_unique<AST::Identifier>(identifierName);
         consume(TokenKind::EQUAL);
         auto value = parse_expression();
         consume(TokenKind::SEMICOLON);
-        return std::make_unique<AST::Assignment>(identifier, std::move(value), isDeclaration);
+        return std::make_unique<AST::Assignment>(std::move(identifier), std::move(value), isDeclaration);
     }
 
     std::unique_ptr<AST::Exit> parse_exit() {

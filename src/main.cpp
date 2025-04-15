@@ -12,6 +12,7 @@
 #include "lexing/token_kind.hpp"
 #include "parsing/parser.hpp"
 #include "utils/log.hpp"
+#include "semantic-analysis/semantic_analyser.hpp"
 
 int main(const int argc, char *argv[]) {
     if (argc != 2) {
@@ -44,9 +45,12 @@ int main(const int argc, char *argv[]) {
     }
 
     auto parser = Parser(tokens);
-    auto AST = parser.parse();
+    const AST::Program ast = parser.parse();
 
-    auto generator = Generator(std::move(AST));
+    auto semanticAnalyser = SemanticAnalyser(ast);
+    semanticAnalyser.analyse();
+
+    auto generator = Generator(ast);
     const auto assemblyCode = generator.generate();
     std::cout << assemblyCode.str() << '\n';
 
