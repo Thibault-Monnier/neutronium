@@ -12,7 +12,7 @@ enum class Type : uint8_t {
     BOOLEAN,
 };
 
-std::string type_to_string(Type type) {
+std::string type_to_string(const Type type) {
     switch (type) {
         case Type::INTEGER:
             return "integer";
@@ -39,6 +39,14 @@ class SemanticAnalyser {
     const AST::Program* AST_;
     std::unordered_map<std::string, Type> variablesTable_;
 
+    [[noreturn]] void abort(const std::string& errorMessage, const std::string& hintMessage = "") {
+        print_error(errorMessage);
+        if (!hintMessage.empty()) {
+            print_hint(hintMessage);
+        }
+        exit(EXIT_FAILURE);
+    }
+
     bool is_arithmetic_operator(const AST::Operator op) {
         return op == AST::Operator::ADD || op == AST::Operator::SUBTRACT ||
                op == AST::Operator::MULTIPLY || op == AST::Operator::DIVIDE;
@@ -53,8 +61,7 @@ class SemanticAnalyser {
     Type get_variable_type(const std::string& name) {
         const auto it = variablesTable_.find(name);
         if (it == variablesTable_.end()) {
-            print_error(std::format("Use of undeclared variable: `{}`", name));
-            exit(EXIT_FAILURE);
+            abort(std::format("Use of undeclared variable: `{}`", name));
         }
         return it->second;
     }
@@ -63,17 +70,15 @@ class SemanticAnalyser {
         const Type leftType = get_expression_type(*binaryExpr.left_);
         const Type rightType = get_expression_type(*binaryExpr.right_);
         if (leftType != rightType) {
-            print_error(std::format("Type mismatch in binary expression: left is {}, right is {}",
-                                    type_to_string(leftType), type_to_string(rightType)));
-            exit(EXIT_FAILURE);
+            abort(std::format("Type mismatch in binary expression: left is {}, right is {}",
+                              type_to_string(leftType), type_to_string(rightType)));
         }
 
         const AST::Operator op = binaryExpr.operator_;
         if (is_arithmetic_operator(op)) {
             if (leftType != Type::INTEGER) {
-                print_error("Invalid type for arithmetic operation: expected integer, got " +
-                            type_to_string(leftType));
-                exit(EXIT_FAILURE);
+                abort("Invalid type for arithmetic operation: expected integer, got " +
+                      type_to_string(leftType));
             }
 
             return Type::INTEGER;
@@ -81,9 +86,8 @@ class SemanticAnalyser {
 
         if (is_comparison_operator(op)) {
             if (leftType != Type::INTEGER) {
-                print_error("Invalid type for comparison operation: expected integer, got " +
-                            type_to_string(leftType));
-                exit(EXIT_FAILURE);
+                abort("Invalid type for comparison operation: expected integer, got " +
+                      type_to_string(leftType));
             }
 
             return Type::BOOLEAN;
@@ -116,16 +120,17 @@ class SemanticAnalyser {
     void analyse_declaration_assignment(const AST::Assignment& assignment) {
         const std::string& name = assignment.identifier_->name_;
         if (variablesTable_.contains(name)) {
-            print_error("Redeclaration of variable: " + name);
-            exit(EXIT_FAILURE);
+            abort("Redeclaration of variable: " + name);
         }
 
         const Type variableType = get_expression_type(*assignment.value_);
         if (variableType != Type::INTEGER) {
-            print_error(std::format("Invalid variable type: `{}` is declared as {}", name,
-                                    type_to_string(variableType)));
-            print_hint("Only integer type is allowed for variables");
-            exit(EXIT_FAILURE);
+            const std::string errorMessage =
+                std::format("Invalid variable type: `{}` is declared as {}", name,
+                            type_to_string(variableType));
+            const std::string hintMessage =
+                std::format("Only integer type is allowed for variables");
+            abort(errorMessage, hintMessage);
         }
 
         variablesTable_.emplace(name, variableType);
@@ -136,17 +141,15 @@ class SemanticAnalyser {
 
         const auto it = variablesTable_.find(name);
         if (it == variablesTable_.end()) {
-            print_error("Assignment to undeclared variable: " + name);
-            exit(EXIT_FAILURE);
+            abort("Assignment to undeclared variable: " + name);
         }
 
         const Type variableType = get_expression_type(*assignment.value_);
         if (variableType != it->second) {
-            print_error(
+            abort(
                 std::format("Type mismatch in assignment: variable `{}` is declared as {}, but "
                             "reassigned to {}",
                             name, type_to_string(it->second), type_to_string(variableType)));
-            exit(EXIT_FAILURE);
         }
     }
 
@@ -161,9 +164,8 @@ class SemanticAnalyser {
     void analyse_exit(const AST::Exit& exitStmt) {
         const Type exitType = get_expression_type(*exitStmt.exitCode_);
         if (exitType != Type::INTEGER) {
-            print_error("Invalid type for exit statement: expected integer, got " +
-                        type_to_string(exitType));
-            exit(EXIT_FAILURE);
+            abort("Invalid type for exit statement: expected integer, got " +
+                  type_to_string(exitType));
         }
     }
 
