@@ -43,6 +43,11 @@ class Lexer {
 
             if (std::isspace(c)) continue;
 
+            if (c == '#') {
+                while (!is_at_end() && peek() != '\n') advance();
+                continue;
+            }
+
             if (std::isalpha(c)) {
                 read_to_buffer_while(isalnum);
                 if (auto keywordKind = get_keyword_kind()) {
