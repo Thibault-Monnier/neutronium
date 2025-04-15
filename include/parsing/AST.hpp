@@ -119,6 +119,9 @@ std::string node_kind_to_string(NodeKind kind);
 Operator token_kind_to_operator(TokenKind tokenKind);
 std::string operator_to_string(Operator op);
 
+bool is_arithmetic_operator(Operator op);
+bool is_comparison_operator(Operator op);
+
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast);
 void log_ast(const Program& node, const std::string& prefix = "", bool isLast = true);
 

@@ -23,6 +23,8 @@ class Generator {
 
         for (const auto& stmt : program_->statements_) generate_stmt(*stmt.get());
 
+        std::cout << "\033[1;32mGeneration completed successfully.\033[0m\n";
+
         return std::move(output_);
     }
 
@@ -83,23 +85,34 @@ class Generator {
 
         evaluate_expression_to_rax(*binaryExpr.left_);
 
-        switch (binaryExpr.operator_) {
-            case AST::Operator::ADD:
-                output_ << "    add rax, [rbp - " << rhsVariableStackOffset << "]\n";
-                break;
-            case AST::Operator::SUBTRACT:
-                output_ << "    sub rax, [rbp - " << rhsVariableStackOffset << "]\n";
-                break;
-            case AST::Operator::MULTIPLY:
-                output_ << "    imul rax, [rbp - " << rhsVariableStackOffset << "]\n";
-                break;
-            case AST::Operator::DIVIDE:
+        const AST::Operator op = binaryExpr.operator_;
+
+        if (AST::is_arithmetic_operator(op)) {
+            if (op == AST::Operator::DIVIDE) {
                 output_ << "    mov rbx, [rbp - " << rhsVariableStackOffset << "]\n";
                 output_ << "    cqo\n";
                 output_ << "    idiv rbx\n";
-                break;
-            default:
-                throw std::invalid_argument("Invalid operator in binary expression");
+            } else {
+                const std::unordered_map<AST::Operator, std::string> arithmeticOperatorPrefixes = {
+                    {AST::Operator::ADD, "add"},
+                    {AST::Operator::SUBTRACT, "sub"},
+                    {AST::Operator::MULTIPLY, "imul"},
+                };
+
+                output_ << "    " << arithmeticOperatorPrefixes.at(op) << " rax, [rbp - "
+                        << rhsVariableStackOffset << "]\n";
+            }
+
+        } else if (AST::is_comparison_operator(op)) {
+            const std::unordered_map<AST::Operator, std::string> comparisonSuffixes = {
+                {AST::Operator::EQUALS, "e"},       {AST::Operator::NOT_EQUALS, "ne"},
+                {AST::Operator::LESS_THAN, "l"},    {AST::Operator::LESS_THAN_OR_EQUAL, "le"},
+                {AST::Operator::GREATER_THAN, "g"}, {AST::Operator::GREATER_THAN_OR_EQUAL, "ge"},
+            };
+
+            output_ << "    cmp rax, [rbp - " << rhsVariableStackOffset << "]\n";
+            output_ << "    set" << comparisonSuffixes.at(op) << " al\n";
+            output_ << "    movzx rax, al\n";
         }
     }
 

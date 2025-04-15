@@ -85,6 +85,17 @@ std::string operator_to_string(const Operator op) {
     }
 }
 
+bool is_arithmetic_operator(const Operator op) {
+    return op == Operator::ADD || op == Operator::SUBTRACT || op == Operator::MULTIPLY ||
+           op == Operator::DIVIDE;
+}
+
+bool is_comparison_operator(const Operator op) {
+    return op == Operator::EQUALS || op == Operator::NOT_EQUALS || op == Operator::LESS_THAN ||
+           op == Operator::LESS_THAN_OR_EQUAL || op == Operator::GREATER_THAN ||
+           op == Operator::GREATER_THAN_OR_EQUAL;
+}
+
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast) {
     std::string branch = isLast ? "└── " : "├── ";
 
@@ -132,7 +143,8 @@ void log_ast(const Program& programNode, const std::string& prefix, bool isLast)
             } else {
                 std::cout << stmtPrefix << "├── Assignment\n";
             }
-            std::cout << stmtPrefix << "│   ├── Identifier: " << assignment.identifier_->name_ << "\n";
+            std::cout << stmtPrefix << "│   ├── Identifier: " << assignment.identifier_->name_
+                      << "\n";
             std::cout << stmtPrefix << "│   └── Value\n";
             log_expression(*assignment.value_, stmtPrefix + "│       ", true);
         } else if (stmt->kind_ == NodeKind::EXIT) {

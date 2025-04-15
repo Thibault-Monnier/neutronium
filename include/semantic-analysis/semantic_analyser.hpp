@@ -51,17 +51,6 @@ class SemanticAnalyser {
         exit(EXIT_FAILURE);
     }
 
-    bool is_arithmetic_operator(const AST::Operator op) {
-        return op == AST::Operator::ADD || op == AST::Operator::SUBTRACT ||
-               op == AST::Operator::MULTIPLY || op == AST::Operator::DIVIDE;
-    }
-
-    bool is_comparison_operator(const AST::Operator op) {
-        return op == AST::Operator::EQUALS || op == AST::Operator::NOT_EQUALS ||
-               op == AST::Operator::LESS_THAN || op == AST::Operator::LESS_THAN_OR_EQUAL ||
-               op == AST::Operator::GREATER_THAN || op == AST::Operator::GREATER_THAN_OR_EQUAL;
-    }
-
     Type get_variable_type(const std::string& name) {
         const auto it = variablesTable_.find(name);
         if (it == variablesTable_.end()) {
@@ -135,13 +124,9 @@ class SemanticAnalyser {
         }
 
         const Type variableType = get_expression_type(*assignment.value_);
-        if (variableType != Type::INTEGER) {
-            const std::string errorMessage =
-                std::format("Invalid variable type: `{}` is declared as {}", name,
-                            type_to_string(variableType));
-            const std::string hintMessage =
-                std::format("Only integer type is allowed for variables");
-            abort(errorMessage, hintMessage);
+        if (variableType != Type::INTEGER && variableType != Type::BOOLEAN) {
+            abort(std::format("Invalid variable type: `{}` is declared as {}", name,
+                              type_to_string(variableType)));
         }
 
         variablesTable_.emplace(name, variableType);
