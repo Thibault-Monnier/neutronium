@@ -14,6 +14,8 @@ class Lexer {
     const std::string source_;
     std::string buffer_;
 
+    std::vector<Token> tokens_;
+
     [[nodiscard]] bool is_at_end() const { return currentIndex_ >= source_.length(); }
     [[nodiscard]] char peek() const { return is_at_end() ? '\0' : source_.at(currentIndex_); }
     char advance() { return source_.at(currentIndex_++); }
@@ -31,12 +33,37 @@ class Lexer {
         return std::nullopt;
     }
 
+    void lex_equal() {
+        if (peek() == '=') {
+            advance();
+            tokens_.emplace_back(TokenKind::EQUAL_EQUAL, "==");
+        } else {
+            tokens_.emplace_back(TokenKind::EQUAL, "=");
+        }
+    }
+
+    void lex_less_than() {
+        if (peek() == '=') {
+            advance();
+            tokens_.emplace_back(TokenKind::LESS_THAN_EQUAL, "<=");
+        } else {
+            tokens_.emplace_back(TokenKind::LESS_THAN, "<");
+        }
+    }
+
+    void lex_greater_than() {
+        if (peek() == '=') {
+            advance();
+            tokens_.emplace_back(TokenKind::GREATER_THAN_EQUAL, ">=");
+        } else {
+            tokens_.emplace_back(TokenKind::GREATER_THAN, ">");
+        }
+    }
+
    public:
     explicit Lexer(std::string source) : source_(std::move(source)) {}
 
     [[nodiscard]] std::vector<Token> tokenize() {
-        std::vector<Token> tokens;
-
         while (!is_at_end()) {
             char c = advance();
             buffer_ = c;
@@ -51,30 +78,37 @@ class Lexer {
             if (std::isalpha(c)) {
                 read_to_buffer_while(isalnum);
                 if (auto keywordKind = get_keyword_kind()) {
-                    tokens.emplace_back(*keywordKind, buffer_);
+                    tokens_.emplace_back(*keywordKind, buffer_);
                 } else {
-                    tokens.emplace_back(TokenKind::IDENTIFIER, buffer_);
+                    tokens_.emplace_back(TokenKind::IDENTIFIER, buffer_);
                 }
 
             } else if (std::isdigit(c)) {
                 read_to_buffer_while(isdigit);
-                tokens.emplace_back(TokenKind::NUMBER_LITERAL, buffer_);
+                tokens_.emplace_back(TokenKind::NUMBER_LITERAL, buffer_);
             } else if (c == '+') {
-                tokens.emplace_back(TokenKind::PLUS, "+");
+                tokens_.emplace_back(TokenKind::PLUS, "+");
             } else if (c == '-') {
-                tokens.emplace_back(TokenKind::MINUS, "-");
+                tokens_.emplace_back(TokenKind::MINUS, "-");
             } else if (c == '*') {
-                tokens.emplace_back(TokenKind::STAR, "*");
+                tokens_.emplace_back(TokenKind::STAR, "*");
             } else if (c == '/') {
-                tokens.emplace_back(TokenKind::SLASH, "/");
+                tokens_.emplace_back(TokenKind::SLASH, "/");
             } else if (c == '=') {
-                tokens.emplace_back(TokenKind::EQUAL, "=");
+                lex_equal();
+            } else if (c == '!' && peek() == '=') {
+                advance();
+                tokens_.emplace_back(TokenKind::NOT_EQUAL, "!=");
+            } else if (c == '<') {
+                lex_less_than();
+            } else if (c == '>') {
+                lex_greater_than();
             } else if (c == '(') {
-                tokens.emplace_back(TokenKind::LEFT_PAREN, "(");
+                tokens_.emplace_back(TokenKind::LEFT_PAREN, "(");
             } else if (c == ')') {
-                tokens.emplace_back(TokenKind::RIGHT_PAREN, ")");
+                tokens_.emplace_back(TokenKind::RIGHT_PAREN, ")");
             } else if (c == ';') {
-                tokens.emplace_back(TokenKind::SEMICOLON, ";");
+                tokens_.emplace_back(TokenKind::SEMICOLON, ";");
             } else {
                 const std::string errorMessage =
                     std::format("Invalid character at index {}, got '{}' at beginning of word",
@@ -84,7 +118,7 @@ class Lexer {
             }
         }
 
-        tokens.emplace_back(TokenKind::END_OF_FILE, "");
-        return tokens;
+        tokens_.emplace_back(TokenKind::END_OF_FILE, "");
+        return tokens_;
     }
 };

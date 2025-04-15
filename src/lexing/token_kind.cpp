@@ -20,6 +20,18 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "DIVIDE";
         case TokenKind::EQUAL:
             return "EQUAL";
+        case TokenKind::EQUAL_EQUAL:
+            return "EQUAL_EQUAL";
+        case TokenKind::NOT_EQUAL:
+            return "NOT_EQUAL";
+        case TokenKind::LESS_THAN:
+            return "LESS_THAN";
+        case TokenKind::LESS_THAN_EQUAL:
+            return "LESS_THAN_EQUAL";
+        case TokenKind::GREATER_THAN:
+            return "GREATER_THAN";
+        case TokenKind::GREATER_THAN_EQUAL:
+            return "GREATER_THAN_EQUAL";
 
         case TokenKind::LEFT_PAREN:
             return "LEFT_PAREN";

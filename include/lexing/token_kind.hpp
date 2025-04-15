@@ -14,6 +14,12 @@ enum class TokenKind : uint8_t {
     STAR,
     SLASH,
     EQUAL,
+    EQUAL_EQUAL,
+    NOT_EQUAL,
+    LESS_THAN,
+    LESS_THAN_EQUAL,
+    GREATER_THAN,
+    GREATER_THAN_EQUAL,
 
     // Delimiters
     LEFT_PAREN,

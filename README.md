@@ -43,7 +43,10 @@ exit-statement ::= 'exit' expression ';'
 
 comment ::= '#' { character }
 
-expression ::= additive-expression
+expression ::= relational-expression
+
+relational-expression ::= additive-expression
+                        | additive-expression ("==" | "!=" | "<" | "<=" | ">" | ">=") additive-expression
 
 additive-expression ::= multiplicative-expression
                       | additive-expression ('+' | '-') multiplicative-expression

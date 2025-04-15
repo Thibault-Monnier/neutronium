@@ -41,6 +41,18 @@ Operator token_kind_to_operator(const TokenKind tokenKind) {
             return Operator::MULTIPLY;
         case TokenKind::SLASH:
             return Operator::DIVIDE;
+        case TokenKind::EQUAL_EQUAL:
+            return Operator::EQUALS;
+        case TokenKind::NOT_EQUAL:
+            return Operator::NOT_EQUALS;
+        case TokenKind::LESS_THAN:
+            return Operator::LESS_THAN;
+        case TokenKind::LESS_THAN_EQUAL:
+            return Operator::LESS_THAN_OR_EQUAL;
+        case TokenKind::GREATER_THAN:
+            return Operator::GREATER_THAN;
+        case TokenKind::GREATER_THAN_EQUAL:
+            return Operator::GREATER_THAN_OR_EQUAL;
         default:
             return Operator::UNDEFINED_OPERATOR;
     }
@@ -56,6 +68,18 @@ std::string operator_to_string(const Operator op) {
             return "*";
         case Operator::DIVIDE:
             return "/";
+        case Operator::EQUALS:
+            return "==";
+        case Operator::NOT_EQUALS:
+            return "!=";
+        case Operator::LESS_THAN:
+            return "<";
+        case Operator::LESS_THAN_OR_EQUAL:
+            return "<=";
+        case Operator::GREATER_THAN:
+            return ">";
+        case Operator::GREATER_THAN_OR_EQUAL:
+            return ">=";
         default:
             throw std::invalid_argument("Invalid operator passed to AST::operator_to_string");
     }

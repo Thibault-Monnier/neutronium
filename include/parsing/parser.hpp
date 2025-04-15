@@ -84,7 +84,7 @@ class Parser {
 
     std::unique_ptr<AST::Expression> parse_binary_expression(
         const std::function<std::unique_ptr<AST::Expression>()>& parseOperand,
-        const std::set<AST::Operator>& allowedOps) {
+        const std::set<AST::Operator>& allowedOps, const bool allowMultiple) {
         auto left = parseOperand();
         while (true) {
             const Token& token = peek();
@@ -94,6 +94,10 @@ class Parser {
                 auto right = parseOperand();
                 left =
                     std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right));
+
+                if (!allowMultiple) {
+                    break;
+                }
             } else {
                 break;
             }
@@ -104,15 +108,25 @@ class Parser {
 
     std::unique_ptr<AST::Expression> parse_multiplicative_expression() {
         return parse_binary_expression([this]() { return parse_unary_expression(); },
-                                       std::set{AST::Operator::MULTIPLY, AST::Operator::DIVIDE});
+                                       std::set{AST::Operator::MULTIPLY, AST::Operator::DIVIDE},
+                                       true);
     }
 
     std::unique_ptr<AST::Expression> parse_additive_expression() {
         return parse_binary_expression([this]() { return parse_multiplicative_expression(); },
-                                       std::set{AST::Operator::ADD, AST::Operator::SUBTRACT});
+                                       std::set{AST::Operator::ADD, AST::Operator::SUBTRACT}, true);
     }
 
-    std::unique_ptr<AST::Expression> parse_expression() { return parse_additive_expression(); }
+    std::unique_ptr<AST::Expression> parse_relational_expression() {
+        return parse_binary_expression(
+            [this]() { return parse_additive_expression(); },
+            std::set{AST::Operator::EQUALS, AST::Operator::NOT_EQUALS, AST::Operator::LESS_THAN,
+                     AST::Operator::GREATER_THAN, AST::Operator::LESS_THAN_OR_EQUAL,
+                     AST::Operator::GREATER_THAN_OR_EQUAL},
+            false);
+    }
+
+    std::unique_ptr<AST::Expression> parse_expression() { return parse_relational_expression(); }
 
     std::unique_ptr<AST::Assignment> parse_assignment(const bool isDeclaration) {
         if (isDeclaration) {
