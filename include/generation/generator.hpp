@@ -36,6 +36,7 @@ class Generator {
     int currentStackSize_ = 0;
 
     int tempVariablesCount_ = 0;
+    int ifStmtsCount_ = 0;
 
     std::unordered_map<std::string, int> variablesStackOffset_;
 
@@ -61,6 +62,10 @@ class Generator {
 
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit) {
         output_ << "    mov rax, " << numberLit.value_ << "\n";
+    }
+
+    void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
+        output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
     }
 
     void move_identifier_to_rax(const AST::Identifier& identifier) {
@@ -123,6 +128,11 @@ class Generator {
                 move_number_lit_to_rax(numberLit);
                 break;
             }
+            case AST::NodeKind::BOOLEAN_LITERAL: {
+                const auto& booleanLit = static_cast<const AST::BooleanLiteral&>(expr);
+                move_boolean_lit_to_rax(booleanLit);
+                break;
+            }
             case AST::NodeKind::IDENTIFIER: {
                 const auto& identifier = static_cast<const AST::Identifier&>(expr);
                 move_identifier_to_rax(identifier);
@@ -143,13 +153,6 @@ class Generator {
         }
     }
 
-    void generate_exit(const AST::Exit& exitStmt) {
-        evaluate_expression_to_rax(*exitStmt.exitCode_);
-        output_ << "    mov rdi, rax\n";  // exit code
-        output_ << "    mov rax, 60\n";   // syscall: exit
-        output_ << "    syscall\n";
-    }
-
     void generate_assignment(const AST::Assignment& assignmentStmt) {
         const std::string& varName = assignmentStmt.identifier_->name_;
 
@@ -162,16 +165,37 @@ class Generator {
         }
     }
 
+    void generate_if_stmt(const AST::IfStatement& ifStmt) {
+        evaluate_expression_to_rax(*ifStmt.condition_);
+        const std::string endifLabel = std::format(".endif{}", ifStmtsCount_++);
+        output_ << "    cmp rax, 0\n";
+        output_ << "    je " << endifLabel << "\n";
+        generate_stmt(*ifStmt.body_);
+        output_ << endifLabel << ":\n";
+    }
+
+    void generate_exit(const AST::Exit& exitStmt) {
+        evaluate_expression_to_rax(*exitStmt.exitCode_);
+        output_ << "    mov rdi, rax\n";  // exit code
+        output_ << "    mov rax, 60\n";   // syscall: exit
+        output_ << "    syscall\n";
+    }
+
     void generate_stmt(const AST::Statement& stmt) {
         switch (stmt.kind_) {
-            case AST::NodeKind::EXIT: {
-                const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
-                generate_exit(exitStmt);
-                break;
-            }
             case AST::NodeKind::ASSIGNMENT: {
                 const auto& assignmentStmt = static_cast<const AST::Assignment&>(stmt);
                 generate_assignment(assignmentStmt);
+                break;
+            }
+            case AST::NodeKind::IF_STATEMENT: {
+                const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
+                generate_if_stmt(ifStmt);
+                break;
+            }
+            case AST::NodeKind::EXIT: {
+                const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
+                generate_exit(exitStmt);
                 break;
             }
             default:

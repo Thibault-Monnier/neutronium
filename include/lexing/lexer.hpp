@@ -27,7 +27,10 @@ class Lexer {
     }
 
     std::optional<TokenKind> get_keyword_kind() {
+        if (buffer_ == "true") return TokenKind::TRUE;
+        if (buffer_ == "false") return TokenKind::FALSE;
         if (buffer_ == "let") return TokenKind::LET;
+        if (buffer_ == "if") return TokenKind::IF;
         if (buffer_ == "exit") return TokenKind::EXIT;
 
         return std::nullopt;
@@ -107,6 +110,8 @@ class Lexer {
                 tokens_.emplace_back(TokenKind::LEFT_PAREN, "(");
             } else if (c == ')') {
                 tokens_.emplace_back(TokenKind::RIGHT_PAREN, ")");
+            } else if (c == ':') {
+                tokens_.emplace_back(TokenKind::COLON, ":");
             } else if (c == ';') {
                 tokens_.emplace_back(TokenKind::SEMICOLON, ";");
             } else {

@@ -86,8 +86,8 @@ class SemanticAnalyser {
         }
 
         if (is_comparison_operator(op)) {
-            if (leftType != Type::INTEGER) {
-                abort("Invalid type for comparison operation: expected integer, got " +
+            if (leftType != Type::INTEGER && leftType != Type::BOOLEAN) {
+                abort("Invalid type for comparison operation: expected integer or boolean, got " +
                       type_to_string(leftType));
             }
             return Type::BOOLEAN;
@@ -100,6 +100,8 @@ class SemanticAnalyser {
         switch (expr.kind_) {
             case AST::NodeKind::NUMBER_LITERAL:
                 return Type::INTEGER;
+            case AST::NodeKind::BOOLEAN_LITERAL:
+                return Type::BOOLEAN;
             case AST::NodeKind::IDENTIFIER: {
                 const auto& identifier = static_cast<const AST::Identifier&>(expr);
                 return get_variable_type(identifier.name_);
@@ -157,6 +159,15 @@ class SemanticAnalyser {
         }
     }
 
+    void analyse_if_statement(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
+        const Type conditionType = get_expression_type(*ifStmt.condition_);
+        if (conditionType != Type::BOOLEAN) {
+            abort("Invalid type for if statement condition: expected boolean, got " +
+                  type_to_string(conditionType));
+        }
+        analyse_statement(*ifStmt.body_);
+    }
+
     void analyse_exit(const AST::Exit& exitStmt) {
         const Type exitType = get_expression_type(*exitStmt.exitCode_);
         if (exitType != Type::INTEGER) {
@@ -165,11 +176,16 @@ class SemanticAnalyser {
         }
     }
 
-    void analyse_statement(const AST::Statement& stmt) {
+    void analyse_statement(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
         switch (stmt.kind_) {
             case AST::NodeKind::ASSIGNMENT: {
                 const auto& assignment = static_cast<const AST::Assignment&>(stmt);
                 analyse_assignment(assignment);
+                break;
+            }
+            case AST::NodeKind::IF_STATEMENT: {
+                const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
+                analyse_if_statement(ifStmt);
                 break;
             }
             case AST::NodeKind::EXIT: {

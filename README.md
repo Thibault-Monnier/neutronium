@@ -32,12 +32,15 @@ program ::= { statement }*
 
 statement ::= assignment
             | declaration-assignment
+            | if-statement
             | exit-statement
             | comment
 
 assignment ::= identifier '=' expression ';'
 
 declaration-assignment ::= 'let' identifier '=' expression ';'
+
+if-statement ::= 'if' expression ':' statement ';'
 
 exit-statement ::= 'exit' expression ';'
 

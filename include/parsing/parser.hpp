@@ -50,6 +50,13 @@ class Parser {
                 consume(TokenKind::NUMBER_LITERAL);
                 return std::make_unique<AST::NumberLiteral>(std::stoi(token.lexeme()));
 
+            case TokenKind::TRUE:
+                consume(TokenKind::TRUE);
+                return std::make_unique<AST::BooleanLiteral>(true);
+            case TokenKind::FALSE:
+                consume(TokenKind::FALSE);
+                return std::make_unique<AST::BooleanLiteral>(false);
+
             case TokenKind::IDENTIFIER:
                 consume(TokenKind::IDENTIFIER);
                 return std::make_unique<AST::Identifier>(token.lexeme());
@@ -137,7 +144,16 @@ class Parser {
         consume(TokenKind::EQUAL);
         auto value = parse_expression();
         consume(TokenKind::SEMICOLON);
-        return std::make_unique<AST::Assignment>(std::move(identifier), std::move(value), isDeclaration);
+        return std::make_unique<AST::Assignment>(std::move(identifier), std::move(value),
+                                                 isDeclaration);
+    }
+
+    std::unique_ptr<AST::IfStatement> parse_if_statement() {
+        consume(TokenKind::IF);
+        auto condition = parse_expression();
+        consume(TokenKind::COLON);
+        auto body = parse_statement();
+        return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body));
     }
 
     std::unique_ptr<AST::Exit> parse_exit() {
@@ -155,6 +171,8 @@ class Parser {
                 return parse_assignment(true);
             case TokenKind::IDENTIFIER:
                 return parse_assignment(false);
+            case TokenKind::IF:
+                return parse_if_statement();
             case TokenKind::EXIT:
                 return parse_exit();
             default:

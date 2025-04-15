@@ -24,16 +24,18 @@ enum class Operator : uint8_t {
 
 enum class NodeKind : uint8_t {
     NUMBER_LITERAL,
+    BOOLEAN_LITERAL,
     IDENTIFIER,
     UNARY_EXPRESSION,
     BINARY_EXPRESSION,
     ASSIGNMENT,
+    IF_STATEMENT,
     EXIT,
     PROGRAM,
 };
 
 struct Node {
-    explicit Node(NodeKind kind) : kind_(kind) {}
+    explicit Node(const NodeKind kind) : kind_(kind) {}
     virtual ~Node() = default;
 
     const NodeKind kind_;
@@ -47,28 +49,36 @@ struct PrimaryExpression : Expression {
     using Expression::Expression;
 };
 
-struct NumberLiteral : PrimaryExpression {
-    NumberLiteral(int value) : PrimaryExpression{NodeKind::NUMBER_LITERAL}, value_(value) {}
+struct NumberLiteral final : PrimaryExpression {
+    explicit NumberLiteral(const int value)
+        : PrimaryExpression{NodeKind::NUMBER_LITERAL}, value_(value) {}
 
-    int value_;
+    const int value_;
 };
 
-struct Identifier : PrimaryExpression {
-    Identifier(std::string name)
+struct BooleanLiteral final : PrimaryExpression {
+    explicit BooleanLiteral(const bool value)
+        : PrimaryExpression{NodeKind::BOOLEAN_LITERAL}, value_(value) {}
+
+    const bool value_;
+};
+
+struct Identifier final : PrimaryExpression {
+    explicit Identifier(std::string name)
         : PrimaryExpression{NodeKind::IDENTIFIER}, name_(std::move(name)) {}
 
-    std::string name_;
+    const std::string name_;
 };
 
-struct UnaryExpression : Expression {
+struct UnaryExpression final : Expression {
     UnaryExpression(Operator op, std::unique_ptr<Expression> operand)
         : Expression{NodeKind::UNARY_EXPRESSION}, operator_(op), operand_(std::move(operand)) {}
 
-    Operator operator_;
-    std::unique_ptr<Expression> operand_;
+    const Operator operator_;
+    const std::unique_ptr<Expression> operand_;
 };
 
-struct BinaryExpression : Expression {
+struct BinaryExpression final : Expression {
     BinaryExpression(std::unique_ptr<Expression> left, Operator op,
                      std::unique_ptr<Expression> right)
         : Expression{NodeKind::BINARY_EXPRESSION},
@@ -76,9 +86,9 @@ struct BinaryExpression : Expression {
           operator_(op),
           right_(std::move(right)) {}
 
-    std::unique_ptr<Expression> left_;
-    Operator operator_;
-    std::unique_ptr<Expression> right_;
+    const std::unique_ptr<Expression> left_;
+    const Operator operator_;
+    const std::unique_ptr<Expression> right_;
 };
 
 struct Statement : Node {
@@ -93,16 +103,26 @@ struct Assignment final : Statement {
           value_(std::move(value)),
           isDeclaration_(isDeclaration) {}
 
-    std::unique_ptr<Identifier> identifier_;
-    std::unique_ptr<Expression> value_;
-    bool isDeclaration_;
+    const std::unique_ptr<Identifier> identifier_;
+    const std::unique_ptr<Expression> value_;
+    const bool isDeclaration_;
+};
+
+struct IfStatement final : Statement {
+    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Statement> body)
+        : Statement{NodeKind::IF_STATEMENT},
+          condition_(std::move(condition)),
+          body_(std::move(body)) {}
+
+    const std::unique_ptr<Expression> condition_;
+    const std::unique_ptr<Statement> body_;
 };
 
 struct Exit final : Statement {
-    Exit(std::unique_ptr<Expression> exitCode)
+    explicit Exit(std::unique_ptr<Expression> exitCode)
         : Statement{NodeKind::EXIT}, exitCode_(std::move(exitCode)) {}
 
-    std::unique_ptr<Expression> exitCode_;
+    const std::unique_ptr<Expression> exitCode_;
 };
 
 struct Program final : Node {

@@ -37,11 +37,19 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "LEFT_PAREN";
         case TokenKind::RIGHT_PAREN:
             return "RIGHT_PAREN";
+        case TokenKind::COLON:
+            return "COLON";
         case TokenKind::SEMICOLON:
             return "SEMICOLON";
 
+        case TokenKind::TRUE:
+            return "TRUE";
+        case TokenKind::FALSE:
+            return "FALSE";
         case TokenKind::LET:
             return "LET";
+        case TokenKind::IF:
+            return "IF";
         case TokenKind::EXIT:
             return "EXIT";
 

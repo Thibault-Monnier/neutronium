@@ -24,10 +24,14 @@ enum class TokenKind : uint8_t {
     // Delimiters
     LEFT_PAREN,
     RIGHT_PAREN,
+    COLON,
     SEMICOLON,
 
     // Keywords
+    TRUE,
+    FALSE,
     LET,
+    IF,
     EXIT,
 
     // Miscellaneous

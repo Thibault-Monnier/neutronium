@@ -102,6 +102,10 @@ void log_expression(const Expression& expr, const std::string& prefix, bool isLa
     if (expr.kind_ == NodeKind::NUMBER_LITERAL) {
         const NumberLiteral numberLit = static_cast<const NumberLiteral&>(expr);
         std::cout << prefix << branch << "NumberLiteral: " << numberLit.value_ << "\n";
+    } else if (expr.kind_ == NodeKind::BOOLEAN_LITERAL) {
+        const BooleanLiteral booleanLit = static_cast<const BooleanLiteral&>(expr);
+        std::cout << prefix << branch
+                  << "BooleanLiteral: " << (booleanLit.value_ ? "true" : "false") << "\n";
     } else if (expr.kind_ == NodeKind::IDENTIFIER) {
         const Identifier identifier = static_cast<const Identifier&>(expr);
         std::cout << prefix << branch << "Identifier: " << identifier.name_ << "\n";
@@ -147,6 +151,10 @@ void log_ast(const Program& programNode, const std::string& prefix, bool isLast)
                       << "\n";
             std::cout << stmtPrefix << "│   └── Value\n";
             log_expression(*assignment.value_, stmtPrefix + "│       ", true);
+        } else if (stmt->kind_ == NodeKind::IF_STATEMENT) {
+            const auto& ifStmt = *static_cast<const IfStatement*>(stmt.get());
+            std::cout << stmtPrefix << "├── IfStatement\n";
+            log_expression(*ifStmt.condition_, stmtPrefix + "│   ", false);
         } else if (stmt->kind_ == NodeKind::EXIT) {
             const auto& exit = *static_cast<const Exit*>(stmt.get());
             std::cout << stmtPrefix << "└── Exit\n";
