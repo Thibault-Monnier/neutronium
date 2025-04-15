@@ -140,6 +140,8 @@ Operator token_kind_to_operator(TokenKind tokenKind);
 std::string operator_to_string(Operator op);
 
 bool is_arithmetic_operator(Operator op);
+bool is_equality_operator(Operator op);
+bool is_relational_operator(Operator op);
 bool is_comparison_operator(Operator op);
 
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast);

@@ -90,10 +90,17 @@ bool is_arithmetic_operator(const Operator op) {
            op == Operator::DIVIDE;
 }
 
+bool is_equality_operator(const Operator op) {
+    return op == Operator::EQUALS || op == Operator::NOT_EQUALS;
+}
+
+bool is_relational_operator(const Operator op) {
+    return op == Operator::LESS_THAN || op == Operator::LESS_THAN_OR_EQUAL ||
+           op == Operator::GREATER_THAN || op == Operator::GREATER_THAN_OR_EQUAL;
+}
+
 bool is_comparison_operator(const Operator op) {
-    return op == Operator::EQUALS || op == Operator::NOT_EQUALS || op == Operator::LESS_THAN ||
-           op == Operator::LESS_THAN_OR_EQUAL || op == Operator::GREATER_THAN ||
-           op == Operator::GREATER_THAN_OR_EQUAL;
+    return is_equality_operator(op) || is_relational_operator(op);
 }
 
 void log_expression(const Expression& expr, const std::string& prefix, const bool isLast) {

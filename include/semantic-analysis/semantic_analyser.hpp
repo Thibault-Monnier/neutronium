@@ -77,7 +77,7 @@ class SemanticAnalyser {
         }
 
         const AST::Operator op = binaryExpr.operator_;
-        if (is_arithmetic_operator(op)) {
+        if (AST::is_arithmetic_operator(op)) {
             if (leftType != Type::INTEGER) {
                 abort("Invalid type for arithmetic operation: expected integer, got " +
                       type_to_string(leftType));
@@ -85,9 +85,17 @@ class SemanticAnalyser {
             return Type::INTEGER;
         }
 
-        if (is_comparison_operator(op)) {
+        if (AST::is_equality_operator(op)) {
             if (leftType != Type::INTEGER && leftType != Type::BOOLEAN) {
-                abort("Invalid type for comparison operation: expected integer or boolean, got " +
+                abort("Invalid type for equality operation: expected integer or boolean, got " +
+                      type_to_string(leftType));
+            }
+            return Type::BOOLEAN;
+        }
+
+        if (AST::is_relational_operator(op)) {
+            if (leftType != Type::INTEGER) {
+                abort("Invalid type for relational operation: expected integer, got " +
                       type_to_string(leftType));
             }
             return Type::BOOLEAN;
