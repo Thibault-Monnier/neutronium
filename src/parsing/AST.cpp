@@ -96,8 +96,8 @@ bool is_comparison_operator(const Operator op) {
            op == Operator::GREATER_THAN_OR_EQUAL;
 }
 
-void log_expression(const Expression& expr, const std::string& prefix, bool isLast) {
-    std::string branch = isLast ? "└── " : "├── ";
+void log_expression(const Expression& expr, const std::string& prefix, const bool isLast) {
+    const std::string branch = isLast ? "└── " : "├── ";
 
     if (expr.kind_ == NodeKind::NUMBER_LITERAL) {
         const NumberLiteral numberLit = static_cast<const NumberLiteral&>(expr);
@@ -129,38 +129,42 @@ void log_expression(const Expression& expr, const std::string& prefix, bool isLa
     }
 }
 
-void log_ast(const Program& programNode, const std::string& prefix, bool isLast) {
+void log_statement(const Statement& stmt, const std::string& prefix, const bool isLast) {
+    std::cout << prefix << (isLast ? "└── " : "├── ") << "Statement\n";
+    const std::string stmtPrefix = prefix + (isLast ? "    " : "│   ");
+
+    if (stmt.kind_ == NodeKind::ASSIGNMENT) {
+        const auto& assignment = *static_cast<const Assignment*>(&stmt);
+        if (assignment.isDeclaration_) {
+            std::cout << stmtPrefix << "├── Declaration Assignment\n";
+        } else {
+            std::cout << stmtPrefix << "├── Assignment\n";
+        }
+        std::cout << stmtPrefix << "│   ├── Identifier: " << assignment.identifier_->name_ << "\n";
+        std::cout << stmtPrefix << "│   └── Value\n";
+        log_expression(*assignment.value_, stmtPrefix + "│       ", true);
+    } else if (stmt.kind_ == NodeKind::IF_STATEMENT) {
+        const auto& ifStmt = *static_cast<const IfStatement*>(&stmt);
+        std::cout << stmtPrefix << "├── IfStatement\n";
+        std::cout << stmtPrefix << "│   ├── Condition\n";
+        log_expression(*ifStmt.condition_, stmtPrefix + "│   │   ", true);
+        std::cout << stmtPrefix << "│   └── Body\n";
+        log_statement(*ifStmt.body_, stmtPrefix + "│       ", true);
+    } else if (stmt.kind_ == NodeKind::EXIT) {
+        const auto& exit = *static_cast<const Exit*>(&stmt);
+        std::cout << stmtPrefix << "└── Exit\n";
+        std::cout << stmtPrefix << "    └── ExitCode\n";
+        log_expression(*exit.exitCode_, stmtPrefix + "        ", true);
+    }
+}
+
+void log_ast(const Program& programNode) {
     std::cout << "Program\n";
-    const std::string newPrefix = prefix + (isLast ? "" : "│");
 
     for (size_t i = 0; i < programNode.statements_.size(); ++i) {
         const auto& stmt = programNode.statements_[i];
-        const bool stmtIsLast = (i == programNode.statements_.size() - 1);
-
-        std::cout << newPrefix << (stmtIsLast ? "└── " : "├── ") << "Statement\n";
-        const std::string stmtPrefix = newPrefix + (stmtIsLast ? "    " : "│   ");
-
-        if (stmt->kind_ == NodeKind::ASSIGNMENT) {
-            const auto& assignment = *static_cast<const Assignment*>(stmt.get());
-            if (assignment.isDeclaration_) {
-                std::cout << stmtPrefix << "├── Declaration Assignment\n";
-            } else {
-                std::cout << stmtPrefix << "├── Assignment\n";
-            }
-            std::cout << stmtPrefix << "│   ├── Identifier: " << assignment.identifier_->name_
-                      << "\n";
-            std::cout << stmtPrefix << "│   └── Value\n";
-            log_expression(*assignment.value_, stmtPrefix + "│       ", true);
-        } else if (stmt->kind_ == NodeKind::IF_STATEMENT) {
-            const auto& ifStmt = *static_cast<const IfStatement*>(stmt.get());
-            std::cout << stmtPrefix << "├── IfStatement\n";
-            log_expression(*ifStmt.condition_, stmtPrefix + "│   ", false);
-        } else if (stmt->kind_ == NodeKind::EXIT) {
-            const auto& exit = *static_cast<const Exit*>(stmt.get());
-            std::cout << stmtPrefix << "└── Exit\n";
-            std::cout << stmtPrefix << "    └── ExitCode\n";
-            log_expression(*exit.exitCode_, stmtPrefix + "        ", true);
-        }
+        const bool isLast = (i == programNode.statements_.size() - 1);
+        log_statement(*stmt, "", isLast);
     }
 }
 

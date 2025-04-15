@@ -143,6 +143,7 @@ bool is_arithmetic_operator(Operator op);
 bool is_comparison_operator(Operator op);
 
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast);
-void log_ast(const Program& node, const std::string& prefix = "", bool isLast = true);
+void log_statement(const Statement& stmt, const std::string& prefix, bool isLast);
+void log_ast(const Program& programNode);
 
 }  // namespace AST
