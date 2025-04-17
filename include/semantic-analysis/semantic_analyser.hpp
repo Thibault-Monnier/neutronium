@@ -61,11 +61,21 @@ class SemanticAnalyser {
 
     Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr) {
         const Type operandType = get_expression_type(*unaryExpr.operand_);
-        if (operandType != Type::INTEGER) {
-            abort("Invalid type for unary operation: expected integer, got " +
-                  type_to_string(operandType));
+        if (operandType == Type::INTEGER) {
+            if (AST::is_arithmetic_operator(unaryExpr.operator_)) return Type::INTEGER;
+
+            abort("Invalid unary operator for integer operand: got " +
+                  AST::operator_to_string(unaryExpr.operator_));
         }
-        return Type::INTEGER;
+        if (operandType == Type::BOOLEAN) {
+            if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) return Type::BOOLEAN;
+
+            abort("Invalid unary operator for boolean operand: got " +
+                  AST::operator_to_string(unaryExpr.operator_));
+        }
+
+        abort("Invalid type for unary operation: expected integer or boolean, got " +
+              type_to_string(operandType));
     }
 
     Type get_binary_expression_type(const AST::BinaryExpression& binaryExpr) {

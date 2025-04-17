@@ -77,6 +77,8 @@ class Generator {
         evaluate_expression_to_rax(*unaryExpr.operand_);
         if (unaryExpr.operator_ == AST::Operator::SUBTRACT) {
             output_ << "    neg rax\n";
+        } else if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) {
+            output_ << "    xor rax, 1\n";
         }
     }
 

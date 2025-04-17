@@ -30,7 +30,7 @@ let exitIfFalse = 1 * -(4 + -4);
 a = exitIfFalse < 0;
 
 if a: exit 0;
-if a == false: exit exitIfFalse;
+if !a: exit exitIfFalse;
 
 # Exit: 0
 ```
@@ -78,7 +78,7 @@ primary-expression ::= literal
                      | identifier
                      | '(' expression ')'
 
-unary-op ::= '-' | '+'
+unary-op ::= '-' | '+' | '!'
 
 identifier ::= [a-zA-Z][a-zA-Z0-9]*
 

@@ -63,6 +63,15 @@ class Lexer {
         }
     }
 
+    void lex_bang() {
+        if (peek() == '=') {
+            advance();
+            tokens_.emplace_back(TokenKind::NOT_EQUAL, "!=");
+        } else {
+            tokens_.emplace_back(TokenKind::BANG, "!");
+        }
+    }
+
    public:
     explicit Lexer(std::string source) : source_(std::move(source)) {}
 
@@ -97,11 +106,10 @@ class Lexer {
                 tokens_.emplace_back(TokenKind::STAR, "*");
             } else if (c == '/') {
                 tokens_.emplace_back(TokenKind::SLASH, "/");
+            } else if (c == '!') {
+                lex_bang();
             } else if (c == '=') {
                 lex_equal();
-            } else if (c == '!' && peek() == '=') {
-                advance();
-                tokens_.emplace_back(TokenKind::NOT_EQUAL, "!=");
             } else if (c == '<') {
                 lex_less_than();
             } else if (c == '>') {

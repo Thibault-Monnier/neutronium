@@ -13,6 +13,7 @@ enum class Operator : uint8_t {
     SUBTRACT,
     MULTIPLY,
     DIVIDE,
+    LOGICAL_NOT,
     EQUALS,
     NOT_EQUALS,
     LESS_THAN,

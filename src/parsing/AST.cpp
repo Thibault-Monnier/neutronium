@@ -41,6 +41,8 @@ Operator token_kind_to_operator(const TokenKind tokenKind) {
             return Operator::MULTIPLY;
         case TokenKind::SLASH:
             return Operator::DIVIDE;
+        case TokenKind::BANG:
+            return Operator::LOGICAL_NOT;
         case TokenKind::EQUAL_EQUAL:
             return Operator::EQUALS;
         case TokenKind::NOT_EQUAL:
@@ -68,6 +70,8 @@ std::string operator_to_string(const Operator op) {
             return "*";
         case Operator::DIVIDE:
             return "/";
+        case Operator::LOGICAL_NOT:
+            return "!";
         case Operator::EQUALS:
             return "==";
         case Operator::NOT_EQUALS:

@@ -80,7 +80,8 @@ class Parser {
         const Token& token = peek();
 
         const AST::Operator op = AST::token_kind_to_operator(token.kind());
-        if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT) {
+        if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT ||
+            op == AST::Operator::LOGICAL_NOT) {
             consume(token.kind());
             auto operand = parse_primary_expression();
             return std::make_unique<AST::UnaryExpression>(op, std::move(operand));

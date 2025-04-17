@@ -13,6 +13,7 @@ enum class TokenKind : uint8_t {
     MINUS,
     STAR,
     SLASH,
+    BANG,
     EQUAL,
     EQUAL_EQUAL,
     NOT_EQUAL,

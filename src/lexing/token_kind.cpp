@@ -15,9 +15,11 @@ std::string token_kind_to_string(const TokenKind kind) {
         case TokenKind::MINUS:
             return "MINUS";
         case TokenKind::STAR:
-            return "TIMES";
+            return "STAR";
         case TokenKind::SLASH:
-            return "DIVIDE";
+            return "SLASH";
+        case TokenKind::BANG:
+            return "BANG";
         case TokenKind::EQUAL:
             return "EQUAL";
         case TokenKind::EQUAL_EQUAL:
