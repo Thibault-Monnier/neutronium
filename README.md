@@ -16,7 +16,7 @@ Navigate to root directory and run the following command:
 cmake --build build/ && ./build/neutronium <path-to-source-file>
 ```
 
-## Language syntax
+## Neutronium Language
 
 Neutronium is a C-like language, and will take some inspiration from several languages, to try to take advantage of the
 best parts of each of them.
@@ -37,12 +37,10 @@ if !a: exit exitIfFalse;
 
 ### EBNF Grammar
 
-The following grammar is the one currently supported by the parser.
-
 > Whitespaces are insignificant and are omitted from the following grammar.
 
 ```
-program ::= { statement }*
+program ::= { statement }
 
 statement ::= assignment
             | declaration-assignment
@@ -54,7 +52,7 @@ assignment ::= identifier '=' expression ';'
 
 declaration-assignment ::= 'let' identifier '=' expression ';'
 
-if-statement ::= 'if' expression ':' statement ';'
+if-statement ::= 'if' expression ':' statement 
 
 exit-statement ::= 'exit' expression ';'
 
@@ -80,11 +78,11 @@ primary-expression ::= literal
 
 unary-op ::= '-' | '+' | '!'
 
-identifier ::= [a-zA-Z][a-zA-Z0-9]*
+identifier ::= letter { letter | digit }
 
 literal ::= integer-literal
 
-integer-literal ::= [0-9]+
+integer-literal ::= digit { digit }
 ```
 
 ## C99 EBNF Grammar
