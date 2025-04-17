@@ -29,7 +29,7 @@ let a = true;
 let exitIfFalse = 1 * -(4 + -4);
 a = exitIfFalse < 0;
 
-if a: exit 0;
+if a: exit 1;
 if !a: exit exitIfFalse;
 
 # Exit: 0
