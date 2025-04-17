@@ -16,12 +16,26 @@ Navigate to root directory and run the following command:
 cmake --build build/ && ./build/neutronium <path-to-source-file>
 ```
 
-## EBNF Grammar
+## Language syntax
 
 Neutronium is a C-like language, and will take some inspiration from several languages, to try to take advantage of the
 best parts of each of them.
 
-### Neutronium currently implemented grammar
+### Example Program
+```
+# This is a comment
+let a = true;
+
+let exitIfFalse = 1 * -(4 + -4);
+a = exitIfFalse < 0;
+
+if a: exit 0;
+if a == false: exit exitIfFalse;
+
+# Exit: 0
+```
+
+### EBNF Grammar
 
 The following grammar is the one currently supported by the parser.
 
@@ -71,35 +85,6 @@ identifier ::= [a-zA-Z][a-zA-Z0-9]*
 literal ::= integer-literal
 
 integer-literal ::= [0-9]+
-```
-
-### Neutronium target grammar (incomplete)
-
-Neutronium is currently in development. The following grammar is incomplete, and might drastically change in the future.
-It also isn't fully implemented yet.
-
-```
-expr ::= equality-expr
-
-equality-expr ::= relational-expr
-                | relational-expr ("==" | "!=") relational-expr
-
-relational-expr ::= additive-expr
-                  | additive-expr ("<" | "<=" | ">" | ">=") additive-expr
-
-additive-expr ::= multiplicative-expr
-                | additive-expr ("+" | "-") multiplicative-expr
-
-multiplicative-expr ::= unary-expr
-                      | multiplicative-expr ("*" | "/") unary-expr
-
-unary-expr ::= unary-op? primary-expr
-
-unary-op ::= "-" | "+"
-
-primary-expr ::= identifier
-               | literal
-               | "(" expr ")"
 ```
 
 ## C99 EBNF Grammar
