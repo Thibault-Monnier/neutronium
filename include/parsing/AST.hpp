@@ -32,6 +32,7 @@ enum class NodeKind : uint8_t {
     ASSIGNMENT,
     IF_STATEMENT,
     EXIT,
+    BLOCK_STATEMENT,
     PROGRAM,
 };
 
@@ -96,6 +97,16 @@ struct Statement : Node {
     using Node::Node;
 };
 
+struct BlockStatement final : Statement {
+    BlockStatement() : Statement{NodeKind::BLOCK_STATEMENT} {}
+
+    void append_statement(std::unique_ptr<Statement> statement) {
+        body_.emplace_back(std::move(statement));
+    }
+
+    std::vector<std::unique_ptr<Statement>> body_;
+};
+
 struct Assignment final : Statement {
     Assignment(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value,
                const bool isDeclaration)
@@ -110,13 +121,13 @@ struct Assignment final : Statement {
 };
 
 struct IfStatement final : Statement {
-    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Statement> body)
+    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body)
         : Statement{NodeKind::IF_STATEMENT},
           condition_(std::move(condition)),
           body_(std::move(body)) {}
 
     const std::unique_ptr<Expression> condition_;
-    const std::unique_ptr<Statement> body_;
+    const std::unique_ptr<BlockStatement> body_;
 };
 
 struct Exit final : Statement {
@@ -127,16 +138,11 @@ struct Exit final : Statement {
 };
 
 struct Program final : Node {
-    Program() : Node{NodeKind::PROGRAM} {}
+    Program() : Node{NodeKind::PROGRAM}, body_(std::make_unique<BlockStatement>()) {}
 
-    void append_statement(std::unique_ptr<Statement> statement) {
-        statements_.emplace_back(std::move(statement));
-    }
-
-    std::vector<std::unique_ptr<Statement>> statements_;
+    std::unique_ptr<BlockStatement> body_;
 };
 
-std::string node_kind_to_string(NodeKind kind);
 Operator token_kind_to_operator(TokenKind tokenKind);
 std::string operator_to_string(Operator op);
 

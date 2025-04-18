@@ -118,6 +118,10 @@ class Lexer {
                 tokens_.emplace_back(TokenKind::LEFT_PAREN, "(");
             } else if (c == ')') {
                 tokens_.emplace_back(TokenKind::RIGHT_PAREN, ")");
+            } else if (c == '{') {
+                tokens_.emplace_back(TokenKind::LEFT_BRACE, "{");
+            } else if (c == '}') {
+                tokens_.emplace_back(TokenKind::RIGHT_BRACE, "}");
             } else if (c == ':') {
                 tokens_.emplace_back(TokenKind::COLON, ":");
             } else if (c == ';') {
@@ -130,7 +134,6 @@ class Lexer {
                 exit(EXIT_FAILURE);
             }
         }
-
         tokens_.emplace_back(TokenKind::END_OF_FILE, "");
         return tokens_;
     }

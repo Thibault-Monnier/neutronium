@@ -14,6 +14,20 @@
 #include "utils/log.hpp"
 
 class Parser {
+   public:
+    explicit Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
+
+    AST::Program parse() {
+        auto program = AST::Program();
+        while (peek().kind() != TokenKind::END_OF_FILE) {
+            program.body_->append_statement(parse_statement());
+        }
+
+        AST::log_ast(program);
+
+        return program;
+    }
+
    private:
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
@@ -149,11 +163,11 @@ class Parser {
                                                  isDeclaration);
     }
 
-    std::unique_ptr<AST::IfStatement> parse_if_statement() {
+    std::unique_ptr<AST::IfStatement> parse_if_statement() {  // NOLINT(*-no-recursion)
         consume(TokenKind::IF);
         auto condition = parse_expression();
         consume(TokenKind::COLON);
-        auto body = parse_statement();
+        auto body = parse_block_statement();
         return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body));
     }
 
@@ -164,7 +178,17 @@ class Parser {
         return std::make_unique<AST::Exit>(std::move(exitCode));
     }
 
-    std::unique_ptr<AST::Statement> parse_statement() {
+    std::unique_ptr<AST::BlockStatement> parse_block_statement() {  // NOLINT(*-no-recursion)
+        consume(TokenKind::LEFT_BRACE);
+        auto block = std::make_unique<AST::BlockStatement>();
+        while (peek().kind() != TokenKind::RIGHT_BRACE) {
+            block->append_statement(parse_statement());
+        }
+        consume(TokenKind::RIGHT_BRACE);
+        return block;
+    }
+
+    std::unique_ptr<AST::Statement> parse_statement() {  // NOLINT(*-no-recursion)
         const Token& firstToken = peek();
 
         switch (firstToken.kind()) {
@@ -176,6 +200,8 @@ class Parser {
                 return parse_if_statement();
             case TokenKind::EXIT:
                 return parse_exit();
+            case TokenKind::LEFT_BRACE:
+                return parse_block_statement();
             default:
                 const std::string errorMessage =
                     std::format("Invalid token at index {} -> got {} at beginning of statement",
@@ -183,19 +209,5 @@ class Parser {
                 const std::string hintMessage = std::format("Lexeme -> {}", firstToken.lexeme());
                 abort(errorMessage, hintMessage);
         }
-    }
-
-   public:
-    explicit Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
-
-    AST::Program parse() {
-        auto program = AST::Program();
-        while (peek().kind() != TokenKind::END_OF_FILE) {
-            program.append_statement(parse_statement());
-        }
-
-        AST::log_ast(program);
-
-        return program;
     }
 };

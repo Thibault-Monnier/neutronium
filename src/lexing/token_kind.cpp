@@ -39,6 +39,10 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "LEFT_PAREN";
         case TokenKind::RIGHT_PAREN:
             return "RIGHT_PAREN";
+        case TokenKind::LEFT_BRACE:
+            return "LEFT_BRACE";
+        case TokenKind::RIGHT_BRACE:
+            return "RIGHT_BRACE";
         case TokenKind::COLON:
             return "COLON";
         case TokenKind::SEMICOLON:

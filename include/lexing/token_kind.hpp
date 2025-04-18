@@ -25,6 +25,8 @@ enum class TokenKind : uint8_t {
     // Delimiters
     LEFT_PAREN,
     RIGHT_PAREN,
+    LEFT_BRACE,
+    RIGHT_BRACE,
     COLON,
     SEMICOLON,
 

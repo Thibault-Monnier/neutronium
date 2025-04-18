@@ -4,32 +4,10 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "lexing/token_kind.hpp"
 
 namespace AST {
-
-std::string node_kind_to_string(const NodeKind kind) {
-    switch (kind) {
-        case NodeKind::NUMBER_LITERAL:
-            return "NUMBER_LITERAL";
-        case NodeKind::IDENTIFIER:
-            return "IDENTIFIER";
-        case NodeKind::UNARY_EXPRESSION:
-            return "UNARY_EXPRESSION";
-        case NodeKind::BINARY_EXPRESSION:
-            return "BINARY_EXPRESSION";
-        case NodeKind::ASSIGNMENT:
-            return "ASSIGNMENT";
-        case NodeKind::EXIT:
-            return "EXIT";
-        case NodeKind::PROGRAM:
-            return "PROGRAM";
-        default:
-            throw std::invalid_argument("Invalid NodeKind passed to AST::node_kind_to_string");
-    }
-}
 
 Operator token_kind_to_operator(const TokenKind tokenKind) {
     switch (tokenKind) {
@@ -141,42 +119,45 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
 }
 
 void log_statement(const Statement& stmt, const std::string& prefix, const bool isLast) {
-    std::cout << prefix << (isLast ? "└── " : "├── ") << "Statement\n";
-    const std::string stmtPrefix = prefix + (isLast ? "    " : "│   ");
-
     if (stmt.kind_ == NodeKind::ASSIGNMENT) {
         const auto& assignment = *static_cast<const Assignment*>(&stmt);
         if (assignment.isDeclaration_) {
-            std::cout << stmtPrefix << "├── Declaration Assignment\n";
+            std::cout << prefix << "├── Declaration Assignment\n";
         } else {
-            std::cout << stmtPrefix << "├── Assignment\n";
+            std::cout << prefix << "├── Assignment\n";
         }
-        std::cout << stmtPrefix << "│   ├── Identifier: " << assignment.identifier_->name_ << "\n";
-        std::cout << stmtPrefix << "│   └── Value\n";
-        log_expression(*assignment.value_, stmtPrefix + "│       ", true);
+        std::cout << prefix << "│   ├── Identifier: " << assignment.identifier_->name_ << "\n";
+        std::cout << prefix << "│   └── Value\n";
+        log_expression(*assignment.value_, prefix + "│       ", true);
     } else if (stmt.kind_ == NodeKind::IF_STATEMENT) {
         const auto& ifStmt = *static_cast<const IfStatement*>(&stmt);
-        std::cout << stmtPrefix << "├── IfStatement\n";
-        std::cout << stmtPrefix << "│   ├── Condition\n";
-        log_expression(*ifStmt.condition_, stmtPrefix + "│   │   ", true);
-        std::cout << stmtPrefix << "│   └── Body\n";
-        log_statement(*ifStmt.body_, stmtPrefix + "│       ", true);
+        std::cout << prefix << "├── IfStatement\n";
+        std::cout << prefix << "│   ├── Condition\n";
+        log_expression(*ifStmt.condition_, prefix + "│   │   ", true);
+        std::cout << prefix << "│   └── Body\n";
+        log_statement(*ifStmt.body_, prefix + "│       ", true);
     } else if (stmt.kind_ == NodeKind::EXIT) {
         const auto& exit = *static_cast<const Exit*>(&stmt);
-        std::cout << stmtPrefix << "└── Exit\n";
-        std::cout << stmtPrefix << "    └── ExitCode\n";
-        log_expression(*exit.exitCode_, stmtPrefix + "        ", true);
+        std::cout << prefix << "└── Exit\n";
+        std::cout << prefix << "    └── ExitCode\n";
+        log_expression(*exit.exitCode_, prefix + "        ", true);
+    } else if (stmt.kind_ == NodeKind::BLOCK_STATEMENT) {
+        const auto& blockStmt = *static_cast<const BlockStatement*>(&stmt);
+        std::cout << prefix << "├── BlockStatement\n";
+        for (size_t i = 0; i < blockStmt.body_.size(); ++i) {
+            const auto& innerStmt = blockStmt.body_[i];
+            const bool isLastInner = (i == blockStmt.body_.size() - 1);
+            log_statement(*innerStmt, prefix + "│   ", isLastInner);
+        }
+    } else {
+        throw std::invalid_argument("Invalid statement kind");
     }
 }
 
 void log_ast(const Program& programNode) {
     std::cout << "Program\n";
-
-    for (size_t i = 0; i < programNode.statements_.size(); ++i) {
-        const auto& stmt = programNode.statements_[i];
-        const bool isLast = (i == programNode.statements_.size() - 1);
-        log_statement(*stmt, "", isLast);
-    }
+    const auto& stmt = programNode.body_;
+    log_statement(*stmt, "", true);
 }
 
 }  // namespace AST

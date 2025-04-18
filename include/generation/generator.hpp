@@ -6,11 +6,13 @@
 #include <utility>
 
 #include "parsing/AST.hpp"
+#include "semantic-analysis/symbol_table.hpp"
 #include "unordered_map"
 
 class Generator {
    public:
-    explicit Generator(const AST::Program& ast) : program_(&ast) {}
+    explicit Generator(const AST::Program& ast, SymbolTable symbolTable)
+        : program_(&ast), symbolTable_(std::move(symbolTable)) {}
 
     std::stringstream generate() {
         // Write the header
@@ -21,9 +23,9 @@ class Generator {
         output_ << "    push rbp\n";
         output_ << "    mov rbp, rsp\n\n";
 
-        stack_allocate_scope_variables(*program_);
-        for (const auto& stmt : program_->statements_) generate_stmt(*stmt.get());
+        generate_stmt(*program_->body_);
 
+        std::cout << output_.str();
         std::cout << "\033[1;32mGeneration completed successfully.\033[0m\n";
 
         return std::move(output_);
@@ -35,25 +37,37 @@ class Generator {
 
     int ifStmtsCount_ = 0;
 
-    std::unordered_map<std::string, int> variablesStackOffset_;
+    SymbolTable symbolTable_;
 
-    void stack_allocate_scope_variables(const AST::Program& scope) {
-        int stackOffset = 0;
-        for (const auto& stmt : scope.statements_) {
+    int get_current_scope_frame_size(const AST::BlockStatement& blockStmt) const {
+        int frameSize = 0;
+        for (const auto& stmt : blockStmt.body_) {
             if (stmt->kind_ == AST::NodeKind::ASSIGNMENT) {
-                const auto& assignment = static_cast<AST::Assignment*>(stmt.get());
-                if (assignment->isDeclaration_) {
-                    stackOffset += 8;
-                    variablesStackOffset_[assignment->identifier_->name_] = stackOffset;
+                const auto& assignment = static_cast<AST::Assignment&>(*stmt);
+                if (assignment.isDeclaration_) {
+                    frameSize += 8;
                 }
             }
         }
+        return frameSize;
+    }
 
-        output_ << "    sub rsp, " << stackOffset << "\n";
+    void stack_allocate_scope_variables(const AST::BlockStatement& blockStmt) {
+        const int frameSize = get_current_scope_frame_size(blockStmt);
+        if (frameSize != 0) {
+            output_ << "    sub rsp, " << frameSize << "\n";
+        }
+    }
+
+    void stack_deallocate_scope_variables(const AST::BlockStatement& blockStmt) {
+        const int frameSize = get_current_scope_frame_size(blockStmt);
+        if (frameSize != 0) {
+            output_ << "    add rsp, " << frameSize << "\n";
+        }
     }
 
     int get_variable_stack_offset(const std::string& name) const {
-        return variablesStackOffset_.at(name);
+        return symbolTable_.at(name).stackOffset_;
     }
 
     void write_to_variable(const std::string& name, const std::string& source) {
@@ -188,6 +202,15 @@ class Generator {
             case AST::NodeKind::EXIT: {
                 const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
                 generate_exit(exitStmt);
+                break;
+            }
+            case AST::NodeKind::BLOCK_STATEMENT: {
+                const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
+                stack_allocate_scope_variables(blockStmt);
+                for (const auto& innerStmt : blockStmt.body_) {
+                    generate_stmt(*innerStmt);
+                }
+                stack_deallocate_scope_variables(blockStmt);
                 break;
             }
             default:

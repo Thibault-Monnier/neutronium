@@ -1,15 +1,17 @@
 #pragma once
 
-#include <cstdint>
+#include <ranges>
 #include <stdexcept>
 #include <unordered_map>
 
 #include "parsing/AST.hpp"
+#include "semantic-analysis/symbol_table.hpp"
+#include "semantic-analysis/types.hpp"
 #include "utils/log.hpp"
 
-enum class Type : uint8_t {
-    INTEGER,
-    BOOLEAN,
+struct Scope {
+    std::unordered_map<std::string, int> variablesStackOffset_;
+    int frameSize_;
 };
 
 std::string type_to_string(const Type type) {
@@ -25,23 +27,27 @@ std::string type_to_string(const Type type) {
 
 class SemanticAnalyser {
    public:
-    explicit SemanticAnalyser(const AST::Program& ast) : AST_(&ast) {}
+    explicit SemanticAnalyser(const AST::Program& ast) : ast_(&ast) {}
 
-    void analyse() {
-        for (const auto& stmt : AST_->statements_) {
-            analyse_statement(*stmt);
+    SymbolTable analyse() {
+        analyse_statement(*ast_->body_);
+
+        for (const auto& [name, info] : symbolTable_) {
+            std::cout << "Variable: " << name << ", Type: " << type_to_string(info.type_) << '\n';
         }
 
         std::cout << "\033[1;32mAnalysis completed successfully.\033[0m\n";
 
-        for (const auto& [name, type] : variablesTable_) {
-            std::cout << "Variable: " << name << ", Type: " << type_to_string(type) << '\n';
-        }
+        return symbolTable_;
     }
 
    private:
-    const AST::Program* AST_;
-    std::unordered_map<std::string, Type> variablesTable_;
+    const AST::Program* ast_;
+
+    SymbolTable symbolTable_;
+
+    int currentStackOffset_ = 0;
+    std::vector<Scope> scopeVariablesStackOffset_;
 
     [[noreturn]] void abort(const std::string& errorMessage, const std::string& hintMessage = "") {
         print_error(errorMessage);
@@ -51,13 +57,46 @@ class SemanticAnalyser {
         exit(EXIT_FAILURE);
     }
 
-    Type get_variable_type(const std::string& name) {
-        const auto it = variablesTable_.find(name);
-        if (it == variablesTable_.end()) {
-            abort(std::format("Use of undeclared variable: `{}`", name));
+    void enter_scope(const AST::BlockStatement& blockStmt) {
+        Scope scope;
+        int frameSize = 0;
+        for (const auto& stmt : blockStmt.body_) {
+            if (stmt->kind_ == AST::NodeKind::ASSIGNMENT) {
+                const auto& assignment = static_cast<AST::Assignment&>(*stmt);
+                if (assignment.isDeclaration_) {
+                    frameSize += 8;
+                    scope.variablesStackOffset_[assignment.identifier_->name_] =
+                        currentStackOffset_ + frameSize;
+                }
+            }
         }
-        return it->second;
+
+        scope.frameSize_ = (frameSize + 15) & ~15;
+        currentStackOffset_ += scope.frameSize_;
+        scopeVariablesStackOffset_.push_back(scope);
     }
+
+    void exit_scope() {
+        for (auto& scopeIt : std::ranges::reverse_view(scopeVariablesStackOffset_)) {
+            for (const auto& [name, offset] : scopeIt.variablesStackOffset_) {
+                symbolTable_.at(name).stackOffset_ = offset;
+            }
+        }
+
+        currentStackOffset_ -= scopeVariablesStackOffset_.back().frameSize_;
+        scopeVariablesStackOffset_.pop_back();
+    }
+
+    bool is_variable_declared_in_scope(const std::string& name) {
+        for (auto& scopeIt : std::ranges::reverse_view(scopeVariablesStackOffset_)) {
+            if (scopeIt.variablesStackOffset_.contains(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    Type get_scope_variable_type(const std::string& name) { return symbolTable_.at(name).type_; }
 
     Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr) {
         const Type operandType = get_expression_type(*unaryExpr.operand_);
@@ -122,7 +161,11 @@ class SemanticAnalyser {
                 return Type::BOOLEAN;
             case AST::NodeKind::IDENTIFIER: {
                 const auto& identifier = static_cast<const AST::Identifier&>(expr);
-                return get_variable_type(identifier.name_);
+                if (!is_variable_declared_in_scope(identifier.name_)) {
+                    abort(std::format("Attempted to access undeclared variable: `{}`",
+                                      identifier.name_));
+                }
+                return get_scope_variable_type(identifier.name_);
             }
             case AST::NodeKind::UNARY_EXPRESSION: {
                 const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
@@ -139,8 +182,9 @@ class SemanticAnalyser {
 
     void analyse_declaration_assignment(const AST::Assignment& assignment) {
         const std::string& name = assignment.identifier_->name_;
-        if (variablesTable_.contains(name)) {
-            abort("Redeclaration of variable: " + name);
+        if (symbolTable_.contains(name)) {
+            abort(std::format("Redeclaration of variable: `{}`", name),
+                  "Shadowing is not permitted");
         }
 
         const Type variableType = get_expression_type(*assignment.value_);
@@ -149,23 +193,23 @@ class SemanticAnalyser {
                               type_to_string(variableType)));
         }
 
-        variablesTable_.emplace(name, variableType);
+        symbolTable_.emplace(name, SymbolInfo{.type_ = variableType, .stackOffset_ = 0});
     }
 
     void analyse_reassignment(const AST::Assignment& assignment) {
         const std::string& name = assignment.identifier_->name_;
 
-        const auto it = variablesTable_.find(name);
-        if (it == variablesTable_.end()) {
-            abort("Assignment to undeclared variable: " + name);
+        if (!is_variable_declared_in_scope(name)) {
+            abort(std::format("Assignment to undeclared variable: `{}`", name));
         }
 
+        const Type declaredType = get_scope_variable_type(name);
         const Type variableType = get_expression_type(*assignment.value_);
-        if (variableType != it->second) {
+        if (variableType != declaredType) {
             abort(
                 std::format("Type mismatch in assignment: variable `{}` is declared as {}, but "
                             "reassigned to {}",
-                            name, type_to_string(it->second), type_to_string(variableType)));
+                            name, type_to_string(declaredType), type_to_string(variableType)));
         }
     }
 
@@ -209,6 +253,15 @@ class SemanticAnalyser {
             case AST::NodeKind::EXIT: {
                 const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
                 analyse_exit(exitStmt);
+                break;
+            }
+            case AST::NodeKind::BLOCK_STATEMENT: {
+                const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
+                enter_scope(blockStmt);
+                for (const auto& innerStmt : blockStmt.body_) {
+                    analyse_statement(*innerStmt);
+                }
+                exit_scope();
                 break;
             }
             default:
