@@ -21,6 +21,7 @@ class Generator {
         output_ << "    push rbp\n";
         output_ << "    mov rbp, rsp\n\n";
 
+        stack_allocate_scope_variables(*program_);
         for (const auto& stmt : program_->statements_) generate_stmt(*stmt.get());
 
         std::cout << "\033[1;32mGeneration completed successfully.\033[0m\n";
@@ -32,32 +33,36 @@ class Generator {
     const AST::Program* program_;
     std::stringstream output_;
 
-    int currentStackOffset_ = 0;
-    int currentStackSize_ = 0;
-
-    int tempVariablesCount_ = 0;
     int ifStmtsCount_ = 0;
 
     std::unordered_map<std::string, int> variablesStackOffset_;
 
-    void allocate_stack(const int bytes) {
-        output_ << "    sub rsp, " << bytes << "\n";
-        currentStackSize_ += bytes;
-    }
-
-    int stack_allocate_variable(const std::string& name, const std::string& source) {
-        constexpr int sizeBytes = 8;
-
-        currentStackOffset_ += sizeBytes;
-        if (currentStackOffset_ > currentStackSize_) {
-            allocate_stack(currentStackOffset_ - currentStackSize_ +
-                           56);  // Allocate more for less runtime allocations
+    void stack_allocate_scope_variables(const AST::Program& scope) {
+        int stackOffset = 0;
+        for (const auto& stmt : scope.statements_) {
+            if (stmt->kind_ == AST::NodeKind::ASSIGNMENT) {
+                const auto& assignment = static_cast<AST::Assignment*>(stmt.get());
+                if (assignment->isDeclaration_) {
+                    stackOffset += 8;
+                    variablesStackOffset_[assignment->identifier_->name_] = stackOffset;
+                }
+            }
         }
 
-        output_ << "    mov qword [rbp - " << currentStackOffset_ << "], " << source << "\n";
+        output_ << "    sub rsp, " << stackOffset << "\n";
+    }
 
-        variablesStackOffset_.emplace(name, currentStackOffset_);
-        return currentStackOffset_;
+    int get_variable_stack_offset(const std::string& name) const {
+        return variablesStackOffset_.at(name);
+    }
+
+    void write_to_variable(const std::string& name, const std::string& source) {
+        output_ << "    mov qword [rbp - " << get_variable_stack_offset(name) << "], " << source
+                << "\n";
+    }
+
+    void move_variable_to_rax(const std::string& name) {
+        output_ << "    mov rax, [rbp - " << get_variable_stack_offset(name) << "]\n";
     }
 
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit) {
@@ -66,11 +71,6 @@ class Generator {
 
     void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
         output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
-    }
-
-    void move_identifier_to_rax(const AST::Identifier& identifier) {
-        const int stackOffset = variablesStackOffset_.at(identifier.name_);
-        output_ << "    mov rax, [rbp - " << stackOffset << "]\n";
     }
 
     void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr) {
@@ -86,17 +86,16 @@ class Generator {
         // First evaluate right side to prevent an additional move in case of division, because the
         // numerator has to be in rax
         evaluate_expression_to_rax(*binaryExpr.right_);
-        const std::string rhsVariableName =
-            std::format(".temp{}", tempVariablesCount_++);  // Starts with '.' to prevent conflicts
-        const int rhsVariableStackOffset = stack_allocate_variable(rhsVariableName, "rax");
+        output_ << "    push rax\n";
 
         evaluate_expression_to_rax(*binaryExpr.left_);
+
+        output_ << "    pop rbx\n";
 
         const AST::Operator op = binaryExpr.operator_;
 
         if (AST::is_arithmetic_operator(op)) {
             if (op == AST::Operator::DIVIDE) {
-                output_ << "    mov rbx, [rbp - " << rhsVariableStackOffset << "]\n";
                 output_ << "    cqo\n";
                 output_ << "    idiv rbx\n";
             } else {
@@ -105,9 +104,7 @@ class Generator {
                     {AST::Operator::SUBTRACT, "sub"},
                     {AST::Operator::MULTIPLY, "imul"},
                 };
-
-                output_ << "    " << arithmeticOperatorPrefixes.at(op) << " rax, [rbp - "
-                        << rhsVariableStackOffset << "]\n";
+                output_ << "    " << arithmeticOperatorPrefixes.at(op) << " rax, rbx\n";
             }
 
         } else if (AST::is_comparison_operator(op)) {
@@ -116,8 +113,7 @@ class Generator {
                 {AST::Operator::LESS_THAN, "l"},    {AST::Operator::LESS_THAN_OR_EQUAL, "le"},
                 {AST::Operator::GREATER_THAN, "g"}, {AST::Operator::GREATER_THAN_OR_EQUAL, "ge"},
             };
-
-            output_ << "    cmp rax, [rbp - " << rhsVariableStackOffset << "]\n";
+            output_ << "    cmp rax, rbx\n";
             output_ << "    set" << comparisonSuffixes.at(op) << " al\n";
             output_ << "    movzx rax, al\n";
         }
@@ -137,7 +133,7 @@ class Generator {
             }
             case AST::NodeKind::IDENTIFIER: {
                 const auto& identifier = static_cast<const AST::Identifier&>(expr);
-                move_identifier_to_rax(identifier);
+                move_variable_to_rax(identifier.name_);
                 break;
             }
             case AST::NodeKind::UNARY_EXPRESSION: {
@@ -155,19 +151,13 @@ class Generator {
         }
     }
 
-    void generate_assignment(const AST::Assignment& assignmentStmt) {
-        const std::string& varName = assignmentStmt.identifier_->name_;
-
-        evaluate_expression_to_rax(*assignmentStmt.value_);
-        if (assignmentStmt.isDeclaration_) {
-            stack_allocate_variable(varName, "rax");
-        } else {
-            const int stackOffset = variablesStackOffset_.at(varName);
-            output_ << "    mov [rbp - " << stackOffset << "], rax\n";
-        }
+    void generate_assignment(const AST::Assignment& assignment) {
+        const std::string& varName = assignment.identifier_->name_;
+        evaluate_expression_to_rax(*assignment.value_);
+        write_to_variable(varName, "rax");
     }
 
-    void generate_if_stmt(const AST::IfStatement& ifStmt) {
+    void generate_if_stmt(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
         evaluate_expression_to_rax(*ifStmt.condition_);
         const std::string endifLabel = std::format(".endif{}", ifStmtsCount_++);
         output_ << "    cmp rax, 0\n";
