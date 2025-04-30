@@ -148,7 +148,7 @@ class SemanticAnalyser {
         throw std::invalid_argument("Invalid operator in binary expression");
     }
 
-    Type get_expression_type(const AST::Expression& expr) {
+    Type get_expression_type(const AST::Expression& expr) {  // NOLINT(*-no-recursion)
         switch (expr.kind_) {
             case AST::NodeKind::NUMBER_LITERAL:
                 return Type::INTEGER;
@@ -179,7 +179,7 @@ class SemanticAnalyser {
         const std::string& name = assignment.identifier_->name_;
         if (symbolTable_.contains(name)) {
             abort(std::format("Redeclaration of variable: `{}`", name),
-                  "Shadowing is not permitted");
+                  "Shadowing is not permitted, even for disjoint scopes");
         }
 
         const Type variableType = get_expression_type(*assignment.value_);
@@ -217,30 +217,27 @@ class SemanticAnalyser {
         }
     }
 
-    void analyse_if_statement(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
-        const Type conditionType = get_expression_type(*ifStmt.condition_);
-        if (conditionType != Type::BOOLEAN) {
-            abort("Invalid type for if statement condition: expected boolean, got " +
-                  type_to_string(conditionType));
+    void analyse_expression(const AST::Expression& expr, const Type expected,
+                            const std::string& location) {
+        const Type type = get_expression_type(expr);
+        if (type != expected) {
+            abort(std::format("Invalid expression type for {}: expected {}, got {}", location,
+                              type_to_string(expected), type_to_string(type)));
         }
+    }
+
+    void analyse_if_statement(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
+        analyse_expression(*ifStmt.condition_, Type::BOOLEAN, "condition");
         analyse_statement(*ifStmt.body_);
     }
 
-    void analyse_while_statement(const AST::WhileStatement& whileStmt) {
-        const Type conditionType = get_expression_type(*whileStmt.condition_);
-        if (conditionType != Type::BOOLEAN) {
-            abort("Invalid type for while statement condition: expected boolean, got " +
-                  type_to_string(conditionType));
-        }
+    void analyse_while_statement(const AST::WhileStatement& whileStmt) {  // NOLINT(*-no-recursion)
+        analyse_expression(*whileStmt.condition_, Type::BOOLEAN, "condition");
         analyse_statement(*whileStmt.body_);
     }
 
     void analyse_exit(const AST::Exit& exitStmt) {
-        const Type exitType = get_expression_type(*exitStmt.exitCode_);
-        if (exitType != Type::INTEGER) {
-            abort("Invalid type for exit statement: expected integer, got " +
-                  type_to_string(exitType));
-        }
+        analyse_expression(*exitStmt.exitCode_, Type::INTEGER, "exit code");
     }
 
     void analyse_statement(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
