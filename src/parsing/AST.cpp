@@ -136,6 +136,13 @@ void log_statement(const Statement& stmt, const std::string& prefix) {
         log_expression(*ifStmt.condition_, prefix + "│   │   ", true);
         std::cout << prefix << "│   └── Body\n";
         log_statement(*ifStmt.body_, prefix + "│       ", true);
+    } else if (stmt.kind_ == NodeKind::WHILE_STATEMENT) {
+        const auto& whileStmt = *static_cast<const WhileStatement*>(&stmt);
+        std::cout << prefix << "├── WhileStatement\n";
+        std::cout << prefix << "│   ├── Condition\n";
+        log_expression(*whileStmt.condition_, prefix + "│   │   ", true);
+        std::cout << prefix << "│   └── Body\n";
+        log_statement(*whileStmt.body_, prefix + "│       ", true);
     } else if (stmt.kind_ == NodeKind::EXIT) {
         const auto& exit = *static_cast<const Exit*>(&stmt);
         std::cout << prefix << "└── Exit\n";

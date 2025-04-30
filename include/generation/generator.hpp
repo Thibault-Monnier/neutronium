@@ -35,7 +35,7 @@ class Generator {
     const AST::Program* program_;
     std::stringstream output_;
 
-    int ifStmtsCount_ = 0;
+    int labelsCount_ = 0;
 
     SymbolTable symbolTable_;
 
@@ -165,6 +165,13 @@ class Generator {
         }
     }
 
+    int generate_condition(const AST::Expression& condition) {
+        evaluate_expression_to_rax(condition);
+        output_ << "    cmp rax, 0\n";
+        output_ << "    je ." << labelsCount_++ << "\n";
+        return labelsCount_- 1;
+    }
+
     void generate_assignment(const AST::Assignment& assignment) {
         const std::string& varName = assignment.identifier_->name_;
         evaluate_expression_to_rax(*assignment.value_);
@@ -172,12 +179,18 @@ class Generator {
     }
 
     void generate_if_stmt(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
-        evaluate_expression_to_rax(*ifStmt.condition_);
-        const std::string endifLabel = std::format(".endif{}", ifStmtsCount_++);
-        output_ << "    cmp rax, 0\n";
-        output_ << "    je " << endifLabel << "\n";
+        const int elseLabel = generate_condition(*ifStmt.condition_);
         generate_stmt(*ifStmt.body_);
-        output_ << endifLabel << ":\n";
+        output_ << "." << elseLabel << ":\n";
+    }
+
+    void generate_while_stmt(const AST::WhileStatement& whileStmt) {
+        const int whileLabel = labelsCount_++;
+        output_ << "." << whileLabel << ":\n";
+        const int endwhileLabel = generate_condition(*whileStmt.condition_);
+        generate_stmt(*whileStmt.body_);
+        output_ << "    jmp ." << whileLabel << "\n";
+        output_ << "." << endwhileLabel << ":\n";
     }
 
     void generate_exit(const AST::Exit& exitStmt) {
@@ -197,6 +210,11 @@ class Generator {
             case AST::NodeKind::IF_STATEMENT: {
                 const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
                 generate_if_stmt(ifStmt);
+                break;
+            }
+            case AST::NodeKind::WHILE_STATEMENT: {
+                const auto& whileStmt = static_cast<const AST::WhileStatement&>(stmt);
+                generate_while_stmt(whileStmt);
                 break;
             }
             case AST::NodeKind::EXIT: {

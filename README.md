@@ -22,21 +22,33 @@ Neutronium is a C-like language, and will take some inspiration from several lan
 best parts of each of them.
 
 ### Example Program
+
+The following program returns 0 if `integer` is prime, its smallest divisor otherwise.
+
 ```
-# This is a comment
-let a = (false != (0 < 2));
+let integer = 89;
 
-let exitIfFalse = 1 * -(4 + -4);
-a = exitIfFalse < 0;
-
-if a: { let b = 5; exit 1; }
-if !(!(!a)): {
-    let two = 2;
-    exitIfFalse = exitIfFalse + two;
-    exit exitIfFalse;
+if integer <= 1: {
+    exit 1;
 }
 
-# Exit: 2
+let isPrime = true;
+let divisor = 1;
+let div = 2;
+while div < integer: {
+    if (integer / div) * div == integer: {
+        isPrime = false;
+        divisor = div;
+        div = integer; # Equivalent to a break
+    }
+    div = div + 1;
+}
+
+if !isPrime: {
+    exit divisor;
+}
+
+exit 0;
 ```
 
 ### EBNF Grammar
@@ -50,6 +62,7 @@ statement ::= block-statement
             | assignment
             | declaration-assignment
             | if-statement
+            | while-statement
             | exit-statement
             | comment
 
@@ -60,6 +73,8 @@ assignment ::= identifier '=' expression ';'
 declaration-assignment ::= 'let' identifier '=' expression ';'
 
 if-statement ::= 'if' expression ':' block-statement
+
+while-statement ::= 'while' expression ':' block-statement
 
 exit-statement ::= 'exit' expression ';'
 

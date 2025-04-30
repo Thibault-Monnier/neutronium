@@ -31,6 +31,7 @@ enum class NodeKind : uint8_t {
     BINARY_EXPRESSION,
     ASSIGNMENT,
     IF_STATEMENT,
+    WHILE_STATEMENT,
     EXIT,
     BLOCK_STATEMENT,
     PROGRAM,
@@ -123,6 +124,16 @@ struct Assignment final : Statement {
 struct IfStatement final : Statement {
     IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body)
         : Statement{NodeKind::IF_STATEMENT},
+          condition_(std::move(condition)),
+          body_(std::move(body)) {}
+
+    const std::unique_ptr<Expression> condition_;
+    const std::unique_ptr<BlockStatement> body_;
+};
+
+struct WhileStatement final : Statement {
+    WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body)
+        : Statement{NodeKind::WHILE_STATEMENT},
           condition_(std::move(condition)),
           body_(std::move(body)) {}
 

@@ -171,6 +171,15 @@ class Parser {
         return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body));
     }
 
+    std::unique_ptr<AST::WhileStatement> parse_while_statement() { // NOLINT(*-no-recursion)
+        consume(TokenKind::WHILE);
+        auto condition = parse_expression();
+        consume(TokenKind::COLON);
+        auto body = parse_block_statement();
+        std::cout << "Parsed while statement with condition: " << '\n';
+        return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
+    }
+
     std::unique_ptr<AST::Exit> parse_exit() {
         consume(TokenKind::EXIT);
         auto exitCode = parse_expression();
@@ -198,6 +207,8 @@ class Parser {
                 return parse_assignment(false);
             case TokenKind::IF:
                 return parse_if_statement();
+            case TokenKind::WHILE:
+                return parse_while_statement();
             case TokenKind::EXIT:
                 return parse_exit();
             case TokenKind::LEFT_BRACE:

@@ -226,6 +226,15 @@ class SemanticAnalyser {
         analyse_statement(*ifStmt.body_);
     }
 
+    void analyse_while_statement(const AST::WhileStatement& whileStmt) {
+        const Type conditionType = get_expression_type(*whileStmt.condition_);
+        if (conditionType != Type::BOOLEAN) {
+            abort("Invalid type for while statement condition: expected boolean, got " +
+                  type_to_string(conditionType));
+        }
+        analyse_statement(*whileStmt.body_);
+    }
+
     void analyse_exit(const AST::Exit& exitStmt) {
         const Type exitType = get_expression_type(*exitStmt.exitCode_);
         if (exitType != Type::INTEGER) {
@@ -244,6 +253,11 @@ class SemanticAnalyser {
             case AST::NodeKind::IF_STATEMENT: {
                 const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
                 analyse_if_statement(ifStmt);
+                break;
+            }
+            case AST::NodeKind::WHILE_STATEMENT: {
+                const auto& whileStmt = static_cast<const AST::WhileStatement&>(stmt);
+                analyse_while_statement(whileStmt);
                 break;
             }
             case AST::NodeKind::EXIT: {

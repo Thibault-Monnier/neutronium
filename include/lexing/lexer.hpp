@@ -31,6 +31,7 @@ class Lexer {
         if (buffer_ == "false") return TokenKind::FALSE;
         if (buffer_ == "let") return TokenKind::LET;
         if (buffer_ == "if") return TokenKind::IF;
+        if (buffer_ == "while") return TokenKind::WHILE;
         if (buffer_ == "exit") return TokenKind::EXIT;
 
         return std::nullopt;
