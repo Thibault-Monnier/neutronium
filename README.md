@@ -24,15 +24,19 @@ best parts of each of them.
 ### Example Program
 ```
 # This is a comment
-let a = true;
+let a = (false != (0 < 2));
 
 let exitIfFalse = 1 * -(4 + -4);
 a = exitIfFalse < 0;
 
-if a: exit 1;
-if !a: exit exitIfFalse;
+if a: { let b = 5; exit 1; }
+if !(!(!a)): {
+    let two = 2;
+    exitIfFalse = exitIfFalse + two;
+    exit exitIfFalse;
+}
 
-# Exit: 0
+# Exit: 2
 ```
 
 ### EBNF Grammar
@@ -48,11 +52,13 @@ statement ::= assignment
             | exit-statement
             | comment
 
+compound-statement ::= '{' { statement } '}'
+
 assignment ::= identifier '=' expression ';'
 
 declaration-assignment ::= 'let' identifier '=' expression ';'
 
-if-statement ::= 'if' expression ':' statement 
+if-statement ::= 'if' expression ':' compound-statement
 
 exit-statement ::= 'exit' expression ';'
 
