@@ -135,14 +135,14 @@ void log_statement(const Statement& stmt, const std::string& prefix) {
         std::cout << prefix << "│   ├── Condition\n";
         log_expression(*ifStmt.condition_, prefix + "│   │   ", true);
         std::cout << prefix << "│   └── Body\n";
-        log_statement(*ifStmt.body_, prefix + "│       ", true);
+        log_statement(*ifStmt.body_, prefix + "│       ");
     } else if (stmt.kind_ == NodeKind::WHILE_STATEMENT) {
         const auto& whileStmt = *static_cast<const WhileStatement*>(&stmt);
         std::cout << prefix << "├── WhileStatement\n";
         std::cout << prefix << "│   ├── Condition\n";
         log_expression(*whileStmt.condition_, prefix + "│   │   ", true);
         std::cout << prefix << "│   └── Body\n";
-        log_statement(*whileStmt.body_, prefix + "│       ", true);
+        log_statement(*whileStmt.body_, prefix + "│       ");
     } else if (stmt.kind_ == NodeKind::EXIT) {
         const auto& exit = *static_cast<const Exit*>(&stmt);
         std::cout << prefix << "└── Exit\n";
@@ -153,8 +153,7 @@ void log_statement(const Statement& stmt, const std::string& prefix) {
         std::cout << prefix << "├── BlockStatement\n";
         for (size_t i = 0; i < blockStmt.body_.size(); ++i) {
             const auto& innerStmt = blockStmt.body_[i];
-            const bool isLastInner = (i == blockStmt.body_.size() - 1);
-            log_statement(*innerStmt, prefix + "│   ", isLastInner);
+            log_statement(*innerStmt, prefix + "│   ");
         }
     } else {
         throw std::invalid_argument("Invalid statement kind");
@@ -164,7 +163,7 @@ void log_statement(const Statement& stmt, const std::string& prefix) {
 void log_ast(const Program& programNode) {
     std::cout << "Program\n";
     const auto& stmt = programNode.body_;
-    log_statement(*stmt, "", true);
+    log_statement(*stmt, "");
 }
 
 }  // namespace AST

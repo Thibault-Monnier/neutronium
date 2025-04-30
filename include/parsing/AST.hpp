@@ -163,7 +163,7 @@ bool is_relational_operator(Operator op);
 bool is_comparison_operator(Operator op);
 
 void log_expression(const Expression& expr, const std::string& prefix, bool isLast);
-void log_statement(const Statement& stmt, const std::string& prefix, bool isLast);
+void log_statement(const Statement& stmt, const std::string& prefix);
 void log_ast(const Program& programNode);
 
 }  // namespace AST
