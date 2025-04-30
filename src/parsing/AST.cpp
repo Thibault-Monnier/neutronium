@@ -118,7 +118,7 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
     }
 }
 
-void log_statement(const Statement& stmt, const std::string& prefix, const bool isLast) {
+void log_statement(const Statement& stmt, const std::string& prefix) {
     if (stmt.kind_ == NodeKind::ASSIGNMENT) {
         const auto& assignment = *static_cast<const Assignment*>(&stmt);
         if (assignment.isDeclaration_) {

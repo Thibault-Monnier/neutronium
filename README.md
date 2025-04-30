@@ -46,19 +46,20 @@ if !(!(!a)): {
 ```
 program ::= { statement }
 
-statement ::= assignment
+statement ::= block-statement
+            | assignment
             | declaration-assignment
             | if-statement
             | exit-statement
             | comment
 
-compound-statement ::= '{' { statement } '}'
+block-statement ::= '{' { statement } '}'
 
 assignment ::= identifier '=' expression ';'
 
 declaration-assignment ::= 'let' identifier '=' expression ';'
 
-if-statement ::= 'if' expression ':' compound-statement
+if-statement ::= 'if' expression ':' block-statement
 
 exit-statement ::= 'exit' expression ';'
 

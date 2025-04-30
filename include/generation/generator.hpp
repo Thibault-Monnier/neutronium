@@ -214,7 +214,7 @@ class Generator {
                 break;
             }
             default:
-                throw std::invalid_argument("Invalid statement kind");
+                throw std::invalid_argument("Invalid statement kind at generation");
         }
     }
 };

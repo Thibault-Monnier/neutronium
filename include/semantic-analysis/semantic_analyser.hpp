@@ -3,6 +3,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <unordered_map>
+#include <vector>
 
 #include "parsing/AST.hpp"
 #include "semantic-analysis/symbol_table.hpp"
@@ -77,12 +78,6 @@ class SemanticAnalyser {
     }
 
     void exit_scope() {
-        for (auto& scopeIt : std::ranges::reverse_view(scopeVariablesStackOffset_)) {
-            for (const auto& [name, offset] : scopeIt.variablesStackOffset_) {
-                symbolTable_.at(name).stackOffset_ = offset;
-            }
-        }
-
         currentStackOffset_ -= scopeVariablesStackOffset_.back().frameSize_;
         scopeVariablesStackOffset_.pop_back();
     }
@@ -193,7 +188,8 @@ class SemanticAnalyser {
                               type_to_string(variableType)));
         }
 
-        symbolTable_.emplace(name, SymbolInfo{.type_ = variableType, .stackOffset_ = 0});
+        const int stackOffset = scopeVariablesStackOffset_.back().variablesStackOffset_.at(name);
+        symbolTable_.emplace(name, SymbolInfo{.type_ = variableType, .stackOffset_ = stackOffset});
     }
 
     void analyse_reassignment(const AST::Assignment& assignment) {
@@ -265,7 +261,7 @@ class SemanticAnalyser {
                 break;
             }
             default:
-                throw std::invalid_argument("Invalid statement kind");
+                throw std::invalid_argument("Invalid statement kind at semantic analysis");
         }
     }
 };
