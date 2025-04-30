@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 #include "lexing/token_kind.hpp"
 
@@ -53,10 +54,10 @@ struct PrimaryExpression : Expression {
 };
 
 struct NumberLiteral final : PrimaryExpression {
-    explicit NumberLiteral(const int value)
+    explicit NumberLiteral(const std::int64_t value)
         : PrimaryExpression{NodeKind::NUMBER_LITERAL}, value_(value) {}
 
-    const int value_;
+    const std::int64_t value_;
 };
 
 struct BooleanLiteral final : PrimaryExpression {

@@ -62,7 +62,7 @@ class Parser {
         switch (token.kind()) {
             case TokenKind::NUMBER_LITERAL:
                 consume(TokenKind::NUMBER_LITERAL);
-                return std::make_unique<AST::NumberLiteral>(std::stoi(token.lexeme()));
+                return std::make_unique<AST::NumberLiteral>(std::stoll(token.lexeme()));
 
             case TokenKind::TRUE:
                 consume(TokenKind::TRUE);
