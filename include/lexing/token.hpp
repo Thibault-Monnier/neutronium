@@ -9,7 +9,7 @@ struct Token {
         : kind_(kind), lexeme_(std::move(lexeme)) {}
 
     [[nodiscard]] TokenKind kind() const { return kind_; }
-    [[nodiscard]] const std::string &lexeme() const { return lexeme_; }
+    [[nodiscard]] const std::string& lexeme() const { return lexeme_; }
 
    private:
     TokenKind kind_;

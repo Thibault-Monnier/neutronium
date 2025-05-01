@@ -1,8 +1,8 @@
 #include "generation/generator.hpp"
 
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
 #include <unordered_map>
 
 #include "parsing/AST.hpp"
