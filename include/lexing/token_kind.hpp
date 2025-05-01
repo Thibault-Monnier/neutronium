@@ -39,7 +39,7 @@ enum class TokenKind : uint8_t {
     EXIT,
 
     // Miscellaneous
-    END_OF_FILE,
+    EOF_,
 };
 
 std::string token_kind_to_string(TokenKind kind);

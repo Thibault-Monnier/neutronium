@@ -126,6 +126,6 @@ std::vector<Token> Lexer::tokenize() {
             exit(EXIT_FAILURE);
         }
     }
-    tokens_.emplace_back(TokenKind::END_OF_FILE, "");
+    tokens_.emplace_back(TokenKind::EOF_, "");
     return tokens_;
 }

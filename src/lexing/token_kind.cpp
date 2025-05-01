@@ -61,8 +61,8 @@ std::string token_kind_to_string(const TokenKind kind) {
         case TokenKind::EXIT:
             return "EXIT";
 
-        case TokenKind::END_OF_FILE:
-            return "END_OF_FILE";
+        case TokenKind::EOF_:
+            return "EOF_";
         default:
             throw std::invalid_argument("Invalid token kind passed to token_kind_to_string");
     }

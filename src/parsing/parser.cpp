@@ -13,7 +13,7 @@
 
 AST::Program Parser::parse() {
     auto program = AST::Program();
-    while (peek().kind() != TokenKind::END_OF_FILE) {
+    while (peek().kind() != TokenKind::EOF_) {
         program.body_->append_statement(parse_statement());
     }
 
