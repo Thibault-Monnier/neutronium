@@ -16,7 +16,7 @@ enum class TokenKind : uint8_t {
     BANG,
     EQUAL,
     EQUAL_EQUAL,
-    NOT_EQUAL,
+    BANG_EQUAL,
     LESS_THAN,
     LESS_THAN_EQUAL,
     GREATER_THAN,

@@ -61,7 +61,7 @@ void Lexer::lex_greater_than() {
 void Lexer::lex_bang() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::NOT_EQUAL, "!=");
+        tokens_.emplace_back(TokenKind::BANG_EQUAL, "!=");
     } else {
         tokens_.emplace_back(TokenKind::BANG, "!");
     }

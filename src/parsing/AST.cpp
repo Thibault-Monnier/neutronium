@@ -18,7 +18,7 @@ Operator token_kind_to_operator(const TokenKind tokenKind) {
         {TokenKind::SLASH, Operator::DIVIDE},
         {TokenKind::BANG, Operator::LOGICAL_NOT},
         {TokenKind::EQUAL_EQUAL, Operator::EQUALS},
-        {TokenKind::NOT_EQUAL, Operator::NOT_EQUALS},
+        {TokenKind::BANG_EQUAL, Operator::NOT_EQUALS},
         {TokenKind::LESS_THAN, Operator::LESS_THAN},
         {TokenKind::LESS_THAN_EQUAL, Operator::LESS_THAN_OR_EQUAL},
         {TokenKind::GREATER_THAN, Operator::GREATER_THAN},
