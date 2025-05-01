@@ -4,67 +4,49 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "lexing/token_kind.hpp"
 
 namespace AST {
 
 Operator token_kind_to_operator(const TokenKind tokenKind) {
-    switch (tokenKind) {
-        case TokenKind::PLUS:
-            return Operator::ADD;
-        case TokenKind::MINUS:
-            return Operator::SUBTRACT;
-        case TokenKind::STAR:
-            return Operator::MULTIPLY;
-        case TokenKind::SLASH:
-            return Operator::DIVIDE;
-        case TokenKind::BANG:
-            return Operator::LOGICAL_NOT;
-        case TokenKind::EQUAL_EQUAL:
-            return Operator::EQUALS;
-        case TokenKind::NOT_EQUAL:
-            return Operator::NOT_EQUALS;
-        case TokenKind::LESS_THAN:
-            return Operator::LESS_THAN;
-        case TokenKind::LESS_THAN_EQUAL:
-            return Operator::LESS_THAN_OR_EQUAL;
-        case TokenKind::GREATER_THAN:
-            return Operator::GREATER_THAN;
-        case TokenKind::GREATER_THAN_EQUAL:
-            return Operator::GREATER_THAN_OR_EQUAL;
-        default:
-            return Operator::UNDEFINED_OPERATOR;
-    }
+    const std::unordered_map<TokenKind, Operator> tokenToOperatorMap = {
+        {TokenKind::PLUS, Operator::ADD},
+        {TokenKind::MINUS, Operator::SUBTRACT},
+        {TokenKind::STAR, Operator::MULTIPLY},
+        {TokenKind::SLASH, Operator::DIVIDE},
+        {TokenKind::BANG, Operator::LOGICAL_NOT},
+        {TokenKind::EQUAL_EQUAL, Operator::EQUALS},
+        {TokenKind::NOT_EQUAL, Operator::NOT_EQUALS},
+        {TokenKind::LESS_THAN, Operator::LESS_THAN},
+        {TokenKind::LESS_THAN_EQUAL, Operator::LESS_THAN_OR_EQUAL},
+        {TokenKind::GREATER_THAN, Operator::GREATER_THAN},
+        {TokenKind::GREATER_THAN_EQUAL, Operator::GREATER_THAN_OR_EQUAL},
+    };
+
+    auto it = tokenToOperatorMap.find(tokenKind);
+    return it != tokenToOperatorMap.end() ? it->second : Operator::UNDEFINED_OPERATOR;
 }
 
 std::string operator_to_string(const Operator op) {
-    switch (op) {
-        case Operator::ADD:
-            return "+";
-        case Operator::SUBTRACT:
-            return "-";
-        case Operator::MULTIPLY:
-            return "*";
-        case Operator::DIVIDE:
-            return "/";
-        case Operator::LOGICAL_NOT:
-            return "!";
-        case Operator::EQUALS:
-            return "==";
-        case Operator::NOT_EQUALS:
-            return "!=";
-        case Operator::LESS_THAN:
-            return "<";
-        case Operator::LESS_THAN_OR_EQUAL:
-            return "<=";
-        case Operator::GREATER_THAN:
-            return ">";
-        case Operator::GREATER_THAN_OR_EQUAL:
-            return ">=";
-        default:
-            throw std::invalid_argument("Invalid operator passed to AST::operator_to_string");
-    }
+    static const std::unordered_map<Operator, std::string> table = {
+        {Operator::ADD, "+"},
+        {Operator::SUBTRACT, "-"},
+        {Operator::MULTIPLY, "*"},
+        {Operator::DIVIDE, "/"},
+        {Operator::LOGICAL_NOT, "!"},
+        {Operator::EQUALS, "=="},
+        {Operator::NOT_EQUALS, "!="},
+        {Operator::LESS_THAN, "<"},
+        {Operator::LESS_THAN_OR_EQUAL, "<="},
+        {Operator::GREATER_THAN, ">"},
+        {Operator::GREATER_THAN_OR_EQUAL, ">="},
+    };
+
+    auto it = table.find(op);
+    if (it != table.end()) return it->second;
+    throw std::invalid_argument("Invalid operator");
 }
 
 bool is_arithmetic_operator(const Operator op) {

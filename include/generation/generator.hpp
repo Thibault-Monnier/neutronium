@@ -11,7 +11,7 @@ class Generator {
     explicit Generator(const AST::Program& ast, SymbolTable symbolTable)
         : program_(&ast), symbolTable_(std::move(symbolTable)) {}
 
-    std::stringstream generate();
+    [[nodiscard]] std::stringstream generate();
 
    private:
     const AST::Program* program_;
