@@ -61,9 +61,11 @@ program ::= { statement }
 statement ::= block-statement
             | assignment
             | declaration-assignment
+            | function-declaration
             | if-statement
             | while-statement
             | exit-statement
+            | expression-statement
             | comment
 
 block-statement ::= '{' { statement } '}'
@@ -72,11 +74,15 @@ assignment ::= identifier '=' expression ';'
 
 declaration-assignment ::= 'let' identifier '=' expression ';'
 
+function-declaration ::= 'fn' identifier '(' ')' ':' block-statement
+
 if-statement ::= 'if' expression ':' block-statement
 
 while-statement ::= 'while' expression ':' block-statement
 
 exit-statement ::= 'exit' expression ';'
+
+expression-statement ::= expression ';'
 
 comment ::= '#' { character }
 
@@ -96,7 +102,10 @@ unary-expression ::= primary-expression
 
 primary-expression ::= literal
                      | identifier
+                     | function-call
                      | '(' expression ')'
+
+function-call ::= identifier '(' ')'
 
 unary-op ::= '-' | '+' | '!'
 

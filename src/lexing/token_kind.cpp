@@ -58,6 +58,8 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "IF";
         case TokenKind::WHILE:
             return "WHILE";
+        case TokenKind::FN:
+            return "FN";
         case TokenKind::EXIT:
             return "EXIT";
 

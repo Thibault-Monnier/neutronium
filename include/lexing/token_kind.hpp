@@ -36,6 +36,7 @@ enum class TokenKind : uint8_t {
     LET,
     IF,
     WHILE,
+    FN,
     EXIT,
 
     // Miscellaneous
