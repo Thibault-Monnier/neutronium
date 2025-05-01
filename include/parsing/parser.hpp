@@ -23,7 +23,9 @@ class Parser {
     [[nodiscard]] const Token& peek(const int amount = 0) const;
     const Token& consume(const TokenKind expected);
 
+    std::unique_ptr<AST::Identifier> parse_identifier();
     std::unique_ptr<AST::FunctionCall> parse_function_call();
+
     std::unique_ptr<AST::Expression> parse_primary_expression();
     std::unique_ptr<AST::Expression> parse_unary_expression();
     std::unique_ptr<AST::Expression> parse_binary_expression(
@@ -34,8 +36,7 @@ class Parser {
     std::unique_ptr<AST::Expression> parse_relational_expression();
     std::unique_ptr<AST::Expression> parse_expression();
 
-    std::unique_ptr<AST::Identifier> parse_identifier();
-
+    std::unique_ptr<AST::ExpressionStatement> parse_expression_statement();
     std::unique_ptr<AST::Assignment> parse_assignment(const bool isDeclaration);
     std::unique_ptr<AST::IfStatement> parse_if_statement();
     std::unique_ptr<AST::WhileStatement> parse_while_statement();

@@ -83,7 +83,11 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
     } else {
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
 
-        if (expr.kind_ == NodeKind::BINARY_EXPRESSION) {
+        if (expr.kind_ == NodeKind::FUNCTION_CALL) {
+            const auto& funcCall = static_cast<const FunctionCall&>(expr);
+            std::cout << prefix << branch << "FunctionCall\n";
+            std::cout << newPrefix << "└── Identifier: " << funcCall.identifier_->name_ << "\n";
+        } else if (expr.kind_ == NodeKind::BINARY_EXPRESSION) {
             const auto& binaryExpr = static_cast<const BinaryExpression&>(expr);
             std::cout << prefix << branch << "BinaryExpression\n";
             log_expression(*binaryExpr.left_, newPrefix, false);
@@ -111,6 +115,11 @@ void log_statement(const Statement& stmt, const std::string& prefix) {
         std::cout << prefix << "│   ├── Identifier: " << assignment.identifier_->name_ << "\n";
         std::cout << prefix << "│   └── Value\n";
         log_expression(*assignment.value_, prefix + "│       ", true);
+    } else if (stmt.kind_ == NodeKind::EXPRESSION_STATEMENT) {
+        const auto& exprStmt = *static_cast<const ExpressionStatement*>(&stmt);
+        std::cout << prefix << "├── ExpressionStatement\n";
+        std::cout << prefix << "│   └── Expression\n";
+        log_expression(*exprStmt.expression_, prefix + "│       ", true);
     } else if (stmt.kind_ == NodeKind::IF_STATEMENT) {
         const auto& ifStmt = *static_cast<const IfStatement*>(&stmt);
         std::cout << prefix << "├── IfStatement\n";
