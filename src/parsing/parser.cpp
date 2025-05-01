@@ -30,7 +30,7 @@ void Parser::abort(const std::string& errorMessage, const std::string& hintMessa
     exit(EXIT_FAILURE);
 }
 
-const Token& Parser::peek() const { return tokens_.at(currentIndex_); }
+const Token& Parser::peek(const int amount) const { return tokens_.at(currentIndex_ + amount); }
 
 const Token& Parser::consume(const TokenKind expected) {
     const Token& token = peek();
@@ -140,12 +140,16 @@ std::unique_ptr<AST::Expression> Parser::parse_expression() {
     return parse_relational_expression();
 }
 
+std::unique_ptr<AST::Identifier> Parser::parse_identifier() {
+    const std::string name = consume(TokenKind::IDENTIFIER).lexeme();
+    return std::make_unique<AST::Identifier>(name);
+}
+
 std::unique_ptr<AST::Assignment> Parser::parse_assignment(const bool isDeclaration) {
     if (isDeclaration) {
         consume(TokenKind::LET);
     }
-    const std::string identifierName = consume(TokenKind::IDENTIFIER).lexeme();
-    auto identifier = std::make_unique<AST::Identifier>(identifierName);
+    auto identifier = parse_identifier();
     consume(TokenKind::EQUAL);
     auto value = parse_expression();
     consume(TokenKind::SEMICOLON);
@@ -168,6 +172,15 @@ std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLIN
     auto body = parse_block_statement();
     std::cout << "Parsed while statement with condition: " << '\n';
     return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
+}
+
+std::unique_ptr<AST::FunctionDeclaration> Parser::parse_function_declaration() {
+    consume(TokenKind::FN);
+    auto identifier = parse_identifier();
+    consume(TokenKind::COLON);
+    auto body = parse_block_statement();
+    return std::make_unique<AST::FunctionDeclaration>(
+        std::move(identifier), std::vector<std::unique_ptr<AST::Identifier>>{}, std::move(body));
 }
 
 std::unique_ptr<AST::Exit> Parser::parse_exit() {
@@ -199,6 +212,8 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
             return parse_if_statement();
         case TokenKind::WHILE:
             return parse_while_statement();
+        case TokenKind::FN:
+            return parse_function_declaration();
         case TokenKind::EXIT:
             return parse_exit();
         case TokenKind::LEFT_BRACE:

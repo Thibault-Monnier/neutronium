@@ -33,6 +33,7 @@ enum class NodeKind : uint8_t {
     ASSIGNMENT,
     IF_STATEMENT,
     WHILE_STATEMENT,
+    FUNCTION_DECLARATION,
     EXIT,
     BLOCK_STATEMENT,
     PROGRAM,
@@ -139,6 +140,20 @@ struct WhileStatement final : Statement {
           body_(std::move(body)) {}
 
     const std::unique_ptr<Expression> condition_;
+    const std::unique_ptr<BlockStatement> body_;
+};
+
+struct FunctionDeclaration final : Statement {
+    FunctionDeclaration(std::unique_ptr<Identifier> identifier,
+                        std::vector<std::unique_ptr<Identifier>> parameters,
+                        std::unique_ptr<BlockStatement> body)
+        : Statement{NodeKind::FUNCTION_DECLARATION},
+          identifier_(std::move(identifier)),
+          parameters_(std::move(parameters)),
+          body_(std::move(body)) {}
+
+    const std::unique_ptr<Identifier> identifier_;
+    const std::vector<std::unique_ptr<Identifier>> parameters_;
     const std::unique_ptr<BlockStatement> body_;
 };
 

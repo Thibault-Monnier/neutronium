@@ -125,6 +125,12 @@ void log_statement(const Statement& stmt, const std::string& prefix) {
         log_expression(*whileStmt.condition_, prefix + "│   │   ", true);
         std::cout << prefix << "│   └── Body\n";
         log_statement(*whileStmt.body_, prefix + "│       ");
+    } else if (stmt.kind_ == NodeKind::FUNCTION_DECLARATION) {
+        const auto& funcDecl = *static_cast<const FunctionDeclaration*>(&stmt);
+        std::cout << prefix << "├── FunctionDeclaration\n";
+        std::cout << prefix << "│   ├── Identifier: " << funcDecl.identifier_->name_ << "\n";
+        std::cout << prefix << "│   └── Body\n";
+        log_statement(*funcDecl.body_, prefix + "│       ");
     } else if (stmt.kind_ == NodeKind::EXIT) {
         const auto& exit = *static_cast<const Exit*>(&stmt);
         std::cout << prefix << "└── Exit\n";
