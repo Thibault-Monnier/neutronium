@@ -20,15 +20,16 @@ class SemanticAnalyser {
     SymbolTable symbolTable_;
 
     int currentStackOffset_ = 0;
-    std::vector<Scope> scopeVariablesStackOffset_;
+    std::vector<Scope> scopes_;
 
     [[noreturn]] void abort(const std::string& errorMessage, const std::string& hintMessage = "");
 
     void enter_scope(const AST::BlockStatement& blockStmt);
     void exit_scope();
 
-    bool is_variable_declared_in_scope(const std::string& name);
-    Type get_scope_variable_type(const std::string& name);
+    bool is_symbol_declared(const std::string& name);
+    Type get_symbol_type(const std::string& name) const;
+    void handle_symbol_declaration(const std::string& name, Type type, SymbolKind kind);
 
     Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr);
     Type get_binary_expression_type(const AST::BinaryExpression& binaryExpr);
@@ -39,9 +40,11 @@ class SemanticAnalyser {
     void analyse_declaration_assignment(const AST::Assignment& assignment);
     void analyse_reassignment(const AST::Assignment& assignment);
     void analyse_assignment(const AST::Assignment& assignment);
+    void analyse_expression_statement(const AST::ExpressionStatement& exprStmt);
 
     void analyse_if_statement(const AST::IfStatement& ifStmt);
     void analyse_while_statement(const AST::WhileStatement& whileStmt);
+    void analyse_function_declaration(const AST::FunctionDeclaration& funcDecl);
     void analyse_exit(const AST::Exit& exitStmt);
 
     void analyse_statement(const AST::Statement& stmt);

@@ -2,7 +2,6 @@
 
 #include <format>
 #include <iostream>
-#include <ranges>
 #include <stdexcept>
 #include <string>
 
@@ -12,7 +11,8 @@ SymbolTable SemanticAnalyser::analyse() {
     analyse_statement(*ast_->body_);
 
     for (const auto& [name, info] : symbolTable_) {
-        std::cout << "Variable: " << name << ", Type: " << type_to_string(info.type_) << '\n';
+        std::cout << "Variable: " << name << ", Type: " << type_to_string(info.type_)
+                  << ", Kind: " << symbol_kind_to_string(info.kind_) << "\n";
     }
 
     std::cout << "\033[1;32mAnalysis completed successfully.\033[0m\n";
@@ -44,28 +44,45 @@ void SemanticAnalyser::enter_scope(const AST::BlockStatement& blockStmt) {
 
     scope.frameSize_ = (frameSize + 15) & ~15;
     currentStackOffset_ += scope.frameSize_;
-    scopeVariablesStackOffset_.push_back(scope);
+    scopes_.push_back(scope);
 }
 
 void SemanticAnalyser::exit_scope() {
-    currentStackOffset_ -= scopeVariablesStackOffset_.back().frameSize_;
-    scopeVariablesStackOffset_.pop_back();
+    currentStackOffset_ -= scopes_.back().frameSize_;
+    scopes_.pop_back();
 }
 
-bool SemanticAnalyser::is_variable_declared_in_scope(const std::string& name) {
-    for (auto& scopeIt : std::ranges::reverse_view(scopeVariablesStackOffset_)) {
-        if (scopeIt.variablesStackOffset_.contains(name)) {
+bool SemanticAnalyser::is_symbol_declared(const std::string& name) {
+    for (const Scope& scope : scopes_) {
+        if (scope.symbols_.contains(name)) {
             return true;
         }
     }
     return false;
 }
 
-Type SemanticAnalyser::get_scope_variable_type(const std::string& name) {
+Type SemanticAnalyser::get_symbol_type(const std::string& name) const {
     return symbolTable_.at(name).type_;
 }
 
-Type SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& unaryExpr) {
+void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const Type type,
+                                                 const SymbolKind kind) {
+    if (is_symbol_declared(name)) {
+        abort(std::format("Redeclaration of symbol: `{}`", name),
+              "Shadowing is not permitted, even for disjoint scopes");
+    }
+
+    scopes_.back().symbols_.emplace(name);
+
+    SymbolInfo info{.kind_ = kind, .type_ = type};
+    if (kind == SymbolKind::VARIABLE) {
+        info.stackOffset_ = scopes_.back().variablesStackOffset_.at(name);
+    }
+    symbolTable_.emplace(name, info);
+}
+
+Type SemanticAnalyser::get_unary_expression_type(  // NOLINT(*-no-recursion)
+    const AST::UnaryExpression& unaryExpr) {
     const Type operandType = get_expression_type(*unaryExpr.operand_);
     if (operandType == Type::INTEGER) {
         if (AST::is_arithmetic_operator(unaryExpr.operator_)) return Type::INTEGER;
@@ -84,7 +101,8 @@ Type SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& una
           type_to_string(operandType));
 }
 
-Type SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression& binaryExpr) {
+Type SemanticAnalyser::get_binary_expression_type(  // NOLINT(*-no-recursion)
+    const AST::BinaryExpression& binaryExpr) {
     const Type leftType = get_expression_type(*binaryExpr.left_);
     const Type rightType = get_expression_type(*binaryExpr.right_);
     if (leftType != rightType) {
@@ -128,11 +146,23 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
             return Type::BOOLEAN;
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
-            if (!is_variable_declared_in_scope(identifier.name_)) {
+            if (!is_symbol_declared(identifier.name_)) {
                 abort(
                     std::format("Attempted to access undeclared variable: `{}`", identifier.name_));
             }
-            return get_scope_variable_type(identifier.name_);
+            return get_symbol_type(identifier.name_);
+        }
+        case AST::NodeKind::FUNCTION_CALL: {
+            const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
+            const std::string& name = funcCall.identifier_->name_;
+            if (!is_symbol_declared(name)) {
+                abort(std::format("Attempted to call undeclared function: `{}`", name));
+            }
+            const SymbolInfo& info = symbolTable_.at(name);
+            if (info.kind_ != SymbolKind::FUNCTION) {
+                abort(std::format("Attempted to call a non-function: `{}`", name));
+            }
+            return info.type_;
         }
         case AST::NodeKind::UNARY_EXPRESSION: {
             const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
@@ -169,18 +199,17 @@ void SemanticAnalyser::analyse_declaration_assignment(const AST::Assignment& ass
                           type_to_string(variableType)));
     }
 
-    const int stackOffset = scopeVariablesStackOffset_.back().variablesStackOffset_.at(name);
-    symbolTable_.emplace(name, SymbolInfo{.type_ = variableType, .stackOffset_ = stackOffset});
+    handle_symbol_declaration(name, variableType, SymbolKind::VARIABLE);
 }
 
 void SemanticAnalyser::analyse_reassignment(const AST::Assignment& assignment) {
     const std::string& name = assignment.identifier_->name_;
 
-    if (!is_variable_declared_in_scope(name)) {
+    if (!is_symbol_declared(name)) {
         abort(std::format("Assignment to undeclared variable: `{}`", name));
     }
 
-    const Type declaredType = get_scope_variable_type(name);
+    const Type declaredType = get_symbol_type(name);
     const Type variableType = get_expression_type(*assignment.value_);
     if (variableType != declaredType) {
         abort(
@@ -198,15 +227,28 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
     }
 }
 
-void SemanticAnalyser::analyse_if_statement(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
+void SemanticAnalyser::analyse_expression_statement(  // NOLINT(*-no-recursion)
+    const AST::ExpressionStatement& exprStmt) {
+    analyse_expression(*exprStmt.expression_, Type::EMPTY, "expression statement");
+}
+
+void SemanticAnalyser::analyse_if_statement(  // NOLINT(*-no-recursion)
+    const AST::IfStatement& ifStmt) {
     analyse_expression(*ifStmt.condition_, Type::BOOLEAN, "condition");
     analyse_statement(*ifStmt.body_);
 }
 
-void SemanticAnalyser::analyse_while_statement(
-    const AST::WhileStatement& whileStmt) {  // NOLINT(*-no-recursion)
+void SemanticAnalyser::analyse_while_statement(  // NOLINT(*-no-recursion)
+    const AST::WhileStatement& whileStmt) {
     analyse_expression(*whileStmt.condition_, Type::BOOLEAN, "condition");
     analyse_statement(*whileStmt.body_);
+}
+
+void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
+    const AST::FunctionDeclaration& funcDecl) {
+    analyse_statement(*funcDecl.body_);
+    const std::string& name = funcDecl.identifier_->name_;
+    handle_symbol_declaration(name, Type::EMPTY, SymbolKind::FUNCTION);
 }
 
 void SemanticAnalyser::analyse_exit(const AST::Exit& exitStmt) {
@@ -220,6 +262,11 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
             analyse_assignment(assignment);
             break;
         }
+        case AST::NodeKind::EXPRESSION_STATEMENT: {
+            const auto& exprStmt = static_cast<const AST::ExpressionStatement&>(stmt);
+            analyse_expression_statement(exprStmt);
+            break;
+        }
         case AST::NodeKind::IF_STATEMENT: {
             const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
             analyse_if_statement(ifStmt);
@@ -228,6 +275,11 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
         case AST::NodeKind::WHILE_STATEMENT: {
             const auto& whileStmt = static_cast<const AST::WhileStatement&>(stmt);
             analyse_while_statement(whileStmt);
+            break;
+        }
+        case AST::NodeKind::FUNCTION_DECLARATION: {
+            const auto& funcDecl = static_cast<const AST::FunctionDeclaration&>(stmt);
+            analyse_function_declaration(funcDecl);
             break;
         }
         case AST::NodeKind::EXIT: {

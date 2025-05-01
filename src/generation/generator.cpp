@@ -52,7 +52,7 @@ void Generator::stack_deallocate_scope_variables(const AST::BlockStatement& bloc
 }
 
 int Generator::get_variable_stack_offset(const std::string& name) const {
-    return symbolTable_.at(name).stackOffset_;
+    return symbolTable_.at(name).stackOffset_.value();
 }
 
 void Generator::write_to_variable(const std::string& name, const std::string& source) {

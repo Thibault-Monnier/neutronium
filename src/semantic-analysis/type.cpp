@@ -9,6 +9,8 @@ std::string type_to_string(const Type type) {
             return "integer";
         case Type::BOOLEAN:
             return "boolean";
+        case Type::EMPTY:
+            return "empty";
         default:
             throw std::invalid_argument("Unknown type passed to type_to_string");
     }
