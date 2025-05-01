@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "semantic-analysis/types.hpp"
+#include "semantic-analysis/type.hpp"
 
 struct SymbolInfo {
     Type type_;
