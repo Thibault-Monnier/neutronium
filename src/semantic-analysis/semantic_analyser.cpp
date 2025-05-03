@@ -17,7 +17,7 @@ SymbolTable SemanticAnalyser::analyse() {
 
     std::cout << "\033[1;32mAnalysis completed successfully.\033[0m\n";
 
-    return symbolTable_;
+    return std::move(symbolTable_);
 }
 
 void SemanticAnalyser::abort(const std::string& errorMessage, const std::string& hintMessage) {
@@ -66,7 +66,8 @@ Type SemanticAnalyser::get_symbol_type(const std::string& name) const {
 }
 
 void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const Type type,
-                                                 const SymbolKind kind) {
+                                                 const SymbolKind kind,
+                                                 const AST::Node& declarationNode) {
     if (is_symbol_declared(name)) {
         abort(std::format("Redeclaration of symbol: `{}`", name),
               "Shadowing is not permitted, even for disjoint scopes");
@@ -74,11 +75,15 @@ void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const 
 
     scopes_.back().symbols_.emplace(name);
 
-    SymbolInfo info{.kind_ = kind, .type_ = type};
-    if (kind == SymbolKind::VARIABLE) {
-        info.stackOffset_ = scopes_.back().variablesStackOffset_.at(name);
-    }
-    symbolTable_.emplace(name, info);
+    SymbolInfo info{
+        .kind_ = kind,
+        .type_ = type,
+        .declarationNode_ = &declarationNode,
+        .stackOffset_ = (kind == SymbolKind::VARIABLE)
+                            ? std::optional(scopes_.back().variablesStackOffset_.at(name))
+                            : std::nullopt,
+    };
+    symbolTable_.emplace(name, std::move(info));
 }
 
 Type SemanticAnalyser::get_unary_expression_type(  // NOLINT(*-no-recursion)
@@ -199,7 +204,7 @@ void SemanticAnalyser::analyse_declaration_assignment(const AST::Assignment& ass
                           type_to_string(variableType)));
     }
 
-    handle_symbol_declaration(name, variableType, SymbolKind::VARIABLE);
+    handle_symbol_declaration(name, variableType, SymbolKind::VARIABLE, assignment);
 }
 
 void SemanticAnalyser::analyse_reassignment(const AST::Assignment& assignment) {
@@ -248,7 +253,7 @@ void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
     const AST::FunctionDeclaration& funcDecl) {
     analyse_statement(*funcDecl.body_);
     const std::string& name = funcDecl.identifier_->name_;
-    handle_symbol_declaration(name, Type::EMPTY, SymbolKind::FUNCTION);
+    handle_symbol_declaration(name, Type::EMPTY, SymbolKind::FUNCTION, funcDecl);
 }
 
 void SemanticAnalyser::analyse_exit(const AST::Exit& exitStmt) {

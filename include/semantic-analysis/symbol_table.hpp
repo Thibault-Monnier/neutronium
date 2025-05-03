@@ -21,9 +21,10 @@ inline std::string symbol_kind_to_string(const SymbolKind kind) {
 }
 
 struct SymbolInfo {
-    SymbolKind kind_;
-    Type type_;
-    std::optional<int> stackOffset_;
+    const SymbolKind kind_;
+    const Type type_;
+    const AST::Node* declarationNode_;
+    const std::optional<int> stackOffset_;
 };
 
 using SymbolTable = std::unordered_map<std::string, SymbolInfo>;

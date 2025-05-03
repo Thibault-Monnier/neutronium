@@ -29,7 +29,8 @@ class SemanticAnalyser {
 
     bool is_symbol_declared(const std::string& name);
     Type get_symbol_type(const std::string& name) const;
-    void handle_symbol_declaration(const std::string& name, Type type, SymbolKind kind);
+    void handle_symbol_declaration(const std::string& name, Type type, SymbolKind kind,
+                                   const AST::Node& declarationNode);
 
     Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr);
     Type get_binary_expression_type(const AST::BinaryExpression& binaryExpr);
