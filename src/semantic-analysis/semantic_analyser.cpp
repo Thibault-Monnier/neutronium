@@ -65,6 +65,10 @@ Type SemanticAnalyser::get_symbol_type(const std::string& name) const {
     return symbolTable_.at(name).type_;
 }
 
+SymbolKind SemanticAnalyser::get_symbol_kind(const std::string& name) const {
+    return symbolTable_.at(name).kind_;
+}
+
 void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const Type type,
                                                  const SymbolKind kind,
                                                  const AST::Node& declarationNode) {
@@ -154,6 +158,8 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
             if (!is_symbol_declared(identifier.name_)) {
                 abort(
                     std::format("Attempted to access undeclared variable: `{}`", identifier.name_));
+            } else if (get_symbol_kind(identifier.name_) != SymbolKind::VARIABLE) {
+                abort(std::format("`{}` is not a variable", identifier.name_));
             }
             return get_symbol_type(identifier.name_);
         }
@@ -194,7 +200,7 @@ void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Typ
 void SemanticAnalyser::analyse_declaration_assignment(const AST::Assignment& assignment) {
     const std::string& name = assignment.identifier_->name_;
     if (symbolTable_.contains(name)) {
-        abort(std::format("Redeclaration of variable: `{}`", name),
+        abort(std::format("Redeclaration of symbol: `{}`", name),
               "Shadowing is not permitted, even for disjoint scopes");
     }
 

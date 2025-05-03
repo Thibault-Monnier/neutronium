@@ -29,6 +29,7 @@ class SemanticAnalyser {
 
     bool is_symbol_declared(const std::string& name);
     Type get_symbol_type(const std::string& name) const;
+    SymbolKind get_symbol_kind(const std::string& name) const;
     void handle_symbol_declaration(const std::string& name, Type type, SymbolKind kind,
                                    const AST::Node& declarationNode);
 

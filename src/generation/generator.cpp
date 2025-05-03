@@ -16,7 +16,13 @@ std::stringstream Generator::generate() {
     output_ << "    push rbp\n";
     output_ << "    mov rbp, rsp\n\n";
 
-    generate_stmt(*program_->body_);
+    generate_stmt(*program_.body_);
+
+    for (const auto& [name, info] : symbolTable_) {
+        if (info.kind_ == SymbolKind::FUNCTION) {
+            generate_function_declaration(*static_cast<const AST::FunctionDeclaration*>(info.declarationNode_));
+        }
+    }
 
     std::cout << output_.str();
     std::cout << "\033[1;32mGeneration completed successfully.\033[0m\n";
@@ -72,7 +78,12 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
     output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
 }
 
-void Generator::evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr) {
+void Generator::generate_function_call(const AST::FunctionCall& funcCall) {
+    output_ << "    call " << funcCall.identifier_->name_ << "\n";
+}
+
+void Generator::evaluate_unary_expression_to_rax(  // NOLINT(*-no-recursion)
+    const AST::UnaryExpression& unaryExpr) {
     evaluate_expression_to_rax(*unaryExpr.operand_);
     if (unaryExpr.operator_ == AST::Operator::SUBTRACT) {
         output_ << "    neg rax\n";
@@ -81,7 +92,8 @@ void Generator::evaluate_unary_expression_to_rax(const AST::UnaryExpression& una
     }
 }
 
-void Generator::evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr) {
+void Generator::evaluate_binary_expression_to_rax(  // NOLINT(*-no-recursion)
+    const AST::BinaryExpression& binaryExpr) {
     // First evaluate right side to prevent an additional move in case of division, because the
     // numerator has to be in rax
     evaluate_expression_to_rax(*binaryExpr.right_);
@@ -135,6 +147,11 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NO
             move_variable_to_rax(identifier.name_);
             break;
         }
+        case AST::NodeKind::FUNCTION_CALL: {
+            const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
+            generate_function_call(funcCall);
+            break;
+        }
         case AST::NodeKind::UNARY_EXPRESSION: {
             const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
             evaluate_unary_expression_to_rax(unaryExpr);
@@ -163,13 +180,18 @@ void Generator::generate_assignment(const AST::Assignment& assignment) {
     write_to_variable(varName, "rax");
 }
 
+void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStmt) {
+    evaluate_expression_to_rax(*exprStmt.expression_);
+}
+
 void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
     const int elseLabel = generate_condition(*ifStmt.condition_);
     generate_stmt(*ifStmt.body_);
     output_ << "." << elseLabel << ":\n";
 }
 
-void Generator::generate_while_stmt(const AST::WhileStatement& whileStmt) {
+void Generator::generate_while_stmt(  // NOLINT(*-no-recursion)
+    const AST::WhileStatement& whileStmt) {
     const int whileLabel = labelsCount_++;
     output_ << "." << whileLabel << ":\n";
     const int endwhileLabel = generate_condition(*whileStmt.condition_);
@@ -185,11 +207,16 @@ void Generator::generate_exit(const AST::Exit& exitStmt) {
     output_ << "    syscall\n";
 }
 
-void Generator::generate_stmt(const AST::Statement& stmt) {
+void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
     switch (stmt.kind_) {
         case AST::NodeKind::ASSIGNMENT: {
             const auto& assignmentStmt = static_cast<const AST::Assignment&>(stmt);
             generate_assignment(assignmentStmt);
+            break;
+        }
+        case AST::NodeKind::EXPRESSION_STATEMENT: {
+            const auto& exprStmt = static_cast<const AST::ExpressionStatement&>(stmt);
+            generate_expression_stmt(exprStmt);
             break;
         }
         case AST::NodeKind::IF_STATEMENT: {
@@ -201,6 +228,9 @@ void Generator::generate_stmt(const AST::Statement& stmt) {
             const auto& whileStmt = static_cast<const AST::WhileStatement&>(stmt);
             generate_while_stmt(whileStmt);
             break;
+        }
+        case AST::NodeKind::FUNCTION_DECLARATION: {
+            break; // Function declarations are handled separately
         }
         case AST::NodeKind::EXIT: {
             const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
@@ -219,4 +249,11 @@ void Generator::generate_stmt(const AST::Statement& stmt) {
         default:
             throw std::invalid_argument("Invalid statement kind at generation");
     }
+}
+
+void Generator::generate_function_declaration(const AST::FunctionDeclaration& funcDecl) {
+    output_ << "\n";
+    output_ << funcDecl.identifier_->name_ << ":\n";
+    generate_stmt(*funcDecl.body_);
+    output_ << "    ret\n";
 }
