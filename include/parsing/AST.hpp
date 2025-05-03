@@ -31,8 +31,11 @@ enum class NodeKind : uint8_t {
     UNARY_EXPRESSION,
     BINARY_EXPRESSION,
     ASSIGNMENT,
+    EXPRESSION_STATEMENT,
     IF_STATEMENT,
     WHILE_STATEMENT,
+    FUNCTION_CALL,
+    FUNCTION_DECLARATION,
     EXIT,
     BLOCK_STATEMENT,
     PROGRAM,
@@ -72,6 +75,17 @@ struct Identifier final : PrimaryExpression {
         : PrimaryExpression{NodeKind::IDENTIFIER}, name_(std::move(name)) {}
 
     const std::string name_;
+};
+
+struct FunctionCall final : PrimaryExpression {
+    FunctionCall(std::unique_ptr<Identifier> identifier,
+                 std::vector<std::unique_ptr<Expression>> arguments)
+        : PrimaryExpression{NodeKind::FUNCTION_CALL},
+          identifier_(std::move(identifier)),
+          arguments_(std::move(arguments)) {}
+
+    const std::unique_ptr<Identifier> identifier_;
+    const std::vector<std::unique_ptr<Expression>> arguments_;
 };
 
 struct UnaryExpression final : Expression {
@@ -122,6 +136,13 @@ struct Assignment final : Statement {
     const bool isDeclaration_;
 };
 
+struct ExpressionStatement final : Statement {
+    explicit ExpressionStatement(std::unique_ptr<Expression> expression)
+        : Statement{NodeKind::EXPRESSION_STATEMENT}, expression_(std::move(expression)) {}
+
+    const std::unique_ptr<Expression> expression_;
+};
+
 struct IfStatement final : Statement {
     IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body)
         : Statement{NodeKind::IF_STATEMENT},
@@ -139,6 +160,20 @@ struct WhileStatement final : Statement {
           body_(std::move(body)) {}
 
     const std::unique_ptr<Expression> condition_;
+    const std::unique_ptr<BlockStatement> body_;
+};
+
+struct FunctionDeclaration final : Statement {
+    FunctionDeclaration(std::unique_ptr<Identifier> identifier,
+                        std::vector<std::unique_ptr<Identifier>> parameters,
+                        std::unique_ptr<BlockStatement> body)
+        : Statement{NodeKind::FUNCTION_DECLARATION},
+          identifier_(std::move(identifier)),
+          parameters_(std::move(parameters)),
+          body_(std::move(body)) {}
+
+    const std::unique_ptr<Identifier> identifier_;
+    const std::vector<std::unique_ptr<Identifier>> parameters_;
     const std::unique_ptr<BlockStatement> body_;
 };
 

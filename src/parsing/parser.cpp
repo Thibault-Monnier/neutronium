@@ -30,7 +30,7 @@ void Parser::abort(const std::string& errorMessage, const std::string& hintMessa
     exit(EXIT_FAILURE);
 }
 
-const Token& Parser::peek() const { return tokens_.at(currentIndex_); }
+const Token& Parser::peek(const int amount) const { return tokens_.at(currentIndex_ + amount); }
 
 const Token& Parser::consume(const TokenKind expected) {
     const Token& token = peek();
@@ -44,6 +44,19 @@ const Token& Parser::consume(const TokenKind expected) {
 
     currentIndex_++;
     return token;
+}
+
+std::unique_ptr<AST::Identifier> Parser::parse_identifier() {
+    const std::string& name = consume(TokenKind::IDENTIFIER).lexeme();
+    return std::make_unique<AST::Identifier>(name);
+}
+
+std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
+    auto identifier = parse_identifier();
+    consume(TokenKind::LEFT_PAREN);
+    consume(TokenKind::RIGHT_PAREN);
+    return std::make_unique<AST::FunctionCall>(std::move(identifier),
+                                               std::vector<std::unique_ptr<AST::Expression>>{});
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT(*-no-recursion)
@@ -62,8 +75,12 @@ std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT
             return std::make_unique<AST::BooleanLiteral>(false);
 
         case TokenKind::IDENTIFIER:
-            consume(TokenKind::IDENTIFIER);
-            return std::make_unique<AST::Identifier>(token.lexeme());
+            if (peek(1).kind() == TokenKind::LEFT_PAREN) {
+                return parse_function_call();
+            } else {
+                consume(TokenKind::IDENTIFIER);
+                return std::make_unique<AST::Identifier>(token.lexeme());
+            }
 
         case TokenKind::LEFT_PAREN: {
             consume(TokenKind::LEFT_PAREN);
@@ -140,12 +157,17 @@ std::unique_ptr<AST::Expression> Parser::parse_expression() {
     return parse_relational_expression();
 }
 
+std::unique_ptr<AST::ExpressionStatement> Parser::parse_expression_statement() {
+    auto expression = parse_expression();
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::ExpressionStatement>(std::move(expression));
+}
+
 std::unique_ptr<AST::Assignment> Parser::parse_assignment(const bool isDeclaration) {
     if (isDeclaration) {
         consume(TokenKind::LET);
     }
-    const std::string identifierName = consume(TokenKind::IDENTIFIER).lexeme();
-    auto identifier = std::make_unique<AST::Identifier>(identifierName);
+    auto identifier = parse_identifier();
     consume(TokenKind::EQUAL);
     auto value = parse_expression();
     consume(TokenKind::SEMICOLON);
@@ -170,6 +192,15 @@ std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLIN
     return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
 }
 
+std::unique_ptr<AST::FunctionDeclaration> Parser::parse_function_declaration() {
+    consume(TokenKind::FN);
+    auto identifier = parse_identifier();
+    consume(TokenKind::COLON);
+    auto body = parse_block_statement();
+    return std::make_unique<AST::FunctionDeclaration>(
+        std::move(identifier), std::vector<std::unique_ptr<AST::Identifier>>{}, std::move(body));
+}
+
 std::unique_ptr<AST::Exit> Parser::parse_exit() {
     consume(TokenKind::EXIT);
     auto exitCode = parse_expression();
@@ -188,26 +219,15 @@ std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLIN
 }
 
 std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recursion)
-    const Token& firstToken = peek();
+    const TokenKind tokenKind = peek().kind();
 
-    switch (firstToken.kind()) {
-        case TokenKind::LET:
-            return parse_assignment(true);
-        case TokenKind::IDENTIFIER:
-            return parse_assignment(false);
-        case TokenKind::IF:
-            return parse_if_statement();
-        case TokenKind::WHILE:
-            return parse_while_statement();
-        case TokenKind::EXIT:
-            return parse_exit();
-        case TokenKind::LEFT_BRACE:
-            return parse_block_statement();
-        default:
-            const std::string errorMessage =
-                std::format("Invalid token at index {} -> got {} at beginning of statement",
-                            currentIndex_, token_kind_to_string(firstToken.kind()));
-            const std::string hintMessage = std::format("Lexeme -> {}", firstToken.lexeme());
-            abort(errorMessage, hintMessage);
-    }
+    if (tokenKind == TokenKind::LET) return parse_assignment(true);
+    if (tokenKind == TokenKind::IDENTIFIER && peek(1).kind() == TokenKind::EQUAL)
+        return parse_assignment(false);
+    if (tokenKind == TokenKind::IF) return parse_if_statement();
+    if (tokenKind == TokenKind::WHILE) return parse_while_statement();
+    if (tokenKind == TokenKind::FN) return parse_function_declaration();
+    if (tokenKind == TokenKind::EXIT) return parse_exit();
+    if (tokenKind == TokenKind::LEFT_BRACE) return parse_block_statement();
+    return parse_expression_statement();
 }

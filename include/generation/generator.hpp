@@ -8,18 +8,18 @@
 
 class Generator {
    public:
-    explicit Generator(const AST::Program& ast, SymbolTable symbolTable)
-        : program_(&ast), symbolTable_(std::move(symbolTable)) {}
+    explicit Generator(const AST::Program& ast, const SymbolTable& symbolTable)
+        : program_(ast), symbolTable_(symbolTable) {}
 
     [[nodiscard]] std::stringstream generate();
 
    private:
-    const AST::Program* program_;
+    const AST::Program& program_;
     std::stringstream output_;
 
     int labelsCount_ = 0;
 
-    SymbolTable symbolTable_;
+    const SymbolTable& symbolTable_;
 
     int get_current_scope_frame_size(const AST::BlockStatement& blockStmt) const;
 
@@ -31,15 +31,18 @@ class Generator {
 
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
     void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit);
+    void generate_function_call(const AST::FunctionCall& funcCall);
     void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr);
     void evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr);
     void evaluate_expression_to_rax(const AST::Expression& expr);
 
     int generate_condition(const AST::Expression& condition);
     void generate_assignment(const AST::Assignment& assignment);
+    void generate_expression_stmt(const AST::ExpressionStatement& exprStmt);
     void generate_if_stmt(const AST::IfStatement& ifStmt);
     void generate_while_stmt(const AST::WhileStatement& whileStmt);
     void generate_exit(const AST::Exit& exitStmt);
 
     void generate_stmt(const AST::Statement& stmt);
+    void generate_function_declaration(const AST::FunctionDeclaration& funcDecl);
 };

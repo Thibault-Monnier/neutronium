@@ -1,54 +1,95 @@
 # Neutronium
 
+> ⚠️ **Disclaimer:** The Neutronium compiler works on **Linux only**, and the following instructions are tailored for Linux environments.
+
 ## Setup
 
-Navigate to root directory and run the following command:
+Clone this repository and set it up by running:
 
 ```bash
-cmake -S . -B build/
+git clone https://github.com/Thibault-Monnier/neutronium.git
+cd neutronium
+chmod +x build.sh
 ```
 
-## Compile and run
+## Compile and Run
 
-Navigate to root directory and run the following command:
+From the root directory, compile and run Neutronium with:
+```bash
+./build.sh && ./build/neutronium <path-to-source-file>
+```
+
+This command builds the Neutronium compiler and executes it on the specified source file.
+
+To execute the generated machine code, run:
 
 ```bash
-cmake --build build/ && ./build/neutronium <path-to-source-file>
+./neutro/out
 ```
+
+> Note: you can write some scripts in the scripts/ directory, which is ignored by source control.
 
 ## Neutronium Language
 
 Neutronium is a C-like language, and will take some inspiration from several languages, to try to take advantage of the
 best parts of each of them.
 
-### Example Program
+### Example Programs
 
 The following program returns 0 if `integer` is prime, its smallest divisor otherwise.
 
-```
-let integer = 89;
-
-if integer <= 1: {
-    exit 1;
-}
+```bash
+let integer = 8000000011;
 
 let isPrime = true;
-let divisor = 1;
-let div = 2;
-while div < integer: {
-    if (integer / div) * div == integer: {
-        isPrime = false;
-        divisor = div;
-        div = integer; # Equivalent to a break
+let smallestDivisor = 1;
+fn computeIsPrime: {
+    if integer <= 1: {
+        exit 1;
     }
-    div = div + 1;
+
+    let curr = 2;
+    while curr < integer: {
+        if (integer / curr) * curr == integer: {
+            isPrime = false;
+            smallestDivisor = curr;
+            curr = integer; # Equivalent to a break
+        }
+        curr = curr + 1;
+    }
 }
 
+computeIsPrime();
+
 if !isPrime: {
-    exit divisor;
+    exit smallestDivisor;
 }
 
 exit 0;
+```
+
+In Neutronium, you can declare functions inside other functions!
+
+```bash
+let var = 0;
+
+fn inc: {
+    var = var + 1;
+}
+
+fn dec: {
+    fn minusOne: {
+        var = var - 1;
+    }
+    minusOne();
+}
+
+inc();
+inc();
+dec();
+inc();
+
+exit var; # 2
 ```
 
 ### EBNF Grammar
@@ -61,9 +102,11 @@ program ::= { statement }
 statement ::= block-statement
             | assignment
             | declaration-assignment
+            | function-declaration
             | if-statement
             | while-statement
             | exit-statement
+            | expression-statement
             | comment
 
 block-statement ::= '{' { statement } '}'
@@ -72,11 +115,15 @@ assignment ::= identifier '=' expression ';'
 
 declaration-assignment ::= 'let' identifier '=' expression ';'
 
+function-declaration ::= 'fn' identifier '(' ')' ':' block-statement
+
 if-statement ::= 'if' expression ':' block-statement
 
 while-statement ::= 'while' expression ':' block-statement
 
 exit-statement ::= 'exit' expression ';'
+
+expression-statement ::= expression ';'
 
 comment ::= '#' { character }
 
@@ -96,7 +143,10 @@ unary-expression ::= primary-expression
 
 primary-expression ::= literal
                      | identifier
+                     | function-call
                      | '(' expression ')'
+
+function-call ::= identifier '(' ')'
 
 unary-op ::= '-' | '+' | '!'
 
