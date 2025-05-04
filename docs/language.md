@@ -9,7 +9,8 @@ Whitespaces are ignored, and most statements are terminated by a semicolon.
 
 ### Variables:
 
-Variables are declared with `let`. All variables are **mutable** and can be reassigned to **a value of the same type**. Variable types are inferred at declaration.
+Variables are declared with `let`. All variables are **mutable** and can be reassigned to **a value of the same type**.
+Variable types are inferred at declaration.
 
 ```bash
 let x = 42;
@@ -20,7 +21,8 @@ Variables can be **64-bit signed integers**, or **boolean**.
 
 ### Control Flow:
 
-Control flow is handled with `if` statements and `while` loops. The bodies are introduced by a colon `:` and wrapped in a block `{ ... }`.
+Control flow is handled with `if` statements and `while` loops. The bodies are introduced by a colon `:` and wrapped in
+a block `{ ... }`.
 
 ```bash
 if x > 0: {
@@ -71,6 +73,7 @@ x = 41; # Error: assignment to undeclared variable `x`
 ```
 
 ### Comments:
+
 Single-line comments start with `#` and extend to the end of the line.
 
 ```bash
@@ -78,14 +81,16 @@ Single-line comments start with `#` and extend to the end of the line.
 ```
 
 ### Identifiers & Literals:
+
 - **Identifiers** start with a letter, followed by any sequence of letters and digits (`foo1Bar2`).
 - **Literals:**
-  - **Non-negative integer:** `42`, `0`
-  - **Boolean:** `true`, `false`
+    - **Non-negative integer:** `42`, `0`
+    - **Boolean:** `true`, `false`
 
 ## Example Program
 
-The following program returns 0 if `integer` is prime, its smallest prime divisor otherwise (or 1 if `integer` is less than 2).
+The following program returns 0 if `integer` is prime, its smallest prime divisor otherwise (or 1 if `integer` is less
+than 2).
 
 ```bash
 let integer = 8000000011;
