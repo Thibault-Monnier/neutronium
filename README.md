@@ -1,6 +1,14 @@
+
 # Neutronium
 
 > ⚠️ **Disclaimer:** The Neutronium compiler works on **Linux only**, and the following instructions are tailored for Linux environments.
+
+<p>
+  <br>
+  <a href="https://github.com/Thibault-Monnier/neutronium/releases/latest">
+    <mark>📦 <strong>Latest Release</strong></mark>
+  </a>
+</p>
 
 ## Setup
 
