@@ -68,7 +68,7 @@ if !isPrime: {
 exit 0;
 ```
 
-In Neutronium, you can declare functions inside other functions!
+In Neutronium, you can declare functions inside of other functions!
 
 ```bash
 let var = 0;
