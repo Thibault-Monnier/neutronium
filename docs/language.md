@@ -17,7 +17,7 @@ let x = 42;
 x = 43;
 ```
 
-Variables can be **64-bit signed integers**, or **boolean**.
+Variables can be **integers** or **booleans**.
 
 ### Control Flow:
 
@@ -86,6 +86,12 @@ Single-line comments start with `#` and extend to the end of the line.
 - **Literals:**
     - **Non-negative integer:** `42`, `0`
     - **Boolean:** `true`, `false`
+
+### Types:
+- **Integer**: 64-bit signed integer
+- **Boolean**: `true` or `false`
+- **Empty**: The return type of _all_ functions (since return values are not yet supported)
+
 
 ## Example Program
 
