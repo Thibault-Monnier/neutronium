@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <parsing/ast.hpp>
 #include <string>
 #include <unordered_map>
 

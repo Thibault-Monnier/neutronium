@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -144,13 +145,16 @@ struct ExpressionStatement final : Statement {
 };
 
 struct IfStatement final : Statement {
-    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body)
+    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
+                std::unique_ptr<BlockStatement> elseClause = nullptr)
         : Statement{NodeKind::IF_STATEMENT},
           condition_(std::move(condition)),
-          body_(std::move(body)) {}
+          body_(std::move(body)),
+          elseClause_(std::move(elseClause)) {}
 
     const std::unique_ptr<Expression> condition_;
     const std::unique_ptr<BlockStatement> body_;
+    const std::unique_ptr<BlockStatement> elseClause_;
 };
 
 struct WhileStatement final : Statement {
@@ -198,8 +202,6 @@ bool is_equality_operator(Operator op);
 bool is_relational_operator(Operator op);
 bool is_comparison_operator(Operator op);
 
-void log_expression(const Expression& expr, const std::string& prefix, bool isLast);
-void log_statement(const Statement& stmt, const std::string& prefix);
 void log_ast(const Program& programNode);
 
 }  // namespace AST

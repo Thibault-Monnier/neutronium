@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "parsing/AST.hpp"
+#include "parsing/ast.hpp"
 
 std::stringstream Generator::generate() {
     // Write the header
@@ -20,7 +20,8 @@ std::stringstream Generator::generate() {
 
     for (const auto& [name, info] : symbolTable_) {
         if (info.kind_ == SymbolKind::FUNCTION) {
-            generate_function_declaration(*static_cast<const AST::FunctionDeclaration*>(info.declarationNode_));
+            generate_function_declaration(
+                *static_cast<const AST::FunctionDeclaration*>(info.declarationNode_));
         }
     }
 
@@ -230,7 +231,7 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
             break;
         }
         case AST::NodeKind::FUNCTION_DECLARATION: {
-            break; // Function declarations are handled separately
+            break;  // Function declarations are handled separately
         }
         case AST::NodeKind::EXIT: {
             const auto& exitStmt = static_cast<const AST::Exit&>(stmt);

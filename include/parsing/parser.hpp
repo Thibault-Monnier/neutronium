@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "lexing/token.hpp"
-#include "parsing/AST.hpp"
+#include "parsing/ast.hpp"
 
 class Parser {
    public:

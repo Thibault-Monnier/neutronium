@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "parsing/AST.hpp"
+#include "parsing/ast.hpp"
 #include "semantic-analysis/scope.hpp"
 #include "semantic-analysis/symbol_table.hpp"
 #include "semantic-analysis/type.hpp"

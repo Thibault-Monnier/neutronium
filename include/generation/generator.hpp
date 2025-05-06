@@ -3,7 +3,6 @@
 #include <sstream>
 #include <string>
 
-#include "parsing/AST.hpp"
 #include "semantic-analysis/symbol_table.hpp"
 
 class Generator {
