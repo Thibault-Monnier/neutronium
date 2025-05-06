@@ -70,7 +70,7 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             const auto& exprStmt = as<ExpressionStatement>(stmt);
             std::cout << prefix << branch << "ExpressionStatement\n";
             std::cout << newPrefix << "└── Expression\n";
-            log_expression(*exprStmt.expression_, newPrefix + "    ", true);
+            log_expression(*exprStmt.expression_, next_prefix(newPrefix, true), true);
             break;
         }
         case NodeKind::IF_STATEMENT: {
@@ -79,8 +79,8 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             std::cout << newPrefix << "├── Condition\n";
             log_expression(*ifStmt.condition_, next_prefix(newPrefix, false), true);
             std::cout << newPrefix << (ifStmt.elseClause_ ? "├── " : "└── ") << "Body\n";
-            log_statement(*ifStmt.body_, next_prefix(newPrefix, ifStmt.elseClause_ == nullptr),
-                          ifStmt.elseClause_ == nullptr);
+            log_statement(*ifStmt.body_, next_prefix(newPrefix, !ifStmt.elseClause_),
+                          !ifStmt.elseClause_);
             if (ifStmt.elseClause_) {
                 std::cout << newPrefix << "└── Else\n";
                 log_statement(*ifStmt.elseClause_, next_prefix(newPrefix, true), true);
