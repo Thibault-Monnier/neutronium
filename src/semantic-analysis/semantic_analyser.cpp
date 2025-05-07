@@ -247,6 +247,9 @@ void SemanticAnalyser::analyse_if_statement(  // NOLINT(*-no-recursion)
     const AST::IfStatement& ifStmt) {
     analyse_expression(*ifStmt.condition_, Type::BOOLEAN, "condition");
     analyse_statement(*ifStmt.body_);
+    if (ifStmt.elseClause_) {
+        analyse_statement(*ifStmt.elseClause_);
+    }
 }
 
 void SemanticAnalyser::analyse_while_statement(  // NOLINT(*-no-recursion)

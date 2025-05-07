@@ -8,7 +8,6 @@
 #include <string>
 
 #include "lexing/token.hpp"
-#include "parsing/AST.hpp"
 #include "utils/log.hpp"
 
 AST::Program Parser::parse() {
@@ -144,7 +143,7 @@ std::unique_ptr<AST::Expression> Parser::parse_additive_expression() {
                                    std::set{AST::Operator::ADD, AST::Operator::SUBTRACT}, true);
 }
 
-std::unique_ptr<AST::Expression> Parser::parse_relational_expression() {
+std::unique_ptr<AST::Expression> Parser::parse_comparison_expression() {
     return parse_binary_expression(
         [this]() { return parse_additive_expression(); },
         std::set{AST::Operator::EQUALS, AST::Operator::NOT_EQUALS, AST::Operator::LESS_THAN,
@@ -154,7 +153,7 @@ std::unique_ptr<AST::Expression> Parser::parse_relational_expression() {
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_expression() {
-    return parse_relational_expression();
+    return parse_comparison_expression();
 }
 
 std::unique_ptr<AST::ExpressionStatement> Parser::parse_expression_statement() {
@@ -180,6 +179,15 @@ std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no
     auto condition = parse_expression();
     consume(TokenKind::COLON);
     auto body = parse_block_statement();
+    std::cout << "Parsed if statement with condition: " << '\n';
+    if (peek().kind() == TokenKind::ELSE) {
+        consume(TokenKind::ELSE);
+        consume(TokenKind::COLON);
+        auto elseBody = parse_block_statement();
+        return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body),
+                                                  std::move(elseBody));
+    }
+    std::cout << "Parsed if statement without else clause" << '\n';
     return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body));
 }
 

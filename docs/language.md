@@ -21,12 +21,18 @@ Variables can be **integers** or **booleans**.
 
 ### Control Flow:
 
-Control flow is handled with `if` statements and `while` loops. The bodies are introduced by a colon `:` and wrapped in
-a block `{ ... }`.
+- `if-else` **statements** and `while` **loops** do not wrap their conditions in parentheses. Their bodies are
+  introduced by a colon `:` and
+  are delimited by braces `{` `}`. The `else` clause is optional, and there is no `else if` construct.
+- `exit` **statements** terminate the program with the given **exit code**. The exit code is an **integer expression**.
 
 ```bash
 if x > 0: {
-    exit x;
+    if x == 1: {
+        exit x;
+    } else: {
+        exit x + 1;
+    }
 }
 
 while x <= 100: {
@@ -88,10 +94,10 @@ Single-line comments start with `#` and extend to the end of the line.
     - **Boolean:** `true`, `false`
 
 ### Types:
+
 - **Integer**: 64-bit signed integer
 - **Boolean**: `true` or `false`
 - **Empty**: The return type of _all_ functions (since return values are not yet supported)
-
 
 ## Example Program
 
@@ -114,8 +120,9 @@ fn computeIsPrime: {
             isPrime = false;
             smallestDivisor = curr;
             curr = integer; # Equivalent to a break
+        } else: {
+            curr = curr + 1;
         }
-        curr = curr + 1;
     }
 }
 
@@ -133,7 +140,7 @@ exit 0;
 <details><summary>Formal EBNF Grammar</summary>
 
 ```
-program ::= { statement }
+program ::= { statement } EOF
 
 statement ::= block-statement
             | assignment
@@ -151,21 +158,25 @@ assignment ::= identifier '=' expression ';'
 
 declaration-assignment ::= 'let' identifier '=' expression ';'
 
-function-declaration ::= 'fn' identifier '(' ')' ':' block-statement
+body ::= statement | block-statement
 
-if-statement ::= 'if' expression ':' block-statement
+function-declaration ::= 'fn' identifier '(' ')' ':' body
 
-while-statement ::= 'while' expression ':' block-statement
+if-statement ::= 'if' expression ':' body [ else-clause ]
+
+else-clause ::= 'else' ':' body
+
+while-statement ::= 'while' expression ':' body
 
 exit-statement ::= 'exit' expression ';'
 
 expression-statement ::= expression ';'
 
-comment ::= '#' { character }
+comment ::= '#' { any-character-except-newline }
 
-expression ::= relational-expression
+expression ::= comparison-expression
 
-relational-expression ::= additive-expression
+comparison-expression ::= additive-expression
                         | additive-expression ("==" | "!=" | "<" | "<=" | ">" | ">=") additive-expression
 
 additive-expression ::= multiplicative-expression
@@ -188,9 +199,15 @@ unary-op ::= '-' | '+' | '!'
 
 identifier ::= letter { letter | digit }
 
-literal ::= integer-literal
+literal ::= integer-literal | boolean-literal
 
 integer-literal ::= digit { digit }
+
+boolean-literal ::= 'true' | 'false'
+
+letter ::= 'a'..'z' | 'A'..'Z'
+
+digit ::= '0'..'9'
 ```
 
 </details>

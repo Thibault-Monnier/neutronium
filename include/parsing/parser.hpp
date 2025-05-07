@@ -33,7 +33,7 @@ class Parser {
         const std::set<AST::Operator>& allowedOps, const bool allowMultiple);
     std::unique_ptr<AST::Expression> parse_multiplicative_expression();
     std::unique_ptr<AST::Expression> parse_additive_expression();
-    std::unique_ptr<AST::Expression> parse_relational_expression();
+    std::unique_ptr<AST::Expression> parse_comparison_expression();
     std::unique_ptr<AST::Expression> parse_expression();
 
     std::unique_ptr<AST::ExpressionStatement> parse_expression_statement();

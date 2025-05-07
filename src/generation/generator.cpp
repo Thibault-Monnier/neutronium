@@ -168,7 +168,7 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NO
     }
 }
 
-int Generator::generate_condition(const AST::Expression& condition) {
+[[nodiscard]] int Generator::generate_condition(const AST::Expression& condition) {
     evaluate_expression_to_rax(condition);
     output_ << "    cmp rax, 0\n";
     output_ << "    je ." << labelsCount_++ << "\n";
@@ -187,8 +187,18 @@ void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStm
 
 void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
     const int elseLabel = generate_condition(*ifStmt.condition_);
+    const int endifLabel = ifStmt.elseClause_ ? labelsCount_++ : elseLabel;
+
     generate_stmt(*ifStmt.body_);
-    output_ << "." << elseLabel << ":\n";
+
+    if (ifStmt.elseClause_) {
+        output_ << "    jmp ." << endifLabel << "\n";
+
+        output_ << "." << elseLabel << ":\t; else\n";
+        generate_stmt(*ifStmt.elseClause_);
+    }
+
+    output_ << "." << endifLabel << ":\t; endif\n";
 }
 
 void Generator::generate_while_stmt(  // NOLINT(*-no-recursion)
