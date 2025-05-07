@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <optional>
 #include <parsing/ast.hpp>
 #include <string>
@@ -23,6 +22,7 @@ inline std::string symbol_kind_to_string(const SymbolKind kind) {
 
 struct SymbolInfo {
     const SymbolKind kind_;
+    const bool isMutable_;
     const Type type_;
     const AST::Node* declarationNode_;
     const std::optional<int> stackOffset_;

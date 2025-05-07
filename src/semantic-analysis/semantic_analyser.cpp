@@ -32,13 +32,11 @@ void SemanticAnalyser::enter_scope(const AST::BlockStatement& blockStmt) {
     Scope scope;
     int frameSize = 0;
     for (const auto& stmt : blockStmt.body_) {
-        if (stmt->kind_ == AST::NodeKind::ASSIGNMENT) {
-            const auto& assignment = static_cast<AST::Assignment&>(*stmt);
-            if (assignment.isDeclaration_) {
-                frameSize += 8;
-                scope.variablesStackOffset_[assignment.identifier_->name_] =
-                    currentStackOffset_ + frameSize;
-            }
+        if (stmt->kind_ == AST::NodeKind::VARIABLE_DECLARATION) {
+            const auto& declaration = static_cast<AST::VariableDeclaration&>(*stmt);
+            frameSize += 8;
+            scope.variablesStackOffset_[declaration.identifier_->name_] =
+                currentStackOffset_ + frameSize;
         }
     }
 
@@ -69,8 +67,8 @@ SymbolKind SemanticAnalyser::get_symbol_kind(const std::string& name) const {
     return symbolTable_.at(name).kind_;
 }
 
-void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const Type type,
-                                                 const SymbolKind kind,
+void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const bool isMutable,
+                                                 const Type type, const SymbolKind kind,
                                                  const AST::Node& declarationNode) {
     if (is_symbol_declared(name)) {
         abort(std::format("Redeclaration of symbol: `{}`", name),
@@ -81,6 +79,7 @@ void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const 
 
     SymbolInfo info{
         .kind_ = kind,
+        .isMutable_ = isMutable,
         .type_ = type,
         .declarationNode_ = &declarationNode,
         .stackOffset_ = (kind == SymbolKind::VARIABLE)
@@ -197,44 +196,42 @@ void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Typ
     }
 }
 
-void SemanticAnalyser::analyse_declaration_assignment(const AST::Assignment& assignment) {
-    const std::string& name = assignment.identifier_->name_;
+void SemanticAnalyser::analyse_variable_declaration(const AST::VariableDeclaration& declaration) {
+    const std::string& name = declaration.identifier_->name_;
     if (symbolTable_.contains(name)) {
         abort(std::format("Redeclaration of symbol: `{}`", name),
               "Shadowing is not permitted, even for disjoint scopes");
     }
 
-    const Type variableType = get_expression_type(*assignment.value_);
+    const Type variableType = get_expression_type(*declaration.value_);
     if (variableType != Type::INTEGER && variableType != Type::BOOLEAN) {
         abort(std::format("Invalid variable type: `{}` is declared as {}", name,
                           type_to_string(variableType)));
     }
 
-    handle_symbol_declaration(name, variableType, SymbolKind::VARIABLE, assignment);
+    handle_symbol_declaration(name, declaration.isMutable_, variableType, SymbolKind::VARIABLE,
+                              declaration);
 }
 
-void SemanticAnalyser::analyse_reassignment(const AST::Assignment& assignment) {
+void SemanticAnalyser::analyse_variable_assignment(const AST::VariableAssignment& assignment) {
     const std::string& name = assignment.identifier_->name_;
-
     if (!is_symbol_declared(name)) {
         abort(std::format("Assignment to undeclared variable: `{}`", name));
     }
 
-    const Type declaredType = get_symbol_type(name);
-    const Type variableType = get_expression_type(*assignment.value_);
-    if (variableType != declaredType) {
-        abort(
-            std::format("Type mismatch in assignment: variable `{}` is declared as {}, but "
-                        "reassigned to {}",
-                        name, type_to_string(declaredType), type_to_string(variableType)));
+    const SymbolInfo& declaredSymbol = symbolTable_.at(name);
+    if (declaredSymbol.kind_ != SymbolKind::VARIABLE) {
+        abort(std::format("Assignment to non-variable: `{}`", name));
     }
-}
+    if (!declaredSymbol.isMutable_) {
+        abort(std::format("Assignment to immutable variable: `{}`", name));
+    }
 
-void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
-    if (assignment.isDeclaration_) {
-        analyse_declaration_assignment(assignment);
-    } else {
-        analyse_reassignment(assignment);
+    const Type assignmentType = get_expression_type(*assignment.value_);
+    if (assignmentType != declaredSymbol.type_) {
+        abort(std::format("Type mismatch: variable `{}` is declared as {}, but assigned to {}",
+                          name, type_to_string(declaredSymbol.type_),
+                          type_to_string(assignmentType)));
     }
 }
 
@@ -262,7 +259,7 @@ void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
     const AST::FunctionDeclaration& funcDecl) {
     analyse_statement(*funcDecl.body_);
     const std::string& name = funcDecl.identifier_->name_;
-    handle_symbol_declaration(name, Type::EMPTY, SymbolKind::FUNCTION, funcDecl);
+    handle_symbol_declaration(name, false, Type::EMPTY, SymbolKind::FUNCTION, funcDecl);
 }
 
 void SemanticAnalyser::analyse_exit(const AST::Exit& exitStmt) {
@@ -271,9 +268,14 @@ void SemanticAnalyser::analyse_exit(const AST::Exit& exitStmt) {
 
 void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
     switch (stmt.kind_) {
-        case AST::NodeKind::ASSIGNMENT: {
-            const auto& assignment = static_cast<const AST::Assignment&>(stmt);
-            analyse_assignment(assignment);
+        case AST::NodeKind::VARIABLE_DECLARATION: {
+            const auto& varDecl = static_cast<const AST::VariableDeclaration&>(stmt);
+            analyse_variable_declaration(varDecl);
+            break;
+        }
+        case AST::NodeKind::VARIABLE_ASSIGNMENT: {
+            const auto& assignment = static_cast<const AST::VariableAssignment&>(stmt);
+            analyse_variable_assignment(assignment);
             break;
         }
         case AST::NodeKind::EXPRESSION_STATEMENT: {

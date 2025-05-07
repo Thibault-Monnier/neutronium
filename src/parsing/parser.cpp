@@ -162,16 +162,27 @@ std::unique_ptr<AST::ExpressionStatement> Parser::parse_expression_statement() {
     return std::make_unique<AST::ExpressionStatement>(std::move(expression));
 }
 
-std::unique_ptr<AST::Assignment> Parser::parse_assignment(const bool isDeclaration) {
-    if (isDeclaration) {
-        consume(TokenKind::LET);
+std::unique_ptr<AST::VariableAssignment> Parser::parse_variable_assignment() {
+    auto identifier = parse_identifier();
+    consume(TokenKind::EQUAL);
+    auto value = parse_expression();
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::VariableAssignment>(std::move(identifier), std::move(value));
+}
+
+std::unique_ptr<AST::VariableDeclaration> Parser::parse_variable_declaration() {
+    consume(TokenKind::LET);
+    bool isMutable = false;
+    if (peek().kind() == TokenKind::MUT) {
+        consume(TokenKind::MUT);
+        isMutable = true;
     }
     auto identifier = parse_identifier();
     consume(TokenKind::EQUAL);
     auto value = parse_expression();
     consume(TokenKind::SEMICOLON);
-    return std::make_unique<AST::Assignment>(std::move(identifier), std::move(value),
-                                             isDeclaration);
+    return std::make_unique<AST::VariableDeclaration>(std::move(identifier), std::move(value),
+                                                      isMutable);
 }
 
 std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no-recursion)
@@ -229,9 +240,9 @@ std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLIN
 std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recursion)
     const TokenKind tokenKind = peek().kind();
 
-    if (tokenKind == TokenKind::LET) return parse_assignment(true);
+    if (tokenKind == TokenKind::LET) return parse_variable_declaration();
     if (tokenKind == TokenKind::IDENTIFIER && peek(1).kind() == TokenKind::EQUAL)
-        return parse_assignment(false);
+        return parse_variable_assignment();
     if (tokenKind == TokenKind::IF) return parse_if_statement();
     if (tokenKind == TokenKind::WHILE) return parse_while_statement();
     if (tokenKind == TokenKind::FN) return parse_function_declaration();

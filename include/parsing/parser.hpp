@@ -37,7 +37,8 @@ class Parser {
     std::unique_ptr<AST::Expression> parse_expression();
 
     std::unique_ptr<AST::ExpressionStatement> parse_expression_statement();
-    std::unique_ptr<AST::Assignment> parse_assignment(const bool isDeclaration);
+    std::unique_ptr<AST::VariableAssignment> parse_variable_assignment();
+    std::unique_ptr<AST::VariableDeclaration> parse_variable_declaration();
     std::unique_ptr<AST::IfStatement> parse_if_statement();
     std::unique_ptr<AST::WhileStatement> parse_while_statement();
     std::unique_ptr<AST::FunctionDeclaration> parse_function_declaration();

@@ -30,18 +30,17 @@ class SemanticAnalyser {
     bool is_symbol_declared(const std::string& name);
     Type get_symbol_type(const std::string& name) const;
     SymbolKind get_symbol_kind(const std::string& name) const;
-    void handle_symbol_declaration(const std::string& name, Type type, SymbolKind kind,
-                                   const AST::Node& declarationNode);
+    void handle_symbol_declaration(const std::string& name, bool isMutable, Type type,
+                                   SymbolKind kind, const AST::Node& declarationNode);
 
     Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr);
     Type get_binary_expression_type(const AST::BinaryExpression& binaryExpr);
     Type get_expression_type(const AST::Expression& expr);
-    void analyse_expression(const AST::Expression& expr, const Type expected,
+    void analyse_expression(const AST::Expression& expr, Type expected,
                             const std::string& location);
 
-    void analyse_declaration_assignment(const AST::Assignment& assignment);
-    void analyse_reassignment(const AST::Assignment& assignment);
-    void analyse_assignment(const AST::Assignment& assignment);
+    void analyse_variable_declaration(const AST::VariableDeclaration& declaration);
+    void analyse_variable_assignment(const AST::VariableAssignment& assignment);
     void analyse_expression_statement(const AST::ExpressionStatement& exprStmt);
 
     void analyse_if_statement(const AST::IfStatement& ifStmt);

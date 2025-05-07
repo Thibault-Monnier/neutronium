@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,7 +30,8 @@ enum class NodeKind : uint8_t {
     IDENTIFIER,
     UNARY_EXPRESSION,
     BINARY_EXPRESSION,
-    ASSIGNMENT,
+    VARIABLE_DECLARATION,
+    VARIABLE_ASSIGNMENT,
     EXPRESSION_STATEMENT,
     IF_STATEMENT,
     WHILE_STATEMENT,
@@ -124,17 +124,27 @@ struct BlockStatement final : Statement {
     std::vector<std::unique_ptr<Statement>> body_;
 };
 
-struct Assignment final : Statement {
-    Assignment(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value,
-               const bool isDeclaration)
-        : Statement{NodeKind::ASSIGNMENT},
+struct VariableDeclaration final : Statement {
+    VariableDeclaration(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value,
+                        const bool isMutable)
+        : Statement{NodeKind::VARIABLE_DECLARATION},
           identifier_(std::move(identifier)),
           value_(std::move(value)),
-          isDeclaration_(isDeclaration) {}
+          isMutable_(isMutable) {}
 
     const std::unique_ptr<Identifier> identifier_;
     const std::unique_ptr<Expression> value_;
-    const bool isDeclaration_;
+    const bool isMutable_;
+};
+
+struct VariableAssignment final : Statement {
+    VariableAssignment(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value)
+        : Statement{NodeKind::VARIABLE_ASSIGNMENT},
+          identifier_(std::move(identifier)),
+          value_(std::move(value)) {}
+
+    const std::unique_ptr<Identifier> identifier_;
+    const std::unique_ptr<Expression> value_;
 };
 
 struct ExpressionStatement final : Statement {

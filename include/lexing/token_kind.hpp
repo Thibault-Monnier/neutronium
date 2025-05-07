@@ -34,6 +34,7 @@ enum class TokenKind : uint8_t {
     TRUE,
     FALSE,
     LET,
+    MUT,
     IF,
     ELSE,
     WHILE,

@@ -36,7 +36,8 @@ class Generator {
     void evaluate_expression_to_rax(const AST::Expression& expr);
 
     int generate_condition(const AST::Expression& condition);
-    void generate_assignment(const AST::Assignment& assignment);
+    void generate_variable_declaration(const AST::VariableDeclaration& varDecl);
+    void generate_variable_assignment(const AST::VariableAssignment& assignment);
     void generate_expression_stmt(const AST::ExpressionStatement& exprStmt);
     void generate_if_stmt(const AST::IfStatement& ifStmt);
     void generate_while_stmt(const AST::WhileStatement& whileStmt);

@@ -57,13 +57,22 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
     const std::string branch = isLast ? "└── " : "├── ";
 
     switch (stmt.kind_) {
-        case NodeKind::ASSIGNMENT: {
-            const auto& assignment = as<Assignment>(stmt);
-            std::cout << prefix << branch
-                      << (assignment.isDeclaration_ ? "Declaration Assignment\n" : "Assignment\n");
+        case NodeKind::VARIABLE_ASSIGNMENT: {
+            const auto& assignment = as<VariableAssignment>(stmt);
+            std::cout << prefix << branch << "VariableAssignment\n";
             std::cout << newPrefix << "├── Identifier: " << assignment.identifier_->name_ << "\n";
             std::cout << newPrefix << "└── Value\n";
             log_expression(*assignment.value_, next_prefix(newPrefix, true), true);
+            break;
+        }
+        case NodeKind::VARIABLE_DECLARATION: {
+            const auto& varDecl = as<VariableDeclaration>(stmt);
+            std::cout << prefix << branch << "VariableDeclaration\n";
+            std::cout << newPrefix << "├── Identifier: " << varDecl.identifier_->name_ << "\n";
+            std::cout << newPrefix << "├── IsMutable: " << (varDecl.isMutable_ ? "true" : "false")
+                      << "\n";
+            std::cout << newPrefix << "└── Value\n";
+            log_expression(*varDecl.value_, next_prefix(newPrefix, true), true);
             break;
         }
         case NodeKind::EXPRESSION_STATEMENT: {
@@ -123,7 +132,7 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
         default:
             throw std::invalid_argument("Invalid statement kind");
     }
-}
+}  // namespace
 
 }  // namespace
 

@@ -34,11 +34,8 @@ std::stringstream Generator::generate() {
 int Generator::get_current_scope_frame_size(const AST::BlockStatement& blockStmt) const {
     int frameSize = 0;
     for (const auto& stmt : blockStmt.body_) {
-        if (stmt->kind_ == AST::NodeKind::ASSIGNMENT) {
-            const auto& assignment = static_cast<AST::Assignment&>(*stmt);
-            if (assignment.isDeclaration_) {
-                frameSize += 8;
-            }
+        if (stmt->kind_ == AST::NodeKind::VARIABLE_DECLARATION) {
+            frameSize += 8;
         }
     }
     return frameSize;
@@ -175,7 +172,13 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NO
     return labelsCount_ - 1;
 }
 
-void Generator::generate_assignment(const AST::Assignment& assignment) {
+void Generator::generate_variable_declaration(const AST::VariableDeclaration& varDecl) {
+    const std::string& varName = varDecl.identifier_->name_;
+    evaluate_expression_to_rax(*varDecl.value_);
+    write_to_variable(varName, "rax");
+}
+
+void Generator::generate_variable_assignment(const AST::VariableAssignment& assignment) {
     const std::string& varName = assignment.identifier_->name_;
     evaluate_expression_to_rax(*assignment.value_);
     write_to_variable(varName, "rax");
@@ -220,9 +223,14 @@ void Generator::generate_exit(const AST::Exit& exitStmt) {
 
 void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
     switch (stmt.kind_) {
-        case AST::NodeKind::ASSIGNMENT: {
-            const auto& assignmentStmt = static_cast<const AST::Assignment&>(stmt);
-            generate_assignment(assignmentStmt);
+        case AST::NodeKind::VARIABLE_DECLARATION: {
+            const auto& varDecl = static_cast<const AST::VariableDeclaration&>(stmt);
+            generate_variable_declaration(varDecl);
+            break;
+        }
+        case AST::NodeKind::VARIABLE_ASSIGNMENT: {
+            const auto& assignment = static_cast<const AST::VariableAssignment&>(stmt);
+            generate_variable_assignment(assignment);
             break;
         }
         case AST::NodeKind::EXPRESSION_STATEMENT: {

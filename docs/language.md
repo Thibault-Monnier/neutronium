@@ -9,12 +9,14 @@ Whitespaces are ignored, and most statements are terminated by a semicolon.
 
 ### Variables:
 
-Variables are declared with `let`. All variables are **mutable** and can be reassigned to **a value of the same type**.
-Variable types are inferred at declaration.
+Variables are declared with `let` and are **immutable by default**. To make it mutable, use `let mut` instead. Mutable
+variables can be reassigned to **a value of the same type**.
+Variable types are **inferred at declaration**.
 
 ```bash
-let x = 42;
-x = 43;
+let x = true;
+let mut y = 42;
+y = 43;
 ```
 
 Variables can be **integers** or **booleans**.
