@@ -161,3 +161,77 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
     }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Extra lexing cases
+// ─────────────────────────────────────────────────────────────
+
+INSTANTIATE_TEST_SUITE_P(LexingExtras, LexerTokenKindTest,
+    ::testing::Values(
+        // “===”: should split into == then =
+        LexCase{"===", {
+            TokenKind::EQUAL_EQUAL,
+            TokenKind::EQUAL,
+            TokenKind::EOF_
+        }},
+        // “<=>”: <= then >
+        LexCase{"<=>", {
+            TokenKind::LESS_THAN_EQUAL,
+            TokenKind::GREATER_THAN,
+            TokenKind::EOF_
+        }},
+        // Alphanumeric run: digits then letters → NUMBER_LITERAL, IDENTIFIER
+        LexCase{"123abc", {
+            TokenKind::NUMBER_LITERAL,
+            TokenKind::IDENTIFIER,
+            TokenKind::EOF_
+        }},
+        // Keyword glued to digit → IDENTIFIER
+        LexCase{"exit0", {
+            TokenKind::IDENTIFIER,
+            TokenKind::EOF_
+        }},
+        // Keyword-prefix with letter → IDENTIFIER
+        LexCase{"whilex", {
+            TokenKind::IDENTIFIER,
+            TokenKind::EOF_
+        }},
+        // No space between ‘let’ and ‘mut’ → IDENTIFIER “letmut”
+        LexCase{"letmut x=1;", {
+            TokenKind::IDENTIFIER,
+            TokenKind::IDENTIFIER,
+            TokenKind::EQUAL,
+            TokenKind::NUMBER_LITERAL,
+            TokenKind::SEMICOLON,
+            TokenKind::EOF_
+        }},
+        // Empty input → just EOF
+        LexCase{"", {
+            TokenKind::EOF_
+        }},
+        // Only whitespace → EOF
+        LexCase{"  \n \n\t  ", {
+            TokenKind::EOF_
+        }},
+        // Multiple semicolons → SEMICOLON, SEMICOLON, EOF
+        LexCase{";;", {
+            TokenKind::SEMICOLON,
+            TokenKind::SEMICOLON,
+            TokenKind::EOF_
+        }},
+        //  Trailing empty statements
+        LexCase{"let x=1;;", {
+            TokenKind::LET,
+            TokenKind::IDENTIFIER,
+            TokenKind::EQUAL,
+            TokenKind::NUMBER_LITERAL,
+            TokenKind::SEMICOLON,
+            TokenKind::SEMICOLON,
+            TokenKind::EOF_
+        }},
+        // 12) Single unary ‘!’
+        LexCase{"!", {
+            TokenKind::BANG,
+            TokenKind::EOF_
+        }}
+    )
+);

@@ -92,7 +92,7 @@ TEST_F(NeutroniumTester, UndeclaredFunctionError) {
     EXPECT_NE(compile(code), 0);
 }
 
-TEST_F(NeutroniumTester, FunctionUsedBeforeDeclarationError) {
+TEST_F(NeutroniumTester, FunctionCalledBeforeDeclarationError) {
     const std::string code = R"(
         y();
         fn y: {
@@ -170,3 +170,91 @@ TEST_F(NeutroniumTester, NonBooleanConditionInWhileError) {
     EXPECT_NE(compile(code), 0);
 }
 
+TEST_F(NeutroniumTester, InvalidIdentifierFails) {
+    const std::string code = R"(
+        let 42x = 5;  # invalid identifier
+        exit 0;
+    )";
+
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, ExpressionStatementsMustBeEmptyType) {
+    const std::string code = R"(
+        1;
+    )";
+
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, UseAfterScopeFails) {
+    const std::string code = R"(
+        {
+            let y = 2;
+        }
+        exit y;               # y is out of scope
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, VarFunctionNameClashFails) {
+    const std::string code = R"(
+        fn bar: { }
+        let bar = 1;          # clashes with fn bar
+        exit 0;
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, DoubleLogicalNotRejected) {
+    const std::string code = R"(
+        if !!true: {          # operand of '!' must be a primary expression
+            exit 1;
+        } else: {
+            exit 0;
+        }
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, MissingSemicolonFails) {
+    const std::string code = R"( exit 1 )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, EmptyStatementsDisallowed) {
+    const std::string code = R"(
+        ;;
+        let x = 1;;
+        exit x;;
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, DeclarationWithoutInitializerFails) {
+    const std::string code = R"(
+        let x;
+        exit 0;
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, UnmatchedBracesFails) {
+    const std::string code = R"(
+        {let x = 1;
+        if x: {
+            exit 0;
+        }
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, UnmatchedParenthesesFails) {
+    const std::string code = R"(
+        let x = (1 + (2) * 3;
+        if x: {
+            exit 0;
+        }
+    )";
+    EXPECT_NE(compile(code), 0);
+}

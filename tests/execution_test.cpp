@@ -86,6 +86,22 @@ TEST_F(NeutroniumTester, NestedFunctionsExecute) {
     EXPECT_EQ(run(code), 7);
 }
 
+TEST_F(NeutroniumTester, NestedFunctionsExecute2) {
+    const std::string code = R"(
+        fn outer: {
+            let mut x = 10;
+            fn inner: {
+                x = x + 1;
+            }
+            inner();
+            exit x;
+        }
+        outer();
+    )";
+
+    EXPECT_EQ(run(code), 11);
+}
+
 TEST_F(NeutroniumTester, WhileLoop) {
     const std::string code = R"(
         let mut i = 0;
@@ -171,4 +187,73 @@ TEST_F(NeutroniumTester, MultipleFunctionCalls) {
     )";
 
     EXPECT_EQ(run(code), 3);
+}
+
+TEST_F(NeutroniumTester, UnaryOperators) {
+    const std::string code = R"(
+        let mut x = -(-42);  # should be 42
+        let mut y = +(+1);   # should be 1
+        let mut z = !false;  # should be true → exit 1
+        if z: {
+            exit x / y;      # should be 42
+        }
+        exit 0;
+    )";
+
+    EXPECT_EQ(run(code), 42);
+}
+
+TEST_F(NeutroniumTester, CommentsAreIgnored) {
+    const std::string code = R"(
+        let x = 1;   # this is a comment
+        let y = 2;   # another one
+        exit x + y; # should be 3
+    )";
+
+    EXPECT_EQ(run(code), 3);
+}
+
+TEST_F(NeutroniumTester, SubtractionAssociativity) {
+    const std::string code = R"( exit 10 - 3 - 2; )";
+    EXPECT_EQ(run(code), 5);
+}
+
+TEST_F(NeutroniumTester, DivisionByZeroRuntimeNonZeroExit) {
+    const std::string code = R"(
+        exit 1 / 0;           # undefined behaviour → SIGFPE on most back-ends
+    )";
+
+    EXPECT_NE(run(code), 0);
+}
+
+TEST_F(NeutroniumTester, WhileFalseSkipsBody) {
+    const std::string code = R"(
+        let mut i = 0;
+        while false: {
+            i = i + 1;        # should never run
+        }
+        exit i;               # expect 0
+    )";
+    EXPECT_EQ(run(code), 0);
+}
+
+TEST_F(NeutroniumTester, MultiplyWithUnaryLiteral) {
+    const std::string code = R"( exit 2 * -3; )";
+    EXPECT_EQ(run(code), 250); // -6 → 250 in 8-bit unsigned
+}
+
+TEST_F(NeutroniumTester, ScopeDeclaration) {
+    const std::string code = R"(
+        {
+            let x = 2;
+            let mut y = 3;
+            {
+                let z = 4;
+                y = y + z;      # y = 3 + 4 = 7
+            }
+            exit x + y;  # = 2 + 7 = 9
+        }
+    )";
+
+    EXPECT_EQ(run(code), 9);
 }
