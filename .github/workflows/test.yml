@@ -1,0 +1,24 @@
+name: Run Tests
+on: push
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y cmake ninja-build build-essential
+
+      - name: Make build script executable
+        run: chmod +x ./build.sh
+
+      - name: Run build
+        id: build_run
+        run: ./build.sh
+        shell: bash
+
+      - name: Run tests
+        run: cd build && ctest --output-on-failure
