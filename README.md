@@ -1,5 +1,7 @@
 # Neutronium
 
+[![Build all targets](https://github.com/Thibault-Monnier/neutronium/actions/workflows/build.yml/badge.svg)](https://github.com/Thibault-Monnier/neutronium/actions/workflows/build.yml)
+
 Neutronium is a lightweight C-like programming language built as an educational project.
 
 > ⚠️ **Disclaimer:** The Neutronium compiler works on **Linux only**, and the following instructions are tailored for
