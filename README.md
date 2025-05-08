@@ -5,7 +5,7 @@
 Neutronium is a lightweight C-like programming language built as an educational project.
 
 > ⚠️ **Disclaimer:** The Neutronium compiler works on **Linux only**, and the following instructions are tailored for
-> Linux environments.
+> Linux (Ubuntu) environments.
 
 <p>
   <br>
@@ -14,7 +14,7 @@ Neutronium is a lightweight C-like programming language built as an educational 
   </a>
 </p>
 
-## Setup
+## 🚀 Setup
 
 Clone this repository and set it up by running:
 
@@ -24,15 +24,20 @@ cd neutronium
 chmod +x build.sh
 ```
 
-## Compile and Run
+To install the required dependencies, run:
 
-From the root directory, compile and run Neutronium with:
+```bash
+sudo apt update
+sudo apt install build-essential cmake ninja-build nasm
+````
+
+## 🛠️ Compile and Run
+
+To build the compiler and run it on a Neutronium source file, run:
 
 ```bash
 ./build.sh && ./build/neutronium <path-to-source-file>
 ```
-
-This command builds the compiler and executes it on the provided source file.
 
 To execute the generated machine code, run:
 
@@ -40,9 +45,21 @@ To execute the generated machine code, run:
 ./neutro/out
 ```
 
-> Note: you can write your scripts in the scripts/ directory, which is ignored by source control.
+> 💡 Tip: you can write your scripts in the scripts/ directory, which is ignored by version control.
 
-## Language
+## 🧪 Run Tests
 
-See the [full language documentation](docs/language.md) for details on the Neutronium language with syntax, examples, grammar and semantics.
+To build and run the test suite, run:
+
+```bash
+./build.sh && ./build/tests
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to open an issue or to submit a pull request.
+
+## 📚 Language
+
+Refer to the [language documentation](docs/language.md) for syntax, examples, grammar, and semantics.
 
