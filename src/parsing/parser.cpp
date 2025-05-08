@@ -189,17 +189,35 @@ std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no
     consume(TokenKind::IF);
     auto condition = parse_expression();
     consume(TokenKind::COLON);
+
     auto body = parse_block_statement();
-    std::cout << "Parsed if statement with condition: " << '\n';
+
+    auto ifStmt = std::make_unique<AST::IfStatement>(std::move(condition), std::move(body));
+
+    AST::IfStatement* lastIf = ifStmt.get();
+
+    while (peek().kind() == TokenKind::ELIF) {
+        consume(TokenKind::ELIF);
+        auto elifCondition = parse_expression();
+        consume(TokenKind::COLON);
+        auto elifBody = parse_block_statement();
+
+        auto elifStmt = std::make_unique<AST::BlockStatement>();
+        elifStmt->append_statement(
+            std::make_unique<AST::IfStatement>(std::move(elifCondition), std::move(elifBody)));
+
+        lastIf->elseClause_ = std::move(elifStmt);
+        lastIf = static_cast<AST::IfStatement*>(lastIf->elseClause_->body_[0].get());
+    }
+
     if (peek().kind() == TokenKind::ELSE) {
         consume(TokenKind::ELSE);
         consume(TokenKind::COLON);
         auto elseBody = parse_block_statement();
-        return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body),
-                                                  std::move(elseBody));
+        lastIf->elseClause_ = std::move(elseBody);
     }
-    std::cout << "Parsed if statement without else clause" << '\n';
-    return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body));
+
+    return ifStmt;
 }
 
 std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLINT(*-no-recursion)

@@ -26,6 +26,7 @@ std::optional<TokenKind> Lexer::get_keyword_kind() const {
     if (buffer_ == "let") return TokenKind::LET;
     if (buffer_ == "mut") return TokenKind::MUT;
     if (buffer_ == "if") return TokenKind::IF;
+    if (buffer_ == "elif") return TokenKind::ELIF;
     if (buffer_ == "else") return TokenKind::ELSE;
     if (buffer_ == "while") return TokenKind::WHILE;
     if (buffer_ == "fn") return TokenKind::FN;

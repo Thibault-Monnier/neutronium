@@ -23,22 +23,20 @@ Variables can be **integers** or **booleans**.
 
 ### Control Flow:
 
-- `if-else` **statements** and `while` **loops** do not wrap their conditions in parentheses. Their bodies are
-  introduced by a colon `:` and
-  are delimited by braces `{` `}`. The `else` clause is optional, and there is no `else if` construct.
+- `if`, `elif`, and `else` **statements** do not wrap their conditions in parentheses. Each condition is followed by a
+  colon `:` and a block delimited by braces `{` `}`.
+- `while` **loops** use the same syntax as `if` **statements**.
 - `exit` **statements** terminate the program with the given **exit code**. The exit code is an **integer expression**.
 
 ```bash
 if x > 0: {
-    if x == 1: {
-        exit x;
-    } else: {
-        exit x + 1;
+    exit 1;
+} elif x == 0: {
+    exit 0;
+} else: {
+    while x <= 42: {
+        x = x + 1;
     }
-}
-
-while x <= 100: {
-    x = x + 1;
 }
 ```
 

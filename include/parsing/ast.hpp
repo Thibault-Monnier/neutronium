@@ -164,7 +164,7 @@ struct IfStatement final : Statement {
 
     const std::unique_ptr<Expression> condition_;
     const std::unique_ptr<BlockStatement> body_;
-    const std::unique_ptr<BlockStatement> elseClause_;
+    std::unique_ptr<BlockStatement> elseClause_;
 };
 
 struct WhileStatement final : Statement {
