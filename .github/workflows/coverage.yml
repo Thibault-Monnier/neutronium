@@ -37,4 +37,6 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/coverage.info
-          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          name: codecov-neutronium
+
