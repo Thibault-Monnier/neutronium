@@ -1,0 +1,26 @@
+
+name: Build all targets
+on: push
+
+jobs:
+  build_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install apt dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            ninja-build
+
+      - name: Make build script executable
+        run: chmod +x ./build.sh
+
+      - name: Run build
+        id: build_run
+        run: ./build.sh
+        shell: bash
