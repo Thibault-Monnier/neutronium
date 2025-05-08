@@ -149,12 +149,12 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
 // Unexpected token (invalid input causes exit)
 // ─────────────────────────────────────────────────────────────
 TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
-    std::vector<std::string> badInputs = {"@", "$", "~", "let x = 1 + @`", "x$"};
+    const std::vector<std::string> badInputs = {"@", "$", "~", "let x = 1 + @`", "x$"};
 
     for (const auto& input : badInputs) {
         EXPECT_EXIT({
             Lexer lexer(input);
-            lexer.tokenize();
+            auto _ = lexer.tokenize();
         },
         ::testing::ExitedWithCode(EXIT_FAILURE),
         "Invalid character at index");

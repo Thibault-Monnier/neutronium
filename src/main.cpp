@@ -53,15 +53,27 @@ int main(const int argc, char *argv[]) {
     auto generator = Generator(ast, symbolTable);
     const auto assemblyCode = generator.generate();
 
-    system("rm -rf neutro");
-    system("mkdir neutro");
+    auto runOrDie = [](const char *cmd) {
+        int rc = std::system(cmd);
+        if (rc != 0) {
+            print_error(std::format("Command '{}' failed (exit {})", cmd, rc));
+            exit(EXIT_FAILURE);
+        }
+    };
+
+    runOrDie("rm -rf neutro");
+    runOrDie("mkdir neutro");
 
     std::ofstream fileStreamOut("neutro/out.asm");
+    if (!fileStreamOut.is_open()) {
+        print_error("Could not open output file");
+        exit(EXIT_FAILURE);
+    }
     fileStreamOut << assemblyCode.str();
     fileStreamOut.close();
 
-    system("nasm -felf64 neutro/out.asm");
-    system("ld -o neutro/out neutro/out.o");
+    runOrDie("nasm -felf64 neutro/out.asm");
+    runOrDie("ld -o neutro/out neutro/out.o");
 
     return 0;
 }
