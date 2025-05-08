@@ -162,7 +162,9 @@ body ::= statement | block-statement
 
 function-declaration ::= 'fn' identifier '(' ')' ':' body
 
-if-statement ::= 'if' expression ':' body [ else-clause ]
+if-statement ::= 'if' expression ':' body { elif-clause } [ else-clause ]
+
+elif-clause ::= 'elif' expression ':' body
 
 else-clause ::= 'else' ':' body
 
