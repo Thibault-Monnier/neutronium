@@ -114,6 +114,38 @@ TEST_F(NeutroniumTester, WhileLoop) {
     EXPECT_EQ(run(code), 6);
 }
 
+TEST_F(NeutroniumTester, WhileLoopWithBreak) {
+    const std::string code = R"(
+        let mut i = 0;
+        while true: {
+            if i == 5: {
+                break;
+            }
+            i = i + 1;
+        }
+        exit i;
+    )";
+
+    EXPECT_EQ(run(code), 5);
+}
+
+TEST_F(NeutroniumTester, WhileLoopWithContinue) {
+    const std::string code = R"(
+        let mut i = 0;
+        let mut j = 0;
+        while i < 5: {
+            i = i + 1;
+            if i >= 3: {
+                continue;
+            }
+            j = j + i;
+        }
+        exit j;
+    )";
+
+    EXPECT_EQ(run(code), 3);
+}
+
 TEST_F(NeutroniumTester, IfElifElse) {
     const std::string codeTemplate = R"(
         let mut x = {val};

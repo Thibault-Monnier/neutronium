@@ -6,8 +6,7 @@ TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
         x = 2;          # illegal: x is immutable
         exit 0;
     )";
-    std::cout << compile(code) << "   <----------- OUTPUT\n";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, MutableReassignmentDifferentTypeFails) {
@@ -16,7 +15,7 @@ TEST_F(NeutroniumTester, MutableReassignmentDifferentTypeFails) {
         flag = 1;       # illegal: boolean -> integer
         exit 0;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, VariableShadowingAcrossBlocksFails) {
@@ -29,7 +28,7 @@ TEST_F(NeutroniumTester, VariableShadowingAcrossBlocksFails) {
         }
         exit 0;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
@@ -37,7 +36,7 @@ TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
         let ok = true;
         exit ok;         # exit expects integer expression
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, TypeMismatchInBinaryOpFails) {
@@ -46,7 +45,7 @@ TEST_F(NeutroniumTester, TypeMismatchInBinaryOpFails) {
         let b = true;
         exit a + b;      # int + bool is illegal
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, VariableShadowingError) {
@@ -59,21 +58,21 @@ TEST_F(NeutroniumTester, VariableShadowingError) {
         exit 0;
     )";
 
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, UndeclaredVariableError) {
     const std::string code = R"(
         let x = y;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, UndeclaredVariableError2) {
     const std::string code = R"(
         x = 1;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, VariableUsedBeforeDeclarationError) {
@@ -81,7 +80,7 @@ TEST_F(NeutroniumTester, VariableUsedBeforeDeclarationError) {
         let y = x + 1;
         let x = 1;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, UndeclaredFunctionError) {
@@ -89,7 +88,7 @@ TEST_F(NeutroniumTester, UndeclaredFunctionError) {
         let x = 1;
         y();
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, FunctionCalledBeforeDeclarationError) {
@@ -99,7 +98,7 @@ TEST_F(NeutroniumTester, FunctionCalledBeforeDeclarationError) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
@@ -107,7 +106,7 @@ TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
         let x = 1;
         x();
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, AttemptToUseAFunctionAsAVariableError) {
@@ -117,7 +116,7 @@ TEST_F(NeutroniumTester, AttemptToUseAFunctionAsAVariableError) {
         }
         let y = x;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {
@@ -127,7 +126,7 @@ TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {
         }
         x = 1;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, RedeclarationOfFunctionError) {
@@ -139,7 +138,7 @@ TEST_F(NeutroniumTester, RedeclarationOfFunctionError) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, RedeclarationOfVariableError) {
@@ -147,7 +146,7 @@ TEST_F(NeutroniumTester, RedeclarationOfVariableError) {
         let x = 1;
         let x = 2;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, NonBooleanConditionInIfError) {
@@ -157,7 +156,7 @@ TEST_F(NeutroniumTester, NonBooleanConditionInIfError) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, NonBooleanConditionInWhileError) {
@@ -167,7 +166,7 @@ TEST_F(NeutroniumTester, NonBooleanConditionInWhileError) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, InvalidIdentifierFails) {
@@ -176,7 +175,7 @@ TEST_F(NeutroniumTester, InvalidIdentifierFails) {
         exit 0;
     )";
 
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, ExpressionStatementsMustBeEmptyType) {
@@ -184,7 +183,7 @@ TEST_F(NeutroniumTester, ExpressionStatementsMustBeEmptyType) {
         1;
     )";
 
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, UseAfterScopeFails) {
@@ -194,7 +193,7 @@ TEST_F(NeutroniumTester, UseAfterScopeFails) {
         }
         exit y;               # y is out of scope
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, VarFunctionNameClashFails) {
@@ -203,7 +202,7 @@ TEST_F(NeutroniumTester, VarFunctionNameClashFails) {
         let bar = 1;          # clashes with fn bar
         exit 0;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, DoubleLogicalNotRejected) {
@@ -214,12 +213,12 @@ TEST_F(NeutroniumTester, DoubleLogicalNotRejected) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, MissingSemicolonFails) {
     const std::string code = R"( exit 1 )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, EmptyStatementsDisallowed) {
@@ -228,7 +227,7 @@ TEST_F(NeutroniumTester, EmptyStatementsDisallowed) {
         let x = 1;;
         exit x;;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, DeclarationWithoutInitializerFails) {
@@ -236,7 +235,7 @@ TEST_F(NeutroniumTester, DeclarationWithoutInitializerFails) {
         let x;
         exit 0;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, UnmatchedBracesFails) {
@@ -246,7 +245,7 @@ TEST_F(NeutroniumTester, UnmatchedBracesFails) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, UnmatchedParenthesesFails) {
@@ -256,7 +255,7 @@ TEST_F(NeutroniumTester, UnmatchedParenthesesFails) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, InvalidUnaryOperatorFails) {
@@ -265,7 +264,7 @@ TEST_F(NeutroniumTester, InvalidUnaryOperatorFails) {
         let y = !x;
         exit 0;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, InvalidUnaryOperatorFails2) {
@@ -274,7 +273,7 @@ TEST_F(NeutroniumTester, InvalidUnaryOperatorFails2) {
         let y = -x;
         exit 0;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, InvalidTypeForUnaryOperatorFails) {
@@ -282,14 +281,14 @@ TEST_F(NeutroniumTester, InvalidTypeForUnaryOperatorFails) {
         fn x: {}
         let y = -x();
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, ArithmeticOperatorOnBooleanFails) {
     const std::string code = R"(
         let x = true + false;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, EqualityOperatorOnEmptyFails) {
@@ -298,14 +297,14 @@ TEST_F(NeutroniumTester, EqualityOperatorOnEmptyFails) {
         let y = (x() != x());
     )";
 
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, RelationalOperatorOnBooleanFails) {
     const std::string code = R"(
         let x = true > false;
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, RelationalOperatorOnEmptyFails) {
@@ -314,7 +313,7 @@ TEST_F(NeutroniumTester, RelationalOperatorOnEmptyFails) {
         let y = (x() >= x());
     )";
 
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
 }
 
 TEST_F(NeutroniumTester, EmptyVariableAssignmentFails) {
@@ -322,5 +321,27 @@ TEST_F(NeutroniumTester, EmptyVariableAssignmentFails) {
         fn x: {}
         let y = x();
     )";
-    EXPECT_NE(compile(code), 0);
+    EXPECT_NE(compile(code).first, 0);
+}
+
+TEST_F(NeutroniumTester, BreakWhenNotInLoopFails) {
+    const std::string code = R"(
+        break;
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.find("break") != std::string::npos &&
+                error.find("outside of a loop") != std::string::npos);
+}
+
+TEST_F(NeutroniumTester, ContinueWhenNotInLoopFails) {
+    const std::string code = R"(
+        {
+            continue;
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.find("continue") != std::string::npos &&
+                error.find("outside of a loop") != std::string::npos);
 }

@@ -252,7 +252,9 @@ void SemanticAnalyser::analyse_if_statement(  // NOLINT(*-no-recursion)
 void SemanticAnalyser::analyse_while_statement(  // NOLINT(*-no-recursion)
     const AST::WhileStatement& whileStmt) {
     analyse_expression(*whileStmt.condition_, Type::BOOLEAN, "condition");
+    loopDepth_++;
     analyse_statement(*whileStmt.body_);
+    loopDepth_--;
 }
 
 void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
@@ -260,6 +262,18 @@ void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
     analyse_statement(*funcDecl.body_);
     const std::string& name = funcDecl.identifier_->name_;
     handle_symbol_declaration(name, false, Type::EMPTY, SymbolKind::FUNCTION, funcDecl);
+}
+
+void SemanticAnalyser::analyse_break_statement() {
+    if (loopDepth_ == 0) {
+        abort("`break` statement is not allowed outside of a loop");
+    }
+}
+
+void SemanticAnalyser::analyse_continue_statement() {
+    if (loopDepth_ == 0) {
+        abort("`continue` statement is not allowed outside of a loop");
+    }
 }
 
 void SemanticAnalyser::analyse_exit(const AST::Exit& exitStmt) {
@@ -298,6 +312,12 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
             analyse_function_declaration(funcDecl);
             break;
         }
+        case AST::NodeKind::BREAK_STATEMENT:
+            analyse_break_statement();
+            break;
+        case AST::NodeKind::CONTINUE_STATEMENT:
+            analyse_continue_statement();
+            break;
         case AST::NodeKind::EXIT: {
             const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
             analyse_exit(exitStmt);

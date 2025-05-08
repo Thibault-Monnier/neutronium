@@ -26,16 +26,21 @@ Variables can be **integers** or **booleans**.
 - `if`, `elif`, and `else` **statements** do not wrap their conditions in parentheses. Each condition is followed by a
   colon `:` and a block delimited by braces `{` `}`.
 - `while` **loops** use the same syntax as `if` **statements**.
+- `break;` and `continue;` **statements** are used to exit or skip the current iteration of a loop, respectively.
 - `exit` **statements** terminate the program with the given **exit code**. The exit code is an **integer expression**.
 
 ```bash
 if x > 0: {
+    while true: {
+        break; # Loop stops immediately
+    }
     exit 1;
 } elif x == 0: {
     exit 0;
 } else: {
     while x <= 42: {
         x = x + 1;
+        continue; # Unnecessary in this case
     }
 }
 ```
@@ -119,7 +124,7 @@ fn computeIsPrime: {
         if (integer / curr) * curr == integer: {
             isPrime = false;
             smallestDivisor = curr;
-            curr = integer; # Equivalent to a break
+            break;
         } else: {
             curr = curr + 1;
         }
@@ -148,6 +153,8 @@ statement ::= block-statement
             | function-declaration
             | if-statement
             | while-statement
+            | break-statement
+            | continue-statement
             | exit-statement
             | expression-statement
             | comment
@@ -169,6 +176,10 @@ elif-clause ::= 'elif' expression ':' body
 else-clause ::= 'else' ':' body
 
 while-statement ::= 'while' expression ':' body
+
+break-statement ::= 'break' ';'
+
+continue-statement ::= 'continue' ';'
 
 exit-statement ::= 'exit' expression ';'
 

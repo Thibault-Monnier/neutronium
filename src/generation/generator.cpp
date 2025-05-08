@@ -207,11 +207,21 @@ void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {  // NOLINT(*-
 void Generator::generate_while_stmt(  // NOLINT(*-no-recursion)
     const AST::WhileStatement& whileStmt) {
     const int whileLabel = labelsCount_++;
+    innerLoopStartLabel_ = whileLabel;
     output_ << "." << whileLabel << ":\n";
+
     const int endwhileLabel = generate_condition(*whileStmt.condition_);
+    innerLoopEndLabel_ = endwhileLabel;
+
     generate_stmt(*whileStmt.body_);
     output_ << "    jmp ." << whileLabel << "\n";
     output_ << "." << endwhileLabel << ":\n";
+}
+
+void Generator::generate_break_statement() { output_ << "    jmp ." << innerLoopEndLabel_ << "\n"; }
+
+void Generator::generate_continue_statement() {
+    output_ << "    jmp ." << innerLoopStartLabel_ << "\n";
 }
 
 void Generator::generate_exit(const AST::Exit& exitStmt) {
@@ -248,6 +258,12 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
             generate_while_stmt(whileStmt);
             break;
         }
+        case AST::NodeKind::BREAK_STATEMENT:
+            generate_break_statement();
+            break;
+        case AST::NodeKind::CONTINUE_STATEMENT:
+            generate_continue_statement();
+            break;
         case AST::NodeKind::FUNCTION_DECLARATION: {
             break;  // Function declarations are handled separately
         }

@@ -113,6 +113,12 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             log_statement(*funcDecl.body_, next_prefix(newPrefix, true), true);
             break;
         }
+        case NodeKind::BREAK_STATEMENT:
+            std::cout << prefix << branch << "BreakStatement\n";
+            break;
+        case NodeKind::CONTINUE_STATEMENT:
+            std::cout << prefix << branch << "ContinueStatement\n";
+            break;
         case NodeKind::EXIT: {
             const auto& exit = as<Exit>(stmt);
             std::cout << prefix << branch << "Exit\n";

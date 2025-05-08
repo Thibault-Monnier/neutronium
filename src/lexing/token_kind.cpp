@@ -64,6 +64,10 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "ELSE";
         case TokenKind::WHILE:
             return "WHILE";
+        case TokenKind::BREAK:
+            return "BREAK";
+        case TokenKind::CONTINUE:
+            return "CONTINUE";
         case TokenKind::FN:
             return "FN";
         case TokenKind::EXIT:

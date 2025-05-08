@@ -17,6 +17,8 @@ class Generator {
     std::stringstream output_;
 
     int labelsCount_ = 0;
+    int innerLoopStartLabel_ = 0;
+    int innerLoopEndLabel_ = 0;
 
     const SymbolTable& symbolTable_;
 
@@ -41,6 +43,8 @@ class Generator {
     void generate_expression_stmt(const AST::ExpressionStatement& exprStmt);
     void generate_if_stmt(const AST::IfStatement& ifStmt);
     void generate_while_stmt(const AST::WhileStatement& whileStmt);
+    void generate_break_statement();
+    void generate_continue_statement();
     void generate_exit(const AST::Exit& exitStmt);
 
     void generate_stmt(const AST::Statement& stmt);

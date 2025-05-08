@@ -39,6 +39,8 @@ enum class TokenKind : uint8_t {
     ELIF,
     ELSE,
     WHILE,
+    BREAK,
+    CONTINUE,
     FN,
     EXIT,
 

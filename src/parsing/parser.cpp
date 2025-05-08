@@ -238,6 +238,18 @@ std::unique_ptr<AST::FunctionDeclaration> Parser::parse_function_declaration() {
         std::move(identifier), std::vector<std::unique_ptr<AST::Identifier>>{}, std::move(body));
 }
 
+std::unique_ptr<AST::BreakStatement> Parser::parse_break_statement() {
+    consume(TokenKind::BREAK);
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::BreakStatement>();
+}
+
+std::unique_ptr<AST::ContinueStatement> Parser::parse_continue_statement() {
+    consume(TokenKind::CONTINUE);
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::ContinueStatement>();
+}
+
 std::unique_ptr<AST::Exit> Parser::parse_exit() {
     consume(TokenKind::EXIT);
     auto exitCode = parse_expression();
@@ -264,6 +276,8 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
     if (tokenKind == TokenKind::IF) return parse_if_statement();
     if (tokenKind == TokenKind::WHILE) return parse_while_statement();
     if (tokenKind == TokenKind::FN) return parse_function_declaration();
+    if (tokenKind == TokenKind::BREAK) return parse_break_statement();
+    if (tokenKind == TokenKind::CONTINUE) return parse_continue_statement();
     if (tokenKind == TokenKind::EXIT) return parse_exit();
     if (tokenKind == TokenKind::LEFT_BRACE) return parse_block_statement();
     return parse_expression_statement();

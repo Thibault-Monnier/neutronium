@@ -37,6 +37,8 @@ enum class NodeKind : uint8_t {
     WHILE_STATEMENT,
     FUNCTION_CALL,
     FUNCTION_DECLARATION,
+    BREAK_STATEMENT,
+    CONTINUE_STATEMENT,
     EXIT,
     BLOCK_STATEMENT,
     PROGRAM,
@@ -189,6 +191,14 @@ struct FunctionDeclaration final : Statement {
     const std::unique_ptr<Identifier> identifier_;
     const std::vector<std::unique_ptr<Identifier>> parameters_;
     const std::unique_ptr<BlockStatement> body_;
+};
+
+struct BreakStatement final : Statement {
+    explicit BreakStatement() : Statement{NodeKind::BREAK_STATEMENT} {}
+};
+
+struct ContinueStatement final : Statement {
+    explicit ContinueStatement() : Statement{NodeKind::CONTINUE_STATEMENT} {}
 };
 
 struct Exit final : Statement {

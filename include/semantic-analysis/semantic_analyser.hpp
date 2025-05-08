@@ -22,6 +22,8 @@ class SemanticAnalyser {
     int currentStackOffset_ = 0;
     std::vector<Scope> scopes_;
 
+    int loopDepth_ = 0;
+
     [[noreturn]] void abort(const std::string& errorMessage, const std::string& hintMessage = "");
 
     void enter_scope(const AST::BlockStatement& blockStmt);
@@ -46,6 +48,8 @@ class SemanticAnalyser {
     void analyse_if_statement(const AST::IfStatement& ifStmt);
     void analyse_while_statement(const AST::WhileStatement& whileStmt);
     void analyse_function_declaration(const AST::FunctionDeclaration& funcDecl);
+    void analyse_break_statement();
+    void analyse_continue_statement();
     void analyse_exit(const AST::Exit& exitStmt);
 
     void analyse_statement(const AST::Statement& stmt);
