@@ -105,27 +105,30 @@ TEST_F(NeutroniumTester, NestedFunctionsExecute2) {
 TEST_F(NeutroniumTester, WhileLoop) {
     const std::string code = R"(
         let mut i = 0;
-        while i < 5: {
+        while i <= 5: {
             i = i + 1;
         }
         exit i;
     )";
 
-    EXPECT_EQ(run(code), 5);
+    EXPECT_EQ(run(code), 6);
 }
 
 TEST_F(NeutroniumTester, IfElifElse) {
     const std::string codeTemplate = R"(
-        let x = {val};
+        let mut x = {val};
         if x < 5: {
             exit 1;
         } elif x == 5: {
             exit 2;
         } elif x == 6: {
-            exit 3;
+            while x < 10: {
+                x = x + 1;
+            }
         } else: {
             exit 4;
         }
+        exit x;
     )";
 
     auto testWithX = [&](const int x, const int expectedExit) {
@@ -134,10 +137,10 @@ TEST_F(NeutroniumTester, IfElifElse) {
         EXPECT_EQ(run(code), expectedExit);
     };
 
-    testWithX(4, 1);  // x < 5 → exit 1
-    testWithX(5, 2);  // x == 5 → exit 2
-    testWithX(6, 3);  // x == 6 → exit 3
-    testWithX(7, 4);  // x > 6 → exit 4
+    testWithX(4, 1);   // x < 5 → exit 1
+    testWithX(5, 2);   // x == 5 → exit 2
+    testWithX(6, 10);  // x == 6 → exit 10
+    testWithX(7, 4);   // x > 6 → exit 4
 }
 
 TEST_F(NeutroniumTester, LogicalNegation) {
@@ -239,7 +242,7 @@ TEST_F(NeutroniumTester, WhileFalseSkipsBody) {
 
 TEST_F(NeutroniumTester, MultiplyWithUnaryLiteral) {
     const std::string code = R"( exit 2 * -3; )";
-    EXPECT_EQ(run(code), 250); // -6 → 250 in 8-bit unsigned
+    EXPECT_EQ(run(code), 250);  // -6 → 250 in 8-bit unsigned
 }
 
 TEST_F(NeutroniumTester, ScopeDeclaration) {
@@ -256,4 +259,67 @@ TEST_F(NeutroniumTester, ScopeDeclaration) {
     )";
 
     EXPECT_EQ(run(code), 9);
+}
+
+TEST_F(NeutroniumTester, NestedControlFlow) {
+    const std::string code = R"(
+        let mut condition = {val};
+        let mut exitCode = - 2*128;
+        if condition: {
+            exitCode = 1;
+            while condition: {
+                condition = !condition;
+                exitCode = 0;
+            }
+        } else: {
+            if exitCode == 0: {
+                exitCode = 2;
+            } else: {
+                exitCode = 3;
+            }
+        }
+
+        exit exitCode;
+    )";
+
+    auto testWithCondition = [&](const bool condition, const int expectedExit) {
+        std::string codeWithCondition = code;
+        codeWithCondition.replace(codeWithCondition.find("{val}"), 5, condition ? "true" : "false");
+        EXPECT_EQ(run(codeWithCondition), expectedExit);
+    };
+
+    testWithCondition(true, 0);   // condition = true → exitCode = 0
+    testWithCondition(false, 3);  // condition = false → exitCode = 3
+}
+
+TEST_F(NeutroniumTester, FunctionCalls) {
+    const std::string code = R"(
+        let mut var = 3545654;
+
+        fn inc: {
+            var = var + 1;
+        }
+
+        fn dec: {
+            fn minusOne: {
+                var = var - 1;
+            }
+            minusOne();
+        }
+
+        fn setToZero: {
+            if (var != 0): {
+                var = 0;
+            }
+        }
+
+        setToZero();
+        inc();
+        inc();
+        dec();
+        inc();
+
+        exit var;
+    )";
+    EXPECT_EQ(run(code), 2);
 }
