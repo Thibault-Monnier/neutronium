@@ -107,14 +107,14 @@ than 2).
 ```bash
 let integer = 8000000011;
 
-let isPrime = true;
-let smallestDivisor = 1;
+let mut isPrime = true;
+let mut smallestDivisor = 1;
 fn computeIsPrime: {
     if integer <= 1: {
         exit 1;
     }
 
-    let curr = 2;
+    let mut curr = 2;
     while curr < integer: {
         if (integer / curr) * curr == integer: {
             isPrime = false;

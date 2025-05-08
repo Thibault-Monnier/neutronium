@@ -22,6 +22,7 @@ add_executable(neutronium src/main.cpp)
 
 target_link_libraries(neutronium PRIVATE neutronium_lib)
 
+
 # === GoogleTest setup ===
 include(FetchContent)
 FetchContent_Declare(
@@ -41,6 +42,9 @@ add_executable(tests ${TEST_SOURCES})
 target_link_libraries(tests PRIVATE
         neutronium_lib
         gtest_main
+)
+target_compile_definitions(tests PRIVATE
+        PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}"
 )
 
 include(GoogleTest)
