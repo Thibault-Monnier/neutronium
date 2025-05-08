@@ -258,3 +258,69 @@ TEST_F(NeutroniumTester, UnmatchedParenthesesFails) {
     )";
     EXPECT_NE(compile(code), 0);
 }
+
+TEST_F(NeutroniumTester, InvalidUnaryOperatorFails) {
+    const std::string code = R"(
+        let x = 1;
+        let y = !x;
+        exit 0;
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, InvalidUnaryOperatorFails2) {
+    const std::string code = R"(
+        let x = true;
+        let y = -x;
+        exit 0;
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, InvalidTypeForUnaryOperatorFails) {
+    const std::string code = R"(
+        fn x: {}
+        let y = -x();
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, ArithmeticOperatorOnBooleanFails) {
+    const std::string code = R"(
+        let x = true + false;
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, EqualityOperatorOnEmptyFails) {
+    const std::string code = R"(
+        fn x: {}
+        let y = (x() != x());
+    )";
+
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, RelationalOperatorOnBooleanFails) {
+    const std::string code = R"(
+        let x = true > false;
+    )";
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, RelationalOperatorOnEmptyFails) {
+    const std::string code = R"(
+        fn x: {}
+        let y = (x() >= x());
+    )";
+
+    EXPECT_NE(compile(code), 0);
+}
+
+TEST_F(NeutroniumTester, EmptyVariableAssignmentFails) {
+    const std::string code = R"(
+        fn x: {}
+        let y = x();
+    )";
+    EXPECT_NE(compile(code), 0);
+}

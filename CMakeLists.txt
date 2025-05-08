@@ -11,6 +11,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address,undefined -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+if(COVERAGE)
+    message(STATUS "Building with code coverage flags")
+    add_compile_options(--coverage)
+    add_link_options(--coverage)
+endif()
+
 include_directories(include)
 
 file(GLOB_RECURSE LIB_SOURCES "src/*.cpp")

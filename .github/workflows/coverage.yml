@@ -1,0 +1,38 @@
+name: Test Coverage
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y cmake ninja-build build-essential nasm lcov
+
+      - name: Configure with coverage flags
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON .
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        run: cd build && ctest --output-on-failure
+
+      - name: Capture coverage
+        run: |
+          cd build
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' '*/_deps/*' --output-file coverage.info
+          genhtml coverage.info --output-directory coverage_html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: build/coverage_html

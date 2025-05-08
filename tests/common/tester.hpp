@@ -1,10 +1,5 @@
 #pragma once
 
-#ifndef PROJECT_ROOT_DIR
-#warning "PROJECT_ROOT_DIR not defined — using fallback for IDE only"
-#define PROJECT_ROOT_DIR "."
-#endif
-
 #include <gtest/gtest.h>
 #include <unistd.h>
 
@@ -24,8 +19,9 @@ class NeutroniumTester : public ::testing::Test {
     void SetUp() override {
         using namespace std::filesystem;
 
-        projectRoot_ = projectRoot_ = std::filesystem::path(PROJECT_ROOT_DIR);
+        originalCwd_ = current_path();
 
+        projectRoot_ = std::filesystem::path(PROJECT_ROOT_DIR);
         compiler_ = projectRoot_ / "build" / "neutronium";
         sourceFile_ = projectRoot_ / "tmp_test.nt";
         outputBinary_ = projectRoot_ / "neutro" / "out";
