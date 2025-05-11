@@ -9,13 +9,82 @@ TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
     EXPECT_NE(compile(code).first, 0);
 }
 
-TEST_F(NeutroniumTester, MutableReassignmentDifferentTypeFails) {
+TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
+    const std::string code = R"(
+        let mut x: int = 1;
+        x = true;      # illegal: integer -> boolean
+        exit 0;
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Type mismatch"));
+
+    const std::string code2 = R"(
+        let mut x: bool = true;
+        x = 1;       # illegal: boolean -> integer
+        exit 0;
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("Type mismatch"));
+
+    const std::string code3 = R"(
+        let mut x: int = 1;
+        let y: bool = true;
+        x = y;       # illegal: int -> bool
+        exit 0;
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE(error3.contains("Type mismatch"));
+}
+
+TEST_F(NeutroniumTester, ReassignmentDifferentInferredTypeFails) {
     const std::string code = R"(
         let mut flag = true;
         flag = 1;       # illegal: boolean -> integer
         exit 0;
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Type mismatch"));
+
+    const std::string code2 = R"(
+        let mut x = 1;
+        x = true;      # illegal: integer -> boolean
+        exit 0;
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("Type mismatch"));
+
+    const std::string code3 = R"(
+        let mut x = false;
+        let y = 1;
+        x = y;       # illegal: bool -> int
+        exit 0;
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE(error3.contains("Type mismatch"));
+}
+
+TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
+    const std::string code = R"(
+        let x: int = true != false;  # illegal: bool -> int
+        exit 0;
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("bool") && error.contains("int") && error.contains("type"));
+
+    const std::string code2 = R"(
+        let mut x: bool = 1 * -5;   # illegal: int -> bool
+        exit 0;
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("int") && error2.contains("bool") && error2.contains("type"));
 }
 
 TEST_F(NeutroniumTester, VariableShadowingAcrossBlocksFails) {
@@ -39,13 +108,26 @@ TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
     EXPECT_NE(compile(code).first, 0);
 }
 
-TEST_F(NeutroniumTester, TypeMismatchInBinaryOpFails) {
+TEST_F(NeutroniumTester, TypeMismatchInExpressionFails) {
     const std::string code = R"(
         let a = 1;
         let b = true;
-        exit a + b;      # int + bool is illegal
+        let c = a + b;      # int + bool is illegal
+        exit 0;
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Type mismatch"));
+
+    const std::string code2 = R"(
+        let a = 1;
+        let b = true;
+        let c = a == b;     # int == bool is illegal
+        exit 0;
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("Type mismatch"));
 }
 
 TEST_F(NeutroniumTester, VariableShadowingError) {
@@ -173,14 +255,6 @@ TEST_F(NeutroniumTester, InvalidIdentifierFails) {
     const std::string code = R"(
         let 42x = 5;  # invalid identifier
         exit 0;
-    )";
-
-    EXPECT_NE(compile(code).first, 0);
-}
-
-TEST_F(NeutroniumTester, ExpressionStatementsMustBeEmptyType) {
-    const std::string code = R"(
-        1;
     )";
 
     EXPECT_NE(compile(code).first, 0);
@@ -330,8 +404,7 @@ TEST_F(NeutroniumTester, BreakWhenNotInLoopFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.find("break") != std::string::npos &&
-                error.find("outside of a loop") != std::string::npos);
+    EXPECT_TRUE(error.contains("break") && error.contains("outside of a loop"));
 }
 
 TEST_F(NeutroniumTester, ContinueWhenNotInLoopFails) {
@@ -342,6 +415,5 @@ TEST_F(NeutroniumTester, ContinueWhenNotInLoopFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.find("continue") != std::string::npos &&
-                error.find("outside of a loop") != std::string::npos);
+    EXPECT_TRUE(error.contains("continue") && error.contains("outside of a loop"));
 }

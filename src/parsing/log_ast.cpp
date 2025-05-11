@@ -69,6 +69,7 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             const auto& varDecl = as<VariableDeclaration>(stmt);
             std::cout << prefix << branch << "VariableDeclaration\n";
             std::cout << newPrefix << "├── Identifier: " << varDecl.identifier_->name_ << "\n";
+            std::cout << newPrefix << "├── Type: " << varDecl.type_.to_string() << "\n";
             std::cout << newPrefix << "├── IsMutable: " << (varDecl.isMutable_ ? "true" : "false")
                       << "\n";
             std::cout << newPrefix << "└── Value\n";

@@ -11,11 +11,11 @@ Whitespaces are ignored, and most statements are terminated by a semicolon.
 
 Variables are declared with `let` and are **immutable by default**. To make it mutable, use `let mut` instead. Mutable
 variables can be reassigned to **a value of the same type**.
-Variable types are **inferred at declaration**.
+Variable types are **inferred at declaration**, or can be explicitly declared with `let <name>: <type> = <value>;`.
 
 ```bash
 let x = true;
-let mut y = 42;
+let mut y: int = 42;
 y = 43;
 ```
 
@@ -65,7 +65,7 @@ fn fooBar: {
 }
 ```
 
-They are called with `fooBar()`. Every function has return type `empty`.
+They are called with `fooBar()`. Every function has return type `void`.
 
 ### Scoping:
 
@@ -102,7 +102,7 @@ Single-line comments start with `#` and extend to the end of the line.
 
 - **Integer**: 64-bit signed integer
 - **Boolean**: `true` or `false`
-- **Empty**: The return type of _all_ functions (since return values are not yet supported)
+- **Void**: The return type of _all_ functions (since return values are not yet supported)
 
 ## Example Program
 

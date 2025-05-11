@@ -2,8 +2,8 @@
 
 TEST_F(NeutroniumTester, PrimeNumberCheck) {
     const std::string codeTemplate = R"(
-        let integer = {val};
-        let mut isPrime = true;
+        let integer: int = {val};
+        let mut isPrime: bool = true;
         let mut smallestDivisor = 1;
         fn computeIsPrime: {
             if integer <= 1: {
@@ -55,6 +55,28 @@ TEST_F(NeutroniumTester, MutableReassignmentSameType) {
     EXPECT_EQ(run(code), 43);
 }
 
+TEST_F(NeutroniumTester, TypeSpecifiers) {
+    const std::string code = R"(
+        let x: int = 42;
+        let mut y: int = 0;
+
+        let z: bool = true;
+        let mut w: bool = false;
+
+        if z: {
+            y = x + 1; # y = 43
+            w = !w;
+        }
+        if w: {
+            y = y + 1; # y = 44
+        }
+
+        exit x;
+    )";
+
+    EXPECT_EQ(run(code), 42);
+}
+
 TEST_F(NeutroniumTester, OperatorPrecedence) {
     const std::string code = R"(
         # Expect 2 + (3 * 4) = 14
@@ -104,7 +126,7 @@ TEST_F(NeutroniumTester, NestedFunctionsExecute2) {
 
 TEST_F(NeutroniumTester, WhileLoop) {
     const std::string code = R"(
-        let mut i = 0;
+        let mut i: int = 0;
         while i <= 5: {
             i = i + 1;
         }
@@ -177,7 +199,7 @@ TEST_F(NeutroniumTester, IfElifElse) {
 
 TEST_F(NeutroniumTester, LogicalNegation) {
     const std::string code = R"(
-        let x = {val};
+        let x: bool = {val};
         if !x: {
             exit 1;
         } else: {
@@ -296,7 +318,7 @@ TEST_F(NeutroniumTester, ScopeDeclaration) {
 TEST_F(NeutroniumTester, NestedControlFlow) {
     const std::string code = R"(
         let mut condition = {val};
-        let mut exitCode = - 2*128;
+        let mut exitCode: int = - 2*128;
         if condition: {
             exitCode = 1;
             while condition: {
@@ -322,6 +344,24 @@ TEST_F(NeutroniumTester, NestedControlFlow) {
 
     testWithCondition(true, 0);   // condition = true → exitCode = 0
     testWithCondition(false, 3);  // condition = false → exitCode = 3
+}
+
+TEST_F(NeutroniumTester, ExpressionStatements) {
+    const std::string code = R"(
+        1;
+        true;
+
+        {
+            !(1 == 1 - 0);
+            2 + 3;
+
+            fn x: {}
+            x();
+        }
+
+        exit 0;
+    )";
+    EXPECT_EQ(run(code), 0);
 }
 
 TEST_F(NeutroniumTester, FunctionCalls) {

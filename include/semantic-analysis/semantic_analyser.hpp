@@ -24,12 +24,12 @@ class SemanticAnalyser {
 
     int loopDepth_ = 0;
 
-    [[noreturn]] void abort(const std::string& errorMessage, const std::string& hintMessage = "");
+    [[noreturn]] static void abort(const std::string& errorMessage, const std::string& hintMessage = "");
 
     void enter_scope(const AST::BlockStatement& blockStmt);
     void exit_scope();
 
-    bool is_symbol_declared(const std::string& name);
+    bool is_symbol_declared(const std::string& name) const;
     Type get_symbol_type(const std::string& name) const;
     SymbolKind get_symbol_kind(const std::string& name) const;
     void handle_symbol_declaration(const std::string& name, bool isMutable, Type type,

@@ -45,6 +45,24 @@ const Token& Parser::consume(const TokenKind expected) {
     return token;
 }
 
+Type Parser::parse_type_specifier() {
+    const TokenKind tokenKind = peek().kind();
+    consume(tokenKind);
+
+    switch (tokenKind) {
+        case TokenKind::INT:
+            return RawType::INTEGER;
+        case TokenKind::BOOL:
+            return RawType::BOOLEAN;
+        default: {
+            const std::string errorMessage =
+                std::format("Invalid token at index {} -> expected type specifier, got {}",
+                            currentIndex_, token_kind_to_string(tokenKind));
+            abort(errorMessage);
+        }
+    }
+}
+
 std::unique_ptr<AST::Identifier> Parser::parse_identifier() {
     const std::string& name = consume(TokenKind::IDENTIFIER).lexeme();
     return std::make_unique<AST::Identifier>(name);
@@ -172,16 +190,26 @@ std::unique_ptr<AST::VariableAssignment> Parser::parse_variable_assignment() {
 
 std::unique_ptr<AST::VariableDeclaration> Parser::parse_variable_declaration() {
     consume(TokenKind::LET);
+
     bool isMutable = false;
     if (peek().kind() == TokenKind::MUT) {
         consume(TokenKind::MUT);
         isMutable = true;
     }
+
     auto identifier = parse_identifier();
+
+    Type type = RawType::ANY;
+    if (peek().kind() == TokenKind::COLON) {
+        consume(TokenKind::COLON);
+        type = parse_type_specifier();
+    }
+
     consume(TokenKind::EQUAL);
     auto value = parse_expression();
     consume(TokenKind::SEMICOLON);
-    return std::make_unique<AST::VariableDeclaration>(std::move(identifier), std::move(value),
+
+    return std::make_unique<AST::VariableDeclaration>(std::move(identifier), std::move(value), type,
                                                       isMutable);
 }
 
@@ -229,7 +257,8 @@ std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLIN
     return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
 }
 
-std::unique_ptr<AST::FunctionDeclaration> Parser::parse_function_declaration() {
+std::unique_ptr<AST::FunctionDeclaration>
+Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
     consume(TokenKind::FN);
     auto identifier = parse_identifier();
     consume(TokenKind::COLON);
