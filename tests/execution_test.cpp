@@ -5,7 +5,7 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
         let integer: int = {val};
         let mut isPrime: bool = true;
         let mut smallestDivisor = 1;
-        fn computeIsPrime: {
+        fn computeIsPrime(): {
             if integer <= 1: {
                 exit 1;
             }
@@ -97,22 +97,19 @@ TEST_F(NeutroniumTester, ParenthesizedExpressions) {
 
 TEST_F(NeutroniumTester, NestedFunctionsExecute) {
     const std::string code = R"(
-        fn outer: {
-            fn inner: { exit 7; }
+        fn outer(): {
+            fn inner(): { exit 7; }
             inner();
         }
         outer();
         exit 0;        # unreachable
     )";
-
     EXPECT_EQ(run(code), 7);
-}
 
-TEST_F(NeutroniumTester, NestedFunctionsExecute2) {
-    const std::string code = R"(
-        fn outer: {
+    const std::string code2 = R"(
+        fn outer(): {
             let mut x = 10;
-            fn inner: {
+            fn inner(): {
                 x = x + 1;
             }
             inner();
@@ -120,8 +117,7 @@ TEST_F(NeutroniumTester, NestedFunctionsExecute2) {
         }
         outer();
     )";
-
-    EXPECT_EQ(run(code), 11);
+    EXPECT_EQ(run(code2), 11);
 }
 
 TEST_F(NeutroniumTester, WhileLoop) {
@@ -235,7 +231,7 @@ TEST_F(NeutroniumTester, ExitFromNestedIfInsideLoop) {
 TEST_F(NeutroniumTester, MultipleFunctionCalls) {
     const std::string code = R"(
         let mut x = 0;
-        fn bump: { x = x + 1; }
+        fn bump(): { x = x + 1; }
 
         bump();
         bump();
@@ -355,7 +351,7 @@ TEST_F(NeutroniumTester, ExpressionStatements) {
             !(1 == 1 - 0);
             2 + 3;
 
-            fn x: {}
+            fn x(): {}
             x();
         }
 
@@ -368,18 +364,18 @@ TEST_F(NeutroniumTester, FunctionCalls) {
     const std::string code = R"(
         let mut var = 3545654;
 
-        fn inc: {
+        fn inc(): {
             var = var + 1;
         }
 
-        fn dec: {
-            fn minusOne: {
+        fn dec(): {
+            fn minusOne(): {
                 var = var - 1;
             }
             minusOne();
         }
 
-        fn setToZero: {
+        fn setToZero(): {
             if (var != 0): {
                 var = 0;
             }

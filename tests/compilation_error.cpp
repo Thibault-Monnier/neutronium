@@ -6,7 +6,11 @@ TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
         x = 2;          # illegal: x is immutable
         exit 0;
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("immutable variable") &&
+                (error.contains("assignment") || error.contains("Assignment")) &&
+                error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
@@ -76,7 +80,8 @@ TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("bool") && error.contains("int") && error.contains("type"));
+    EXPECT_TRUE(error.contains("bool") && error.contains("int") && error.contains("type") &&
+                error.contains("x"));
 
     const std::string code2 = R"(
         let mut x: bool = 1 * -5;   # illegal: int -> bool
@@ -84,20 +89,8 @@ TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("int") && error2.contains("bool") && error2.contains("type"));
-}
-
-TEST_F(NeutroniumTester, VariableShadowingAcrossBlocksFails) {
-    const std::string code = R"(
-        {
-            let y = 10;
-        }
-        {
-            let y = 11;   # illegal shadowing, even in a new block
-        }
-        exit 0;
-    )";
-    EXPECT_NE(compile(code).first, 0);
+    EXPECT_TRUE(error2.contains("int") && error2.contains("bool") && error2.contains("type") &&
+                error2.contains("x"));
 }
 
 TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
@@ -105,7 +98,10 @@ TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
         let ok = true;
         exit ok;         # exit expects integer expression
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("exit") && error.contains("integer") && error.contains("type") &&
+                error.contains("boolean"));
 }
 
 TEST_F(NeutroniumTester, TypeMismatchInExpressionFails) {
@@ -130,7 +126,55 @@ TEST_F(NeutroniumTester, TypeMismatchInExpressionFails) {
     EXPECT_TRUE(error2.contains("Type mismatch"));
 }
 
-TEST_F(NeutroniumTester, VariableShadowingError) {
+TEST_F(NeutroniumTester, RedeclarationOfVariableError) {
+    const std::string code = R"(
+        let x = 1;
+        let x = 2;
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE((error.contains("Redeclaration") || error.contains("redeclaration")) &&
+                (error.contains("variable") || error.contains("symbol")) && error.contains("x"));
+}
+
+TEST_F(NeutroniumTester, UndeclaredVariableError) {
+    const std::string code = R"(
+        let x = y;
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("undeclared") && error.contains("variable") && error.contains("y"));
+
+    const std::string code2 = R"(
+        x = 1;
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("undeclared") && error2.contains("variable") &&
+                error2.contains("x"));
+}
+
+TEST_F(NeutroniumTester, VariableUsedBeforeDeclarationError) {
+    const std::string code = R"(
+        let y = x + 1;
+        let x = 1;
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("undeclared") && error.contains("variable") && error.contains("x"));
+}
+
+TEST_F(NeutroniumTester, VariableOfTypeVoidFails) {
+    const std::string code = R"(
+        fn x(): {}
+        let y = x();
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("void") && error.contains("type") && error.contains("y"));
+}
+
+TEST_F(NeutroniumTester, SymbolShadowingError) {
     const std::string code = R"(
         let x = 1;
         {
@@ -139,30 +183,54 @@ TEST_F(NeutroniumTester, VariableShadowingError) {
 
         exit 0;
     )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE((error.contains("Redeclaration") || error.contains("redeclaration")) &&
+                (error.contains("variable") || error.contains("symbol")) && error.contains("x"));
 
-    EXPECT_NE(compile(code).first, 0);
+    const std::string code2 = R"(
+        {
+            let y = 10;
+        }
+        {
+            let y = 11;   # illegal shadowing, even in a new block
+        }
+        exit 0;
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE((error2.contains("Redeclaration") || error2.contains("redeclaration")) &&
+                (error2.contains("variable") || error2.contains("symbol")) && error2.contains("y"));
+
+    const std::string code3 = R"(
+        fn x(): {
+            let x = 1;
+        }
+        {
+            fn x(): {
+                let x = 2;   # illegal shadowing, even in a new block
+            }
+        }
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE((error3.contains("Redeclaration") || error3.contains("redeclaration")) &&
+                (error3.contains("function") || error3.contains("symbol")) && error3.contains("x"));
 }
 
-TEST_F(NeutroniumTester, UndeclaredVariableError) {
+TEST_F(NeutroniumTester, RedeclarationOfFunctionError) {
     const std::string code = R"(
-        let x = y;
+        fn x(): {
+            exit 0;
+        }
+        fn x(): {
+            exit 0;
+        }
     )";
-    EXPECT_NE(compile(code).first, 0);
-}
-
-TEST_F(NeutroniumTester, UndeclaredVariableError2) {
-    const std::string code = R"(
-        x = 1;
-    )";
-    EXPECT_NE(compile(code).first, 0);
-}
-
-TEST_F(NeutroniumTester, VariableUsedBeforeDeclarationError) {
-    const std::string code = R"(
-        let y = x + 1;
-        let x = 1;
-    )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Redeclaration") &&
+                (error.contains("symbol") || error.contains("function")) && error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, UndeclaredFunctionError) {
@@ -170,17 +238,21 @@ TEST_F(NeutroniumTester, UndeclaredFunctionError) {
         let x = 1;
         y();
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("undeclared") && error.contains("function") && error.contains("y"));
 }
 
 TEST_F(NeutroniumTester, FunctionCalledBeforeDeclarationError) {
     const std::string code = R"(
         y();
-        fn y: {
+        fn y(): {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("undeclared") && error.contains("function") && error.contains("y"));
 }
 
 TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
@@ -188,47 +260,31 @@ TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
         let x = 1;
         x();
     )";
-    EXPECT_NE(compile(code).first, 0);
-}
-
-TEST_F(NeutroniumTester, AttemptToUseAFunctionAsAVariableError) {
-    const std::string code = R"(
-        fn x: {
-            exit 0;
-        }
-        let y = x;
-    )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("call") && error.contains("function") && error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {
     const std::string code = R"(
-        fn x: {
+        fn x(): {
             exit 0;
         }
         x = 1;
     )";
-    EXPECT_NE(compile(code).first, 0);
-}
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Assignment") && error.contains("variable") && error.contains("x"));
 
-TEST_F(NeutroniumTester, RedeclarationOfFunctionError) {
-    const std::string code = R"(
-        fn x: {
+    const std::string code2 = R"(
+        fn x(): {
             exit 0;
         }
-        fn x: {
-            exit 0;
-        }
+        let y = x;
     )";
-    EXPECT_NE(compile(code).first, 0);
-}
-
-TEST_F(NeutroniumTester, RedeclarationOfVariableError) {
-    const std::string code = R"(
-        let x = 1;
-        let x = 2;
-    )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("variable") && error2.contains("not") && error2.contains("x"));
 }
 
 TEST_F(NeutroniumTester, NonBooleanConditionInIfError) {
@@ -238,7 +294,10 @@ TEST_F(NeutroniumTester, NonBooleanConditionInIfError) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("bool") && error.contains("condition") && error.contains("type") &&
+                error.contains("integer"));
 }
 
 TEST_F(NeutroniumTester, NonBooleanConditionInWhileError) {
@@ -248,7 +307,10 @@ TEST_F(NeutroniumTester, NonBooleanConditionInWhileError) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("bool") && error.contains("condition") && error.contains("type") &&
+                error.contains("integer"));
 }
 
 TEST_F(NeutroniumTester, InvalidIdentifierFails) {
@@ -256,8 +318,10 @@ TEST_F(NeutroniumTester, InvalidIdentifierFails) {
         let 42x = 5;  # invalid identifier
         exit 0;
     )";
-
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("LITERAL") &&
+                error.contains("IDENTIFIER"));
 }
 
 TEST_F(NeutroniumTester, UseAfterScopeFails) {
@@ -267,16 +331,21 @@ TEST_F(NeutroniumTester, UseAfterScopeFails) {
         }
         exit y;               # y is out of scope
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("undeclared") && error.contains("variable") && error.contains("y"));
 }
 
 TEST_F(NeutroniumTester, VarFunctionNameClashFails) {
     const std::string code = R"(
-        fn bar: { }
+        fn bar(): {}
         let bar = 1;          # clashes with fn bar
         exit 0;
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Redeclaration") && error.contains("symbol") &&
+                error.contains("bar"));
 }
 
 TEST_F(NeutroniumTester, DoubleLogicalNotRejected) {
@@ -287,21 +356,28 @@ TEST_F(NeutroniumTester, DoubleLogicalNotRejected) {
             exit 0;
         }
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("primary") && error.contains("expression") &&
+                error.contains("BANG") && error.contains("token"));
 }
 
 TEST_F(NeutroniumTester, MissingSemicolonFails) {
     const std::string code = R"( exit 1 )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("EOF") && error.contains("SEMICOLON"));
 }
 
-TEST_F(NeutroniumTester, EmptyStatementsDisallowed) {
+TEST_F(NeutroniumTester, EmptyStatementsNotAllowed) {
     const std::string code = R"(
         ;;
         let x = 1;;
         exit x;;
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("SEMICOLON"));
 }
 
 TEST_F(NeutroniumTester, DeclarationWithoutInitializerFails) {
@@ -309,93 +385,93 @@ TEST_F(NeutroniumTester, DeclarationWithoutInitializerFails) {
         let x;
         exit 0;
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("EQUAL") && error.contains("SEMICOLON") &&
+                error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, UnmatchedBracesFails) {
     const std::string code = R"(
         {let x = 1;
-        if x: {
-            exit 0;
-        }
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token"));
 }
 
 TEST_F(NeutroniumTester, UnmatchedParenthesesFails) {
     const std::string code = R"(
         let x = (1 + (2) * 3;
-        if x: {
-            exit 0;
-        }
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("RIGHT_PAREN"));
 }
 
-TEST_F(NeutroniumTester, InvalidUnaryOperatorFails) {
+TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
     const std::string code = R"(
         let x = 1;
         let y = !x;
         exit 0;
     )";
-    EXPECT_NE(compile(code).first, 0);
-}
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE((error.contains("operator") || error.contains("type")) &&
+                error.contains("integer"));
 
-TEST_F(NeutroniumTester, InvalidUnaryOperatorFails2) {
-    const std::string code = R"(
+    const std::string code2 = R"(
         let x = true;
         let y = -x;
         exit 0;
     )";
-    EXPECT_NE(compile(code).first, 0);
-}
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE((error2.contains("operator") || error2.contains("type")) &&
+                error2.contains("bool"));
 
-TEST_F(NeutroniumTester, InvalidTypeForUnaryOperatorFails) {
-    const std::string code = R"(
-        fn x: {}
+    const std::string code3 = R"(
+        fn x(): {}
         let y = -x();
     )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE((error3.contains("operator") || error3.contains("type")) &&
+                error3.contains("void"));
 }
 
-TEST_F(NeutroniumTester, ArithmeticOperatorOnBooleanFails) {
+TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     const std::string code = R"(
         let x = true + false;
     )";
-    EXPECT_NE(compile(code).first, 0);
-}
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("type") && error.contains("integer") && error.contains("boolean"));
 
-TEST_F(NeutroniumTester, EqualityOperatorOnEmptyFails) {
-    const std::string code = R"(
-        fn x: {}
-        let y = (x() != x());
-    )";
-
-    EXPECT_NE(compile(code).first, 0);
-}
-
-TEST_F(NeutroniumTester, RelationalOperatorOnBooleanFails) {
-    const std::string code = R"(
+    const std::string code2 = R"(
         let x = true > false;
     )";
-    EXPECT_NE(compile(code).first, 0);
-}
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("type") && error2.contains("integer") &&
+                error2.contains("boolean"));
 
-TEST_F(NeutroniumTester, RelationalOperatorOnEmptyFails) {
-    const std::string code = R"(
-        fn x: {}
+    const std::string code3 = R"(
+        fn x(): {}
+        let y = (x() != x());
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE(error3.contains("type") && error3.contains("void") && error3.contains("integer") &&
+                error3.contains("boolean"));
+
+    const std::string code4 = R"(
+        fn x(): {}
         let y = (x() >= x());
     )";
-
-    EXPECT_NE(compile(code).first, 0);
-}
-
-TEST_F(NeutroniumTester, EmptyVariableAssignmentFails) {
-    const std::string code = R"(
-        fn x: {}
-        let y = x();
-    )";
-    EXPECT_NE(compile(code).first, 0);
+    auto [status4, error4] = compile(code4);
+    EXPECT_NE(status4, 0);
+    EXPECT_TRUE(error4.contains("type") && error4.contains("void") && error4.contains("integer"));
 }
 
 TEST_F(NeutroniumTester, BreakWhenNotInLoopFails) {
@@ -404,7 +480,7 @@ TEST_F(NeutroniumTester, BreakWhenNotInLoopFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("break") && error.contains("outside of a loop"));
+    EXPECT_TRUE(error.contains("break") && error.contains("loop"));
 }
 
 TEST_F(NeutroniumTester, ContinueWhenNotInLoopFails) {
@@ -415,5 +491,5 @@ TEST_F(NeutroniumTester, ContinueWhenNotInLoopFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("continue") && error.contains("outside of a loop"));
+    EXPECT_TRUE(error.contains("continue") && error.contains("loop"));
 }

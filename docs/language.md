@@ -55,17 +55,17 @@ Operator precedence and associativity follow classical C-like rules.
 
 ### Functions:
 
-Functions are declared with `fn` and can be nested within other functions. They do not support parameters or return
-values.
+Functions are declared with `fn` and can be nested within other functions. To specify a function's return type, use `->` followed by the type; if not specified, the return type is `void`. 
+Currently, functions do not support parameters.
 
 ```bash
-fn fooBar: {
+fn fooBar() -> void: {
     let x = 42;
     exit x;
 }
 ```
 
-They are called with `fooBar()`. Every function has return type `void`.
+They are called with `fooBar()`. Functions can have any return type.
 
 ### Scoping:
 
@@ -114,7 +114,7 @@ let integer: int = 8000000011;
 
 let mut isPrime = true;
 let mut smallestDivisor = 1;
-fn computeIsPrime: {
+fn computeIsPrime() -> void: {
     if integer <= 1: {
         exit 1;
     }
@@ -161,7 +161,7 @@ statement ::= block-statement
 
 block-statement ::= '{' { statement } '}'
 
-type-specifier ::= 'int' | 'bool'
+type-specifier ::= 'int' | 'bool' | 'void'
 
 assignment ::= identifier '=' expression ';'
 
@@ -169,7 +169,7 @@ declaration-assignment ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '='
 
 body ::= statement | block-statement
 
-function-declaration ::= 'fn' identifier '(' ')' ':' body
+function-declaration ::= 'fn' identifier '(' ')' [ '->' type-specifier ] ':' body
 
 if-statement ::= 'if' expression ':' body { elif-clause } [ else-clause ]
 

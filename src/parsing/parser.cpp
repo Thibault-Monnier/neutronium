@@ -261,6 +261,8 @@ std::unique_ptr<AST::FunctionDeclaration>
 Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
     consume(TokenKind::FN);
     auto identifier = parse_identifier();
+    consume(TokenKind::LEFT_PAREN);
+    consume(TokenKind::RIGHT_PAREN);
     consume(TokenKind::COLON);
     auto body = parse_block_statement();
     return std::make_unique<AST::FunctionDeclaration>(
