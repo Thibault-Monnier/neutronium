@@ -59,7 +59,7 @@ TEST_F(NeutroniumTester, ReassignmentDifferentInferredTypeFails) {
     EXPECT_TRUE(error2.contains("Type mismatch"));
 
     const std::string code3 = R"(
-        let mut x = false;"
+        let mut x = false;
         let y = 1;
         x = y;       # illegal: bool -> int
         exit 0;

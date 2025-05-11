@@ -204,9 +204,14 @@ void SemanticAnalyser::analyse_variable_declaration(const AST::VariableDeclarati
     }
 
     const Type variableType = get_expression_type(*declaration.value_);
+
     if (variableType.raw() != RawType::INTEGER && variableType.raw() != RawType::BOOLEAN) {
         abort(std::format("Invalid variable type: `{}` is declared as {}", name,
                           variableType.to_string()));
+    }
+    if (!variableType.matches(declaration.type_)) {
+        abort(std::format("Type mismatch: variable `{}` has {} type specifier, but has {} value",
+                          name, declaration.type_.to_string(), variableType.to_string()));
     }
 
     handle_symbol_declaration(name, declaration.isMutable_, variableType, SymbolKind::VARIABLE,

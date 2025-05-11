@@ -19,9 +19,11 @@ class Parser {
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
 
-    [[noreturn]] void abort(const std::string& errorMessage, const std::string& hintMessage = "");
+    [[noreturn]] static void abort(const std::string& errorMessage, const std::string& hintMessage = "");
     [[nodiscard]] const Token& peek(const int amount = 0) const;
     const Token& consume(const TokenKind expected);
+
+    Type parse_type_specifier();
 
     std::unique_ptr<AST::Identifier> parse_identifier();
     std::unique_ptr<AST::FunctionCall> parse_function_call();

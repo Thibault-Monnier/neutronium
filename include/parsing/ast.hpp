@@ -1,11 +1,11 @@
 #pragma once
 
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "lexing/token_kind.hpp"
+#include "semantic-analysis/type.hpp"
 
 namespace AST {
 
@@ -128,14 +128,16 @@ struct BlockStatement final : Statement {
 
 struct VariableDeclaration final : Statement {
     VariableDeclaration(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value,
-                        const bool isMutable)
+                        const Type type, const bool isMutable)
         : Statement{NodeKind::VARIABLE_DECLARATION},
           identifier_(std::move(identifier)),
           value_(std::move(value)),
+          type_(type),
           isMutable_(isMutable) {}
 
     const std::unique_ptr<Identifier> identifier_;
     const std::unique_ptr<Expression> value_;
+    const Type type_;
     const bool isMutable_;
 };
 
