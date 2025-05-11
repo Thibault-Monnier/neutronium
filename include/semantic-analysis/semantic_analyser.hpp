@@ -24,7 +24,7 @@ class SemanticAnalyser {
 
     int loopDepth_ = 0;
 
-    [[noreturn]] void abort(const std::string& errorMessage, const std::string& hintMessage = "");
+    [[noreturn]] static void abort(const std::string& errorMessage, const std::string& hintMessage = "");
 
     void enter_scope(const AST::BlockStatement& blockStmt);
     void exit_scope();

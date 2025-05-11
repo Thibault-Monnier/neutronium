@@ -78,7 +78,7 @@ INSTANTIATE_TEST_SUITE_P(CommentsAndBlocks, LexerTokenKindTest,
                  TokenKind::NUMBER_LITERAL, TokenKind::SEMICOLON, TokenKind::EOF_}},
         LexCase{
             "fn main: {\n"
-            "  let mut x = 1;\n"
+            "  let mut x: int = 1;\n"
             "  while x < 10: {\n"
             "    x = x + 1;\n"
             "  }\n"
@@ -86,7 +86,7 @@ INSTANTIATE_TEST_SUITE_P(CommentsAndBlocks, LexerTokenKindTest,
             "}",
             {
                 TokenKind::FN, TokenKind::IDENTIFIER, TokenKind::COLON, TokenKind::LEFT_BRACE,
-                TokenKind::LET, TokenKind::MUT, TokenKind::IDENTIFIER,
+                TokenKind::LET, TokenKind::MUT, TokenKind::IDENTIFIER, TokenKind::COLON, TokenKind::INT,
                 TokenKind::EQUAL, TokenKind::NUMBER_LITERAL, TokenKind::SEMICOLON,
                 TokenKind::WHILE, TokenKind::IDENTIFIER, TokenKind::LESS_THAN,
                 TokenKind::NUMBER_LITERAL, TokenKind::COLON, TokenKind::LEFT_BRACE,
@@ -125,10 +125,10 @@ INSTANTIATE_TEST_SUITE_P(EdgeCases, LexerTokenKindTest,
 INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
     ::testing::Values(
         LexCase{
-            "true false let mut if elif else while fn exit "
+            "true false int bool let mut if elif else while fn exit "
             "+ - * / = == != < <= > >= ( ) { } : ; 0 foo1Bar2",
             {
-                TokenKind::TRUE, TokenKind::FALSE,
+                TokenKind::TRUE, TokenKind::FALSE, TokenKind::INT, TokenKind::BOOL,
                 TokenKind::LET, TokenKind::MUT, TokenKind::IF, TokenKind::ELIF,
                 TokenKind::ELSE, TokenKind::WHILE, TokenKind::FN, TokenKind::EXIT,
                 TokenKind::PLUS, TokenKind::MINUS, TokenKind::STAR, TokenKind::SLASH,
