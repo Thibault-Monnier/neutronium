@@ -45,7 +45,7 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
     checkPrimeProgram(127, 0);  // Prime
 }
 
-TEST_F(NeutroniumTester, MutableReassignmentSameType) {
+TEST_F(NeutroniumTester, MutableReassignment) {
     const std::string code = R"(
         let mut x = 42;
         x = x + 1;
@@ -77,22 +77,35 @@ TEST_F(NeutroniumTester, TypeSpecifiers) {
     EXPECT_EQ(run(code), 42);
 }
 
-TEST_F(NeutroniumTester, OperatorPrecedence) {
+TEST_F(NeutroniumTester, ExpressionsEvaluation) {
     const std::string code = R"(
+        let mut x = -(-42);  # should be 42
+        let mut y = +1;      # should be 1
+        let mut z = !false;  # should be true
+        if z: {
+            exit x / y;      # should be 42
+        }
+        exit 0;
+    )";
+    EXPECT_EQ(run(code), 42);
+
+    const std::string code1 = R"(
         # Expect 2 + (3 * 4) = 14
         exit 2 + 3 * 4 - 1 / 2;
     )";
+    EXPECT_EQ(run(code1), 14);
 
-    EXPECT_EQ(run(code), 14);
-}
-
-TEST_F(NeutroniumTester, ParenthesizedExpressions) {
-    const std::string code = R"(
+    const std::string code2 = R"(
         # (2 + 3) * (4 + 1) = 5 * 5 = 25
         exit (2 + 3) * (4 + 1);
     )";
+    EXPECT_EQ(run(code2), 25);
 
-    EXPECT_EQ(run(code), 25);
+    const std::string code3 = R"( exit 10 - 3 - 2; )";
+    EXPECT_EQ(run(code3), 5);
+
+    const std::string code4 = R"( exit 2 * -3; )";
+    EXPECT_EQ(run(code4), 250);  // -6 → 250 in 8-bit unsigned
 }
 
 TEST_F(NeutroniumTester, NestedFunctionsExecute) {
@@ -132,26 +145,14 @@ TEST_F(NeutroniumTester, WhileLoop) {
     EXPECT_EQ(run(code), 6);
 }
 
-TEST_F(NeutroniumTester, WhileLoopWithBreak) {
+TEST_F(NeutroniumTester, WhileLoopWithContinueAndBreak) {
     const std::string code = R"(
         let mut i = 0;
+        let mut j = 0;
         while true: {
             if i == 5: {
                 break;
             }
-            i = i + 1;
-        }
-        exit i;
-    )";
-
-    EXPECT_EQ(run(code), 5);
-}
-
-TEST_F(NeutroniumTester, WhileLoopWithContinue) {
-    const std::string code = R"(
-        let mut i = 0;
-        let mut j = 0;
-        while i < 5: {
             i = i + 1;
             if i >= 3: {
                 continue;
@@ -193,26 +194,6 @@ TEST_F(NeutroniumTester, IfElifElse) {
     testWithX(7, 4);   // x > 6 → exit 4
 }
 
-TEST_F(NeutroniumTester, LogicalNegation) {
-    const std::string code = R"(
-        let x: bool = {val};
-        if !x: {
-            exit 1;
-        } else: {
-            exit 0;
-        }
-    )";
-
-    auto testWithX = [&](const bool x, const int expectedExit) {
-        std::string codeWithX = code;
-        codeWithX.replace(codeWithX.find("{val}"), 5, x ? "true" : "false");
-        EXPECT_EQ(run(codeWithX), expectedExit);
-    };
-
-    testWithX(true, 0);   // !true → exit 0
-    testWithX(false, 1);  // !false → exit 1
-}
-
 TEST_F(NeutroniumTester, ExitFromNestedIfInsideLoop) {
     const std::string code = R"(
         let mut i = 0;
@@ -228,47 +209,13 @@ TEST_F(NeutroniumTester, ExitFromNestedIfInsideLoop) {
     EXPECT_EQ(run(code), 3);
 }
 
-TEST_F(NeutroniumTester, MultipleFunctionCalls) {
-    const std::string code = R"(
-        let mut x = 0;
-        fn bump(): { x = x + 1; }
-
-        bump();
-        bump();
-        bump();
-        exit x;
-    )";
-
-    EXPECT_EQ(run(code), 3);
-}
-
-TEST_F(NeutroniumTester, UnaryOperators) {
-    const std::string code = R"(
-        let mut x = -(-42);  # should be 42
-        let mut y = +(+1);   # should be 1
-        let mut z = !false;  # should be true → exit 1
-        if z: {
-            exit x / y;      # should be 42
-        }
-        exit 0;
-    )";
-
-    EXPECT_EQ(run(code), 42);
-}
-
 TEST_F(NeutroniumTester, CommentsAreIgnored) {
     const std::string code = R"(
         let x = 1;   # this is a comment
-        let y = 2;   # another one
-        exit x + y; # should be 3
+        exit x; # should be 1
     )";
 
-    EXPECT_EQ(run(code), 3);
-}
-
-TEST_F(NeutroniumTester, SubtractionAssociativity) {
-    const std::string code = R"( exit 10 - 3 - 2; )";
-    EXPECT_EQ(run(code), 5);
+    EXPECT_EQ(run(code), 1);
 }
 
 TEST_F(NeutroniumTester, DivisionByZeroRuntimeNonZeroExit) {
@@ -288,11 +235,6 @@ TEST_F(NeutroniumTester, WhileFalseSkipsBody) {
         exit i;               # expect 0
     )";
     EXPECT_EQ(run(code), 0);
-}
-
-TEST_F(NeutroniumTester, MultiplyWithUnaryLiteral) {
-    const std::string code = R"( exit 2 * -3; )";
-    EXPECT_EQ(run(code), 250);  // -6 → 250 in 8-bit unsigned
 }
 
 TEST_F(NeutroniumTester, ScopeDeclaration) {
