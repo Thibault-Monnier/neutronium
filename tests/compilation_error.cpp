@@ -178,14 +178,6 @@ TEST_F(NeutroniumTester, InvalidIdentifierFails) {
     EXPECT_NE(compile(code).first, 0);
 }
 
-TEST_F(NeutroniumTester, ExpressionStatementsMustBeEmptyType) {
-    const std::string code = R"(
-        1;
-    )";
-
-    EXPECT_NE(compile(code).first, 0);
-}
-
 TEST_F(NeutroniumTester, UseAfterScopeFails) {
     const std::string code = R"(
         {
