@@ -110,7 +110,7 @@ The following program returns 0 if `integer` is prime, its smallest prime diviso
 than 2).
 
 ```bash
-let integer = 8000000011;
+let integer: int = 8000000011;
 
 let mut isPrime = true;
 let mut smallestDivisor = 1;
@@ -161,9 +161,11 @@ statement ::= block-statement
 
 block-statement ::= '{' { statement } '}'
 
+type-specifier ::= 'int' | 'bool'
+
 assignment ::= identifier '=' expression ';'
 
-declaration-assignment ::= 'let' identifier '=' expression ';'
+declaration-assignment ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
 
 body ::= statement | block-statement
 
