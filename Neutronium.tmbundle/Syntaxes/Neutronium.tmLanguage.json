@@ -1,0 +1,124 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Neutronium",
+  "scopeName": "source.neutronium",
+  "fileTypes": [
+    "nt"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#booleans"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#identifiers"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.neutronium",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.neutronium",
+          "match": "\\b(if|elif|else|while|exit|fn|let|mut)\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "meta.function.neutronium",
+          "begin": "\\b(fn)\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.neutronium"
+            },
+            "2": {
+              "name": "entity.name.function.neutronium"
+            }
+          },
+          "end": ":"
+        }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.neutronium",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.integer.decimal.neutronium",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.primitive.neutronium",
+          "match": "\\b(bool|int)\\b"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.neutronium",
+          "match": "\\b[a-zA-Z][a-zA-Z0-9]*\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.neutronium",
+          "match": "(==|!=|<=|>=|[+\\-*/<>!=])"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.brackets.neutronium",
+          "match": "[{}()[\\]]"
+        },
+        {
+          "name": "punctuation.separator.neutronium",
+          "match": "[;:]"
+        }
+      ]
+    }
+  }
+}
