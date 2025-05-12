@@ -8,9 +8,20 @@ TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("immutable variable") &&
+    EXPECT_TRUE(error.contains("immutable") &&
                 (error.contains("assignment") || error.contains("Assignment")) &&
                 error.contains("x"));
+
+    const std::string code2 = R"(
+        fn foo(x: int): {
+            x = 2;      # illegal: x is immutable
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("immutable") &&
+                (error2.contains("assignment") || error2.contains("Assignment")) &&
+                error2.contains("x"));
 }
 
 TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
@@ -41,6 +52,16 @@ TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("Type mismatch"));
+
+    const std::string code4 = R"(
+        fn foo(mut x: bool): {
+            x = 1;      # illegal: bool -> int
+        }
+        exit 0;
+    )";
+    auto [status4, error4] = compile(code4);
+    EXPECT_NE(status4, 0);
+    EXPECT_TRUE(error4.contains("Type mismatch") && error4.contains("x"));
 }
 
 TEST_F(NeutroniumTester, ReassignmentDifferentInferredTypeFails) {
@@ -216,6 +237,25 @@ TEST_F(NeutroniumTester, SymbolShadowingError) {
     EXPECT_NE(status3, 0);
     EXPECT_TRUE((error3.contains("Redeclaration") || error3.contains("redeclaration")) &&
                 (error3.contains("function") || error3.contains("symbol")) && error3.contains("x"));
+
+    const std::string code4 = R"(
+        let x = 1;
+        fn foo(x: int): {}
+    )";
+    auto [status4, error4] = compile(code4);
+    EXPECT_NE(status4, 0);
+    EXPECT_TRUE((error4.contains("Redeclaration") || error4.contains("redeclaration")) &&
+                (error4.contains("variable") || error4.contains("symbol")) && error4.contains("x"));
+
+    const std::string code5 = R"(
+        fn foo(x: int): {
+            let x = 1;
+        }
+    )";
+    auto [status5, error5] = compile(code5);
+    EXPECT_NE(status5, 0);
+    EXPECT_TRUE((error5.contains("Redeclaration") || error5.contains("redeclaration")) &&
+                (error5.contains("function") || error5.contains("symbol")) && error5.contains("x"));
 }
 
 TEST_F(NeutroniumTester, RedeclarationOfFunctionError) {
@@ -223,7 +263,7 @@ TEST_F(NeutroniumTester, RedeclarationOfFunctionError) {
         fn x(): {
             exit 0;
         }
-        fn x(): {
+        fn x(y: bool): {
             exit 0;
         }
     )";
@@ -285,6 +325,42 @@ TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
     EXPECT_TRUE(error2.contains("variable") && error2.contains("not") && error2.contains("x"));
+}
+
+TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
+    const std::string code = R"(
+        fn x(a: int, b: bool): {
+            exit 0;
+        }
+        x(1);          # missing arguments
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("function") && error.contains("arguments") && error.contains("x") &&
+                error.contains("2") && error.contains("1"));
+
+    const std::string code2 = R"(
+        fn x(a: int, b: bool): {
+            exit 0;
+        }
+        x(1, 2, 3);     # too many arguments
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("function") && error2.contains("arguments") &&
+                error2.contains("x") && error2.contains("2") && error2.contains("3"));
+
+    const std::string code3 = R"(
+        fn x(a: int, b: bool): {
+            exit 0;
+        }
+        x(1, 2);   # wrong type for argument 2
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE(error3.contains("function") && error3.contains("arguments") &&
+                error3.contains("type") && error3.contains("x") && error3.contains("2") &&
+                error3.contains("bool"));
 }
 
 TEST_F(NeutroniumTester, NonBooleanConditionInIfError) {

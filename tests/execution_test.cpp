@@ -2,10 +2,9 @@
 
 TEST_F(NeutroniumTester, PrimeNumberCheck) {
     const std::string codeTemplate = R"(
-        let integer: int = {val};
         let mut isPrime: bool = true;
         let mut smallestDivisor = 1;
-        fn computeIsPrime(): {
+        fn computeIsPrime(integer: int): {
             if integer <= 1: {
                 exit 1;
             }
@@ -15,14 +14,15 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
                 if (integer / curr) * curr == integer: {
                     isPrime = false;
                     smallestDivisor = curr;
-                    curr = integer;
+                    break;
                 } else: {
                     curr = curr + 1;
                 }
             }
         }
 
-        computeIsPrime();
+        let integer: int = {val};
+        computeIsPrime(integer);
 
         if !isPrime: {
             exit smallestDivisor;
@@ -131,6 +131,76 @@ TEST_F(NeutroniumTester, NestedFunctionsExecute) {
         outer();
     )";
     EXPECT_EQ(run(code2), 11);
+}
+
+TEST_F(NeutroniumTester, FunctionWithParameters) {
+    const std::string code = R"(
+        fn add(a: int, b: int): {
+            exit a + b;
+        }
+        add(-2, 5);
+    )";
+    EXPECT_EQ(run(code), 3);
+
+    const std::string code2 = R"(
+        fn multiplyOrAdd(a: int, b: int, shouldAdd: bool): {
+            if shouldAdd: {
+                exit a + b;
+            } else: {
+                exit a * b;
+            }
+        }
+        let shouldAdd = {val};
+        let result = multiplyOrAdd(3, 4, shouldAdd);
+    )";
+    auto testWithShouldAdd = [&](const bool shouldAdd, const int expectedResult) {
+        std::string codeWithShouldAdd = code2;
+        codeWithShouldAdd.replace(codeWithShouldAdd.find("{val}"), 5, shouldAdd ? "true" : "false");
+        EXPECT_EQ(run(codeWithShouldAdd), expectedResult);
+    };
+    testWithShouldAdd(true, 7);    // shouldAdd = true → 3 + 4 = 7
+    testWithShouldAdd(false, 12);  // shouldAdd = false → 3 * 4 = 12
+
+    const std::string code3 = R"(
+        fn inc(mut x: int): {
+            x = x + 1;
+            exit x;
+        }
+        inc(5);
+    )";
+    EXPECT_EQ(run(code3), 6);
+}
+
+TEST_F(NeutroniumTester, FunctionCalls) {
+    const std::string code = R"(
+        let mut var = 3545654;
+
+        fn inc(): {
+            var = var + 1;
+        }
+
+        fn dec(): {
+            fn minusOne(): {
+                var = var - 1;
+            }
+            minusOne();
+        }
+
+        fn setToZero(): {
+            if (var != 0): {
+                var = 0;
+            }
+        }
+
+        setToZero();
+        inc();
+        inc();
+        dec();
+        inc();
+
+        exit var;
+    )";
+    EXPECT_EQ(run(code), 2);
 }
 
 TEST_F(NeutroniumTester, WhileLoop) {
@@ -300,36 +370,4 @@ TEST_F(NeutroniumTester, ExpressionStatements) {
         exit 0;
     )";
     EXPECT_EQ(run(code), 0);
-}
-
-TEST_F(NeutroniumTester, FunctionCalls) {
-    const std::string code = R"(
-        let mut var = 3545654;
-
-        fn inc(): {
-            var = var + 1;
-        }
-
-        fn dec(): {
-            fn minusOne(): {
-                var = var - 1;
-            }
-            minusOne();
-        }
-
-        fn setToZero(): {
-            if (var != 0): {
-                var = 0;
-            }
-        }
-
-        setToZero();
-        inc();
-        inc();
-        dec();
-        inc();
-
-        exit var;
-    )";
-    EXPECT_EQ(run(code), 2);
 }

@@ -29,6 +29,7 @@ enum class TokenKind : uint8_t {
     RIGHT_BRACE,
     COLON,
     SEMICOLON,
+    COMMA,
 
     // Keywords
     TRUE,

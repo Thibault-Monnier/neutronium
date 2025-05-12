@@ -55,17 +55,22 @@ Operator precedence and associativity follow classical C-like rules.
 
 ### Functions:
 
-Functions are declared with `fn` and can be nested within other functions. To specify a function's return type, use `->` followed by the type; if not specified, the return type is `void`. 
-Currently, functions do not support parameters.
+Functions are declared with `fn` and can be nested within other functions. Parameters are passed in parentheses `()`,
+and are seperated by commas `,`. To specify a parameter, use the syntax `<mut?> <name>: <type>`. The function body is
+enclosed in braces `{}`.
+They do not support return value yet.
 
 ```bash
-fn fooBar() -> void: {
-    let x = 42;
+Currently, functions do not support return values.
+
+```bash
+fn fooBar(mut x: int, y: int): {
+    x = x + y;
     exit x;
 }
 ```
 
-They are called with `fooBar()`. Functions can have any return type.
+They are called with `fooBar(x, y)`.
 
 ### Scoping:
 
@@ -110,11 +115,9 @@ The following program returns 0 if `integer` is prime, its smallest prime diviso
 than 2).
 
 ```bash
-let integer: int = 8000000011;
-
 let mut isPrime = true;
 let mut smallestDivisor = 1;
-fn computeIsPrime() -> void: {
+fn computeIsPrime(integer: int): {
     if integer <= 1: {
         exit 1;
     }
@@ -131,7 +134,8 @@ fn computeIsPrime() -> void: {
     }
 }
 
-computeIsPrime();
+let integer: int = 8000000011;
+computeIsPrime(integer);
 
 if !isPrime: {
     exit smallestDivisor;
@@ -169,7 +173,11 @@ declaration-assignment ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '='
 
 body ::= statement | block-statement
 
-function-declaration ::= 'fn' identifier '(' ')' [ '->' type-specifier ] ':' body
+function-declaration ::= 'fn' identifier '(' parameter-list ')' ':' body
+
+parameter-list ::= [ parameter-declaration { ',' parameter-declaration } ]
+
+parameter-declaration ::= [ 'mut' ] identifier ':' type-specifier
 
 if-statement ::= 'if' expression ':' body { elif-clause } [ else-clause ]
 
@@ -208,7 +216,9 @@ primary-expression ::= literal
                      | function-call
                      | '(' expression ')'
 
-function-call ::= identifier '(' ')'
+function-call ::= identifier '(' argument-list ')'
+
+argument-list ::= [ expression { ',' expression } ]
 
 unary-op ::= '-' | '+' | '!'
 

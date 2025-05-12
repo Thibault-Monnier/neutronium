@@ -126,6 +126,8 @@ std::vector<Token> Lexer::tokenize() {
             tokens_.emplace_back(TokenKind::COLON, ":");
         } else if (c == ';') {
             tokens_.emplace_back(TokenKind::SEMICOLON, ";");
+        } else if (c == ',') {
+            tokens_.emplace_back(TokenKind::COMMA, ",");
         } else {
             const std::string errorMessage =
                 std::format("Invalid character at index {}, got '{}' at beginning of word",
