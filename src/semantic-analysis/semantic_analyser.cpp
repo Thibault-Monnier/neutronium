@@ -12,7 +12,8 @@ SymbolTable SemanticAnalyser::analyse() {
 
     for (const auto& [name, info] : symbolTable_) {
         std::cout << "Variable: " << name << ", Type: " << info.type_.to_string()
-                  << ", Kind: " << symbol_kind_to_string(info.kind_) << "\n";
+                  << ", Kind: " << symbol_kind_to_string(info.kind_)
+                  << ", Stack Offset: " << info.stackOffset_.value_or(-1) << "\n";
     }
 
     std::cout << "\033[1;32mAnalysis completed successfully.\033[0m\n";
@@ -28,22 +29,7 @@ void SemanticAnalyser::abort(const std::string& errorMessage, const std::string&
     exit(EXIT_FAILURE);
 }
 
-void SemanticAnalyser::enter_scope(const AST::BlockStatement& blockStmt) {
-    Scope scope;
-    int frameSize = 0;
-    for (const auto& stmt : blockStmt.body_) {
-        if (stmt->kind_ == AST::NodeKind::VARIABLE_DECLARATION) {
-            const auto& declaration = static_cast<AST::VariableDeclaration&>(*stmt);
-            frameSize += 8;
-            scope.variablesStackOffset_[declaration.identifier_->name_] =
-                currentStackOffset_ + frameSize;
-        }
-    }
-
-    scope.frameSize_ = (frameSize + 15) & ~15;
-    currentStackOffset_ += scope.frameSize_;
-    scopes_.push_back(scope);
-}
+void SemanticAnalyser::enter_scope() { scopes_.emplace_back(); }
 
 void SemanticAnalyser::exit_scope() {
     currentStackOffset_ -= scopes_.back().frameSize_;
@@ -76,6 +62,12 @@ void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const 
     }
 
     scopes_.back().symbols_.emplace(name);
+    if (kind == SymbolKind::VARIABLE) {
+        constexpr int VAR_STACK_OFFSET = 8;  // Assuming each variable takes 8 bytes
+        scopes_.back().variablesStackOffset_.emplace(name, currentStackOffset_);
+        scopes_.back().frameSize_ += VAR_STACK_OFFSET;
+        currentStackOffset_ += VAR_STACK_OFFSET;
+    }
 
     SymbolInfo info{
         .kind_ = kind,
@@ -329,7 +321,7 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
         }
         case AST::NodeKind::BLOCK_STATEMENT: {
             const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
-            enter_scope(blockStmt);
+            enter_scope();
             for (const auto& innerStmt : blockStmt.body_) {
                 analyse_statement(*innerStmt);
             }

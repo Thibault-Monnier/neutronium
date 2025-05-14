@@ -26,7 +26,7 @@ class SemanticAnalyser {
 
     [[noreturn]] static void abort(const std::string& errorMessage, const std::string& hintMessage = "");
 
-    void enter_scope(const AST::BlockStatement& blockStmt);
+    void enter_scope();
     void exit_scope();
 
     bool is_symbol_declared(const std::string& name) const;
