@@ -47,6 +47,8 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "COLON";
         case TokenKind::SEMICOLON:
             return "SEMICOLON";
+        case TokenKind::COMMA:
+            return "COMMA";
 
         case TokenKind::TRUE:
             return "TRUE";

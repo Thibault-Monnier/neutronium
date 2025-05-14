@@ -43,6 +43,7 @@ class Parser {
     std::unique_ptr<AST::VariableDeclaration> parse_variable_declaration();
     std::unique_ptr<AST::IfStatement> parse_if_statement();
     std::unique_ptr<AST::WhileStatement> parse_while_statement();
+    std::unique_ptr<AST::VariableDeclaration> parse_function_parameter();
     std::unique_ptr<AST::FunctionDeclaration> parse_function_declaration();
     std::unique_ptr<AST::BreakStatement> parse_break_statement();
     std::unique_ptr<AST::ContinueStatement> parse_continue_statement();
