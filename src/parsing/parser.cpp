@@ -81,8 +81,7 @@ std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
     }
     consume(TokenKind::RIGHT_PAREN);
 
-    return std::make_unique<AST::FunctionCall>(std::move(identifier),
-                                               std::vector<std::unique_ptr<AST::Expression>>{});
+    return std::make_unique<AST::FunctionCall>(std::move(identifier), std::move(arguments));
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT(*-no-recursion)

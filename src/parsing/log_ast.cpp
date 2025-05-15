@@ -34,7 +34,17 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
         if (expr.kind_ == NodeKind::FUNCTION_CALL) {
             const auto& funcCall = as<FunctionCall>(expr);
             std::cout << prefix << branch << "FunctionCall\n";
-            std::cout << newPrefix << "└── Identifier: " << funcCall.identifier_->name_ << "\n";
+            std::cout << newPrefix << "├── Identifier: " << funcCall.identifier_->name_ << "\n";
+            std::cout << newPrefix << "└── Arguments\n";
+            for (size_t i = 0; i < funcCall.arguments_.size(); ++i) {
+                const auto& arg = funcCall.arguments_[i];
+                bool isLastArg = i == funcCall.arguments_.size() - 1;
+                const std::string argPrefix =
+                    next_prefix(newPrefix, true);
+                const std::string argBranch = isLastArg ? "└── " : "├── ";
+                std::cout << argPrefix << argBranch << "Argument" << i + 1 << "\n";
+                log_expression(*arg, next_prefix(argPrefix, isLastArg), true);
+            }
 
         } else if (expr.kind_ == NodeKind::BINARY_EXPRESSION) {
             const auto& binaryExpr = as<BinaryExpression>(expr);

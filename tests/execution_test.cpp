@@ -2,15 +2,18 @@
 
 TEST_F(NeutroniumTester, PrimeNumberCheck) {
     const std::string codeTemplate = R"(
+        let testValue: int = {val};
+
         let mut isPrime: bool = true;
         let mut smallestDivisor = 1;
+
         fn computeIsPrime(integer: int): {
             if integer <= 1: {
                 exit 1;
             }
 
             let mut curr = 2;
-            while curr < integer: {
+            while curr * curr <= integer: {
                 if (integer / curr) * curr == integer: {
                     isPrime = false;
                     smallestDivisor = curr;
@@ -21,8 +24,7 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
             }
         }
 
-        let integer: int = {val};
-        computeIsPrime(integer);
+        computeIsPrime(testValue);
 
         if !isPrime: {
             exit smallestDivisor;
@@ -31,7 +33,7 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
         exit 0;
     )";
 
-    auto checkPrimeProgram = [&](int n, int expectedExit) {
+    auto checkPrimeProgram = [&](const long long n, const int expectedExit) {
         std::string code = codeTemplate;
         code.replace(code.find("{val}"), 5, std::to_string(n));
         EXPECT_EQ(run(code), expectedExit) << "Failed for integer = " << n;
@@ -43,6 +45,7 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
     checkPrimeProgram(4, 2);    // Not prime, smallest divisor = 2
     checkPrimeProgram(17, 0);   // Prime
     checkPrimeProgram(127, 0);  // Prime
+    checkPrimeProgram(1000000000039, 0);  // Prime
 }
 
 TEST_F(NeutroniumTester, MutableReassignment) {
@@ -150,16 +153,16 @@ TEST_F(NeutroniumTester, FunctionWithParameters) {
                 exit a * b;
             }
         }
-        let shouldAdd = {val};
-        let result = multiplyOrAdd(3, 4, shouldAdd);
+        let shouldMultiply = {val};
+        multiplyOrAdd((1 + 2), 4 * 1 - 0, (!shouldMultiply));
     )";
-    auto testWithShouldAdd = [&](const bool shouldAdd, const int expectedResult) {
+    auto testWithShouldAdd = [&](const bool shouldMultiply, const int expectedResult) {
         std::string codeWithShouldAdd = code2;
-        codeWithShouldAdd.replace(codeWithShouldAdd.find("{val}"), 5, shouldAdd ? "true" : "false");
+        codeWithShouldAdd.replace(codeWithShouldAdd.find("{val}"), 5, shouldMultiply ? "true" : "false");
         EXPECT_EQ(run(codeWithShouldAdd), expectedResult);
     };
-    testWithShouldAdd(true, 7);    // shouldAdd = true → 3 + 4 = 7
-    testWithShouldAdd(false, 12);  // shouldAdd = false → 3 * 4 = 12
+    testWithShouldAdd(false, 7);    // shouldAdd = true → 3 + 4 = 7
+    testWithShouldAdd(true, 12);  // shouldAdd = false → 3 * 4 = 12
 
     const std::string code3 = R"(
         fn inc(mut x: int): {

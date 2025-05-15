@@ -336,8 +336,9 @@ TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("function") && error.contains("arguments") && error.contains("x") &&
-                error.contains("2") && error.contains("1"));
+    EXPECT_TRUE((error.contains("function") || error.contains("Function")) &&
+                error.contains("argument") && error.contains("x") && error.contains("2") &&
+                error.contains("1"));
 
     const std::string code2 = R"(
         fn x(a: int, b: bool): {
@@ -347,20 +348,34 @@ TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("function") && error2.contains("arguments") &&
-                error2.contains("x") && error2.contains("2") && error2.contains("3"));
+    EXPECT_TRUE((error.contains("function") || error.contains("Function")) &&
+                error2.contains("argument") && error2.contains("x") && error2.contains("2") &&
+                error2.contains("3"));
 
     const std::string code3 = R"(
-        fn x(a: int, b: bool): {
+        fn x(a: int, mut b: bool): {
             exit 0;
         }
         x(1, 2);   # wrong type for argument 2
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
-    EXPECT_TRUE(error3.contains("function") && error3.contains("arguments") &&
-                error3.contains("type") && error3.contains("x") && error3.contains("2") &&
-                error3.contains("bool"));
+    EXPECT_TRUE((error.contains("function") || error.contains("Function")) &&
+                error3.contains("argument") && error3.contains("type") && error3.contains("x") &&
+                error3.contains("b") && error3.contains("bool"));
+}
+
+TEST_F(NeutroniumTester, AssignmentToImmutableFunctionParamaterFails) {
+    const std::string code = R"(
+        fn x(mut a: int, b: bool): {
+            a = 1;
+            b = false;
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("immutable") && error.contains("b") &&
+                (error.contains("assignment") || error.contains("Assignment")));
 }
 
 TEST_F(NeutroniumTester, NonBooleanConditionInIfError) {

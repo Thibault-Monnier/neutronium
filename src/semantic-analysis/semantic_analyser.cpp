@@ -56,6 +56,10 @@ SymbolKind SemanticAnalyser::get_symbol_kind(const std::string& name) const {
 void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const bool isMutable,
                                                  const Type type, const SymbolKind kind,
                                                  const AST::Node& declarationNode) {
+    if (symbolTable_.contains(name)) {
+        abort(std::format("Redeclaration of symbol: `{}`", name),
+              "Shadowing is not permitted, even for disjoint scopes");
+    }
     if (is_symbol_declared(name)) {
         abort(std::format("Redeclaration of symbol: `{}`", name),
               "Shadowing is not permitted, even for disjoint scopes");
@@ -79,6 +83,40 @@ void SemanticAnalyser::handle_symbol_declaration(const std::string& name, const 
                             : std::nullopt,
     };
     symbolTable_.emplace(name, std::move(info));
+}
+
+Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
+    const AST::FunctionCall& funcCall) {
+    const std::string& name = funcCall.identifier_->name_;
+    if (!is_symbol_declared(name)) {
+        abort(std::format("Attempted to call undeclared function: `{}`", name));
+    }
+    const SymbolInfo& info = symbolTable_.at(name);
+    if (info.kind_ != SymbolKind::FUNCTION) {
+        abort(std::format("Attempted to call a non-function: `{}`", name));
+    }
+
+    const auto& funcDecl = static_cast<const AST::FunctionDeclaration&>(*info.declarationNode_);
+
+    if (funcCall.arguments_.size() != funcDecl.parameters_.size()) {
+        abort(
+            std::format("Function `{}` called with incorrect number of arguments: expected {}, "
+                        "got {}",
+                        name, funcDecl.parameters_.size(), funcCall.arguments_.size()));
+    }
+    for (int i = 0; i < funcCall.arguments_.size(); i++) {
+        const Type argType = get_expression_type(*funcCall.arguments_[i]);
+        const Type paramType = funcDecl.parameters_[i]->type_;
+        if (!argType.matches(paramType)) {
+            abort(
+                std::format("Function `{}` called with incorrect argument type for parameter `{}`: "
+                            "expected {}, got {}",
+                            name, funcDecl.parameters_[i]->identifier_->name_,
+                            paramType.to_string(), argType.to_string()));
+        }
+    }
+
+    return info.type_;
 }
 
 Type SemanticAnalyser::get_unary_expression_type(  // NOLINT(*-no-recursion)
@@ -156,15 +194,7 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
         }
         case AST::NodeKind::FUNCTION_CALL: {
             const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
-            const std::string& name = funcCall.identifier_->name_;
-            if (!is_symbol_declared(name)) {
-                abort(std::format("Attempted to call undeclared function: `{}`", name));
-            }
-            const SymbolInfo& info = symbolTable_.at(name);
-            if (info.kind_ != SymbolKind::FUNCTION) {
-                abort(std::format("Attempted to call a non-function: `{}`", name));
-            }
-            return info.type_;
+            return get_function_call_type(funcCall);
         }
         case AST::NodeKind::UNARY_EXPRESSION: {
             const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
@@ -190,11 +220,6 @@ void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Typ
 
 void SemanticAnalyser::analyse_variable_declaration(const AST::VariableDeclaration& declaration) {
     const std::string& name = declaration.identifier_->name_;
-    if (symbolTable_.contains(name)) {
-        abort(std::format("Redeclaration of symbol: `{}`", name),
-              "Shadowing is not permitted, even for disjoint scopes");
-    }
-
     const Type variableType = get_expression_type(*declaration.value_);
 
     if (variableType.raw() != RawType::INTEGER && variableType.raw() != RawType::BOOLEAN) {
@@ -255,18 +280,25 @@ void SemanticAnalyser::analyse_while_statement(  // NOLINT(*-no-recursion)
 
 void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
     const AST::FunctionDeclaration& funcDecl) {
+    enter_scope();
+    for (const auto& param : funcDecl.parameters_) {
+        handle_symbol_declaration(param->identifier_->name_, param->isMutable_, param->type_,
+                                  SymbolKind::VARIABLE, *param);
+    }
     analyse_statement(*funcDecl.body_);
+    exit_scope();
+
     const std::string& name = funcDecl.identifier_->name_;
     handle_symbol_declaration(name, false, RawType::VOID, SymbolKind::FUNCTION, funcDecl);
 }
 
-void SemanticAnalyser::analyse_break_statement() {
+void SemanticAnalyser::analyse_break_statement() const {
     if (loopDepth_ == 0) {
         abort("`break` statement is not allowed outside of a loop");
     }
 }
 
-void SemanticAnalyser::analyse_continue_statement() {
+void SemanticAnalyser::analyse_continue_statement() const {
     if (loopDepth_ == 0) {
         abort("`continue` statement is not allowed outside of a loop");
     }

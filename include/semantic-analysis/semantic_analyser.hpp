@@ -34,6 +34,7 @@ class SemanticAnalyser {
     SymbolKind get_symbol_kind(const std::string& name) const;
     void handle_symbol_declaration(const std::string& name, bool isMutable, Type type,
                                    SymbolKind kind, const AST::Node& declarationNode);
+    Type get_function_call_type(const AST::FunctionCall& funcCall);
 
     Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr);
     Type get_binary_expression_type(const AST::BinaryExpression& binaryExpr);
@@ -48,8 +49,8 @@ class SemanticAnalyser {
     void analyse_if_statement(const AST::IfStatement& ifStmt);
     void analyse_while_statement(const AST::WhileStatement& whileStmt);
     void analyse_function_declaration(const AST::FunctionDeclaration& funcDecl);
-    void analyse_break_statement();
-    void analyse_continue_statement();
+    void analyse_break_statement() const;
+    void analyse_continue_statement() const;
     void analyse_exit(const AST::Exit& exitStmt);
 
     void analyse_statement(const AST::Statement& stmt);
