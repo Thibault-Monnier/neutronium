@@ -398,6 +398,7 @@ void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
 }
 
 void SemanticAnalyser::analyse_constant_declaration(const AST::ConstantDeclaration& declaration) {
+    abort("Constants are not supported yet");
     const std::string& name = declaration.identifier_->name_;
 
     const Type constantType = get_expression_type(*declaration.value_);

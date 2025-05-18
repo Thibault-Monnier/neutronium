@@ -12,11 +12,10 @@ std::stringstream Generator::generate() {
     output_ << "section .text\n";
     output_ << "global _start\n";
     output_ << "_start:\n";
-
     output_ << "    push rbp\n";
     output_ << "    mov rbp, rsp\n\n";
+    output_ << "    call main\n";
 
-    //generate_stmt(*program_.body_);
     generate_exit("0");
 
     for (const auto& [name, info] : symbolTable_) {
