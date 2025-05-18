@@ -34,6 +34,7 @@ enum class TokenKind : uint8_t {
     // Keywords
     TRUE,
     FALSE,
+    CONST,
     LET,
     INT,
     BOOL,

@@ -8,7 +8,7 @@
 #include "utils/log.hpp"
 
 SymbolTable SemanticAnalyser::analyse() {
-    analyse_statement(*ast_->body_);
+    //analyse_statement(*ast_->body_);
 
     for (const auto& [name, info] : symbolTable_) {
         std::cout << "Variable: " << name << ", Type: " << info.type_.to_string()
@@ -318,7 +318,7 @@ void SemanticAnalyser::analyse_continue_statement() const {
     }
 }
 
-void SemanticAnalyser::analyse_exit(const AST::Exit& exitStmt) {
+void SemanticAnalyser::analyse_exit(const AST::ExitStatement& exitStmt) {
     analyse_expression(*exitStmt.exitCode_, RawType::INTEGER, "exit code");
 }
 
@@ -350,8 +350,8 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
             break;
         }
         case AST::NodeKind::FUNCTION_DECLARATION: {
-            const auto& funcDecl = static_cast<const AST::FunctionDeclaration&>(stmt);
-            analyse_function_declaration(funcDecl);
+            /*const auto& funcDecl = static_cast<const AST::FunctionDeclaration&>(stmt);
+            analyse_function_declaration(funcDecl);*/
             break;
         }
         case AST::NodeKind::BREAK_STATEMENT:
@@ -360,8 +360,8 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
         case AST::NodeKind::CONTINUE_STATEMENT:
             analyse_continue_statement();
             break;
-        case AST::NodeKind::EXIT: {
-            const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
+        case AST::NodeKind::EXIT_STATEMENT: {
+            const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
             analyse_exit(exitStmt);
             break;
         }

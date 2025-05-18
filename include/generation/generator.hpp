@@ -48,7 +48,7 @@ class Generator {
     void generate_break_statement();
     void generate_continue_statement();
     void generate_exit(const std::string& source);
-    void generate_exit(const AST::Exit& exitStmt);
+    void generate_exit(const AST::ExitStatement& exitStmt);
 
     void generate_stmt(const AST::Statement& stmt);
     void generate_function_declaration(const AST::FunctionDeclaration& funcDecl);

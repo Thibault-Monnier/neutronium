@@ -236,7 +236,8 @@ TEST_F(NeutroniumTester, SymbolShadowingError) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE((error3.contains("Redeclaration") || error3.contains("redeclaration")) &&
-                (error3.contains("function") || error3.contains("symbol")) && error3.contains("x"));*/
+                (error3.contains("function") || error3.contains("symbol")) &&
+    error3.contains("x"));*/
 
     const std::string code4 = R"(
         let x = 1;
@@ -293,6 +294,29 @@ TEST_F(NeutroniumTester, FunctionCalledBeforeDeclarationError) {
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("undeclared") && error.contains("function") && error.contains("y"));
+}
+
+TEST_F(NeutroniumTester, NestedFunctionsFails) {
+    const std::string code = R"(
+        fn outer(): {
+            fn inner(): {}
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Invalid token") && error.contains("FN"));
+
+    const std::string code2 = R"(
+        fn outer(): {
+            fn inner(): { exit 7; }
+            inner();
+        }
+        outer();
+        exit 0;
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("Invalid token") && error2.contains("FN"));
 }
 
 TEST_F(NeutroniumTester, AttemptToCallAVariableError) {

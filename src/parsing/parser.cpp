@@ -11,14 +11,13 @@
 #include "utils/log.hpp"
 
 AST::Program Parser::parse() {
-    auto program = AST::Program();
-    while (peek().kind() != TokenKind::EOF_) {
-        program.body_->append_statement(parse_statement());
-    }
+    auto program = parse_program();
 
-    AST::log_ast(program);
+    AST::log_ast(*program);
 
-    return program;
+    return AST::Program();
+
+    // return *program;
 }
 
 void Parser::abort(const std::string& errorMessage, const std::string& hintMessage) {
@@ -280,6 +279,50 @@ std::unique_ptr<AST::VariableDeclaration> Parser::parse_function_parameter() {
     return std::make_unique<AST::VariableDeclaration>(std::move(identifier), type, isMutable);
 }
 
+std::unique_ptr<AST::BreakStatement> Parser::parse_break_statement() {
+    consume(TokenKind::BREAK);
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::BreakStatement>();
+}
+
+std::unique_ptr<AST::ContinueStatement> Parser::parse_continue_statement() {
+    consume(TokenKind::CONTINUE);
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::ContinueStatement>();
+}
+
+std::unique_ptr<AST::ExitStatement> Parser::parse_exit_statement() {
+    consume(TokenKind::EXIT);
+    auto exitCode = parse_expression();
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::ExitStatement>(std::move(exitCode));
+}
+
+std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLINT(*-no-recursion)
+    consume(TokenKind::LEFT_BRACE);
+    auto block = std::make_unique<AST::BlockStatement>();
+    while (peek().kind() != TokenKind::RIGHT_BRACE) {
+        block->append_statement(parse_statement());
+    }
+    consume(TokenKind::RIGHT_BRACE);
+    return block;
+}
+
+std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recursion)
+    const TokenKind tokenKind = peek().kind();
+
+    if (tokenKind == TokenKind::LET) return parse_variable_declaration();
+    if (tokenKind == TokenKind::IDENTIFIER && peek(1).kind() == TokenKind::EQUAL)
+        return parse_variable_assignment();
+    if (tokenKind == TokenKind::IF) return parse_if_statement();
+    if (tokenKind == TokenKind::WHILE) return parse_while_statement();
+    if (tokenKind == TokenKind::BREAK) return parse_break_statement();
+    if (tokenKind == TokenKind::CONTINUE) return parse_continue_statement();
+    if (tokenKind == TokenKind::EXIT) return parse_exit_statement();
+    if (tokenKind == TokenKind::LEFT_BRACE) return parse_block_statement();
+    return parse_expression_statement();
+}
+
 std::unique_ptr<AST::FunctionDeclaration>
 Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
     consume(TokenKind::FN);
@@ -301,47 +344,50 @@ Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
                                                       std::move(body));
 }
 
-std::unique_ptr<AST::BreakStatement> Parser::parse_break_statement() {
-    consume(TokenKind::BREAK);
-    consume(TokenKind::SEMICOLON);
-    return std::make_unique<AST::BreakStatement>();
-}
+std::unique_ptr<AST::ConstantDeclaration> Parser::parse_constant_declaration() {
+    consume(TokenKind::CONST);
 
-std::unique_ptr<AST::ContinueStatement> Parser::parse_continue_statement() {
-    consume(TokenKind::CONTINUE);
-    consume(TokenKind::SEMICOLON);
-    return std::make_unique<AST::ContinueStatement>();
-}
+    auto identifier = parse_identifier();
 
-std::unique_ptr<AST::Exit> Parser::parse_exit() {
-    consume(TokenKind::EXIT);
-    auto exitCode = parse_expression();
-    consume(TokenKind::SEMICOLON);
-    return std::make_unique<AST::Exit>(std::move(exitCode));
-}
-
-std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLINT(*-no-recursion)
-    consume(TokenKind::LEFT_BRACE);
-    auto block = std::make_unique<AST::BlockStatement>();
-    while (peek().kind() != TokenKind::RIGHT_BRACE) {
-        block->append_statement(parse_statement());
+    Type type = RawType::ANY;
+    if (peek().kind() == TokenKind::COLON) {
+        consume(TokenKind::COLON);
+        type = parse_type_specifier();
     }
-    consume(TokenKind::RIGHT_BRACE);
-    return block;
+
+    consume(TokenKind::EQUAL);
+    auto value = parse_expression();
+    consume(TokenKind::SEMICOLON);
+
+    return std::make_unique<AST::ConstantDeclaration>(std::move(identifier), type,
+                                                      std::move(value));
 }
 
-std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recursion)
-    const TokenKind tokenKind = peek().kind();
+std::unique_ptr<AST::Program> Parser::parse_program() {
+    auto program = std::make_unique<AST::Program>();
 
-    if (tokenKind == TokenKind::LET) return parse_variable_declaration();
-    if (tokenKind == TokenKind::IDENTIFIER && peek(1).kind() == TokenKind::EQUAL)
-        return parse_variable_assignment();
-    if (tokenKind == TokenKind::IF) return parse_if_statement();
-    if (tokenKind == TokenKind::WHILE) return parse_while_statement();
-    if (tokenKind == TokenKind::FN) return parse_function_declaration();
-    if (tokenKind == TokenKind::BREAK) return parse_break_statement();
-    if (tokenKind == TokenKind::CONTINUE) return parse_continue_statement();
-    if (tokenKind == TokenKind::EXIT) return parse_exit();
-    if (tokenKind == TokenKind::LEFT_BRACE) return parse_block_statement();
-    return parse_expression_statement();
+    while (peek().kind() != TokenKind::FN) {
+        if (peek().kind() == TokenKind::CONST) {
+            auto constant = parse_constant_declaration();
+            program->append_constant(std::move(constant));
+        } else {
+            const std::string errorMessage =
+                std::format("Invalid token at index {} -> expected constant declaration, got {}",
+                            currentIndex_, token_kind_to_string(peek().kind()));
+            abort(errorMessage);
+        }
+    }
+    while (peek().kind() != TokenKind::EOF_) {
+        if (peek().kind() == TokenKind::FN) {
+            auto functionDeclaration = parse_function_declaration();
+            program->append_function(std::move(functionDeclaration));
+        } else {
+            const std::string errorMessage =
+                std::format("Invalid token at index {} -> expected function declaration, got {}",
+                            currentIndex_, token_kind_to_string(peek().kind()));
+            abort(errorMessage);
+        }
+    }
+
+    return program;
 }

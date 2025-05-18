@@ -57,7 +57,7 @@ class SemanticAnalyser {
     void analyse_function_declaration(const AST::FunctionDeclaration& funcDecl);
     void analyse_break_statement() const;
     void analyse_continue_statement() const;
-    void analyse_exit(const AST::Exit& exitStmt);
+    void analyse_exit(const AST::ExitStatement& exitStmt);
 
     void analyse_statement(const AST::Statement& stmt);
 };

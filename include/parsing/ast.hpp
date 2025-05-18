@@ -36,11 +36,12 @@ enum class NodeKind : uint8_t {
     IF_STATEMENT,
     WHILE_STATEMENT,
     FUNCTION_CALL,
-    FUNCTION_DECLARATION,
     BREAK_STATEMENT,
     CONTINUE_STATEMENT,
-    EXIT,
+    EXIT_STATEMENT,
     BLOCK_STATEMENT,
+    CONSTANT_DECLARATION,
+    FUNCTION_DECLARATION,
     PROGRAM,
 };
 
@@ -181,11 +182,39 @@ struct WhileStatement final : Statement {
     std::unique_ptr<BlockStatement> body_;
 };
 
-struct FunctionDeclaration final : Statement {
+struct BreakStatement final : Statement {
+    explicit BreakStatement() : Statement{NodeKind::BREAK_STATEMENT} {}
+};
+
+struct ContinueStatement final : Statement {
+    explicit ContinueStatement() : Statement{NodeKind::CONTINUE_STATEMENT} {}
+};
+
+struct ExitStatement final : Statement {
+    explicit ExitStatement(std::unique_ptr<Expression> exitCode)
+        : Statement{NodeKind::EXIT_STATEMENT}, exitCode_(std::move(exitCode)) {}
+
+    std::unique_ptr<Expression> exitCode_;
+};
+
+struct ConstantDeclaration final : Node {
+    ConstantDeclaration(std::unique_ptr<Identifier> identifier, const Type type,
+                        std::unique_ptr<Expression> value)
+        : Node{NodeKind::CONSTANT_DECLARATION},
+          identifier_(std::move(identifier)),
+          type_(type),
+          value_(std::move(value)) {}
+
+    std::unique_ptr<Identifier> identifier_;
+    const Type type_;
+    std::unique_ptr<Expression> value_;
+};
+
+struct FunctionDeclaration final : Node {
     FunctionDeclaration(std::unique_ptr<Identifier> identifier,
                         std::vector<std::unique_ptr<VariableDeclaration>> parameters,
                         std::unique_ptr<BlockStatement> body)
-        : Statement{NodeKind::FUNCTION_DECLARATION},
+        : Node{NodeKind::FUNCTION_DECLARATION},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
           body_(std::move(body)) {}
@@ -195,25 +224,19 @@ struct FunctionDeclaration final : Statement {
     std::unique_ptr<BlockStatement> body_;
 };
 
-struct BreakStatement final : Statement {
-    explicit BreakStatement() : Statement{NodeKind::BREAK_STATEMENT} {}
-};
-
-struct ContinueStatement final : Statement {
-    explicit ContinueStatement() : Statement{NodeKind::CONTINUE_STATEMENT} {}
-};
-
-struct Exit final : Statement {
-    explicit Exit(std::unique_ptr<Expression> exitCode)
-        : Statement{NodeKind::EXIT}, exitCode_(std::move(exitCode)) {}
-
-    std::unique_ptr<Expression> exitCode_;
-};
-
 struct Program final : Node {
-    Program() : Node{NodeKind::PROGRAM}, body_(std::make_unique<BlockStatement>()) {}
+    Program() : Node{NodeKind::PROGRAM} {}
 
-    std::unique_ptr<BlockStatement> body_;
+    void append_constant(std::unique_ptr<ConstantDeclaration> constant) {
+        constants_.emplace_back(std::move(constant));
+    }
+
+    void append_function(std::unique_ptr<FunctionDeclaration> function) {
+        functions_.emplace_back(std::move(function));
+    }
+
+    std::vector<std::unique_ptr<ConstantDeclaration>> constants_;
+    std::vector<std::unique_ptr<FunctionDeclaration>> functions_;
 };
 
 Operator token_kind_to_operator(TokenKind tokenKind);

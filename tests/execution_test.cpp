@@ -111,31 +111,6 @@ TEST_F(NeutroniumTester, ExpressionsEvaluation) {
     EXPECT_EQ(run(code4), 250);  // -6 → 250 in 8-bit unsigned
 }
 
-TEST_F(NeutroniumTester, NestedFunctionsExecute) {
-    const std::string code = R"(
-        fn outer(): {
-            fn inner(): { exit 7; }
-            inner();
-        }
-        outer();
-        exit 0;        # unreachable
-    )";
-    EXPECT_EQ(run(code), 7);
-
-    const std::string code2 = R"(
-        fn outer(): {
-            let mut x = 10;
-            fn inner(): {
-                x = x + 1;
-            }
-            inner();
-            exit x;
-        }
-        outer();
-    )";
-    EXPECT_EQ(run(code2), 11);
-}
-
 TEST_F(NeutroniumTester, FunctionWithParameters) {
     const std::string code = R"(
         fn add(a: int, b: int): {
@@ -183,10 +158,7 @@ TEST_F(NeutroniumTester, FunctionCalls) {
         }
 
         fn dec(): {
-            fn minusOne(): {
-                var = var - 1;
-            }
-            minusOne();
+            var = var - 1;
         }
 
         fn setToZero(): {

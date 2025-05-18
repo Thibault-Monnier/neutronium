@@ -16,7 +16,7 @@ std::stringstream Generator::generate() {
     output_ << "    push rbp\n";
     output_ << "    mov rbp, rsp\n\n";
 
-    generate_stmt(*program_.body_);
+    //generate_stmt(*program_.body_);
     generate_exit("0");
 
     for (const auto& [name, info] : symbolTable_) {
@@ -246,7 +246,7 @@ void Generator::generate_exit(const std::string& source) {
     output_ << "    mov rax, 60\n";                // syscall: exit
     output_ << "    syscall\n";
 }
-void Generator::generate_exit(const AST::Exit& exitStmt) {
+void Generator::generate_exit(const AST::ExitStatement& exitStmt) {
     evaluate_expression_to_rax(*exitStmt.exitCode_);
     generate_exit("rax");
 }
@@ -287,8 +287,8 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
         case AST::NodeKind::FUNCTION_DECLARATION: {
             break;  // Function declarations are handled separately
         }
-        case AST::NodeKind::EXIT: {
-            const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
+        case AST::NodeKind::EXIT_STATEMENT: {
+            const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
             generate_exit(exitStmt);
             break;
         }

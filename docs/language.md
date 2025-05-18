@@ -3,158 +3,20 @@
 Neutronium is a lightweight C-like programming language that supports basic constructs such as variables, functions, and
 control flow.
 
-## Features & Syntax
-
-Whitespaces are ignored, and most statements are terminated by a semicolon.
-
-### Variables:
-
-Variables are declared with `let` and are **immutable by default**. To make it mutable, use `let mut` instead. Mutable
-variables can be reassigned to **a value of the same type**.
-Variable types are **inferred at declaration**, or can be explicitly declared with `let <name>: <type> = <value>;`.
-
-```bash
-let x = true;
-let mut y: int = 42;
-y = 43;
-```
-
-Variables can be **integers** or **booleans**.
-
-### Control Flow:
-
-- `if`, `elif`, and `else` **statements** do not wrap their conditions in parentheses. Each condition is followed by a
-  colon `:` and a block delimited by braces `{` `}`.
-- `while` **loops** use the same syntax as `if` **statements**.
-- `break;` and `continue;` **statements** are used to exit or skip the current iteration of a loop, respectively.
-- `exit` **statements** terminate the program with the given **exit code**. The exit code is an **integer expression**.
-
-```bash
-if x > 0: {
-    while true: {
-        break; # Loop stops immediately
-    }
-    exit 1;
-} elif x == 0: {
-    exit 0;
-} else: {
-    while x <= 42: {
-        x = x + 1;
-        continue; # Unnecessary in this case
-    }
-}
-```
-
-### Expressions:
-
-- **Integer arithmetic**: `+`, `-`, `*`, `/`
-- **Relational operators**: `==`, `!=`, `<`, `<=`, `>`, `>=`
-- **Unary operators**: `-`, `+`, `!` (logical NOT)
-
-Operator precedence and associativity follow classical C-like rules.
-
-### Functions:
-
-Functions are declared with `fn` and can be nested within other functions. Parameters are passed in parentheses `()`,
-and are seperated by commas `,`. To specify a parameter, use the syntax `<mut?> <name>: <type>`. The function body is
-enclosed in braces `{}`.
-They do not support return value yet.
-
-```bash
-Currently, functions do not support return values.
-
-```bash
-fn fooBar(mut x: int, y: int): {
-    x = x + y;
-    exit x;
-}
-```
-
-They are called with `fooBar(x, y)`.
-
-### Scoping:
-
-Each block, delimited with `{` `}`, creates a new scope. Shadowing is not permitted, even for disjoint scopes.
-
-```bash
-{
-  let x = 42;
-}
-
-{
-  let x = 43; # Error: redeclaration of symbol `x`
-}
-
-x = 41; # Error: assignment to undeclared variable `x`
-```
-
-### Comments:
-
-Single-line comments start with `#` and extend to the end of the line.
-
-```bash
-# This is a comment
-```
-
-### Identifiers & Literals:
-
-- **Identifiers** start with a letter, followed by any sequence of letters and digits (`foo1Bar2`).
-- **Literals:**
-    - **Non-negative integer:** `42`, `0`
-    - **Boolean:** `true`, `false`
-
-### Types:
-
-- **Integer**: 64-bit signed integer
-- **Boolean**: `true` or `false`
-- **Void**: The return type of _all_ functions (since return values are not yet supported)
-
-## Example Program
-
-The following program returns 0 if `integer` is prime, its smallest prime divisor otherwise (or 1 if `integer` is less
-than 2).
-
-```bash
-let mut isPrime = true;
-let mut smallestDivisor = 1;
-fn computeIsPrime(integer: int): {
-    if integer <= 1: {
-        exit 1;
-    }
-
-    let mut curr = 2;
-    while curr < integer: {
-        if (integer / curr) * curr == integer: {
-            isPrime = false;
-            smallestDivisor = curr;
-            break;
-        } else: {
-            curr = curr + 1;
-        }
-    }
-}
-
-let integer: int = 8000000011;
-computeIsPrime(integer);
-
-if !isPrime: {
-    exit smallestDivisor;
-}
-
-exit 0;
-```
-
 ## Grammar
 
 <details><summary>Formal EBNF Grammar</summary>
 
 ```
-program ::= { statement } EOF
+program ::= { const-declaration } { function-declaration } EOF
+
+function-declaration ::= 'fn' identifier '(' parameter-list ')' ':' block-statement
+
+const-declaration ::= 'const' identifier [ ':' type-specifier ] '=' expression ';'
 
 statement ::= block-statement
             | assignment
             | declaration-assignment
-            | function-declaration
             | if-statement
             | while-statement
             | break-statement
@@ -171,21 +33,17 @@ assignment ::= identifier '=' expression ';'
 
 declaration-assignment ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
 
-body ::= statement | block-statement
-
-function-declaration ::= 'fn' identifier '(' parameter-list ')' ':' body
-
 parameter-list ::= [ parameter-declaration { ',' parameter-declaration } ]
 
 parameter-declaration ::= [ 'mut' ] identifier ':' type-specifier
 
-if-statement ::= 'if' expression ':' body { elif-clause } [ else-clause ]
+if-statement ::= 'if' expression ':' block-statement { elif-clause } [ else-clause ]
 
-elif-clause ::= 'elif' expression ':' body
+elif-clause ::= 'elif' expression ':' block-statement
 
-else-clause ::= 'else' ':' body
+else-clause ::= 'else' ':' block-statement
 
-while-statement ::= 'while' expression ':' body
+while-statement ::= 'while' expression ':' block-statement
 
 break-statement ::= 'break' ';'
 

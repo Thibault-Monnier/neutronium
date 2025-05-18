@@ -54,6 +54,8 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "TRUE";
         case TokenKind::FALSE:
             return "FALSE";
+        case TokenKind::CONST:
+            return "CONST";
         case TokenKind::INT:
             return "INT";
         case TokenKind::BOOL:
