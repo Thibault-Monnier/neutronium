@@ -30,6 +30,7 @@ enum class TokenKind : uint8_t {
     COLON,
     SEMICOLON,
     COMMA,
+    RIGHT_ARROW,
 
     // Keywords
     TRUE,
@@ -46,6 +47,7 @@ enum class TokenKind : uint8_t {
     BREAK,
     CONTINUE,
     FN,
+    RETURN,
     EXIT,
 
     // Miscellaneous

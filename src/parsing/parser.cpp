@@ -289,6 +289,13 @@ std::unique_ptr<AST::ContinueStatement> Parser::parse_continue_statement() {
     return std::make_unique<AST::ContinueStatement>();
 }
 
+std::unique_ptr<AST::ReturnStatement> Parser::parse_return_statement() {
+    consume(TokenKind::RETURN);
+    auto returnValue = parse_expression();
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::ReturnStatement>(std::move(returnValue));
+}
+
 std::unique_ptr<AST::ExitStatement> Parser::parse_exit_statement() {
     consume(TokenKind::EXIT);
     auto exitCode = parse_expression();
@@ -316,6 +323,7 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
     if (tokenKind == TokenKind::WHILE) return parse_while_statement();
     if (tokenKind == TokenKind::BREAK) return parse_break_statement();
     if (tokenKind == TokenKind::CONTINUE) return parse_continue_statement();
+    if (tokenKind == TokenKind::RETURN) return parse_return_statement();
     if (tokenKind == TokenKind::EXIT) return parse_exit_statement();
     if (tokenKind == TokenKind::LEFT_BRACE) return parse_block_statement();
     return parse_expression_statement();
@@ -336,10 +344,16 @@ Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
     }
     consume(TokenKind::RIGHT_PAREN);
 
+    Type returnType = RawType::VOID;
+    if (peek().kind() == TokenKind::RIGHT_ARROW) {
+        consume(TokenKind::RIGHT_ARROW);
+        returnType = parse_type_specifier();
+    }
+
     consume(TokenKind::COLON);
     auto body = parse_block_statement();
     return std::make_unique<AST::FunctionDeclaration>(std::move(identifier), std::move(parameters),
-                                                      std::move(body));
+                                                      returnType, std::move(body));
 }
 
 std::unique_ptr<AST::ConstantDeclaration> Parser::parse_constant_declaration() {

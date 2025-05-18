@@ -38,6 +38,7 @@ enum class NodeKind : uint8_t {
     FUNCTION_CALL,
     BREAK_STATEMENT,
     CONTINUE_STATEMENT,
+    RETURN_STATEMENT,
     EXIT_STATEMENT,
     BLOCK_STATEMENT,
     CONSTANT_DECLARATION,
@@ -197,6 +198,13 @@ struct ExitStatement final : Statement {
     std::unique_ptr<Expression> exitCode_;
 };
 
+struct ReturnStatement final : Statement {
+    explicit ReturnStatement(std::unique_ptr<Expression> returnValue)
+        : Statement{NodeKind::RETURN_STATEMENT}, returnValue_(std::move(returnValue)) {}
+
+    std::unique_ptr<Expression> returnValue_;
+};
+
 struct ConstantDeclaration final : Node {
     ConstantDeclaration(std::unique_ptr<Identifier> identifier, const Type type,
                         std::unique_ptr<Expression> value)
@@ -213,14 +221,16 @@ struct ConstantDeclaration final : Node {
 struct FunctionDeclaration final : Node {
     FunctionDeclaration(std::unique_ptr<Identifier> identifier,
                         std::vector<std::unique_ptr<VariableDeclaration>> parameters,
-                        std::unique_ptr<BlockStatement> body)
+                        const Type returnType, std::unique_ptr<BlockStatement> body)
         : Node{NodeKind::FUNCTION_DECLARATION},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
+          returnType_(returnType),
           body_(std::move(body)) {}
 
     std::unique_ptr<Identifier> identifier_;
     const std::vector<std::unique_ptr<VariableDeclaration>> parameters_;
+    const Type returnType_;
     std::unique_ptr<BlockStatement> body_;
 };
 

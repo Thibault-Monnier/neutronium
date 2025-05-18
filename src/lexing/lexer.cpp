@@ -35,9 +35,19 @@ std::optional<TokenKind> Lexer::get_keyword_kind() const {
     if (buffer_ == "break") return TokenKind::BREAK;
     if (buffer_ == "continue") return TokenKind::CONTINUE;
     if (buffer_ == "fn") return TokenKind::FN;
+    if (buffer_ == "return") return TokenKind::RETURN;
     if (buffer_ == "exit") return TokenKind::EXIT;
 
     return std::nullopt;
+}
+
+void Lexer::lex_minus() {
+    if (peek() == '>') {
+        advance();
+        tokens_.emplace_back(TokenKind::RIGHT_ARROW, "->");
+    } else {
+        tokens_.emplace_back(TokenKind::MINUS, "-");
+    }
 }
 
 void Lexer::lex_equal() {
@@ -102,7 +112,7 @@ std::vector<Token> Lexer::tokenize() {
         } else if (c == '+') {
             tokens_.emplace_back(TokenKind::PLUS, "+");
         } else if (c == '-') {
-            tokens_.emplace_back(TokenKind::MINUS, "-");
+            lex_minus();
         } else if (c == '*') {
             tokens_.emplace_back(TokenKind::STAR, "*");
         } else if (c == '/') {

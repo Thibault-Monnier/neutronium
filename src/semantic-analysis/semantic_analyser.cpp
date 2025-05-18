@@ -363,6 +363,20 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
         case AST::NodeKind::CONTINUE_STATEMENT:
             analyse_continue_statement();
             break;
+        case AST::NodeKind::RETURN_STATEMENT: {
+            /*const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
+            const Type returnType = get_expression_type(*returnStmt.returnValue_);
+            const auto mainIt = symbolTable_.find("main");
+            if (mainIt != symbolTable_.end() && mainIt->second.kind_ == SymbolKind::FUNCTION) {
+                const auto& funcDecl =
+                    static_cast<const AST::FunctionDeclaration*>(mainIt->second.declarationNode_);
+                if (funcDecl->type_.raw() != RawType::VOID) {
+                    abort(std::format("`main` function must not return a value, but got {}",
+                                      returnType.to_string()));
+                }
+            }*/
+            break;
+        }
         case AST::NodeKind::EXIT_STATEMENT: {
             const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
             analyse_exit(exitStmt);

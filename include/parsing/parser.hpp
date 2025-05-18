@@ -46,6 +46,7 @@ class Parser {
     std::unique_ptr<AST::VariableDeclaration> parse_function_parameter();
     std::unique_ptr<AST::BreakStatement> parse_break_statement();
     std::unique_ptr<AST::ContinueStatement> parse_continue_statement();
+    std::unique_ptr<AST::ReturnStatement> parse_return_statement();
     std::unique_ptr<AST::ExitStatement> parse_exit_statement();
     std::unique_ptr<AST::BlockStatement> parse_block_statement();
     std::unique_ptr<AST::Statement> parse_statement();

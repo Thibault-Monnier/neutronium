@@ -10,7 +10,7 @@ control flow.
 ```
 program ::= { const-declaration } { function-declaration } EOF
 
-function-declaration ::= 'fn' identifier '(' parameter-list ')' ':' block-statement
+function-declaration ::= 'fn' identifier '(' parameter-list ')' [ '->' type-specifier ] ':' block-statement
 
 const-declaration ::= 'const' identifier [ ':' type-specifier ] '=' expression ';'
 
@@ -21,6 +21,7 @@ statement ::= block-statement
             | while-statement
             | break-statement
             | continue-statement
+            | return-statement
             | exit-statement
             | expression-statement
             | comment
@@ -48,6 +49,8 @@ while-statement ::= 'while' expression ':' block-statement
 break-statement ::= 'break' ';'
 
 continue-statement ::= 'continue' ';'
+
+return-statement ::= 'return' expression ';'
 
 exit-statement ::= 'exit' expression ';'
 

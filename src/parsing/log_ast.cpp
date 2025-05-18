@@ -122,6 +122,15 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
         case NodeKind::CONTINUE_STATEMENT:
             std::cout << prefix << branch << "ContinueStatement\n";
             break;
+        case NodeKind::RETURN_STATEMENT: {
+            const auto& returnStmt = as<ReturnStatement>(stmt);
+            std::cout << prefix << branch << "ReturnStatement\n";
+            if (returnStmt.returnValue_) {
+                std::cout << newPrefix << "└── Value\n";
+                log_expression(*returnStmt.returnValue_, next_prefix(newPrefix, true), true);
+            }
+            break;
+        }
         case NodeKind::EXIT_STATEMENT: {
             const auto& exit = as<ExitStatement>(stmt);
             std::cout << prefix << branch << "Exit\n";
