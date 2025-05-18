@@ -240,6 +240,14 @@ void Generator::generate_continue_statement() {
     output_ << "    jmp ." << innerLoopStartLabel_ << "\n";
 }
 
+void Generator::generate_return_statement(const AST::ReturnStatement& returnStmt) {
+    if (returnStmt.returnValue_) {
+        evaluate_expression_to_rax(*returnStmt.returnValue_);
+    }
+    output_ << "    leave\n";
+    output_ << "    ret\n";
+}
+
 void Generator::generate_exit(const std::string& source) {
     output_ << "    mov rdi, " << source << "\n";  // exit code
     output_ << "    mov rax, 60\n";                // syscall: exit
@@ -283,8 +291,9 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
         case AST::NodeKind::CONTINUE_STATEMENT:
             generate_continue_statement();
             break;
-        case AST::NodeKind::FUNCTION_DECLARATION: {
-            break;  // Function declarations are handled separately
+        case AST::NodeKind::RETURN_STATEMENT: {
+            const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
+            generate_return_statement(returnStmt);
         }
         case AST::NodeKind::EXIT_STATEMENT: {
             const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
@@ -326,7 +335,12 @@ void Generator::generate_function_declaration(const AST::FunctionDeclaration& fu
 
     generate_stmt(*funcDecl.body_);
 
-    output_ << "\n";
-    output_ << "    leave\n";
-    output_ << "    ret\n";
+    if (funcDecl.returnType_.raw() == RawType::VOID) {
+        output_ << "\n";
+        output_ << "    xor rax, rax\n";  // Return 0
+        output_ << "    leave\n";
+        output_ << "    ret\n";
+    } else {
+        output_ << "    ud2\n";  // Prevent fallthrough
+    }
 }

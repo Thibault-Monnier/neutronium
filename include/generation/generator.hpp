@@ -47,6 +47,7 @@ class Generator {
     void generate_while_stmt(const AST::WhileStatement& whileStmt);
     void generate_break_statement();
     void generate_continue_statement();
+    void generate_return_statement(const AST::ReturnStatement& returnStmt);
     void generate_exit(const std::string& source);
     void generate_exit(const AST::ExitStatement& exitStmt);
 
