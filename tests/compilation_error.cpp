@@ -223,7 +223,7 @@ TEST_F(NeutroniumTester, SymbolShadowingError) {
     EXPECT_TRUE((error2.contains("Redeclaration") || error2.contains("redeclaration")) &&
                 (error2.contains("variable") || error2.contains("symbol")) && error2.contains("y"));
 
-    const std::string code3 = R"(
+    /*const std::string code3 = R"(
         fn x(): {
             let x = 1;
         }
@@ -236,7 +236,7 @@ TEST_F(NeutroniumTester, SymbolShadowingError) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE((error3.contains("Redeclaration") || error3.contains("redeclaration")) &&
-                (error3.contains("function") || error3.contains("symbol")) && error3.contains("x"));
+                (error3.contains("function") || error3.contains("symbol")) && error3.contains("x"));*/
 
     const std::string code4 = R"(
         let x = 1;

@@ -21,11 +21,13 @@ inline std::string symbol_kind_to_string(const SymbolKind kind) {
 }
 
 struct SymbolInfo {
+    const std::string name_;
     const SymbolKind kind_;
     const bool isMutable_;
     const Type type_;
     const AST::Node* declarationNode_;
-    const std::optional<int> stackOffset_;
+    const std::optional<int> stackOffset_;      // Only for variables
+    const std::vector<SymbolInfo> parameters_;  // Only for functions
 };
 
 using SymbolTable = std::unordered_map<std::string, SymbolInfo>;

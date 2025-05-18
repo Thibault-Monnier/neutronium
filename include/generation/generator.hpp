@@ -26,8 +26,10 @@ class Generator {
 
     void stack_allocate_scope_variables(const AST::BlockStatement& blockStmt);
     void stack_deallocate_scope_variables(const AST::BlockStatement& blockStmt);
+    SymbolInfo get_symbol_info(const std::string& name) const;
     int get_variable_stack_offset(const std::string& name) const;
     void write_to_variable(const std::string& name, const std::string& source);
+    void pop_stack_to_variable(const std::string& name);
     void move_variable_to_rax(const std::string& name);
 
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
@@ -45,6 +47,7 @@ class Generator {
     void generate_while_stmt(const AST::WhileStatement& whileStmt);
     void generate_break_statement();
     void generate_continue_statement();
+    void generate_exit(const std::string& source);
     void generate_exit(const AST::Exit& exitStmt);
 
     void generate_stmt(const AST::Statement& stmt);

@@ -19,7 +19,7 @@ class SemanticAnalyser {
 
     SymbolTable symbolTable_;
 
-    int currentStackOffset_ = 0;
+    int currentStackOffset_ = 8;
     std::vector<Scope> scopes_;
 
     int loopDepth_ = 0;
@@ -29,11 +29,17 @@ class SemanticAnalyser {
     void enter_scope();
     void exit_scope();
 
-    bool is_symbol_declared(const std::string& name) const;
+    bool is_symbol_declared_in_scope(const std::string& name) const;
     Type get_symbol_type(const std::string& name) const;
     SymbolKind get_symbol_kind(const std::string& name) const;
-    void handle_symbol_declaration(const std::string& name, bool isMutable, Type type,
-                                   SymbolKind kind, const AST::Node& declarationNode);
+    SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable, Type type,
+                               const AST::Node& declarationNode,
+                               std::vector<SymbolInfo> parameters);
+    SymbolInfo& handle_variable_declaration(const std::string& name, bool isMutable, Type type,
+                                            const AST::Node& declarationNode);
+    SymbolInfo& handle_function_declaration(const std::string& name, Type returnType,
+                                            const std::vector<SymbolInfo>& parameterSymbols,
+                                            const AST::Node& declarationNode);
     Type get_function_call_type(const AST::FunctionCall& funcCall);
 
     Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr);
