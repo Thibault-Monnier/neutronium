@@ -364,17 +364,15 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
             analyse_continue_statement();
             break;
         case AST::NodeKind::RETURN_STATEMENT: {
-            /*const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
+            const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
             const Type returnType = get_expression_type(*returnStmt.returnValue_);
-            const auto mainIt = symbolTable_.find("main");
-            if (mainIt != symbolTable_.end() && mainIt->second.kind_ == SymbolKind::FUNCTION) {
-                const auto& funcDecl =
-                    static_cast<const AST::FunctionDeclaration*>(mainIt->second.declarationNode_);
-                if (funcDecl->type_.raw() != RawType::VOID) {
-                    abort(std::format("`main` function must not return a value, but got {}",
-                                      returnType.to_string()));
-                }
-            }*/
+            if (returnType.raw() != currentFunctionReturnType_.raw()) {
+                abort(
+                    std::format("Type mismatch in return statement: function `{}` expects a return "
+                                "value of type {}, but got {} instead",
+                                currentFunctionName_, currentFunctionReturnType_.to_string(),
+                                returnType.to_string()));
+            }
             break;
         }
         case AST::NodeKind::EXIT_STATEMENT: {
@@ -399,6 +397,9 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
 void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
     const AST::FunctionDeclaration& funcDecl) {
     enter_scope();
+    currentFunctionName_ = funcDecl.identifier_->name_;
+    currentFunctionReturnType_ = funcDecl.returnType_;
+
     std::vector<SymbolInfo> parameterSymbols;
     for (const auto& param : funcDecl.parameters_) {
         parameterSymbols.emplace_back(handle_variable_declaration(
@@ -407,8 +408,8 @@ void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
     analyse_statement(*funcDecl.body_);
     exit_scope();
 
-    const std::string& name = funcDecl.identifier_->name_;
-    handle_function_declaration(name, RawType::VOID, parameterSymbols, funcDecl);
+    handle_function_declaration(funcDecl.identifier_->name_, funcDecl.returnType_, parameterSymbols,
+                                funcDecl);
 }
 
 void SemanticAnalyser::analyse_constant_declaration(const AST::ConstantDeclaration& declaration) {

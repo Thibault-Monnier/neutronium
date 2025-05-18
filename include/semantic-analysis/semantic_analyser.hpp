@@ -24,6 +24,9 @@ class SemanticAnalyser {
 
     int loopDepth_ = 0;
 
+    std::string currentFunctionName_;
+    Type currentFunctionReturnType_ = RawType::ANY;
+
     [[noreturn]] static void abort(const std::string& errorMessage,
                                    const std::string& hintMessage = "");
 
