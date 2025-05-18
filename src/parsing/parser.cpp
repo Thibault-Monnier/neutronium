@@ -10,14 +10,12 @@
 #include "lexing/token.hpp"
 #include "utils/log.hpp"
 
-AST::Program Parser::parse() {
+std::unique_ptr<AST::Program> Parser::parse() {
     auto program = parse_program();
 
     AST::log_ast(*program);
 
-    return AST::Program();
-
-    // return *program;
+    return program;
 }
 
 void Parser::abort(const std::string& errorMessage, const std::string& hintMessage) {

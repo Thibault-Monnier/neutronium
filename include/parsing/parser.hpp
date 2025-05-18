@@ -13,7 +13,7 @@ class Parser {
    public:
     explicit Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 
-    [[nodiscard]] AST::Program parse();
+    [[nodiscard]] std::unique_ptr<AST::Program> parse();
 
    private:
     std::vector<Token> tokens_;

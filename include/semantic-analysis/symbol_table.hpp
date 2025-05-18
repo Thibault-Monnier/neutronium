@@ -7,10 +7,12 @@
 
 #include "semantic-analysis/type.hpp"
 
-enum class SymbolKind : uint8_t { FUNCTION, VARIABLE };
+enum class SymbolKind : uint8_t { CONSTANT, FUNCTION, VARIABLE };
 
 inline std::string symbol_kind_to_string(const SymbolKind kind) {
     switch (kind) {
+        case SymbolKind::CONSTANT:
+            return "constant";
         case SymbolKind::FUNCTION:
             return "function";
         case SymbolKind::VARIABLE:

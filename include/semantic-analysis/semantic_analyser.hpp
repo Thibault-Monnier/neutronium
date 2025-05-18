@@ -33,9 +33,11 @@ class SemanticAnalyser {
     Type get_symbol_type(const std::string& name) const;
     SymbolKind get_symbol_kind(const std::string& name) const;
     SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable, Type type,
-                               const AST::Node& declarationNode,
+                               bool isScoped, const AST::Node& declarationNode,
                                std::vector<SymbolInfo> parameters);
     SymbolInfo& handle_variable_declaration(const std::string& name, bool isMutable, Type type,
+                                            const AST::Node& declarationNode);
+    SymbolInfo& handle_constant_declaration(const std::string& name, Type type,
                                             const AST::Node& declarationNode);
     SymbolInfo& handle_function_declaration(const std::string& name, Type returnType,
                                             const std::vector<SymbolInfo>& parameterSymbols,
@@ -60,4 +62,5 @@ class SemanticAnalyser {
     void analyse_exit(const AST::ExitStatement& exitStmt);
 
     void analyse_statement(const AST::Statement& stmt);
+    void analyse_constant_declaration(const AST::ConstantDeclaration& decl);
 };
