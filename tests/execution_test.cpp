@@ -38,12 +38,12 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
         EXPECT_EQ(run(code), expectedExit) << "Failed for integer = " << n;
     };
 
-    checkPrimeProgram(7, 0);    // Prime
-    checkPrimeProgram(9, 3);    // Not prime, smallest divisor = 3
-    checkPrimeProgram(1, 1);    // < 2, exit early
-    checkPrimeProgram(4, 2);    // Not prime, smallest divisor = 2
-    checkPrimeProgram(17, 0);   // Prime
-    checkPrimeProgram(127, 0);  // Prime
+    checkPrimeProgram(7, 0);              // Prime
+    checkPrimeProgram(9, 3);              // Not prime, smallest divisor = 3
+    checkPrimeProgram(1, 1);              // < 2, exit early
+    checkPrimeProgram(4, 2);              // Not prime, smallest divisor = 2
+    checkPrimeProgram(17, 0);             // Prime
+    checkPrimeProgram(127, 0);            // Prime
     checkPrimeProgram(1000000000039, 0);  // Prime
 }
 
@@ -81,6 +81,57 @@ TEST_F(NeutroniumTester, TypeSpecifiers) {
     )";
 
     EXPECT_EQ(run(code), 42);
+}
+
+TEST_F(NeutroniumTester, FunctionReturnValues) {
+    /* 1. Two independent return paths */
+    const std::string codeAbs = R"(
+        fn absValue(val: int) -> int: {
+            if val < 0: {
+                return -val;
+            }
+            return val;
+        }
+
+        fn main(): {
+            exit absValue(-42);
+        }
+    )";
+    EXPECT_EQ(run(codeAbs), 42);
+
+    /* 2. Returning a boolean and using it in the caller */
+    const std::string codeIsEven = R"(
+        fn isEven(x: int) -> bool: {
+            return (x / 2) * 2 == x;
+        }
+
+        fn main(): {
+            if isEven(6): {
+                exit 1;
+            } else: {
+                exit 0;
+            }
+        }
+    )";
+    EXPECT_EQ(run(codeIsEven), 1);
+
+    /* 3. Early return from inside a loop */
+    const std::string codeFind = R"(
+        fn findFirstGtTen() -> int: {
+            let mut i = 0;
+            while true: {
+                if i > 10: {
+                    return i;
+                }
+                i = i + 1;
+            }
+        }
+
+        fn main(): {
+            exit findFirstGtTen();
+        }
+    )";
+    EXPECT_EQ(run(codeFind), 11);
 }
 
 TEST_F(NeutroniumTester, ExpressionsEvaluation) {
@@ -147,10 +198,11 @@ TEST_F(NeutroniumTester, FunctionWithParameters) {
     )";
     auto testWithShouldAdd = [&](const bool shouldMultiply, const int expectedResult) {
         std::string codeWithShouldAdd = code2;
-        codeWithShouldAdd.replace(codeWithShouldAdd.find("{val}"), 5, shouldMultiply ? "true" : "false");
+        codeWithShouldAdd.replace(codeWithShouldAdd.find("{val}"), 5,
+                                  shouldMultiply ? "true" : "false");
         EXPECT_EQ(run(codeWithShouldAdd), expectedResult);
     };
-    testWithShouldAdd(false, 7);    // shouldAdd = true → 3 + 4 = 7
+    testWithShouldAdd(false, 7);  // shouldAdd = true → 3 + 4 = 7
     testWithShouldAdd(true, 12);  // shouldAdd = false → 3 * 4 = 12
 
     const std::string code3 = R"(

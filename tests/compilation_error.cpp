@@ -1,5 +1,75 @@
 #include "common/tester.hpp"
 
+TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
+    const std::string code = R"(
+        let x = 1;
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("LET") && error.contains("constant"));
+
+    const std::string code2 = R"(
+        1 + 2;
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("token") && error2.contains("LITERAL") &&
+                error2.contains("constant"));
+
+    const std::string code3 = R"(
+        fn x(): {}
+        x();
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE(error3.contains("token") && error3.contains("IDENTIFIER") &&
+                error3.contains("function declaration"));
+
+    const std::string code4 = R"(
+        {}
+    )";
+    auto [status4, error4] = compile(code4);
+    EXPECT_NE(status4, 0);
+    EXPECT_TRUE(error4.contains("token") && error4.contains("LEFT_BRACE") &&
+                error4.contains("constant"));
+}
+
+TEST_F(NeutroniumTester, FunctionDeclarationNotInGlobalScopeFails) {
+    const std::string code = R"(
+        fn main(): {
+            fn x(): {}
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("FN"));
+}
+
+TEST_F(NeutroniumTester, MainFunctionErrors) {
+    const std::string code = R"(
+        fn x(): {}
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("No") && error.contains("main") && error.contains("function"));
+
+    const std::string code2 = R"(
+        fn main(mut x: int): {}
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("main") && error2.contains("function") &&
+                error2.contains("parameter"));
+
+    const std::string code3 = R"(
+        fn main() -> int: {}
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE(error3.contains("main") && error3.contains("function") &&
+                error3.contains("return") && error3.contains("void"));
+}
+
 TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
     const std::string code = R"(
         fn main(): {
@@ -178,7 +248,8 @@ TEST_F(NeutroniumTester, UndeclaredVariableError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") && (error.contains("variable") || error.contains("symbol")) && error.contains("y"));
+    EXPECT_TRUE(error.contains("undeclared") &&
+                (error.contains("variable") || error.contains("symbol")) && error.contains("y"));
 
     const std::string code2 = R"(
         fn main(): { x = 1; }
@@ -198,7 +269,8 @@ TEST_F(NeutroniumTester, VariableUsedBeforeDeclarationError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") && (error.contains("variable") || error.contains("symbol")) && error.contains("x"));
+    EXPECT_TRUE(error.contains("undeclared") &&
+                (error.contains("variable") || error.contains("symbol")) && error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, VariableOfTypeVoidFails) {
@@ -288,30 +360,8 @@ TEST_F(NeutroniumTester, FunctionCalledBeforeDeclarationError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") && (error.contains("function") || error.contains("symbol")) && error.contains("x"));
-}
-
-TEST_F(NeutroniumTester, NestedFunctionsFails) {
-    const std::string code = R"(
-        fn outer(): {
-            fn inner(): {}
-        }
-    )";
-    auto [status, error] = compile(code);
-    EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("Invalid token") && error.contains("FN"));
-
-    const std::string code2 = R"(
-        fn outer(): {
-            fn inner(): { exit 7; }
-            inner();
-        }
-        outer();
-        exit 0;
-    )";
-    auto [status2, error2] = compile(code2);
-    EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("Invalid token") && error2.contains("FN"));
+    EXPECT_TRUE(error.contains("undeclared") &&
+                (error.contains("function") || error.contains("symbol")) && error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
@@ -397,6 +447,42 @@ TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
                 error3.contains("b") && error3.contains("bool"));
 }
 
+TEST_F(NeutroniumTester, FunctionReturnTypeMismatch) {
+    const std::string code = R"(
+        fn x() -> bool: {
+            return 1;
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("return") &&
+                error.contains("type") && error.contains("bool") && error.contains("int"));
+
+    const std::string code2 = R"(
+        fn x(): {
+            return true;
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("Type mismatch") && error2.contains("return") &&
+                error2.contains("type") && error2.contains("void") && error2.contains("bool"));
+
+    const std::string code3 = R"(
+        fn x() -> int: {
+            return 1;
+        }
+
+        fn main(): {
+            let y: bool = x();
+        }
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE(error3.contains("Type mismatch") && error3.contains("y") &&
+                error3.contains("type") && error3.contains("bool") && error3.contains("int"));
+}
+
 TEST_F(NeutroniumTester, AssignmentToImmutableFunctionParamaterFails) {
     const std::string code = R"(
         fn x(mut a: int, b: bool): {
@@ -434,8 +520,8 @@ TEST_F(NeutroniumTester, NonBooleanConditionError) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("bool") && error2.contains("condition") && error2.contains("type") &&
-                error2.contains("integer"));
+    EXPECT_TRUE(error2.contains("bool") && error2.contains("condition") &&
+                error2.contains("type") && error2.contains("integer"));
 }
 
 TEST_F(NeutroniumTester, InvalidIdentifierFails) {
@@ -461,7 +547,8 @@ TEST_F(NeutroniumTester, UseAfterScopeFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") && (error.contains("variable") || error.contains("symbol")) && error.contains("y"));
+    EXPECT_TRUE(error.contains("undeclared") &&
+                (error.contains("variable") || error.contains("symbol")) && error.contains("y"));
 }
 
 TEST_F(NeutroniumTester, UnmatchedBracesFails) {
