@@ -25,6 +25,7 @@ std::optional<TokenKind> Lexer::get_keyword_kind() const {
     if (buffer_ == "false") return TokenKind::FALSE;
     if (buffer_ == "int") return TokenKind::INT;
     if (buffer_ == "bool") return TokenKind::BOOL;
+    if (buffer_ == "const") return TokenKind::CONST;
     if (buffer_ == "let") return TokenKind::LET;
     if (buffer_ == "mut") return TokenKind::MUT;
     if (buffer_ == "if") return TokenKind::IF;
@@ -34,9 +35,19 @@ std::optional<TokenKind> Lexer::get_keyword_kind() const {
     if (buffer_ == "break") return TokenKind::BREAK;
     if (buffer_ == "continue") return TokenKind::CONTINUE;
     if (buffer_ == "fn") return TokenKind::FN;
+    if (buffer_ == "return") return TokenKind::RETURN;
     if (buffer_ == "exit") return TokenKind::EXIT;
 
     return std::nullopt;
+}
+
+void Lexer::lex_minus() {
+    if (peek() == '>') {
+        advance();
+        tokens_.emplace_back(TokenKind::RIGHT_ARROW, "->");
+    } else {
+        tokens_.emplace_back(TokenKind::MINUS, "-");
+    }
 }
 
 void Lexer::lex_equal() {
@@ -101,7 +112,7 @@ std::vector<Token> Lexer::tokenize() {
         } else if (c == '+') {
             tokens_.emplace_back(TokenKind::PLUS, "+");
         } else if (c == '-') {
-            tokens_.emplace_back(TokenKind::MINUS, "-");
+            lex_minus();
         } else if (c == '*') {
             tokens_.emplace_back(TokenKind::STAR, "*");
         } else if (c == '/') {
@@ -126,6 +137,8 @@ std::vector<Token> Lexer::tokenize() {
             tokens_.emplace_back(TokenKind::COLON, ":");
         } else if (c == ';') {
             tokens_.emplace_back(TokenKind::SEMICOLON, ";");
+        } else if (c == ',') {
+            tokens_.emplace_back(TokenKind::COMMA, ",");
         } else {
             const std::string errorMessage =
                 std::format("Invalid character at index {}, got '{}' at beginning of word",

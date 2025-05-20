@@ -12,11 +12,11 @@ std::stringstream Generator::generate() {
     output_ << "section .text\n";
     output_ << "global _start\n";
     output_ << "_start:\n";
-
     output_ << "    push rbp\n";
     output_ << "    mov rbp, rsp\n\n";
+    output_ << "    call main\n";
 
-    generate_stmt(*program_.body_);
+    generate_exit("0");
 
     for (const auto& [name, info] : symbolTable_) {
         if (info.kind_ == SymbolKind::FUNCTION) {
@@ -55,13 +55,22 @@ void Generator::stack_deallocate_scope_variables(const AST::BlockStatement& bloc
     }
 }
 
+SymbolInfo Generator::get_symbol_info(const std::string& name) const {
+    return symbolTable_.at(name);
+}
+
 int Generator::get_variable_stack_offset(const std::string& name) const {
-    return symbolTable_.at(name).stackOffset_.value();
+    return get_symbol_info(name).stackOffset_.value();
 }
 
 void Generator::write_to_variable(const std::string& name, const std::string& source) {
     output_ << "    mov qword [rbp - " << get_variable_stack_offset(name) << "], " << source
             << "\n";
+}
+
+void Generator::pop_stack_to_variable(const std::string& name) {
+    output_ << "    pop rax\n";
+    write_to_variable(name, "rax");
 }
 
 void Generator::move_variable_to_rax(const std::string& name) {
@@ -76,7 +85,14 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
     output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
 }
 
-void Generator::generate_function_call(const AST::FunctionCall& funcCall) {
+void Generator::generate_function_call(  // NOLINT(*-no-recursion)
+    const AST::FunctionCall& funcCall) {
+    const auto& funcInfo = get_symbol_info(funcCall.identifier_->name_);
+
+    for (const auto& argument : funcCall.arguments_) {
+        evaluate_expression_to_rax(*argument);
+        output_ << "    push rax\n";
+    }
     output_ << "    call " << funcCall.identifier_->name_ << "\n";
 }
 
@@ -224,11 +240,22 @@ void Generator::generate_continue_statement() {
     output_ << "    jmp ." << innerLoopStartLabel_ << "\n";
 }
 
-void Generator::generate_exit(const AST::Exit& exitStmt) {
-    evaluate_expression_to_rax(*exitStmt.exitCode_);
-    output_ << "    mov rdi, rax\n";  // exit code
-    output_ << "    mov rax, 60\n";   // syscall: exit
+void Generator::generate_return_statement(const AST::ReturnStatement& returnStmt) {
+    if (returnStmt.returnValue_) {
+        evaluate_expression_to_rax(*returnStmt.returnValue_);
+    }
+    output_ << "    leave\n";
+    output_ << "    ret\n";
+}
+
+void Generator::generate_exit(const std::string& source) {
+    output_ << "    mov rdi, " << source << "\n";  // exit code
+    output_ << "    mov rax, 60\n";                // syscall: exit
     output_ << "    syscall\n";
+}
+void Generator::generate_exit(const AST::ExitStatement& exitStmt) {
+    evaluate_expression_to_rax(*exitStmt.exitCode_);
+    generate_exit("rax");
 }
 
 void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
@@ -264,11 +291,12 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
         case AST::NodeKind::CONTINUE_STATEMENT:
             generate_continue_statement();
             break;
-        case AST::NodeKind::FUNCTION_DECLARATION: {
-            break;  // Function declarations are handled separately
+        case AST::NodeKind::RETURN_STATEMENT: {
+            const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
+            generate_return_statement(returnStmt);
         }
-        case AST::NodeKind::EXIT: {
-            const auto& exitStmt = static_cast<const AST::Exit&>(stmt);
+        case AST::NodeKind::EXIT_STATEMENT: {
+            const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
             generate_exit(exitStmt);
             break;
         }
@@ -289,6 +317,30 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
 void Generator::generate_function_declaration(const AST::FunctionDeclaration& funcDecl) {
     output_ << "\n";
     output_ << funcDecl.identifier_->name_ << ":\n";
+
+    output_ << "    push rbp\n";        // Save the old base pointer
+    output_ << "    mov rbp, rsp\n\n";  // Set the new base pointer
+
+    const int parametersFrameSize = funcDecl.parameters_.size() * 8;
+    output_ << "    sub rsp, " << parametersFrameSize << "\n";
+
+    for (int i = 0; i < funcDecl.parameters_.size(); i++) {
+        const auto& param = funcDecl.parameters_[i];
+        const int paramOffset = parametersFrameSize + 8 - i * 8;
+        output_ << "    mov rax, [rbp + " << paramOffset << "]\n";
+        write_to_variable(param->identifier_->name_, "rax");
+    }
+
+    output_ << "\n";
+
     generate_stmt(*funcDecl.body_);
-    output_ << "    ret\n";
+
+    if (funcDecl.returnType_.raw() == RawType::VOID) {
+        output_ << "\n";
+        output_ << "    xor rax, rax\n";  // Return 0
+        output_ << "    leave\n";
+        output_ << "    ret\n";
+    } else {
+        output_ << "    ud2\n";  // Prevent fallthrough
+    }
 }

@@ -47,11 +47,17 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "COLON";
         case TokenKind::SEMICOLON:
             return "SEMICOLON";
+        case TokenKind::COMMA:
+            return "COMMA";
+        case TokenKind::RIGHT_ARROW:
+            return "RIGHT_ARROW";
 
         case TokenKind::TRUE:
             return "TRUE";
         case TokenKind::FALSE:
             return "FALSE";
+        case TokenKind::CONST:
+            return "CONST";
         case TokenKind::INT:
             return "INT";
         case TokenKind::BOOL:
@@ -74,6 +80,8 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "CONTINUE";
         case TokenKind::FN:
             return "FN";
+        case TokenKind::RETURN:
+            return "RETURN";
         case TokenKind::EXIT:
             return "EXIT";
 

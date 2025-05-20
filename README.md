@@ -61,5 +61,5 @@ Contributions are welcome! Feel free to open an issue or to submit a pull reques
 
 ## 📚 Language
 
-Refer to the [language documentation](docs/language.md) for syntax, examples, grammar, and semantics.
+Refer to the [language documentation](docs/language.md) for syntax.
 

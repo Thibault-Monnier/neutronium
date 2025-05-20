@@ -39,9 +39,9 @@ INSTANTIATE_TEST_SUITE_P(AdditionalTokens, LexerTokenKindTest,
             TokenKind::LESS_THAN, TokenKind::LESS_THAN_EQUAL,
             TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL,
             TokenKind::EOF_}},
-        LexCase{"{ } : ;", {
+        LexCase{"{ } : ; ,", {
             TokenKind::LEFT_BRACE, TokenKind::RIGHT_BRACE,
-            TokenKind::COLON, TokenKind::SEMICOLON, TokenKind::EOF_}},
+            TokenKind::COLON, TokenKind::SEMICOLON, TokenKind::COMMA, TokenKind::EOF_}},
         LexCase{"42 15 true false", {
             TokenKind::NUMBER_LITERAL, TokenKind::NUMBER_LITERAL,
             TokenKind::TRUE, TokenKind::FALSE, TokenKind::EOF_}}
@@ -56,7 +56,7 @@ INSTANTIATE_TEST_SUITE_P(Expressions, LexerTokenKindTest,
         LexCase{"foo()", {TokenKind::IDENTIFIER, TokenKind::LEFT_PAREN, TokenKind::RIGHT_PAREN, TokenKind::EOF_}},
         LexCase{"(42)", {TokenKind::LEFT_PAREN, TokenKind::NUMBER_LITERAL, TokenKind::RIGHT_PAREN, TokenKind::EOF_}},
         LexCase{"!true", {TokenKind::BANG, TokenKind::TRUE, TokenKind::EOF_}},
-        LexCase{"+1", {TokenKind::PLUS, TokenKind::NUMBER_LITERAL, TokenKind::EOF_}},
+        LexCase{"+1,", {TokenKind::PLUS, TokenKind::NUMBER_LITERAL, TokenKind::COMMA, TokenKind::EOF_}},
         LexCase{"-0", {TokenKind::MINUS, TokenKind::NUMBER_LITERAL, TokenKind::EOF_}},
         LexCase{"x==y", {TokenKind::IDENTIFIER, TokenKind::EQUAL_EQUAL, TokenKind::IDENTIFIER, TokenKind::EOF_}},
         LexCase{"x!=y", {TokenKind::IDENTIFIER, TokenKind::BANG_EQUAL, TokenKind::IDENTIFIER, TokenKind::EOF_}},
@@ -126,7 +126,7 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
     ::testing::Values(
         LexCase{
             "true false int bool let mut if elif else while fn exit "
-            "+ - * / = == != < <= > >= ( ) { } : ; 0 foo1Bar2",
+            "+ - * / = == != < <= > >= ( ) { } : ; , 0 foo1Bar2",
             {
                 TokenKind::TRUE, TokenKind::FALSE, TokenKind::INT, TokenKind::BOOL,
                 TokenKind::LET, TokenKind::MUT, TokenKind::IF, TokenKind::ELIF,
@@ -137,7 +137,7 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
                 TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL,
                 TokenKind::LEFT_PAREN, TokenKind::RIGHT_PAREN,
                 TokenKind::LEFT_BRACE, TokenKind::RIGHT_BRACE,
-                TokenKind::COLON, TokenKind::SEMICOLON,
+                TokenKind::COLON, TokenKind::SEMICOLON, TokenKind::COMMA,
                 TokenKind::NUMBER_LITERAL, TokenKind::IDENTIFIER,
                 TokenKind::EOF_
             }

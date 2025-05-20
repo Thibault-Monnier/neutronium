@@ -10,13 +10,10 @@
 #include "lexing/token.hpp"
 #include "utils/log.hpp"
 
-AST::Program Parser::parse() {
-    auto program = AST::Program();
-    while (peek().kind() != TokenKind::EOF_) {
-        program.body_->append_statement(parse_statement());
-    }
+std::unique_ptr<AST::Program> Parser::parse() {
+    auto program = parse_program();
 
-    AST::log_ast(program);
+    AST::log_ast(*program);
 
     return program;
 }
@@ -70,10 +67,18 @@ std::unique_ptr<AST::Identifier> Parser::parse_identifier() {
 
 std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
     auto identifier = parse_identifier();
+
     consume(TokenKind::LEFT_PAREN);
+    std::vector<std::unique_ptr<AST::Expression>> arguments;
+    while (peek().kind() != TokenKind::RIGHT_PAREN) {
+        arguments.push_back(parse_expression());
+        if (peek().kind() == TokenKind::COMMA) {
+            consume(TokenKind::COMMA);
+        }
+    }
     consume(TokenKind::RIGHT_PAREN);
-    return std::make_unique<AST::FunctionCall>(std::move(identifier),
-                                               std::vector<std::unique_ptr<AST::Expression>>{});
+
+    return std::make_unique<AST::FunctionCall>(std::move(identifier), std::move(arguments));
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT(*-no-recursion)
@@ -209,8 +214,8 @@ std::unique_ptr<AST::VariableDeclaration> Parser::parse_variable_declaration() {
     auto value = parse_expression();
     consume(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::VariableDeclaration>(std::move(identifier), std::move(value), type,
-                                                      isMutable);
+    return std::make_unique<AST::VariableDeclaration>(std::move(identifier), type, isMutable,
+                                                      std::move(value));
 }
 
 std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no-recursion)
@@ -257,16 +262,19 @@ std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLIN
     return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
 }
 
-std::unique_ptr<AST::FunctionDeclaration>
-Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
-    consume(TokenKind::FN);
+std::unique_ptr<AST::VariableDeclaration> Parser::parse_function_parameter() {
+    bool isMutable = false;
+    if (peek().kind() == TokenKind::MUT) {
+        consume(TokenKind::MUT);
+        isMutable = true;
+    }
+
     auto identifier = parse_identifier();
-    consume(TokenKind::LEFT_PAREN);
-    consume(TokenKind::RIGHT_PAREN);
+
     consume(TokenKind::COLON);
-    auto body = parse_block_statement();
-    return std::make_unique<AST::FunctionDeclaration>(
-        std::move(identifier), std::vector<std::unique_ptr<AST::Identifier>>{}, std::move(body));
+    const Type type = parse_type_specifier();
+
+    return std::make_unique<AST::VariableDeclaration>(std::move(identifier), type, isMutable);
 }
 
 std::unique_ptr<AST::BreakStatement> Parser::parse_break_statement() {
@@ -281,11 +289,18 @@ std::unique_ptr<AST::ContinueStatement> Parser::parse_continue_statement() {
     return std::make_unique<AST::ContinueStatement>();
 }
 
-std::unique_ptr<AST::Exit> Parser::parse_exit() {
+std::unique_ptr<AST::ReturnStatement> Parser::parse_return_statement() {
+    consume(TokenKind::RETURN);
+    auto returnValue = parse_expression();
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::ReturnStatement>(std::move(returnValue));
+}
+
+std::unique_ptr<AST::ExitStatement> Parser::parse_exit_statement() {
     consume(TokenKind::EXIT);
     auto exitCode = parse_expression();
     consume(TokenKind::SEMICOLON);
-    return std::make_unique<AST::Exit>(std::move(exitCode));
+    return std::make_unique<AST::ExitStatement>(std::move(exitCode));
 }
 
 std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLINT(*-no-recursion)
@@ -306,10 +321,85 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
         return parse_variable_assignment();
     if (tokenKind == TokenKind::IF) return parse_if_statement();
     if (tokenKind == TokenKind::WHILE) return parse_while_statement();
-    if (tokenKind == TokenKind::FN) return parse_function_declaration();
     if (tokenKind == TokenKind::BREAK) return parse_break_statement();
     if (tokenKind == TokenKind::CONTINUE) return parse_continue_statement();
-    if (tokenKind == TokenKind::EXIT) return parse_exit();
+    if (tokenKind == TokenKind::RETURN) return parse_return_statement();
+    if (tokenKind == TokenKind::EXIT) return parse_exit_statement();
     if (tokenKind == TokenKind::LEFT_BRACE) return parse_block_statement();
     return parse_expression_statement();
+}
+
+std::unique_ptr<AST::FunctionDeclaration>
+Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
+    consume(TokenKind::FN);
+    auto identifier = parse_identifier();
+
+    consume(TokenKind::LEFT_PAREN);
+    std::vector<std::unique_ptr<AST::VariableDeclaration>> parameters;
+    while (peek().kind() != TokenKind::RIGHT_PAREN) {
+        parameters.push_back(parse_function_parameter());
+        if (peek().kind() == TokenKind::COMMA) {
+            consume(TokenKind::COMMA);
+        }
+    }
+    consume(TokenKind::RIGHT_PAREN);
+
+    Type returnType = RawType::VOID;
+    if (peek().kind() == TokenKind::RIGHT_ARROW) {
+        consume(TokenKind::RIGHT_ARROW);
+        returnType = parse_type_specifier();
+    }
+
+    consume(TokenKind::COLON);
+    auto body = parse_block_statement();
+    return std::make_unique<AST::FunctionDeclaration>(std::move(identifier), std::move(parameters),
+                                                      returnType, std::move(body));
+}
+
+std::unique_ptr<AST::ConstantDeclaration> Parser::parse_constant_declaration() {
+    consume(TokenKind::CONST);
+
+    auto identifier = parse_identifier();
+
+    Type type = RawType::ANY;
+    if (peek().kind() == TokenKind::COLON) {
+        consume(TokenKind::COLON);
+        type = parse_type_specifier();
+    }
+
+    consume(TokenKind::EQUAL);
+    auto value = parse_expression();
+    consume(TokenKind::SEMICOLON);
+
+    return std::make_unique<AST::ConstantDeclaration>(std::move(identifier), type,
+                                                      std::move(value));
+}
+
+std::unique_ptr<AST::Program> Parser::parse_program() {
+    auto program = std::make_unique<AST::Program>();
+
+    while (peek().kind() != TokenKind::FN) {
+        if (peek().kind() == TokenKind::CONST) {
+            auto constant = parse_constant_declaration();
+            program->append_constant(std::move(constant));
+        } else {
+            const std::string errorMessage =
+                std::format("Invalid token at index {} -> expected constant declaration, got {}",
+                            currentIndex_, token_kind_to_string(peek().kind()));
+            abort(errorMessage);
+        }
+    }
+    while (peek().kind() != TokenKind::EOF_) {
+        if (peek().kind() == TokenKind::FN) {
+            auto functionDeclaration = parse_function_declaration();
+            program->append_function(std::move(functionDeclaration));
+        } else {
+            const std::string errorMessage =
+                std::format("Invalid token at index {} -> expected function declaration, got {}",
+                            currentIndex_, token_kind_to_string(peek().kind()));
+            abort(errorMessage);
+        }
+    }
+
+    return program;
 }

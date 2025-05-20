@@ -36,11 +36,13 @@ enum class NodeKind : uint8_t {
     IF_STATEMENT,
     WHILE_STATEMENT,
     FUNCTION_CALL,
-    FUNCTION_DECLARATION,
     BREAK_STATEMENT,
     CONTINUE_STATEMENT,
-    EXIT,
+    RETURN_STATEMENT,
+    EXIT_STATEMENT,
     BLOCK_STATEMENT,
+    CONSTANT_DECLARATION,
+    FUNCTION_DECLARATION,
     PROGRAM,
 };
 
@@ -87,7 +89,7 @@ struct FunctionCall final : PrimaryExpression {
           identifier_(std::move(identifier)),
           arguments_(std::move(arguments)) {}
 
-    const std::unique_ptr<Identifier> identifier_;
+    std::unique_ptr<Identifier> identifier_;
     const std::vector<std::unique_ptr<Expression>> arguments_;
 };
 
@@ -96,7 +98,7 @@ struct UnaryExpression final : Expression {
         : Expression{NodeKind::UNARY_EXPRESSION}, operator_(op), operand_(std::move(operand)) {}
 
     const Operator operator_;
-    const std::unique_ptr<Expression> operand_;
+    std::unique_ptr<Expression> operand_;
 };
 
 struct BinaryExpression final : Expression {
@@ -107,9 +109,9 @@ struct BinaryExpression final : Expression {
           operator_(op),
           right_(std::move(right)) {}
 
-    const std::unique_ptr<Expression> left_;
+    std::unique_ptr<Expression> left_;
     const Operator operator_;
-    const std::unique_ptr<Expression> right_;
+    std::unique_ptr<Expression> right_;
 };
 
 struct Statement : Node {
@@ -127,18 +129,18 @@ struct BlockStatement final : Statement {
 };
 
 struct VariableDeclaration final : Statement {
-    VariableDeclaration(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value,
-                        const Type type, const bool isMutable)
+    VariableDeclaration(std::unique_ptr<Identifier> identifier, const Type type,
+                        const bool isMutable, std::unique_ptr<Expression> value = nullptr)
         : Statement{NodeKind::VARIABLE_DECLARATION},
           identifier_(std::move(identifier)),
-          value_(std::move(value)),
           type_(type),
-          isMutable_(isMutable) {}
+          isMutable_(isMutable),
+          value_(std::move(value)) {}
 
-    const std::unique_ptr<Identifier> identifier_;
-    const std::unique_ptr<Expression> value_;
+    std::unique_ptr<Identifier> identifier_;
     const Type type_;
     const bool isMutable_;
+    std::unique_ptr<Expression> value_;
 };
 
 struct VariableAssignment final : Statement {
@@ -147,15 +149,15 @@ struct VariableAssignment final : Statement {
           identifier_(std::move(identifier)),
           value_(std::move(value)) {}
 
-    const std::unique_ptr<Identifier> identifier_;
-    const std::unique_ptr<Expression> value_;
+    std::unique_ptr<Identifier> identifier_;
+    std::unique_ptr<Expression> value_;
 };
 
 struct ExpressionStatement final : Statement {
     explicit ExpressionStatement(std::unique_ptr<Expression> expression)
         : Statement{NodeKind::EXPRESSION_STATEMENT}, expression_(std::move(expression)) {}
 
-    const std::unique_ptr<Expression> expression_;
+    std::unique_ptr<Expression> expression_;
 };
 
 struct IfStatement final : Statement {
@@ -166,8 +168,8 @@ struct IfStatement final : Statement {
           body_(std::move(body)),
           elseClause_(std::move(elseClause)) {}
 
-    const std::unique_ptr<Expression> condition_;
-    const std::unique_ptr<BlockStatement> body_;
+    std::unique_ptr<Expression> condition_;
+    std::unique_ptr<BlockStatement> body_;
     std::unique_ptr<BlockStatement> elseClause_;
 };
 
@@ -177,22 +179,8 @@ struct WhileStatement final : Statement {
           condition_(std::move(condition)),
           body_(std::move(body)) {}
 
-    const std::unique_ptr<Expression> condition_;
-    const std::unique_ptr<BlockStatement> body_;
-};
-
-struct FunctionDeclaration final : Statement {
-    FunctionDeclaration(std::unique_ptr<Identifier> identifier,
-                        std::vector<std::unique_ptr<Identifier>> parameters,
-                        std::unique_ptr<BlockStatement> body)
-        : Statement{NodeKind::FUNCTION_DECLARATION},
-          identifier_(std::move(identifier)),
-          parameters_(std::move(parameters)),
-          body_(std::move(body)) {}
-
-    const std::unique_ptr<Identifier> identifier_;
-    const std::vector<std::unique_ptr<Identifier>> parameters_;
-    const std::unique_ptr<BlockStatement> body_;
+    std::unique_ptr<Expression> condition_;
+    std::unique_ptr<BlockStatement> body_;
 };
 
 struct BreakStatement final : Statement {
@@ -203,17 +191,62 @@ struct ContinueStatement final : Statement {
     explicit ContinueStatement() : Statement{NodeKind::CONTINUE_STATEMENT} {}
 };
 
-struct Exit final : Statement {
-    explicit Exit(std::unique_ptr<Expression> exitCode)
-        : Statement{NodeKind::EXIT}, exitCode_(std::move(exitCode)) {}
+struct ExitStatement final : Statement {
+    explicit ExitStatement(std::unique_ptr<Expression> exitCode)
+        : Statement{NodeKind::EXIT_STATEMENT}, exitCode_(std::move(exitCode)) {}
 
-    const std::unique_ptr<Expression> exitCode_;
+    std::unique_ptr<Expression> exitCode_;
+};
+
+struct ReturnStatement final : Statement {
+    explicit ReturnStatement(std::unique_ptr<Expression> returnValue)
+        : Statement{NodeKind::RETURN_STATEMENT}, returnValue_(std::move(returnValue)) {}
+
+    std::unique_ptr<Expression> returnValue_;
+};
+
+struct ConstantDeclaration final : Node {
+    ConstantDeclaration(std::unique_ptr<Identifier> identifier, const Type type,
+                        std::unique_ptr<Expression> value)
+        : Node{NodeKind::CONSTANT_DECLARATION},
+          identifier_(std::move(identifier)),
+          type_(type),
+          value_(std::move(value)) {}
+
+    std::unique_ptr<Identifier> identifier_;
+    const Type type_;
+    std::unique_ptr<Expression> value_;
+};
+
+struct FunctionDeclaration final : Node {
+    FunctionDeclaration(std::unique_ptr<Identifier> identifier,
+                        std::vector<std::unique_ptr<VariableDeclaration>> parameters,
+                        const Type returnType, std::unique_ptr<BlockStatement> body)
+        : Node{NodeKind::FUNCTION_DECLARATION},
+          identifier_(std::move(identifier)),
+          parameters_(std::move(parameters)),
+          returnType_(returnType),
+          body_(std::move(body)) {}
+
+    std::unique_ptr<Identifier> identifier_;
+    const std::vector<std::unique_ptr<VariableDeclaration>> parameters_;
+    const Type returnType_;
+    std::unique_ptr<BlockStatement> body_;
 };
 
 struct Program final : Node {
-    Program() : Node{NodeKind::PROGRAM}, body_(std::make_unique<BlockStatement>()) {}
+    Program() : Node{NodeKind::PROGRAM} {}
 
-    std::unique_ptr<BlockStatement> body_;
+    void append_constant(std::unique_ptr<ConstantDeclaration> constant) {
+        constants_.emplace_back(std::move(constant));
+    }
+
+    void append_function(std::unique_ptr<FunctionDeclaration> function) {
+        functions_.emplace_back(std::move(function));
+    }
+
+    std::vector<std::unique_ptr<ConstantDeclaration>> constants_;
+    std::vector<std::unique_ptr<FunctionDeclaration>> functions_;
 };
 
 Operator token_kind_to_operator(TokenKind tokenKind);

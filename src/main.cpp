@@ -45,12 +45,12 @@ int main(const int argc, char *argv[]) {
     }
 
     auto parser = Parser(tokens);
-    const AST::Program ast = parser.parse();
+    const auto ast = parser.parse();
 
-    auto semanticAnalyser = SemanticAnalyser(ast);
+    auto semanticAnalyser = SemanticAnalyser(*ast);
     const auto symbolTable = semanticAnalyser.analyse();
 
-    auto generator = Generator(ast, symbolTable);
+    auto generator = Generator(*ast, symbolTable);
     const auto assemblyCode = generator.generate();
 
     auto runOrDie = [](const char *cmd) {
