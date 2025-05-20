@@ -53,6 +53,11 @@ void SemanticAnalyser::exit_scope() {
 }
 
 bool SemanticAnalyser::is_symbol_declared_in_scope(const std::string& name) const {
+    for (const auto& func : ast_->functions_) {
+        if (func->identifier_->name_ == name) {
+            return true;
+        }
+    }
     for (const Scope& scope : scopes_) {
         if (scope.symbols_.contains(name)) {
             return true;
@@ -221,7 +226,7 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
             const auto it = symbolTable_.find(identifier.name_);
-            if (it == symbolTable_.end()) {
+            if (!is_symbol_declared_in_scope(identifier.name_)) {
                 abort(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_));
             } else if (it->second.kind_ != SymbolKind::VARIABLE &&
                        it->second.kind_ != SymbolKind::CONSTANT) {
