@@ -294,6 +294,7 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
         case AST::NodeKind::RETURN_STATEMENT: {
             const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
             generate_return_statement(returnStmt);
+            break;
         }
         case AST::NodeKind::EXIT_STATEMENT: {
             const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
@@ -321,12 +322,12 @@ void Generator::generate_function_declaration(const AST::FunctionDeclaration& fu
     output_ << "    push rbp\n";        // Save the old base pointer
     output_ << "    mov rbp, rsp\n\n";  // Set the new base pointer
 
-    const int parametersFrameSize = funcDecl.parameters_.size() * 8;
+    const std::size_t parametersFrameSize = funcDecl.parameters_.size() * 8;
     output_ << "    sub rsp, " << parametersFrameSize << "\n";
 
-    for (int i = 0; i < funcDecl.parameters_.size(); i++) {
+    for (std::size_t i = 0; i < funcDecl.parameters_.size(); ++i) {
         const auto& param = funcDecl.parameters_[i];
-        const int paramOffset = parametersFrameSize + 8 - i * 8;
+        const std::size_t paramOffset = parametersFrameSize + 8 - i * 8;
         output_ << "    mov rax, [rbp + " << paramOffset << "]\n";
         write_to_variable(param->identifier_->name_, "rax");
     }
