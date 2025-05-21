@@ -18,11 +18,8 @@ std::stringstream Generator::generate() {
 
     generate_exit("0");
 
-    for (const auto& [name, info] : symbolTable_) {
-        if (info.kind_ == SymbolKind::FUNCTION) {
-            generate_function_declaration(
-                *static_cast<const AST::FunctionDeclaration*>(info.declarationNode_));
-        }
+    for (const auto& funcDecl : program_.functions_) {
+        generate_function_declaration(*funcDecl);
     }
 
     std::cout << output_.str();
@@ -55,22 +52,21 @@ void Generator::stack_deallocate_scope_variables(const AST::BlockStatement& bloc
     }
 }
 
-SymbolInfo Generator::get_symbol_info(const std::string& name) const {
-    return symbolTable_.at(name);
+int Generator::get_variable_stack_offset(const std::string& name) const {
+    if (!variablesStackOffset_.contains(name)) {
+        throw std::invalid_argument("Variable not found: " + name);
+    }
+    return variablesStackOffset_.at(name);
 }
 
-int Generator::get_variable_stack_offset(const std::string& name) const {
-    return get_symbol_info(name).stackOffset_.value();
+void Generator::insert_variable_stack_offset(const std::string& name) {
+    variablesStackOffset_.emplace(name, currentStackOffset_);
+    currentStackOffset_ += 8;
 }
 
 void Generator::write_to_variable(const std::string& name, const std::string& source) {
     output_ << "    mov qword [rbp - " << get_variable_stack_offset(name) << "], " << source
             << "\n";
-}
-
-void Generator::pop_stack_to_variable(const std::string& name) {
-    output_ << "    pop rax\n";
-    write_to_variable(name, "rax");
 }
 
 void Generator::move_variable_to_rax(const std::string& name) {
@@ -188,6 +184,8 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NO
 
 void Generator::generate_variable_declaration(const AST::VariableDeclaration& varDecl) {
     const std::string& varName = varDecl.identifier_->name_;
+    insert_variable_stack_offset(varName);
+
     evaluate_expression_to_rax(*varDecl.value_);
     write_to_variable(varName, "rax");
 }
@@ -317,6 +315,8 @@ void Generator::generate_function_declaration(const AST::FunctionDeclaration& fu
     output_ << "\n";
     output_ << funcDecl.identifier_->name_ << ":\n";
 
+    currentStackOffset_ = INITIAL_STACK_OFFSET;
+
     output_ << "    push rbp\n";        // Save the old base pointer
     output_ << "    mov rbp, rsp\n\n";  // Set the new base pointer
 
@@ -327,6 +327,8 @@ void Generator::generate_function_declaration(const AST::FunctionDeclaration& fu
         const auto& param = funcDecl.parameters_[i];
         const std::size_t paramOffset = parametersFrameSize + 8 - i * 8;
         output_ << "    mov rax, [rbp + " << paramOffset << "]\n";
+
+        insert_variable_stack_offset(param->identifier_->name_);
         write_to_variable(param->identifier_->name_, "rax");
     }
 

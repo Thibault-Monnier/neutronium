@@ -48,9 +48,9 @@ int main(const int argc, char *argv[]) {
     const auto ast = parser.parse();
 
     auto semanticAnalyser = SemanticAnalyser(*ast);
-    const auto symbolTable = semanticAnalyser.analyse();
+    semanticAnalyser.analyse();
 
-    auto generator = Generator(*ast, symbolTable);
+    auto generator = Generator(*ast);
     const auto assemblyCode = generator.generate();
 
     auto runOrDie = [](const char *cmd) {

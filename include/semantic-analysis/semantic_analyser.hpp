@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "parsing/ast.hpp"
-#include "semantic-analysis/scope.hpp"
 #include "semantic-analysis/symbol_table.hpp"
 #include "semantic-analysis/type.hpp"
 
@@ -12,15 +11,13 @@ class SemanticAnalyser {
    public:
     explicit SemanticAnalyser(const AST::Program& ast) : ast_(&ast) {}
 
-    SymbolTable analyse();
+    void analyse();
 
    private:
     const AST::Program* ast_;
 
-    SymbolTable symbolTable_;
-
-    int currentStackOffset_ = 8;
-    std::vector<Scope> scopes_;
+    std::vector<SymbolTable> scopes_;
+    SymbolTable functionsTable_;
 
     int loopDepth_ = 0;
 
@@ -34,8 +31,7 @@ class SemanticAnalyser {
     void exit_scope();
 
     // ── Symbol utilities ────────────────────────────────────────────────────────
-    bool is_symbol_declared_in_scope(const std::string& name) const;
-    Type get_symbol_type(const std::string& name) const;
+    [[nodiscard]] std::optional<const SymbolInfo*> get_symbol_info(const std::string& name) const;
 
     // ── Symbol declaration helpers ──────────────────────────────────────────────
     SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable, Type type,

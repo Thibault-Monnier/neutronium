@@ -7,7 +7,7 @@
 
 #include "utils/log.hpp"
 
-SymbolTable SemanticAnalyser::analyse() {
+void SemanticAnalyser::analyse() {
     for (const auto& constDecl : ast_->constants_) {
         analyse_constant_declaration(*constDecl);
     }
@@ -16,8 +16,8 @@ SymbolTable SemanticAnalyser::analyse() {
         analyse_function_declaration(*funcDecl);
     }
 
-    const auto mainIt = symbolTable_.find("main");
-    if (mainIt == symbolTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
+    const auto mainIt = functionsTable_.find("main");
+    if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
         abort("No `main` function found");
     } else if (mainIt->second.type_.raw() != RawType::VOID) {
         abort("`main` function must return `void`");
@@ -25,16 +25,7 @@ SymbolTable SemanticAnalyser::analyse() {
         abort("`main` function must not take any parameters");
     }
 
-    for (const auto& [name, info] : symbolTable_) {
-        std::cout << "Variable: " << name << ", Type: " << info.type_.to_string()
-                  << ", Kind: " << symbol_kind_to_string(info.kind_)
-                  << ", Is Mutable: " << info.isMutable_
-                  << ", Stack Offset: " << info.stackOffset_.value_or(-1) << "\n";
-    }
-
     std::cout << "\033[1;32mAnalysis completed successfully.\033[0m\n";
-
-    return std::move(symbolTable_);
 }
 
 void SemanticAnalyser::abort(const std::string& errorMessage, const std::string& hintMessage) {
@@ -47,49 +38,28 @@ void SemanticAnalyser::abort(const std::string& errorMessage, const std::string&
 
 void SemanticAnalyser::enter_scope() { scopes_.emplace_back(); }
 
-void SemanticAnalyser::exit_scope() {
-    currentStackOffset_ -= scopes_.back().frameSize_;
-    scopes_.pop_back();
-}
+void SemanticAnalyser::exit_scope() { scopes_.pop_back(); }
 
-bool SemanticAnalyser::is_symbol_declared_in_scope(const std::string& name) const {
-    for (const auto& func : ast_->functions_) {
-        if (func->identifier_->name_ == name) {
-            return true;
-        }
+std::optional<const SymbolInfo*> SemanticAnalyser::get_symbol_info(const std::string& name) const {
+    {
+        auto it = functionsTable_.find(name);
+        if (it != functionsTable_.end()) return &it->second;
     }
-    for (const Scope& scope : scopes_) {
-        if (scope.symbols_.contains(name)) {
-            return true;
-        }
-    }
-    return false;
-}
 
-Type SemanticAnalyser::get_symbol_type(const std::string& name) const {
-    return symbolTable_.at(name).type_;
+    for (auto const& scope : scopes_) {
+        auto it = scope.find(name);
+        if (it != scope.end()) return &it->second;
+    }
+
+    return std::nullopt;
 }
 
 SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const SymbolKind kind,
                                              const bool isMutable, const Type type,
                                              const bool isScoped, const AST::Node& declarationNode,
                                              std::vector<SymbolInfo> parameters) {
-    if (symbolTable_.contains(name)) {
-        abort(std::format("Redeclaration of symbol: `{}`", name),
-              "Shadowing is not permitted, even for disjoint scopes");
-    }
-
-    if (isScoped) {
-        scopes_.back().symbols_.insert(name);
-    }
-
-    std::optional<int> stackOffset;
-    if (kind == SymbolKind::VARIABLE) {
-        constexpr int VAR_STACK_SIZE = 8;
-        stackOffset = currentStackOffset_;
-        scopes_.back().variablesStackOffset_[name] = *stackOffset;
-        scopes_.back().frameSize_ += VAR_STACK_SIZE;
-        currentStackOffset_ += VAR_STACK_SIZE;
+    if (get_symbol_info(name).has_value()) {
+        abort(std::format("Redeclaration of symbol: `{}`", name));
     }
 
     SymbolInfo info{.name_ = name,
@@ -97,11 +67,18 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const Symb
                     .isMutable_ = isMutable,
                     .type_ = type,
                     .declarationNode_ = &declarationNode,
-                    .stackOffset_ = stackOffset,
                     .parameters_ = std::move(parameters)};
 
-    auto [it, _] = symbolTable_.emplace(name, std::move(info));
-    return it->second;
+    if (isScoped) {
+        auto [it, _] = scopes_.back().emplace(name, std::move(info));
+        return it->second;
+    } else if (kind == SymbolKind::FUNCTION) {
+        auto [it, _] = functionsTable_.emplace(name, std::move(info));
+        return it->second;
+    }
+
+    throw std::invalid_argument("Invalid symbol kind for non-scoped symbol: " +
+                                std::to_string(static_cast<int>(kind)));
 }
 
 SymbolInfo& SemanticAnalyser::handle_constant_declaration(const std::string& name, const Type type,
@@ -125,15 +102,18 @@ SymbolInfo& SemanticAnalyser::handle_variable_declaration(const std::string& nam
 Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
     const AST::FunctionCall& funcCall) {
     const std::string& name = funcCall.identifier_->name_;
-    if (!symbolTable_.contains(name)) {
+
+    const auto info = get_symbol_info(name);
+    if (!info.has_value()) {
         abort(std::format("Attempted to call undeclared function: `{}`", name));
     }
-    const SymbolInfo& info = symbolTable_.at(name);
-    if (info.kind_ != SymbolKind::FUNCTION) {
+
+    if (info.value()->kind_ != SymbolKind::FUNCTION) {
         abort(std::format("Attempted to call a non-function: `{}`", name));
     }
 
-    const auto& funcDecl = static_cast<const AST::FunctionDeclaration&>(*info.declarationNode_);
+    const auto& funcDecl =
+        static_cast<const AST::FunctionDeclaration&>(*info.value()->declarationNode_);
 
     if (funcCall.arguments_.size() != funcDecl.parameters_.size()) {
         abort(
@@ -141,7 +121,8 @@ Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
                         "got {}",
                         name, funcDecl.parameters_.size(), funcCall.arguments_.size()));
     }
-    for (uint i = 0; i < funcCall.arguments_.size(); i++) {
+
+    for (std::size_t i = 0; i < funcCall.arguments_.size(); i++) {
         const Type argType = get_expression_type(*funcCall.arguments_[i]);
         const Type paramType = funcDecl.parameters_[i]->type_;
         if (!argType.matches(paramType)) {
@@ -153,7 +134,7 @@ Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
         }
     }
 
-    return info.type_;
+    return info.value()->type_;
 }
 
 Type SemanticAnalyser::get_unary_expression_type(  // NOLINT(*-no-recursion)
@@ -221,14 +202,14 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
             return RawType::BOOLEAN;
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
-            const auto it = symbolTable_.find(identifier.name_);
-            if (!is_symbol_declared_in_scope(identifier.name_)) {
+            const auto info = get_symbol_info(identifier.name_);
+            if (!info.has_value()) {
                 abort(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_));
-            } else if (it->second.kind_ != SymbolKind::VARIABLE &&
-                       it->second.kind_ != SymbolKind::CONSTANT) {
-                abort(std::format("`{}` is not a variable or contant", identifier.name_));
+            } else if (info.value()->kind_ != SymbolKind::VARIABLE &&
+                       info.value()->kind_ != SymbolKind::CONSTANT) {
+                abort(std::format("`{}` is not a variable or constant", identifier.name_));
             }
-            return get_symbol_type(identifier.name_);
+            return info.value()->type_;
         }
         case AST::NodeKind::FUNCTION_CALL: {
             const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
@@ -274,22 +255,23 @@ void SemanticAnalyser::analyse_variable_declaration(const AST::VariableDeclarati
 
 void SemanticAnalyser::analyse_variable_assignment(const AST::VariableAssignment& assignment) {
     const std::string& name = assignment.identifier_->name_;
-    if (!is_symbol_declared_in_scope(name)) {
+    const auto& declarationInfo = get_symbol_info(name);
+    if (!declarationInfo.has_value()) {
         abort(std::format("Assignment to undeclared variable: `{}`", name));
     }
 
-    const SymbolInfo& declaredSymbol = symbolTable_.at(name);
-    if (declaredSymbol.kind_ != SymbolKind::VARIABLE) {
+    if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
         abort(std::format("Assignment to non-variable: `{}`", name));
     }
-    if (!declaredSymbol.isMutable_) {
+    if (!declarationInfo.value()->isMutable_) {
         abort(std::format("Assignment to immutable variable: `{}`", name));
     }
 
     const Type assignmentType = get_expression_type(*assignment.value_);
-    if (assignmentType.raw() != declaredSymbol.type_.raw()) {
+    const Type declarationType = declarationInfo.value()->type_;
+    if (assignmentType.raw() != declarationType.raw()) {
         abort(std::format("Type mismatch: variable `{}` is declared as {}, but assigned to {}",
-                          name, declaredSymbol.type_.to_string(), assignmentType.to_string()));
+                          name, declarationType.to_string(), assignmentType.to_string()));
     }
 }
 
@@ -406,11 +388,11 @@ void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
         parameterSymbols.emplace_back(handle_variable_declaration(
             param->identifier_->name_, param->isMutable_, param->type_, *param));
     }
-    analyse_statement(*funcDecl.body_);
-    exit_scope();
-
     handle_function_declaration(funcDecl.identifier_->name_, funcDecl.returnType_, parameterSymbols,
                                 funcDecl);
+
+    analyse_statement(*funcDecl.body_);
+    exit_scope();
 }
 
 void SemanticAnalyser::analyse_constant_declaration(const AST::ConstantDeclaration& declaration) {

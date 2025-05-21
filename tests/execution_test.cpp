@@ -47,6 +47,38 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
     checkPrimeProgram(1000000000039, 0);  // Prime
 }
 
+TEST_F(NeutroniumTester, RecursiveFibonacci) {
+    const std::string code = R"(
+        fn fibonacci(n: int) -> int: {
+            if n <= 1: {
+                return n;
+            }
+            let a = fibonacci(n - 1);
+            let b = fibonacci(n - 2);
+            return a + b;
+        }
+
+        fn main(): {
+            let n = {val};
+            let result = fibonacci(n);
+            exit result;
+        }
+    )";
+    auto testFibonacci = [&](const int n, const int expectedResult) {
+        std::string codeWithN = code;
+        codeWithN.replace(codeWithN.find("{val}"), 5, std::to_string(n));
+        EXPECT_EQ(run(codeWithN), expectedResult) << "Failed for n = " << n;
+    };
+
+    testFibonacci(0, 0);
+    testFibonacci(1, 1);
+    testFibonacci(2, 1);
+    testFibonacci(3, 2);
+    testFibonacci(7, 13);
+    testFibonacci(10, 55);
+    testFibonacci(35, 9227465 % 256);  // 9227465 % 256 = 201
+}
+
 TEST_F(NeutroniumTester, MutableReassignment) {
     const std::string code = R"(
         fn main(): {
@@ -217,21 +249,21 @@ TEST_F(NeutroniumTester, FunctionWithParameters) {
 
 TEST_F(NeutroniumTester, FunctionCalls) {
     const std::string code = R"(
-        fn inc(mut var2: int) -> int: {
-            var2 = var2 + 1;
-            return var2;
+        fn inc(mut var: int) -> int: {
+            var = var + 1;
+            return var;
         }
 
-        fn dec(mut var3: int) -> int: {
-            var3 = var3 - 1;
-            return var3;
+        fn dec(mut var: int) -> int: {
+            var = var - 1;
+            return var;
         }
 
-        fn setToZero(mut var4: int) -> int: {
-            if (var4 != 0): {
-                var4 = 0;
+        fn setToZero(mut var: int) -> int: {
+            if (var != 0): {
+                var = 0;
             }
-            return var4;
+            return var;
         }
 
         fn main(): {
@@ -247,6 +279,25 @@ TEST_F(NeutroniumTester, FunctionCalls) {
         }
     )";
     EXPECT_EQ(run(code), 2);
+
+    const std::string code2 = R"(
+        fn aPlusB(a: int, b: int) -> int: {
+            return a + b;
+        }
+
+        fn aMinusB(a: int, b: int) -> int: {
+            return a - b;
+        }
+
+        fn main(): {
+            let a = 5;
+            let b = 3;
+            let c = aPlusB(a, b);
+            let d = aMinusB(a, b);
+            exit c * d; # a² - b²
+        }
+    )";
+    EXPECT_EQ(run(code2), 16);
 }
 
 TEST_F(NeutroniumTester, WhileLoop) {
@@ -381,8 +432,21 @@ TEST_F(NeutroniumTester, ScopeDeclaration) {
             }
         }
     )";
-
     EXPECT_EQ(run(code), 9);
+
+    const std::string code2 = R"(
+        fn main(): {
+            let x = 2;
+            let mut y = 3;
+            {
+                let z = 4;
+                y = y + z;      # y = 3 + 4 = 7
+            }
+            let z = 5;
+            exit x + y + z;  # = 2 + 7 + 5 = 14
+        }
+    )";
+    EXPECT_EQ(run(code2), 14);
 }
 
 TEST_F(NeutroniumTester, NestedControlFlow) {

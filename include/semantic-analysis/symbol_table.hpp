@@ -28,7 +28,6 @@ struct SymbolInfo {
     const bool isMutable_;
     const Type type_;
     const AST::Node* declarationNode_;
-    const std::optional<int> stackOffset_;      // Only for variables
     const std::vector<SymbolInfo> parameters_;  // Only for functions
 };
 

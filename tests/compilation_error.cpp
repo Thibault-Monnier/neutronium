@@ -301,31 +301,14 @@ TEST_F(NeutroniumTester, SymbolShadowingError) {
                 (error.contains("variable") || error.contains("symbol")) && error.contains("x"));
 
     const std::string code2 = R"(
-        fn main(): {
-            {
-                let y = 10;
-            }
-            {
-                let y = 11;   # illegal shadowing, even in a new block
-            }
+        fn foo(mut x: int): {
+            let x = 2;
         }
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
     EXPECT_TRUE((error2.contains("Redeclaration") || error2.contains("redeclaration")) &&
-                (error2.contains("variable") || error2.contains("symbol")) && error2.contains("y"));
-
-    const std::string code3 = R"(
-        fn foo(x: int): {}
-
-        fn main(): {
-            let x = 1;
-        }
-    )";
-    auto [status3, error3] = compile(code3);
-    EXPECT_NE(status3, 0);
-    EXPECT_TRUE((error3.contains("Redeclaration") || error3.contains("redeclaration")) &&
-                (error3.contains("variable") || error3.contains("symbol")) && error3.contains("x"));
+                (error2.contains("variable") || error2.contains("symbol")) && error2.contains("x"));
 }
 
 TEST_F(NeutroniumTester, RedeclarationOfFunctionError) {

@@ -7,8 +7,7 @@
 
 class Generator {
    public:
-    explicit Generator(const AST::Program& ast, const SymbolTable& symbolTable)
-        : program_(ast), symbolTable_(symbolTable) {}
+    explicit Generator(const AST::Program& ast) : program_(ast) {}
 
     [[nodiscard]] std::stringstream generate();
 
@@ -20,16 +19,17 @@ class Generator {
     int innerLoopStartLabel_ = 0;
     int innerLoopEndLabel_ = 0;
 
-    const SymbolTable& symbolTable_;
+    static constexpr int INITIAL_STACK_OFFSET = 8;
+    int currentStackOffset_ = INITIAL_STACK_OFFSET;
+    std::unordered_map<std::string, int> variablesStackOffset_;
 
     int get_current_scope_frame_size(const AST::BlockStatement& blockStmt) const;
 
     void stack_allocate_scope_variables(const AST::BlockStatement& blockStmt);
     void stack_deallocate_scope_variables(const AST::BlockStatement& blockStmt);
-    SymbolInfo get_symbol_info(const std::string& name) const;
     int get_variable_stack_offset(const std::string& name) const;
+    void insert_variable_stack_offset(const std::string& name);
     void write_to_variable(const std::string& name, const std::string& source);
-    void pop_stack_to_variable(const std::string& name);
     void move_variable_to_rax(const std::string& name);
 
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
