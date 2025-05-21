@@ -87,7 +87,13 @@ void Generator::generate_function_call(  // NOLINT(*-no-recursion)
         evaluate_expression_to_rax(*argument);
         output_ << "    push rax\n";
     }
+
     output_ << "    call " << funcCall.identifier_->name_ << "\n";
+
+    // Clean up the stack after the function call
+    for (int i = 0; i < funcCall.arguments_.size(); ++i) {
+        output_ << "    pop rcx\n";
+    }
 }
 
 void Generator::evaluate_unary_expression_to_rax(  // NOLINT(*-no-recursion)

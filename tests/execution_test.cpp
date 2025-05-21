@@ -53,9 +53,7 @@ TEST_F(NeutroniumTester, RecursiveFibonacci) {
             if n <= 1: {
                 return n;
             }
-            let a = fibonacci(n - 1);
-            let b = fibonacci(n - 2);
-            return a + b;
+            return fibonacci(n - 1) + fibonacci(n - 2);
         }
 
         fn main(): {
@@ -201,6 +199,19 @@ TEST_F(NeutroniumTester, ExpressionsEvaluation) {
 
     const std::string code4 = R"( fn main(): { exit 2 * -3; } )";
     EXPECT_EQ(run(code4), 250);  // -6 → 250 in 8-bit unsigned
+
+    const std::string codeFunctions = R"(
+        fn n(num: int) -> int: {
+            return num;
+        }
+
+        fn main(): {
+            let mut x = n(1) + n(2) / n(1); # should be 3
+            x = x + n(3 * 1) * n(1 + 1); # should be 9
+            exit x;
+        }
+    )";
+    EXPECT_EQ(run(codeFunctions), 9);
 }
 
 TEST_F(NeutroniumTester, FunctionWithParameters) {
