@@ -669,3 +669,27 @@ TEST_F(NeutroniumTester, ContinueWhenNotInLoopFails) {
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("continue") && error.contains("loop"));
 }
+
+TEST_F(NeutroniumTester, InvalidTypeSpecifier) {
+    const std::string code = R"(
+        fn main(): {
+            let x: int = 1;
+            let y: invalidType = 2;  # invalid type
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("type specifier") &&
+                error.contains("IDENTIFIER"));
+
+    const std::string code2 = R"(
+        fn main(): {
+            let x: int = 1;
+            let y: 1 = 2;  # invalid type
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("token") && error2.contains("type specifier") &&
+                error2.contains("LITERAL"));
+}

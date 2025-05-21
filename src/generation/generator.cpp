@@ -87,8 +87,6 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
 
 void Generator::generate_function_call(  // NOLINT(*-no-recursion)
     const AST::FunctionCall& funcCall) {
-    const auto& funcInfo = get_symbol_info(funcCall.identifier_->name_);
-
     for (const auto& argument : funcCall.arguments_) {
         evaluate_expression_to_rax(*argument);
         output_ << "    push rax\n";

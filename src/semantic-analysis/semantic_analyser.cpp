@@ -70,10 +70,6 @@ Type SemanticAnalyser::get_symbol_type(const std::string& name) const {
     return symbolTable_.at(name).type_;
 }
 
-SymbolKind SemanticAnalyser::get_symbol_kind(const std::string& name) const {
-    return symbolTable_.at(name).kind_;
-}
-
 SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const SymbolKind kind,
                                              const bool isMutable, const Type type,
                                              const bool isScoped, const AST::Node& declarationNode,

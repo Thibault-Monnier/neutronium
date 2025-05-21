@@ -36,7 +36,6 @@ class SemanticAnalyser {
     // ── Symbol utilities ────────────────────────────────────────────────────────
     bool is_symbol_declared_in_scope(const std::string& name) const;
     Type get_symbol_type(const std::string& name) const;
-    SymbolKind get_symbol_kind(const std::string& name) const;
 
     // ── Symbol declaration helpers ──────────────────────────────────────────────
     SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable, Type type,
