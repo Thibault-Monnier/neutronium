@@ -77,6 +77,37 @@ TEST_F(NeutroniumTester, RecursiveFibonacci) {
     testFibonacci(35, 9227465 % 256);  // 9227465 % 256 = 201
 }
 
+TEST_F(NeutroniumTester, FastIterativeFibonacci) {
+    const std::string code = R"(
+        fn computeFibonacci(mut n: int) -> int: {
+            let mut a = 0;
+            let mut b = 1;
+            while n > 0: {
+                let temp = a;
+                a = b;
+                b = temp + b;
+                n = n - 1;
+            }
+            return a;
+        }
+
+        fn main(): {
+            let n = {val};
+            exit computeFibonacci(n);
+        }
+    )";
+    auto testFastFibonacci = [&](const int n, const int expectedResult) {
+        std::string codeWithN = code;
+        codeWithN.replace(codeWithN.find("{val}"), 5, std::to_string(n));
+        EXPECT_EQ(run(codeWithN), expectedResult) << "Failed for n = " << n;
+    };
+
+    testFastFibonacci(0, 0);
+    testFastFibonacci(1, 1);
+    testFastFibonacci(10, 55);
+    testFastFibonacci(99, 2); // 218,922,995,834,555,169,026 mod 256 = 2
+}
+
 TEST_F(NeutroniumTester, MutableReassignment) {
     const std::string code = R"(
         fn main(): {
