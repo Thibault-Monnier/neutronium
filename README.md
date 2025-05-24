@@ -21,7 +21,9 @@ Clone this repository and set it up by running:
 ```bash
 git clone https://github.com/Thibault-Monnier/neutronium.git
 cd neutronium
-chmod +x build.sh
+chmod +x cmake-build.sh
+chmod +x run.sh
+chmod +x test.sh
 ```
 
 To install the required dependencies, run:
@@ -36,13 +38,16 @@ sudo apt install build-essential cmake ninja-build nasm
 To build the compiler and run it on a Neutronium source file, run:
 
 ```bash
-./build.sh && ./build/neutronium <path-to-source-file>
+./run.sh <path-to-source-file>
 ```
 
-To execute the generated machine code, run:
+Alternatively, you can build the compiler and run it, then execute the machine code manually by executing:
 
 ```bash
-./neutro/out
+./cmake-build.sh # Build the compiler
+./build/neutronium <path-to-source-file> # Run the compiler on a source file
+./neutro/out # Execute the generated machine code
+echo $? # Print the exit code of the Neutronium program
 ```
 
 > 💡 Tip: you can write your scripts in the scripts/ directory, which is ignored by version control.
@@ -52,7 +57,7 @@ To execute the generated machine code, run:
 To build and run the test suite, run:
 
 ```bash
-./build.sh && ./build/tests
+./test.sh
 ```
 
 ## 🤝 Contributing

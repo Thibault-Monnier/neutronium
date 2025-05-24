@@ -20,11 +20,11 @@ jobs:
 
 
       - name: Make build script executable
-        run: chmod +x ./build.sh
+        run: chmod +x ./cmake-build.sh
 
       - name: Run build
         id: build_run
-        run: ./build.sh
+        run: ./cmake-build.sh
         shell: bash
 
       - name: Run tests
