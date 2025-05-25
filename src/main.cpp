@@ -20,24 +20,30 @@ using Clock = std::chrono::high_resolution_clock;
 
 namespace {
 
+void show_step(std::string_view message) {
+    std::cout << "\033[33m- \033[0m" << message << "..." << std::flush;
+}
+
 template <typename F>
-decltype(auto) timed(std::string_view message, F &&f) {
+decltype(auto) timed(const std::string_view message, F&& f) {
+    show_step(message);
     const auto start = Clock::now();
+
     if constexpr (std::is_void_v<std::invoke_result_t<F>>) {
         std::forward<F>(f)();
         const auto ms =
             std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
-        std::cout << "\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
+        std::cout << "\r\33[2K\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
     } else {
         auto result = std::forward<F>(f)();
         const auto ms =
             std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
-        std::cout << "\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
+        std::cout << "\r\33[2K\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
         return result;
     }
 }
 
-void run_or_die(const char *cmd) {
+void run_or_die(const char* cmd) {
     if (std::system(cmd) != 0) {
         print_error(std::format("Command '{}' failed", cmd));
         std::exit(EXIT_FAILURE);
@@ -46,7 +52,7 @@ void run_or_die(const char *cmd) {
 
 }  // namespace
 
-int main(const int argc, char *argv[]) {
+int main(const int argc, char* argv[]) {
     CompilerOptions opts = parse_cli(argc, argv);
 
     const std::ifstream source(opts.sourceFilename_);
@@ -61,16 +67,13 @@ int main(const int argc, char *argv[]) {
 
     if (opts.logCode_) std::cout << code << '\n';
 
-    auto lexer = Lexer(code);
-    const std::vector<Token> tokens = lexer.tokenize();
+    const auto tokens = timed("Lexing", [&] { return Lexer(code).tokenize(); });
     if (opts.logTokens_) {
-        for (const auto &token : tokens) {
+        for (const auto& token : tokens)
             std::cout << token_kind_to_string(token.kind()) << ": `" << token.lexeme() << "`\n";
-        }
     }
 
-    auto parser = Parser(tokens);
-    const auto ast = timed("Parsing", [&] { return parser.parse(); });
+    const auto ast = timed("Parsing", [&] { return Parser(tokens).parse(); });
     if (opts.logAst_) AST::log_ast(*ast);
 
     timed("Semantic analysis", [&] { SemanticAnalyser(*ast).analyse(); });
@@ -78,17 +81,18 @@ int main(const int argc, char *argv[]) {
     const auto assembly = timed("Code generation", [&] { return Generator(*ast).generate(); });
     if (opts.logAssembly_) std::cout << assembly.str();
 
-    run_or_die("rm -rf neutro");
-    run_or_die("mkdir neutro");
+    run_or_die("rm -rf neutro && mkdir neutro");
 
-    std::ofstream out("neutro/out.asm");
-    if (!out) {
-        print_error("Could not open output file");
-        exit(EXIT_FAILURE);
+    {
+        std::ofstream out("neutro/out.asm");
+        if (!out) {
+            print_error("Could not open output file");
+            exit(EXIT_FAILURE);
+        }
+        out << assembly.str();
     }
-    out << assembly.str();
 
-    timed("Assembling", [] { run_or_die("nasm -f elf64 neutro/out.asm -o neutro/out.o"); });
+    timed("Assembling", [] { run_or_die("nasm -felf64 neutro/out.asm"); });
     timed("Linking", [] { run_or_die("ld -o neutro/out neutro/out.o"); });
 
     std::cout << "== Compiled successfully! ==\n";
