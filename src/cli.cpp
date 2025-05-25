@@ -10,10 +10,9 @@ CompilerOptions parse_cli(int argc, char** argv) {
     cxxopts::Options options(argv[0], "Neutronium language compiler");
     options.positional_help("<input-file>").show_positional_help();
 
-    options.add_options()("h,help", "Print help")("v,version", "Print version")(
-        "d,debug", "Enable all debug logs")("log-code", "Log source code processing")(
-        "log-tokens", "Log token stream")("log-ast", "Log AST construction")(
-        "log-assembly", "Log final assembly output")(
+    options.add_options()("h,help", "Print help")("d,debug", "Enable all debug logs")(
+        "log-code", "Log source code processing")("log-tokens", "Log token stream")(
+        "log-ast", "Log AST construction")("log-assembly", "Log final assembly output")(
         "log", "Comma-separated logs (code,tokens,ast,assembly)",
         cxxopts::value<std::vector<std::string>>()->implicit_value(""))(
         "input", "Source file", cxxopts::value<std::string>());
@@ -31,10 +30,6 @@ CompilerOptions parse_cli(int argc, char** argv) {
 
     if (result.count("help")) {
         std::cout << options.help() << '\n';
-        std::exit(EXIT_SUCCESS);
-    }
-    if (result.count("version")) {
-        std::cout << "Neutronium Compiler v0.1.0\n";
         std::exit(EXIT_SUCCESS);
     }
 
