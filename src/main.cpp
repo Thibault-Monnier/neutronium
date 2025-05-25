@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstdlib>
 #include <format>
 #include <fstream>
@@ -15,24 +16,52 @@
 #include "semantic-analysis/semantic_analyser.hpp"
 #include "utils/log.hpp"
 
+using Clock = std::chrono::high_resolution_clock;
+
+namespace {
+
+template <typename F>
+decltype(auto) timed(std::string_view message, F &&f) {
+    const auto start = Clock::now();
+    if constexpr (std::is_void_v<std::invoke_result_t<F>>) {
+        std::forward<F>(f)();
+        const auto ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
+        std::cout << "\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
+    } else {
+        auto result = std::forward<F>(f)();
+        const auto ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
+        std::cout << "\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
+        return result;
+    }
+}
+
+void run_or_die(const char *cmd) {
+    if (std::system(cmd) != 0) {
+        print_error(std::format("Command '{}' failed", cmd));
+        std::exit(EXIT_FAILURE);
+    }
+}
+
+}  // namespace
+
 int main(const int argc, char *argv[]) {
     CompilerOptions opts = parse_cli(argc, argv);
 
-    std::ifstream fileStreamIn(opts.sourceFilename_);
-    if (!fileStreamIn.is_open()) {
-        const std::string errorMessage =
-            std::format("Could not open file '{}'", opts.sourceFilename_);
-        print_error(errorMessage);
+    const std::ifstream source(opts.sourceFilename_);
+    if (!source) {
+        print_error(std::format("Could not open file '{}'", opts.sourceFilename_));
         exit(EXIT_FAILURE);
     }
-    std::stringstream fileContentsStream;
-    fileContentsStream << fileStreamIn.rdbuf();
-    fileStreamIn.close();
 
-    const std::string fileContents = fileContentsStream.str();
-    if (opts.logCode_) std::cout << fileContents << '\n';
+    std::stringstream buffer;
+    buffer << source.rdbuf();
+    const std::string code = buffer.str();
 
-    auto lexer = Lexer(fileContents);
+    if (opts.logCode_) std::cout << code << '\n';
+
+    auto lexer = Lexer(code);
     const std::vector<Token> tokens = lexer.tokenize();
     if (opts.logTokens_) {
         for (const auto &token : tokens) {
@@ -41,37 +70,28 @@ int main(const int argc, char *argv[]) {
     }
 
     auto parser = Parser(tokens);
-    const auto ast = parser.parse();
+    const auto ast = timed("Parsing", [&] { return parser.parse(); });
     if (opts.logAst_) AST::log_ast(*ast);
 
-    auto semanticAnalyser = SemanticAnalyser(*ast);
-    semanticAnalyser.analyse();
+    timed("Semantic analysis", [&] { SemanticAnalyser(*ast).analyse(); });
 
-    auto generator = Generator(*ast);
-    const auto assemblyCode = generator.generate();
-    if (opts.logAssembly_) std::cout << assemblyCode.str();
+    const auto assembly = timed("Code generation", [&] { return Generator(*ast).generate(); });
+    if (opts.logAssembly_) std::cout << assembly.str();
 
-    auto runOrDie = [](const char *cmd) {
-        int rc = std::system(cmd);
-        if (rc != 0) {
-            print_error(std::format("Command '{}' failed (exit {})", cmd, rc));
-            exit(EXIT_FAILURE);
-        }
-    };
+    run_or_die("rm -rf neutro");
+    run_or_die("mkdir neutro");
 
-    runOrDie("rm -rf neutro");
-    runOrDie("mkdir neutro");
-
-    std::ofstream fileStreamOut("neutro/out.asm");
-    if (!fileStreamOut.is_open()) {
+    std::ofstream out("neutro/out.asm");
+    if (!out) {
         print_error("Could not open output file");
         exit(EXIT_FAILURE);
     }
-    fileStreamOut << assemblyCode.str();
-    fileStreamOut.close();
+    out << assembly.str();
 
-    runOrDie("nasm -felf64 neutro/out.asm");
-    runOrDie("ld -o neutro/out neutro/out.o");
+    timed("Assembling", [] { run_or_die("nasm -f elf64 neutro/out.asm -o neutro/out.o"); });
+    timed("Linking", [] { run_or_die("ld -o neutro/out neutro/out.o"); });
+
+    std::cout << "== Compiled successfully! ==\n";
 
     return 0;
 }

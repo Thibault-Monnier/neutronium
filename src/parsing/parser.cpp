@@ -12,7 +12,6 @@
 
 std::unique_ptr<AST::Program> Parser::parse() {
     auto program = parse_program();
-    std::cout << "\033[1;32mParsing completed successfully.\033[0m\n";
     return program;
 }
 

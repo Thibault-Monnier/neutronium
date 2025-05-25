@@ -24,8 +24,6 @@ void SemanticAnalyser::analyse() {
     } else if (mainIt->second.parameters_.size() != 0) {
         abort("`main` function must not take any parameters");
     }
-
-    std::cout << "\033[1;32mAnalysis completed successfully.\033[0m\n";
 }
 
 void SemanticAnalyser::abort(const std::string& errorMessage) {
