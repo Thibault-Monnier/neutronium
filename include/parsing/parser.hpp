@@ -19,8 +19,7 @@ class Parser {
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
 
-    [[noreturn]] static void abort(const std::string& errorMessage,
-                                   const std::string& hintMessage = "");
+    [[noreturn]] static void abort(const std::string& errorMessage);
     [[nodiscard]] const Token& peek(const int amount = 0) const;
     const Token& consume(const TokenKind expected);
 

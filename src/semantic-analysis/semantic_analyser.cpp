@@ -28,11 +28,8 @@ void SemanticAnalyser::analyse() {
     std::cout << "\033[1;32mAnalysis completed successfully.\033[0m\n";
 }
 
-void SemanticAnalyser::abort(const std::string& errorMessage, const std::string& hintMessage) {
+void SemanticAnalyser::abort(const std::string& errorMessage) {
     print_error(errorMessage);
-    if (!hintMessage.empty()) {
-        print_hint(hintMessage);
-    }
     exit(EXIT_FAILURE);
 }
 

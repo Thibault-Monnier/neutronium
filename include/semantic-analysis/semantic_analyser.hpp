@@ -24,8 +24,7 @@ class SemanticAnalyser {
     std::string currentFunctionName_;
     Type currentFunctionReturnType_ = RawType::VOID;
 
-    [[noreturn]] static void abort(const std::string& errorMessage,
-                                   const std::string& hintMessage = "");
+    [[noreturn]] static void abort(const std::string& errorMessage);
 
     void enter_scope();
     void exit_scope();

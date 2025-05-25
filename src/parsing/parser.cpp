@@ -16,11 +16,8 @@ std::unique_ptr<AST::Program> Parser::parse() {
     return program;
 }
 
-void Parser::abort(const std::string& errorMessage, const std::string& hintMessage) {
+void Parser::abort(const std::string& errorMessage) {
     print_error(errorMessage);
-    if (!hintMessage.empty()) {
-        print_hint(hintMessage);
-    }
     exit(EXIT_FAILURE);
 }
 
