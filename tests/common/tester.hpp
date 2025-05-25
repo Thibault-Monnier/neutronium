@@ -9,7 +9,45 @@
 #include <string>
 
 class NeutroniumTester : public ::testing::Test {
-   protected:
+   public:
+    NeutroniumTester() = default;
+
+    [[nodiscard]] std::pair<int, std::string> compile(const std::string& code) const {
+        // Write source file
+        {
+            std::ofstream out(sourceFile_);
+            out << code;
+        }
+
+        chdir(projectRoot_.c_str());
+
+        const std::string errorFile = (projectRoot_ / "compile_error.log").string();
+        const std::string cmd = compiler_.string() + " -d " + sourceFile_.filename().string() +
+                                " > /dev/null 2> " + errorFile;
+
+        const int status = WEXITSTATUS(std::system(cmd.c_str()));
+
+        std::ifstream err(errorFile);
+        const std::string errorMsg((std::istreambuf_iterator<char>(err)),
+                                   std::istreambuf_iterator<char>());
+        std::filesystem::remove(errorFile);
+
+        if (!errorMsg.empty()) {
+            std::cerr << errorMsg;
+            std::cerr.flush();
+        }
+
+        return {status, errorMsg};
+    }
+
+    [[nodiscard]] int run(const std::string& code) const {
+        auto [compileStatus, compileErr] = compile(code);
+        EXPECT_EQ(compileStatus, 0) << "Compilation failed unexpectedly:\n" << compileErr;
+        chdir(originalCwd_.c_str());
+        return WEXITSTATUS(std::system(outputBinary_.c_str()));
+    }
+
+   private:
     std::streambuf* oldCerrBuf_;
     std::ostringstream capturedCerr_;
 
@@ -40,40 +78,5 @@ class NeutroniumTester : public ::testing::Test {
 
         std::filesystem::remove(sourceFile_);
         chdir(originalCwd_.c_str());
-    }
-
-    [[nodiscard]] std::pair<int, std::string> compile(const std::string& code) const {
-        // Write source file
-        {
-            std::ofstream out(sourceFile_);
-            out << code;
-        }
-
-        chdir(projectRoot_.c_str());
-
-        const std::string errorFile = (projectRoot_ / "compile_error.log").string();
-        const std::string cmd = compiler_.string() + " " + sourceFile_.filename().string() +
-                                " > /dev/null 2> " + errorFile;
-
-        const int status = WEXITSTATUS(std::system(cmd.c_str()));
-
-        std::ifstream err(errorFile);
-        const std::string errorMsg((std::istreambuf_iterator<char>(err)),
-                                   std::istreambuf_iterator<char>());
-        std::filesystem::remove(errorFile);
-
-        if (!errorMsg.empty()) {
-            std::cerr << errorMsg;
-            std::cerr.flush();
-        }
-
-        return {status, errorMsg};
-    }
-
-    [[nodiscard]] int run(const std::string& code) const {
-        auto [compileStatus, compileErr] = compile(code);
-        EXPECT_EQ(compileStatus, 0) << "Compilation failed unexpectedly:\n" << compileErr;
-        chdir(originalCwd_.c_str());
-        return WEXITSTATUS(std::system(outputBinary_.c_str()));
     }
 };
