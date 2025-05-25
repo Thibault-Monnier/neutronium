@@ -12,9 +12,7 @@
 
 std::unique_ptr<AST::Program> Parser::parse() {
     auto program = parse_program();
-
-    AST::log_ast(*program);
-
+    std::cout << "\033[1;32mParsing completed successfully.\033[0m\n";
     return program;
 }
 
@@ -258,7 +256,6 @@ std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLIN
     auto condition = parse_expression();
     consume(TokenKind::COLON);
     auto body = parse_block_statement();
-    std::cout << "Parsed while statement with condition: " << '\n';
     return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
 }
 

@@ -22,7 +22,6 @@ std::stringstream Generator::generate() {
         generate_function_declaration(*funcDecl);
     }
 
-    std::cout << output_.str();
     std::cout << "\033[1;32mGeneration completed successfully.\033[0m\n";
 
     return std::move(output_);

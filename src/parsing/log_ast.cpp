@@ -189,15 +189,15 @@ void log_ast(const Program& programNode) {
         std::cout << newPrefix << "├── Identifier: " << funcDecl.identifier_->name_ << "\n";
 
         std::cout << newPrefix << "├── Parameters\n";
-        for (size_t i = 0; i < funcDecl.parameters_.size(); ++i) {
-            const auto& param = funcDecl.parameters_[i];
+        for (size_t j = 0; j < funcDecl.parameters_.size(); ++j) {
+            const auto& param = funcDecl.parameters_[j];
 
             const std::string paramPrefix = next_prefix(newPrefix, false);
-            const std::string paramBranch = i == funcDecl.parameters_.size() - 1 ? "└── " : "├── ";
-            std::cout << paramPrefix << paramBranch << "Parameter" << i + 1 << "\n";
+            const std::string paramBranch = j == funcDecl.parameters_.size() - 1 ? "└── " : "├── ";
+            std::cout << paramPrefix << paramBranch << "Parameter" << j + 1 << "\n";
 
             const std::string paramDetailsPrefix =
-                next_prefix(paramPrefix, i == funcDecl.parameters_.size() - 1);
+                next_prefix(paramPrefix, j == funcDecl.parameters_.size() - 1);
             std::cout << paramDetailsPrefix << "├── Identifier: " << param->identifier_->name_
                       << "\n";
             std::cout << paramDetailsPrefix << "├── Type: " << param->type_.to_string() << "\n";

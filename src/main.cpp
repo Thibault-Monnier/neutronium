@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "cli.hpp"
 #include "generation/generator.hpp"
 #include "lexing/lexer.hpp"
 #include "lexing/token.hpp"
@@ -15,19 +16,12 @@
 #include "utils/log.hpp"
 
 int main(const int argc, char *argv[]) {
-    if (argc != 2) {
-        const std::string errorMessage = "Expected 1 argument, got " + std::to_string(argc - 1);
-        print_error(errorMessage);
+    CompilerOptions opts = parse_cli(argc, argv);
 
-        const std::string hintMessage = std::format("Usage: {} <filename>", argv[0]);
-        print_hint(hintMessage);
-
-        exit(EXIT_FAILURE);
-    }
-
-    std::ifstream fileStreamIn(argv[1]);
+    std::ifstream fileStreamIn(opts.sourceFilename_);
     if (!fileStreamIn.is_open()) {
-        const std::string errorMessage = std::format("Could not open file '{}'", argv[1]);
+        const std::string errorMessage =
+            std::format("Could not open file '{}'", opts.sourceFilename_);
         print_error(errorMessage);
         exit(EXIT_FAILURE);
     }
@@ -36,22 +30,26 @@ int main(const int argc, char *argv[]) {
     fileStreamIn.close();
 
     const std::string fileContents = fileContentsStream.str();
-    std::cout << fileContents << '\n';
+    if (opts.logCode_) std::cout << fileContents << '\n';
 
     auto lexer = Lexer(fileContents);
     const std::vector<Token> tokens = lexer.tokenize();
-    for (const auto &token : tokens) {
-        std::cout << token_kind_to_string(token.kind()) << ": `" << token.lexeme() << "`\n";
+    if (opts.logTokens_) {
+        for (const auto &token : tokens) {
+            std::cout << token_kind_to_string(token.kind()) << ": `" << token.lexeme() << "`\n";
+        }
     }
 
     auto parser = Parser(tokens);
     const auto ast = parser.parse();
+    if (opts.logAst_) AST::log_ast(*ast);
 
     auto semanticAnalyser = SemanticAnalyser(*ast);
     semanticAnalyser.analyse();
 
     auto generator = Generator(*ast);
     const auto assemblyCode = generator.generate();
+    if (opts.logAssembly_) std::cout << assemblyCode.str();
 
     auto runOrDie = [](const char *cmd) {
         int rc = std::system(cmd);
