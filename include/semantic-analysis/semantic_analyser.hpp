@@ -22,7 +22,7 @@ class SemanticAnalyser {
     int loopDepth_ = 0;
 
     std::string currentFunctionName_;
-    Type currentFunctionReturnType_ = RawType::ANY;
+    Type currentFunctionReturnType_ = RawType::VOID;
 
     [[noreturn]] static void abort(const std::string& errorMessage,
                                    const std::string& hintMessage = "");
@@ -66,7 +66,10 @@ class SemanticAnalyser {
     void analyse_exit(const AST::ExitStatement& exitStmt);
     void analyse_statement(const AST::Statement& stmt);
 
-    // ── Global declarations analysis ───────────────────────────────────────────
+    // ── Function analysis ──────────────────────────────────────────────────────
+    bool verify_statement_returns(const AST::Statement& stmt);
     void analyse_function_declaration(const AST::FunctionDeclaration& funcDecl);
+
+    // ── Constant analysis ───────────────────────────────────────────
     void analyse_constant_declaration(const AST::ConstantDeclaration& declaration);
 };

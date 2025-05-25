@@ -62,7 +62,9 @@ TEST_F(NeutroniumTester, MainFunctionErrors) {
                 error2.contains("parameter"));
 
     const std::string code3 = R"(
-        fn main() -> int: {}
+        fn main() -> int: {
+            return 1;
+        }
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
@@ -464,6 +466,38 @@ TEST_F(NeutroniumTester, FunctionReturnTypeMismatch) {
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("Type mismatch") && error3.contains("y") &&
                 error3.contains("type") && error3.contains("bool") && error3.contains("int"));
+}
+
+TEST_F(NeutroniumTester, FunctionDoesNotAlwaysReturn) {
+    const std::string code = R"(
+        fn x() -> bool: {
+            let a = 1;
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Function") && error.contains("x") && error.contains("return") &&
+                error.contains("always") && error.contains("bool"));
+
+    const std::string code2 = R"(
+        fn x() -> int: {
+            if true: {
+                return 2;
+            } elif false: {
+                return 3;
+            } else: {
+                let a = 1;  # no return here
+            }
+
+            while false: {
+                return 4;
+            }
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("Function") && error2.contains("x") && error2.contains("return") &&
+                error2.contains("always") && error2.contains("int"));
 }
 
 TEST_F(NeutroniumTester, AssignmentToImmutableFunctionParamaterFails) {

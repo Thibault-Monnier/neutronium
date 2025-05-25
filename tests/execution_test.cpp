@@ -186,6 +186,7 @@ TEST_F(NeutroniumTester, FunctionReturnValues) {
                 }
                 i = i + 1;
             }
+            exit 1; # unreachable
         }
 
         fn main(): {

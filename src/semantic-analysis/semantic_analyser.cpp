@@ -377,6 +377,32 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
     }
 }
 
+bool SemanticAnalyser::verify_statement_returns(  // NOLINT(*-no-recursion)
+    const AST::Statement& stmt) {
+    const AST::NodeKind kind = stmt.kind_;
+
+    if (kind == AST::NodeKind::IF_STATEMENT) {
+        const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
+        if (!ifStmt.elseClause_) return false;
+
+        const bool body = verify_statement_returns(*ifStmt.body_);
+        const bool elseBody = verify_statement_returns(*ifStmt.elseClause_);
+        return body && elseBody;
+
+    } else if (kind == AST::NodeKind::BLOCK_STATEMENT) {
+        const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
+        for (const auto& innerStmt : blockStmt.body_) {
+            if (verify_statement_returns(*innerStmt)) return true;
+        }
+
+    } else if (kind == AST::NodeKind::RETURN_STATEMENT || kind == AST::NodeKind::EXIT_STATEMENT ||
+               kind == AST::NodeKind::BREAK_STATEMENT) {
+        return true;
+    }
+
+    return false;
+}
+
 void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
     const AST::FunctionDeclaration& funcDecl) {
     enter_scope();
@@ -392,6 +418,15 @@ void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
                                 funcDecl);
 
     analyse_statement(*funcDecl.body_);
+
+    const bool allPathsReturn = verify_statement_returns(*funcDecl.body_);
+    if (!allPathsReturn && funcDecl.returnType_.raw() != RawType::VOID) {
+        abort(
+            std::format("Function `{}` must return a value of type {}, but does not always return",
+                        currentFunctionName_, funcDecl.returnType_.to_string()));
+    }
+
+    currentFunctionName_.clear();
     exit_scope();
 }
 
