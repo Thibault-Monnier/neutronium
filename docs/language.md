@@ -83,7 +83,7 @@ argument-list ::= [ expression { ',' expression } ]
 
 unary-op ::= '-' | '+' | '!'
 
-identifier ::= letter { letter | digit }
+identifier ::= letter { letter | digit | '_' }
 
 literal ::= integer-literal | boolean-literal
 

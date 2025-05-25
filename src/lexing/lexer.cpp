@@ -99,7 +99,7 @@ std::vector<Token> Lexer::tokenize() {
         }
 
         if (std::isalpha(c)) {
-            read_to_buffer_while(isalnum);
+            read_to_buffer_while([](char ch) { return std::isalnum(ch) || ch == '_'; });
             if (auto keywordKind = get_keyword_kind()) {
                 tokens_.emplace_back(*keywordKind, buffer_);
             } else {

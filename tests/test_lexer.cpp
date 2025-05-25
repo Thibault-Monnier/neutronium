@@ -26,7 +26,7 @@ INSTANTIATE_TEST_SUITE_P(AllTokens, LexerTokenKindTest,
         LexCase{"let mut x = 1;",
                 {TokenKind::LET, TokenKind::MUT, TokenKind::IDENTIFIER,
                  TokenKind::EQUAL, TokenKind::NUMBER_LITERAL, TokenKind::SEMICOLON, TokenKind::EOF_}},
-        LexCase{"# comment\n42", {TokenKind::NUMBER_LITERAL, TokenKind::EOF_}}
+        LexCase{"# comment @\n42", {TokenKind::NUMBER_LITERAL, TokenKind::EOF_}}
     )
 );
 
@@ -53,7 +53,7 @@ INSTANTIATE_TEST_SUITE_P(AdditionalTokens, LexerTokenKindTest,
 // ─────────────────────────────────────────────────────────────
 INSTANTIATE_TEST_SUITE_P(Expressions, LexerTokenKindTest,
     ::testing::Values(
-        LexCase{"foo()", {TokenKind::IDENTIFIER, TokenKind::LEFT_PAREN, TokenKind::RIGHT_PAREN, TokenKind::EOF_}},
+        LexCase{"foo_()", {TokenKind::IDENTIFIER, TokenKind::LEFT_PAREN, TokenKind::RIGHT_PAREN, TokenKind::EOF_}},
         LexCase{"(42)", {TokenKind::LEFT_PAREN, TokenKind::NUMBER_LITERAL, TokenKind::RIGHT_PAREN, TokenKind::EOF_}},
         LexCase{"!true", {TokenKind::BANG, TokenKind::TRUE, TokenKind::EOF_}},
         LexCase{"+1,", {TokenKind::PLUS, TokenKind::NUMBER_LITERAL, TokenKind::COMMA, TokenKind::EOF_}},
@@ -126,7 +126,7 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
     ::testing::Values(
         LexCase{
             "true false int bool let mut if elif else while fn exit "
-            "+ - * / = == != < <= > >= ( ) { } : ; , 0 foo1Bar2",
+            "+ - * / = == != < <= > >= ( ) { } : ; , 0 foo_1Bar2_",
             {
                 TokenKind::TRUE, TokenKind::FALSE, TokenKind::INT, TokenKind::BOOL,
                 TokenKind::LET, TokenKind::MUT, TokenKind::IF, TokenKind::ELIF,
@@ -149,7 +149,7 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
 // Unexpected token (invalid input causes exit)
 // ─────────────────────────────────────────────────────────────
 TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
-    const std::vector<std::string> badInputs = {"@", "$", "~", "let x = 1 + @`", "x$"};
+    const std::vector<std::string> badInputs = {"@", "$", "~", "let x = 1 + @`", "x$", "let _invalid_identifier = 42;"};
 
     for (const auto& input : badInputs) {
         EXPECT_EXIT({

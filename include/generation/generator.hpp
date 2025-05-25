@@ -34,6 +34,7 @@ class Generator {
 
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
     void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit);
+    std::string function_name_with_prefix(const std::string& name) const;
     void generate_function_call(const AST::FunctionCall& funcCall);
     void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr);
     void evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr);

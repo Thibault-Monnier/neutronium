@@ -14,7 +14,7 @@ std::stringstream Generator::generate() {
     output_ << "_start:\n";
     output_ << "    push rbp\n";
     output_ << "    mov rbp, rsp\n\n";
-    output_ << "    call main\n";
+    output_ << "    call " << function_name_with_prefix("main") << "\n";
 
     generate_exit("0");
 
@@ -60,6 +60,7 @@ int Generator::get_variable_stack_offset(const std::string& name) const {
 }
 
 void Generator::insert_variable_stack_offset(const std::string& name) {
+    variablesStackOffset_.erase(name);
     variablesStackOffset_.emplace(name, currentStackOffset_);
     currentStackOffset_ += 8;
 }
@@ -81,6 +82,10 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
     output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
 }
 
+std::string Generator::function_name_with_prefix(const std::string& name) const {
+    return "func_" + name;  // Prefix with "fn_" to avoid conflicts with NASM keywords
+}
+
 void Generator::generate_function_call(  // NOLINT(*-no-recursion)
     const AST::FunctionCall& funcCall) {
     for (const auto& argument : funcCall.arguments_) {
@@ -88,7 +93,7 @@ void Generator::generate_function_call(  // NOLINT(*-no-recursion)
         output_ << "    push rax\n";
     }
 
-    output_ << "    call " << funcCall.identifier_->name_ << "\n";
+    output_ << "    call " << function_name_with_prefix(funcCall.identifier_->name_) << "\n";
 
     // Clean up the stack after the function call
     for (int i = 0; i < funcCall.arguments_.size(); ++i) {
@@ -319,7 +324,8 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
 
 void Generator::generate_function_declaration(const AST::FunctionDeclaration& funcDecl) {
     output_ << "\n";
-    output_ << funcDecl.identifier_->name_ << ":\n";
+    output_ << function_name_with_prefix(funcDecl.identifier_->name_)
+            << ":\n";  // Prefix with "fn_" to avoid conflicts with NASM keywords
 
     currentStackOffset_ = INITIAL_STACK_OFFSET;
 
