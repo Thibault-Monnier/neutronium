@@ -34,16 +34,13 @@ class SemanticAnalyser {
 
     // ── Symbol declaration helpers ──────────────────────────────────────────────
     SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable, Type type,
-                               bool isScoped, const AST::Node& declarationNode,
-                               std::vector<SymbolInfo> parameters);
+                               bool isScoped, std::vector<SymbolInfo> parameters);
 
-    SymbolInfo& handle_constant_declaration(const std::string& name, Type type,
-                                            const AST::Node& declarationNode);
-    SymbolInfo& handle_function_declaration(const std::string& name, Type returnType,
-                                            const std::vector<SymbolInfo>& parameterSymbols,
-                                            const AST::Node& declarationNode);
-    SymbolInfo& handle_variable_declaration(const std::string& name, bool isMutable, Type type,
-                                            const AST::Node& declarationNode);
+    SymbolInfo& handle_constant_declaration(const std::string& name, Type type);
+    SymbolInfo& handle_function_declaration(
+        const std::string& name, Type returnType,
+        const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
+    SymbolInfo& handle_variable_declaration(const std::string& name, bool isMutable, Type type);
 
     // ── Expression utilities ───────────────────────────────────────────────────
     Type get_function_call_type(const AST::FunctionCall& funcCall);
@@ -67,6 +64,7 @@ class SemanticAnalyser {
 
     // ── Function analysis ──────────────────────────────────────────────────────
     bool verify_statement_returns(const AST::Statement& stmt);
+    void analyse_external_function_declaration(const AST::ExternalFunctionDeclaration& funcDecl);
     void analyse_function_definition(const AST::FunctionDefinition& funcDef);
 
     // ── Constant analysis ───────────────────────────────────────────

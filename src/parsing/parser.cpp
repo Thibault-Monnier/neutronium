@@ -255,21 +255,6 @@ std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLIN
     return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
 }
 
-std::unique_ptr<AST::VariableDefinition> Parser::parse_function_parameter() {
-    bool isMutable = false;
-    if (peek().kind() == TokenKind::MUT) {
-        consume(TokenKind::MUT);
-        isMutable = true;
-    }
-
-    auto identifier = parse_identifier();
-
-    consume(TokenKind::COLON);
-    const Type type = parse_type_specifier();
-
-    return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable);
-}
-
 std::unique_ptr<AST::BreakStatement> Parser::parse_break_statement() {
     consume(TokenKind::BREAK);
     consume(TokenKind::SEMICOLON);
@@ -321,6 +306,22 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
     if (tokenKind == TokenKind::LEFT_BRACE) return parse_block_statement();
     return parse_expression_statement();
 }
+
+std::unique_ptr<AST::VariableDefinition> Parser::parse_function_parameter() {
+    bool isMutable = false;
+    if (peek().kind() == TokenKind::MUT) {
+        consume(TokenKind::MUT);
+        isMutable = true;
+    }
+
+    auto identifier = parse_identifier();
+
+    consume(TokenKind::COLON);
+    const Type type = parse_type_specifier();
+
+    return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable);
+}
+
 
 ParsedFunctionSignature Parser::parse_function_signature() {
     auto identifier = parse_identifier();
@@ -391,13 +392,13 @@ std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
 std::unique_ptr<AST::Program> Parser::parse_program() {
     auto program = std::make_unique<AST::Program>();
 
-    while (peek().kind() == TokenKind::EXTERN) {
-        auto externFunction = parse_external_function_declaration();
-        program->append_extern_function(std::move(externFunction));
-    }
     while (peek().kind() == TokenKind::CONST) {
         auto constant = parse_constant_definition();
         program->append_constant(std::move(constant));
+    }
+    while (peek().kind() == TokenKind::EXTERN) {
+        auto externFunction = parse_external_function_declaration();
+        program->append_extern_function(std::move(externFunction));
     }
     while (peek().kind() != TokenKind::EOF_) {
         if (peek().kind() == TokenKind::FN) {

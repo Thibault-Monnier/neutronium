@@ -8,6 +8,13 @@
 #include "parsing/ast.hpp"
 
 std::stringstream Generator::generate() {
+    // Declare external functions
+    for (const auto& externalFuncDecl : program_.externalFunctions_) {
+        output_ << "extern " << function_name_with_prefix(externalFuncDecl->identifier_->name_) << "\n";
+    }
+
+    output_ << "\n";
+
     // Write the header
     output_ << "section .text\n";
     output_ << "global _start\n";

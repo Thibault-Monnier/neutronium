@@ -188,12 +188,12 @@ void log_ast(const Program& programNode) {
             }
         };
 
-    for (size_t i = 0; i < programNode.externFunctions_.size(); ++i) {
-        const bool isLast = i == programNode.externFunctions_.size() - 1 &&
+    for (size_t i = 0; i < programNode.externalFunctions_.size(); ++i) {
+        const bool isLast = i == programNode.externalFunctions_.size() - 1 &&
                             programNode.constants_.empty() && programNode.functions_.empty();
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
-        const auto& externFunc = as<ExternalFunctionDeclaration>(*programNode.externFunctions_[i]);
+        const auto& externFunc = as<ExternalFunctionDeclaration>(*programNode.externalFunctions_[i]);
 
         std::cout << prefix << branch << "ExternalFunctionDeclaration\n";
         functionSignature(*externFunc.identifier_, externFunc.parameters_, externFunc.returnType_,

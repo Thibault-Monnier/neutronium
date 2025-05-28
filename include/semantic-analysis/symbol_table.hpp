@@ -27,7 +27,6 @@ struct SymbolInfo {
     const SymbolKind kind_;
     const bool isMutable_;
     const Type type_;
-    const AST::Node* declarationNode_;
     const std::vector<SymbolInfo> parameters_;  // Only for functions
 };
 

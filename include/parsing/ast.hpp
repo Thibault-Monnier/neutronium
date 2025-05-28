@@ -261,12 +261,12 @@ struct Program final : Node {
     }
 
     void append_extern_function(std::unique_ptr<ExternalFunctionDeclaration> externFunction) {
-        externFunctions_.emplace_back(std::move(externFunction));
+        externalFunctions_.emplace_back(std::move(externFunction));
     }
 
     std::vector<std::unique_ptr<ConstantDefinition>> constants_;
+    std::vector<std::unique_ptr<ExternalFunctionDeclaration>> externalFunctions_;
     std::vector<std::unique_ptr<FunctionDefinition>> functions_;
-    std::vector<std::unique_ptr<ExternalFunctionDeclaration>> externFunctions_;
 };
 
 Operator token_kind_to_operator(TokenKind tokenKind);

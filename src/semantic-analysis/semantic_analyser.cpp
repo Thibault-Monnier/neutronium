@@ -12,6 +12,10 @@ void SemanticAnalyser::analyse() {
         analyse_constant_definition(*constDef);
     }
 
+    for (const auto& externalFuncDecl : ast_->externalFunctions_) {
+        analyse_external_function_declaration(*externalFuncDecl);
+    }
+
     for (const auto& funcDef : ast_->functions_) {
         analyse_function_definition(*funcDef);
     }
@@ -51,7 +55,7 @@ std::optional<const SymbolInfo*> SemanticAnalyser::get_symbol_info(const std::st
 
 SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const SymbolKind kind,
                                              const bool isMutable, const Type type,
-                                             const bool isScoped, const AST::Node& declarationNode,
+                                             const bool isScoped,
                                              std::vector<SymbolInfo> parameters) {
     if (get_symbol_info(name).has_value()) {
         abort(std::format("Redeclaration of symbol: `{}`", name));
@@ -61,7 +65,6 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const Symb
                     .kind_ = kind,
                     .isMutable_ = isMutable,
                     .type_ = type,
-                    .declarationNode_ = &declarationNode,
                     .parameters_ = std::move(parameters)};
 
     if (isScoped) {
@@ -76,22 +79,26 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const Symb
                                 std::to_string(static_cast<int>(kind)));
 }
 
-SymbolInfo& SemanticAnalyser::handle_constant_declaration(const std::string& name, const Type type,
-                                                          const AST::Node& declarationNode) {
-    return declare_symbol(name, SymbolKind::CONSTANT, false, type, false, declarationNode, {});
+SymbolInfo& SemanticAnalyser::handle_constant_declaration(const std::string& name,
+                                                          const Type type) {
+    return declare_symbol(name, SymbolKind::CONSTANT, false, type, false, {});
 }
 
 SymbolInfo& SemanticAnalyser::handle_function_declaration(
-    const std::string& name, const Type returnType, const std::vector<SymbolInfo>& parameterSymbols,
-    const AST::Node& declarationNode) {
-    return declare_symbol(name, SymbolKind::FUNCTION, false, returnType, false, declarationNode,
-                          parameterSymbols);
+    const std::string& name, const Type returnType,
+    const std::vector<std::unique_ptr<AST::VariableDefinition>>& params) {
+    std::vector<SymbolInfo> parameterSymbols;
+    for (const auto& param : params) {
+        parameterSymbols.emplace_back(handle_variable_declaration(param->identifier_->name_,
+                                                                  param->isMutable_, param->type_));
+    }
+
+    return declare_symbol(name, SymbolKind::FUNCTION, false, returnType, false, parameterSymbols);
 }
 
 SymbolInfo& SemanticAnalyser::handle_variable_declaration(const std::string& name,
-                                                          const bool isMutable, const Type type,
-                                                          const AST::Node& declarationNode) {
-    return declare_symbol(name, SymbolKind::VARIABLE, isMutable, type, true, declarationNode, {});
+                                                          const bool isMutable, const Type type) {
+    return declare_symbol(name, SymbolKind::VARIABLE, isMutable, type, true, {});
 }
 
 Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
@@ -107,25 +114,23 @@ Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
         abort(std::format("Attempted to call a non-function: `{}`", name));
     }
 
-    const auto& funcDecl =
-        static_cast<const AST::FunctionDefinition&>(*info.value()->declarationNode_);
+    const auto& params = info.value()->parameters_;
 
-    if (funcCall.arguments_.size() != funcDecl.parameters_.size()) {
+    if (funcCall.arguments_.size() != params.size()) {
         abort(
             std::format("Function `{}` called with incorrect number of arguments: expected {}, "
                         "got {}",
-                        name, funcDecl.parameters_.size(), funcCall.arguments_.size()));
+                        name, params.size(), funcCall.arguments_.size()));
     }
 
     for (std::size_t i = 0; i < funcCall.arguments_.size(); i++) {
         const Type argType = get_expression_type(*funcCall.arguments_[i]);
-        const Type paramType = funcDecl.parameters_[i]->type_;
+        const Type paramType = params[i].type_;
         if (!argType.matches(paramType)) {
             abort(
                 std::format("Function `{}` called with incorrect argument type for parameter `{}`: "
                             "expected {}, got {}",
-                            name, funcDecl.parameters_[i]->identifier_->name_,
-                            paramType.to_string(), argType.to_string()));
+                            name, params[i].name_, paramType.to_string(), argType.to_string()));
         }
     }
 
@@ -232,7 +237,8 @@ void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Typ
     }
 }
 
-void SemanticAnalyser::analyse_variable_declaration_assignment(const AST::VariableDefinition& declaration) {
+void SemanticAnalyser::analyse_variable_declaration_assignment(
+    const AST::VariableDefinition& declaration) {
     const std::string& name = declaration.identifier_->name_;
     const Type variableType = get_expression_type(*declaration.value_);
 
@@ -245,7 +251,7 @@ void SemanticAnalyser::analyse_variable_declaration_assignment(const AST::Variab
                           name, declaration.type_.to_string(), variableType.to_string()));
     }
 
-    handle_variable_declaration(name, declaration.isMutable_, variableType, declaration);
+    handle_variable_declaration(name, declaration.isMutable_, variableType);
 }
 
 void SemanticAnalyser::analyse_variable_assignment(const AST::VariableAssignment& assignment) {
@@ -398,19 +404,22 @@ bool SemanticAnalyser::verify_statement_returns(  // NOLINT(*-no-recursion)
     return false;
 }
 
+void SemanticAnalyser::analyse_external_function_declaration(
+    const AST::ExternalFunctionDeclaration& funcDecl) {
+    enter_scope();
+    handle_function_declaration(funcDecl.identifier_->name_, funcDecl.returnType_,
+                                funcDecl.parameters_);
+    exit_scope();
+}
+
 void SemanticAnalyser::analyse_function_definition(  // NOLINT(*-no-recursion)
     const AST::FunctionDefinition& funcDef) {
     enter_scope();
     currentFunctionName_ = funcDef.identifier_->name_;
     currentFunctionReturnType_ = funcDef.returnType_;
 
-    std::vector<SymbolInfo> parameterSymbols;
-    for (const auto& param : funcDef.parameters_) {
-        parameterSymbols.emplace_back(handle_variable_declaration(
-            param->identifier_->name_, param->isMutable_, param->type_, *param));
-    }
-    handle_function_declaration(funcDef.identifier_->name_, funcDef.returnType_, parameterSymbols,
-                                funcDef);
+    handle_function_declaration(funcDef.identifier_->name_, funcDef.returnType_,
+                                funcDef.parameters_);
 
     analyse_statement(*funcDef.body_);
 
@@ -439,5 +448,5 @@ void SemanticAnalyser::analyse_constant_definition(const AST::ConstantDefinition
                           name, declaration.type_.to_string(), constantType.to_string()));
     }
 
-    handle_constant_declaration(name, constantType, declaration);
+    handle_constant_declaration(name, constantType);
 }
