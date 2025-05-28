@@ -8,12 +8,12 @@
 #include "utils/log.hpp"
 
 void SemanticAnalyser::analyse() {
-    for (const auto& constDecl : ast_->constants_) {
-        analyse_constant_declaration(*constDecl);
+    for (const auto& constDef : ast_->constants_) {
+        analyse_constant_definition(*constDef);
     }
 
-    for (const auto& funcDecl : ast_->functions_) {
-        analyse_function_declaration(*funcDecl);
+    for (const auto& funcDef : ast_->functions_) {
+        analyse_function_definition(*funcDef);
     }
 
     const auto mainIt = functionsTable_.find("main");
@@ -108,7 +108,7 @@ Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
     }
 
     const auto& funcDecl =
-        static_cast<const AST::FunctionDeclaration&>(*info.value()->declarationNode_);
+        static_cast<const AST::FunctionDefinition&>(*info.value()->declarationNode_);
 
     if (funcCall.arguments_.size() != funcDecl.parameters_.size()) {
         abort(
@@ -232,7 +232,7 @@ void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Typ
     }
 }
 
-void SemanticAnalyser::analyse_variable_declaration(const AST::VariableDeclaration& declaration) {
+void SemanticAnalyser::analyse_variable_declaration_assignment(const AST::VariableDefinition& declaration) {
     const std::string& name = declaration.identifier_->name_;
     const Type variableType = get_expression_type(*declaration.value_);
 
@@ -310,9 +310,9 @@ void SemanticAnalyser::analyse_exit(const AST::ExitStatement& exitStmt) {
 
 void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
     switch (stmt.kind_) {
-        case AST::NodeKind::VARIABLE_DECLARATION: {
-            const auto& varDecl = static_cast<const AST::VariableDeclaration&>(stmt);
-            analyse_variable_declaration(varDecl);
+        case AST::NodeKind::VARIABLE_DEFINITION: {
+            const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
+            analyse_variable_declaration_assignment(varDecl);
             break;
         }
         case AST::NodeKind::VARIABLE_ASSIGNMENT: {
@@ -398,34 +398,34 @@ bool SemanticAnalyser::verify_statement_returns(  // NOLINT(*-no-recursion)
     return false;
 }
 
-void SemanticAnalyser::analyse_function_declaration(  // NOLINT(*-no-recursion)
-    const AST::FunctionDeclaration& funcDecl) {
+void SemanticAnalyser::analyse_function_definition(  // NOLINT(*-no-recursion)
+    const AST::FunctionDefinition& funcDef) {
     enter_scope();
-    currentFunctionName_ = funcDecl.identifier_->name_;
-    currentFunctionReturnType_ = funcDecl.returnType_;
+    currentFunctionName_ = funcDef.identifier_->name_;
+    currentFunctionReturnType_ = funcDef.returnType_;
 
     std::vector<SymbolInfo> parameterSymbols;
-    for (const auto& param : funcDecl.parameters_) {
+    for (const auto& param : funcDef.parameters_) {
         parameterSymbols.emplace_back(handle_variable_declaration(
             param->identifier_->name_, param->isMutable_, param->type_, *param));
     }
-    handle_function_declaration(funcDecl.identifier_->name_, funcDecl.returnType_, parameterSymbols,
-                                funcDecl);
+    handle_function_declaration(funcDef.identifier_->name_, funcDef.returnType_, parameterSymbols,
+                                funcDef);
 
-    analyse_statement(*funcDecl.body_);
+    analyse_statement(*funcDef.body_);
 
-    const bool allPathsReturn = verify_statement_returns(*funcDecl.body_);
-    if (!allPathsReturn && funcDecl.returnType_.raw() != RawType::VOID) {
+    const bool allPathsReturn = verify_statement_returns(*funcDef.body_);
+    if (!allPathsReturn && funcDef.returnType_.raw() != RawType::VOID) {
         abort(
             std::format("Function `{}` must return a value of type {}, but does not always return",
-                        currentFunctionName_, funcDecl.returnType_.to_string()));
+                        currentFunctionName_, funcDef.returnType_.to_string()));
     }
 
     currentFunctionName_.clear();
     exit_scope();
 }
 
-void SemanticAnalyser::analyse_constant_declaration(const AST::ConstantDeclaration& declaration) {
+void SemanticAnalyser::analyse_constant_definition(const AST::ConstantDefinition& declaration) {
     abort("Constants are not supported yet");
     const std::string& name = declaration.identifier_->name_;
 

@@ -187,7 +187,7 @@ std::unique_ptr<AST::VariableAssignment> Parser::parse_variable_assignment() {
     return std::make_unique<AST::VariableAssignment>(std::move(identifier), std::move(value));
 }
 
-std::unique_ptr<AST::VariableDeclaration> Parser::parse_variable_declaration() {
+std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
     consume(TokenKind::LET);
 
     bool isMutable = false;
@@ -208,7 +208,7 @@ std::unique_ptr<AST::VariableDeclaration> Parser::parse_variable_declaration() {
     auto value = parse_expression();
     consume(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::VariableDeclaration>(std::move(identifier), type, isMutable,
+    return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable,
                                                       std::move(value));
 }
 
@@ -255,7 +255,7 @@ std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLIN
     return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
 }
 
-std::unique_ptr<AST::VariableDeclaration> Parser::parse_function_parameter() {
+std::unique_ptr<AST::VariableDefinition> Parser::parse_function_parameter() {
     bool isMutable = false;
     if (peek().kind() == TokenKind::MUT) {
         consume(TokenKind::MUT);
@@ -267,7 +267,7 @@ std::unique_ptr<AST::VariableDeclaration> Parser::parse_function_parameter() {
     consume(TokenKind::COLON);
     const Type type = parse_type_specifier();
 
-    return std::make_unique<AST::VariableDeclaration>(std::move(identifier), type, isMutable);
+    return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable);
 }
 
 std::unique_ptr<AST::BreakStatement> Parser::parse_break_statement() {
@@ -309,7 +309,7 @@ std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLIN
 std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recursion)
     const TokenKind tokenKind = peek().kind();
 
-    if (tokenKind == TokenKind::LET) return parse_variable_declaration();
+    if (tokenKind == TokenKind::LET) return parse_variable_definition();
     if (tokenKind == TokenKind::IDENTIFIER && peek(1).kind() == TokenKind::EQUAL)
         return parse_variable_assignment();
     if (tokenKind == TokenKind::IF) return parse_if_statement();
@@ -322,13 +322,13 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
     return parse_expression_statement();
 }
 
-std::unique_ptr<AST::FunctionDeclaration>
-Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
+std::unique_ptr<AST::FunctionDefinition>
+Parser::parse_function_definition() {  // NOLINT(*-no-recursion)
     consume(TokenKind::FN);
     auto identifier = parse_identifier();
 
     consume(TokenKind::LEFT_PAREN);
-    std::vector<std::unique_ptr<AST::VariableDeclaration>> parameters;
+    std::vector<std::unique_ptr<AST::VariableDefinition>> parameters;
     while (peek().kind() != TokenKind::RIGHT_PAREN) {
         parameters.push_back(parse_function_parameter());
         if (peek().kind() == TokenKind::COMMA) {
@@ -345,11 +345,11 @@ Parser::parse_function_declaration() {  // NOLINT(*-no-recursion)
 
     consume(TokenKind::COLON);
     auto body = parse_block_statement();
-    return std::make_unique<AST::FunctionDeclaration>(std::move(identifier), std::move(parameters),
+    return std::make_unique<AST::FunctionDefinition>(std::move(identifier), std::move(parameters),
                                                       returnType, std::move(body));
 }
 
-std::unique_ptr<AST::ConstantDeclaration> Parser::parse_constant_declaration() {
+std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
     consume(TokenKind::CONST);
 
     auto identifier = parse_identifier();
@@ -364,7 +364,7 @@ std::unique_ptr<AST::ConstantDeclaration> Parser::parse_constant_declaration() {
     auto value = parse_expression();
     consume(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::ConstantDeclaration>(std::move(identifier), type,
+    return std::make_unique<AST::ConstantDefinition>(std::move(identifier), type,
                                                       std::move(value));
 }
 
@@ -373,22 +373,22 @@ std::unique_ptr<AST::Program> Parser::parse_program() {
 
     while (peek().kind() != TokenKind::FN) {
         if (peek().kind() == TokenKind::CONST) {
-            auto constant = parse_constant_declaration();
+            auto constant = parse_constant_definition();
             program->append_constant(std::move(constant));
         } else {
             const std::string errorMessage =
-                std::format("Invalid token at index {} -> expected constant declaration, got {}",
+                std::format("Invalid token at index {} -> expected constant definition, got {}",
                             currentIndex_, token_kind_to_string(peek().kind()));
             abort(errorMessage);
         }
     }
     while (peek().kind() != TokenKind::EOF_) {
         if (peek().kind() == TokenKind::FN) {
-            auto functionDeclaration = parse_function_declaration();
-            program->append_function(std::move(functionDeclaration));
+            auto functionDefinition = parse_function_definition();
+            program->append_function(std::move(functionDefinition));
         } else {
             const std::string errorMessage =
-                std::format("Invalid token at index {} -> expected function declaration, got {}",
+                std::format("Invalid token at index {} -> expected function definition, got {}",
                             currentIndex_, token_kind_to_string(peek().kind()));
             abort(errorMessage);
         }

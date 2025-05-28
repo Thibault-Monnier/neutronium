@@ -75,9 +75,9 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             log_expression(*assignment.value_, next_prefix(newPrefix, true), true);
             break;
         }
-        case NodeKind::VARIABLE_DECLARATION: {
-            const auto& varDecl = as<VariableDeclaration>(stmt);
-            std::cout << prefix << branch << "VariableDeclaration\n";
+        case NodeKind::VARIABLE_DEFINITION: {
+            const auto& varDecl = as<VariableDefinition>(stmt);
+            std::cout << prefix << branch << "VariableDefinition\n";
             std::cout << newPrefix << "├── Identifier: " << varDecl.identifier_->name_ << "\n";
             std::cout << newPrefix << "├── Type: " << varDecl.type_.to_string() << "\n";
             std::cout << newPrefix << "├── IsMutable: " << (varDecl.isMutable_ ? "true" : "false")
@@ -168,9 +168,9 @@ void log_ast(const Program& programNode) {
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
 
-        const auto& constant = as<ConstantDeclaration>(*programNode.constants_[i]);
+        const auto& constant = as<ConstantDefinition>(*programNode.constants_[i]);
 
-        std::cout << prefix << branch << "ConstantDeclaration\n";
+        std::cout << prefix << branch << "ConstantDefinition\n";
         std::cout << newPrefix << "├── Identifier: " << constant.identifier_->name_ << "\n";
         std::cout << newPrefix << "├── Type: " << constant.type_.to_string() << "\n";
         std::cout << newPrefix << "└── Value\n";
@@ -184,20 +184,20 @@ void log_ast(const Program& programNode) {
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
 
-        const auto& funcDecl = as<FunctionDeclaration>(*programNode.functions_[i]);
-        std::cout << prefix << branch << "FunctionDeclaration\n";
-        std::cout << newPrefix << "├── Identifier: " << funcDecl.identifier_->name_ << "\n";
+        const auto& funcDef = as<FunctionDefinition>(*programNode.functions_[i]);
+        std::cout << prefix << branch << "FunctionDefinition\n";
+        std::cout << newPrefix << "├── Identifier: " << funcDef.identifier_->name_ << "\n";
 
         std::cout << newPrefix << "├── Parameters\n";
-        for (size_t j = 0; j < funcDecl.parameters_.size(); ++j) {
-            const auto& param = funcDecl.parameters_[j];
+        for (size_t j = 0; j < funcDef.parameters_.size(); ++j) {
+            const auto& param = funcDef.parameters_[j];
 
             const std::string paramPrefix = next_prefix(newPrefix, false);
-            const std::string paramBranch = j == funcDecl.parameters_.size() - 1 ? "└── " : "├── ";
+            const std::string paramBranch = j == funcDef.parameters_.size() - 1 ? "└── " : "├── ";
             std::cout << paramPrefix << paramBranch << "Parameter" << j + 1 << "\n";
 
             const std::string paramDetailsPrefix =
-                next_prefix(paramPrefix, j == funcDecl.parameters_.size() - 1);
+                next_prefix(paramPrefix, j == funcDef.parameters_.size() - 1);
             std::cout << paramDetailsPrefix << "├── Identifier: " << param->identifier_->name_
                       << "\n";
             std::cout << paramDetailsPrefix << "├── Type: " << param->type_.to_string() << "\n";
@@ -205,7 +205,7 @@ void log_ast(const Program& programNode) {
                       << "└── IsMutable: " << (param->isMutable_ ? "true" : "false") << "\n";
         }
         std::cout << newPrefix << "└── Body\n";
-        log_statement(*funcDecl.body_, next_prefix(newPrefix, true), true);
+        log_statement(*funcDef.body_, next_prefix(newPrefix, true), true);
         if (!isLast) {
             std::cout << prefix << "│\n";
         }

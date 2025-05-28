@@ -55,7 +55,7 @@ class SemanticAnalyser {
                             const std::string& location);
 
     // ── Statement analysis ─────────────────────────────────────────────────────
-    void analyse_variable_declaration(const AST::VariableDeclaration& declaration);
+    void analyse_variable_declaration_assignment(const AST::VariableDefinition& declaration);
     void analyse_variable_assignment(const AST::VariableAssignment& assignment);
     void analyse_expression_statement(const AST::ExpressionStatement& exprStmt);
     void analyse_if_statement(const AST::IfStatement& ifStmt);
@@ -67,8 +67,8 @@ class SemanticAnalyser {
 
     // ── Function analysis ──────────────────────────────────────────────────────
     bool verify_statement_returns(const AST::Statement& stmt);
-    void analyse_function_declaration(const AST::FunctionDeclaration& funcDecl);
+    void analyse_function_definition(const AST::FunctionDefinition& funcDef);
 
     // ── Constant analysis ───────────────────────────────────────────
-    void analyse_constant_declaration(const AST::ConstantDeclaration& declaration);
+    void analyse_constant_definition(const AST::ConstantDefinition& declaration);
 };

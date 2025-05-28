@@ -23,7 +23,7 @@ TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("token") && error3.contains("IDENTIFIER") &&
-                error3.contains("function declaration"));
+                error3.contains("function definition"));
 
     const std::string code4 = R"(
         {}

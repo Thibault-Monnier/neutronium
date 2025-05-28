@@ -22,6 +22,7 @@ Clone this repository and set it up by running:
 git clone https://github.com/Thibault-Monnier/neutronium.git
 cd neutronium
 chmod +x cmake-build.sh
+chmod +x compile.sh
 chmod +x run.sh
 chmod +x test.sh
 ```
