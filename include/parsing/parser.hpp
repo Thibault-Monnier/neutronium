@@ -9,6 +9,12 @@
 #include "lexing/token.hpp"
 #include "parsing/ast.hpp"
 
+struct ParsedFunctionSignature {
+    std::unique_ptr<AST::Identifier> identifier_;
+    std::vector<std::unique_ptr<AST::VariableDefinition>> parameters_;
+    Type returnType_;
+};
+
 class Parser {
    public:
     explicit Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
@@ -49,6 +55,8 @@ class Parser {
     std::unique_ptr<AST::ExitStatement> parse_exit_statement();
     std::unique_ptr<AST::BlockStatement> parse_block_statement();
     std::unique_ptr<AST::Statement> parse_statement();
+    ParsedFunctionSignature parse_function_signature();
+    std::unique_ptr<AST::ExternalFunctionDeclaration> parse_external_function_declaration();
 
     std::unique_ptr<AST::FunctionDefinition> parse_function_definition();
     std::unique_ptr<AST::ConstantDefinition> parse_constant_definition();

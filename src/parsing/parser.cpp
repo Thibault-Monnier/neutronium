@@ -209,7 +209,7 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
     consume(TokenKind::SEMICOLON);
 
     return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable,
-                                                      std::move(value));
+                                                     std::move(value));
 }
 
 std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no-recursion)
@@ -322,9 +322,7 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
     return parse_expression_statement();
 }
 
-std::unique_ptr<AST::FunctionDefinition>
-Parser::parse_function_definition() {  // NOLINT(*-no-recursion)
-    consume(TokenKind::FN);
+ParsedFunctionSignature Parser::parse_function_signature() {
     auto identifier = parse_identifier();
 
     consume(TokenKind::LEFT_PAREN);
@@ -343,10 +341,33 @@ Parser::parse_function_definition() {  // NOLINT(*-no-recursion)
         returnType = parse_type_specifier();
     }
 
+    return {.identifier_ = std::move(identifier),
+            .parameters_ = std::move(parameters),
+            .returnType_ = returnType};
+}
+
+std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_function_declaration() {
+    consume(TokenKind::EXTERN);
+    consume(TokenKind::FN);
+
+    ParsedFunctionSignature signature = parse_function_signature();
+
+    consume(TokenKind::SEMICOLON);
+    return std::make_unique<AST::ExternalFunctionDeclaration>(
+        std::move(signature.identifier_), std::move(signature.parameters_), signature.returnType_);
+}
+
+std::unique_ptr<AST::FunctionDefinition>
+Parser::parse_function_definition() {  // NOLINT(*-no-recursion)
+    consume(TokenKind::FN);
+
+    ParsedFunctionSignature signature = parse_function_signature();
+
     consume(TokenKind::COLON);
     auto body = parse_block_statement();
-    return std::make_unique<AST::FunctionDefinition>(std::move(identifier), std::move(parameters),
-                                                      returnType, std::move(body));
+    return std::make_unique<AST::FunctionDefinition>(std::move(signature.identifier_),
+                                                     std::move(signature.parameters_),
+                                                     signature.returnType_, std::move(body));
 }
 
 std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
@@ -364,23 +385,19 @@ std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
     auto value = parse_expression();
     consume(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::ConstantDefinition>(std::move(identifier), type,
-                                                      std::move(value));
+    return std::make_unique<AST::ConstantDefinition>(std::move(identifier), type, std::move(value));
 }
 
 std::unique_ptr<AST::Program> Parser::parse_program() {
     auto program = std::make_unique<AST::Program>();
 
-    while (peek().kind() != TokenKind::FN) {
-        if (peek().kind() == TokenKind::CONST) {
-            auto constant = parse_constant_definition();
-            program->append_constant(std::move(constant));
-        } else {
-            const std::string errorMessage =
-                std::format("Invalid token at index {} -> expected constant definition, got {}",
-                            currentIndex_, token_kind_to_string(peek().kind()));
-            abort(errorMessage);
-        }
+    while (peek().kind() == TokenKind::EXTERN) {
+        auto externFunction = parse_external_function_declaration();
+        program->append_extern_function(std::move(externFunction));
+    }
+    while (peek().kind() == TokenKind::CONST) {
+        auto constant = parse_constant_definition();
+        program->append_constant(std::move(constant));
     }
     while (peek().kind() != TokenKind::EOF_) {
         if (peek().kind() == TokenKind::FN) {

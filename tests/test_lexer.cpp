@@ -125,12 +125,13 @@ INSTANTIATE_TEST_SUITE_P(EdgeCases, LexerTokenKindTest,
 INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
     ::testing::Values(
         LexCase{
-            "true false int bool let mut if elif else while fn exit "
+            "true false int bool let mut if elif else continue break while fn extern return exit "
             "+ - * / = == != < <= > >= ( ) { } : ; , 0 foo_1Bar2_",
             {
                 TokenKind::TRUE, TokenKind::FALSE, TokenKind::INT, TokenKind::BOOL,
-                TokenKind::LET, TokenKind::MUT, TokenKind::IF, TokenKind::ELIF,
-                TokenKind::ELSE, TokenKind::WHILE, TokenKind::FN, TokenKind::EXIT,
+                TokenKind::LET, TokenKind::MUT, TokenKind::IF, TokenKind::ELIF, TokenKind::ELSE,
+                TokenKind::CONTINUE, TokenKind::BREAK, TokenKind::WHILE, TokenKind::FN,
+                TokenKind::EXTERN, TokenKind::RETURN, TokenKind::EXIT,
                 TokenKind::PLUS, TokenKind::MINUS, TokenKind::STAR, TokenKind::SLASH,
                 TokenKind::EQUAL, TokenKind::EQUAL_EQUAL, TokenKind::BANG_EQUAL,
                 TokenKind::LESS_THAN, TokenKind::LESS_THAN_EQUAL,

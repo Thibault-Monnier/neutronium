@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "parsing/ast.hpp"
+#include "parsing/parser.hpp"
 
 namespace AST {
 
@@ -162,6 +163,47 @@ void log_ast(const Program& programNode) {
     std::cout << "Program\n";
 
     const std::string prefix = "    ";
+
+    const auto functionSignature =
+        [](const AST::Identifier& identifier,
+           const std::vector<std::unique_ptr<AST::VariableDefinition>>& params,
+           const Type& returnType, const std::string& newPrefix, bool hasBody) {
+            std::cout << newPrefix << "├── Identifier: " << identifier.name_ << "\n";
+            std::cout << newPrefix << "├── ReturnType: " << returnType.to_string() << "\n";
+
+            const std::string parametersBranch = hasBody ? "├── " : "└── ";
+            std::cout << newPrefix << parametersBranch << "Parameters\n";
+            for (size_t j = 0; j < params.size(); ++j) {
+                const auto& param = params[j];
+                const std::string paramPrefix =
+                    next_prefix(newPrefix, (j == params.size() - 1) && !hasBody);
+                const std::string paramBranch = j == params.size() - 1 ? "└── " : "├── ";
+                std::cout << paramPrefix << paramBranch << "Parameter" << j + 1 << "\n";
+                std::cout << next_prefix(paramPrefix, j == params.size() - 1)
+                          << "├── Identifier: " << param->identifier_->name_ << "\n";
+                std::cout << next_prefix(paramPrefix, j == params.size() - 1)
+                          << "├── Type: " << param->type_.to_string() << "\n";
+                std::cout << next_prefix(paramPrefix, j == params.size() - 1)
+                          << "└── IsMutable: " << (param->isMutable_ ? "true" : "false") << "\n";
+            }
+        };
+
+    for (size_t i = 0; i < programNode.externFunctions_.size(); ++i) {
+        const bool isLast = i == programNode.externFunctions_.size() - 1 &&
+                            programNode.constants_.empty() && programNode.functions_.empty();
+        const std::string branch = isLast ? "└── " : "├── ";
+        const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
+        const auto& externFunc = as<ExternalFunctionDeclaration>(*programNode.externFunctions_[i]);
+
+        std::cout << prefix << branch << "ExternalFunctionDeclaration\n";
+        functionSignature(*externFunc.identifier_, externFunc.parameters_, externFunc.returnType_,
+                          newPrefix, false);
+
+        if (!isLast) {
+            std::cout << prefix << "│\n";
+        }
+    }
+
     for (size_t i = 0; i < programNode.constants_.size(); ++i) {
         const bool isLast =
             i == programNode.constants_.size() - 1 && programNode.functions_.empty();
@@ -179,31 +221,17 @@ void log_ast(const Program& programNode) {
             std::cout << prefix << "│\n";
         }
     }
+
     for (size_t i = 0; i < programNode.functions_.size(); ++i) {
         const bool isLast = i == programNode.functions_.size() - 1;
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
-
         const auto& funcDef = as<FunctionDefinition>(*programNode.functions_[i]);
+
         std::cout << prefix << branch << "FunctionDefinition\n";
-        std::cout << newPrefix << "├── Identifier: " << funcDef.identifier_->name_ << "\n";
+        functionSignature(*funcDef.identifier_, funcDef.parameters_, funcDef.returnType_, newPrefix,
+                          true);
 
-        std::cout << newPrefix << "├── Parameters\n";
-        for (size_t j = 0; j < funcDef.parameters_.size(); ++j) {
-            const auto& param = funcDef.parameters_[j];
-
-            const std::string paramPrefix = next_prefix(newPrefix, false);
-            const std::string paramBranch = j == funcDef.parameters_.size() - 1 ? "└── " : "├── ";
-            std::cout << paramPrefix << paramBranch << "Parameter" << j + 1 << "\n";
-
-            const std::string paramDetailsPrefix =
-                next_prefix(paramPrefix, j == funcDef.parameters_.size() - 1);
-            std::cout << paramDetailsPrefix << "├── Identifier: " << param->identifier_->name_
-                      << "\n";
-            std::cout << paramDetailsPrefix << "├── Type: " << param->type_.to_string() << "\n";
-            std::cout << paramDetailsPrefix
-                      << "└── IsMutable: " << (param->isMutable_ ? "true" : "false") << "\n";
-        }
         std::cout << newPrefix << "└── Body\n";
         log_statement(*funcDef.body_, next_prefix(newPrefix, true), true);
         if (!isLast) {
