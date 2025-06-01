@@ -144,30 +144,35 @@ TEST_F(NeutroniumTester, TypeSpecifiers) {
     EXPECT_EQ(run(code), 42);
 }
 
-TEST_F(NeutroniumTester, StdPrintc) {
+TEST_F(NeutroniumTester, StandardLibrary) {
     const std::string code = R"(
-        extern fn printc(c: int);
+        extern fn print_c(char: int);
+        extern fn print_num(num: int);
 
         fn main(): {
-            printc(72);
-            printc(101);
-            printc(108);
-            printc(108);
-            printc(111);
-            printc(44);
-            printc(32);
-            printc(87);
-            printc(111);
-            printc(114);
-            printc(108);
-            printc(100);
-            printc(33);
-            printc(10);
+            print_c(72);
+            print_c(101);
+            print_c(108);
+            print_c(108);
+            print_c(111);
+            print_c(44);
+            print_c(32);
+            print_c(87);
+            print_c(111);
+            print_c(114);
+            print_c(108);
+            print_c(100);
+            print_c(33);
+            print_c(10);
+
+            print_num(42);
+            print_c(10);
+            print_c(10);
         }
     )";
     const auto result = run_with_output(code);
     EXPECT_EQ(result.exit, 0);
-    EXPECT_EQ(result.output, "Hello, World!\n");
+    EXPECT_EQ(result.output, "Hello, World!\n42\n\n");
 }
 
 TEST_F(NeutroniumTester, FunctionReturnValues) {
