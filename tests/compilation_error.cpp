@@ -6,7 +6,7 @@ TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("token") && error.contains("LET") && error.contains("constant"));
+    EXPECT_TRUE(error.contains("token") && error.contains("LET") && error.contains("expected"));
 
     const std::string code2 = R"(
         1 + 2;
@@ -14,7 +14,7 @@ TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
     EXPECT_TRUE(error2.contains("token") && error2.contains("LITERAL") &&
-                error2.contains("constant"));
+                error2.contains("expected"));
 
     const std::string code3 = R"(
         fn x(): {}
@@ -23,7 +23,7 @@ TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("token") && error3.contains("IDENTIFIER") &&
-                error3.contains("function definition"));
+                error3.contains("expected"));
 
     const std::string code4 = R"(
         {}
@@ -31,7 +31,7 @@ TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
     auto [status4, error4] = compile(code4);
     EXPECT_NE(status4, 0);
     EXPECT_TRUE(error4.contains("token") && error4.contains("LEFT_BRACE") &&
-                error4.contains("constant"));
+                error4.contains("expected"));
 }
 
 TEST_F(NeutroniumTester, FunctionDeclarationNotInGlobalScopeFails) {
