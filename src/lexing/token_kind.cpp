@@ -80,6 +80,8 @@ std::string token_kind_to_string(const TokenKind kind) {
             return "CONTINUE";
         case TokenKind::FN:
             return "FN";
+        case TokenKind::EXTERN:
+            return "EXTERN";
         case TokenKind::RETURN:
             return "RETURN";
         case TokenKind::EXIT:

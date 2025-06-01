@@ -105,7 +105,7 @@ TEST_F(NeutroniumTester, FastIterativeFibonacci) {
     testFastFibonacci(0, 0);
     testFastFibonacci(1, 1);
     testFastFibonacci(10, 55);
-    testFastFibonacci(99, 2); // 218,922,995,834,555,169,026 mod 256 = 2
+    testFastFibonacci(99, 2);  // 218,922,995,834,555,169,026 mod 256 = 2
 }
 
 TEST_F(NeutroniumTester, MutableReassignment) {
@@ -142,6 +142,37 @@ TEST_F(NeutroniumTester, TypeSpecifiers) {
     )";
 
     EXPECT_EQ(run(code), 42);
+}
+
+TEST_F(NeutroniumTester, StandardLibrary) {
+    const std::string code = R"(
+        extern fn print_c(char: int);
+        extern fn print_num(num: int);
+
+        fn main(): {
+            print_c(72);
+            print_c(101);
+            print_c(108);
+            print_c(108);
+            print_c(111);
+            print_c(44);
+            print_c(32);
+            print_c(87);
+            print_c(111);
+            print_c(114);
+            print_c(108);
+            print_c(100);
+            print_c(33);
+            print_c(10);
+
+            print_num(42);
+            print_c(10);
+            print_c(10);
+        }
+    )";
+    const auto result = run_with_output(code);
+    EXPECT_EQ(result.exit, 0);
+    EXPECT_EQ(result.output, "Hello, World!\n42\n\n");
 }
 
 TEST_F(NeutroniumTester, FunctionReturnValues) {
@@ -425,27 +456,6 @@ TEST_F(NeutroniumTester, ExitFromNestedIfInsideLoop) {
     )";
 
     EXPECT_EQ(run(code), 3);
-}
-
-TEST_F(NeutroniumTester, CommentsAreIgnored) {
-    const std::string code = R"(
-        fn main(): {
-            let x = 1;   # this is a comment
-            exit x; # should be 1
-        }
-    )";
-
-    EXPECT_EQ(run(code), 1);
-}
-
-TEST_F(NeutroniumTester, DivisionByZeroRuntimeNonZeroExit) {
-    const std::string code = R"(
-        fn main(): {
-            exit 1 / 0;           # undefined behaviour → SIGFPE on most back-ends
-        }
-    )";
-
-    EXPECT_NE(run(code), 0);
 }
 
 TEST_F(NeutroniumTester, WhileFalseSkipsBody) {

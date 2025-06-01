@@ -47,6 +47,7 @@ enum class TokenKind : uint8_t {
     BREAK,
     CONTINUE,
     FN,
+    EXTERN,
     RETURN,
     EXIT,
 

@@ -8,6 +8,13 @@
 #include "parsing/ast.hpp"
 
 std::stringstream Generator::generate() {
+    // Declare external functions
+    for (const auto& externalFuncDecl : program_.externalFunctions_) {
+        output_ << "extern " << function_name_with_prefix(externalFuncDecl->identifier_->name_) << "\n";
+    }
+
+    output_ << "\n";
+
     // Write the header
     output_ << "section .text\n";
     output_ << "global _start\n";
@@ -18,8 +25,8 @@ std::stringstream Generator::generate() {
 
     generate_exit("0");
 
-    for (const auto& funcDecl : program_.functions_) {
-        generate_function_declaration(*funcDecl);
+    for (const auto& funcDef : program_.functions_) {
+        generate_function_definition(*funcDef);
     }
 
     return std::move(output_);
@@ -28,7 +35,7 @@ std::stringstream Generator::generate() {
 int Generator::get_current_scope_frame_size(const AST::BlockStatement& blockStmt) const {
     int frameSize = 0;
     for (const auto& stmt : blockStmt.body_) {
-        if (stmt->kind_ == AST::NodeKind::VARIABLE_DECLARATION) {
+        if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
             frameSize += 8;
         }
     }
@@ -190,7 +197,7 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NO
     return labelsCount_ - 1;
 }
 
-void Generator::generate_variable_declaration(const AST::VariableDeclaration& varDecl) {
+void Generator::generate_variable_definition(const AST::VariableDefinition& varDecl) {
     const std::string& varName = varDecl.identifier_->name_;
     insert_variable_stack_offset(varName);
 
@@ -264,9 +271,9 @@ void Generator::generate_exit(const AST::ExitStatement& exitStmt) {
 
 void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
     switch (stmt.kind_) {
-        case AST::NodeKind::VARIABLE_DECLARATION: {
-            const auto& varDecl = static_cast<const AST::VariableDeclaration&>(stmt);
-            generate_variable_declaration(varDecl);
+        case AST::NodeKind::VARIABLE_DEFINITION: {
+            const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
+            generate_variable_definition(varDecl);
             break;
         }
         case AST::NodeKind::VARIABLE_ASSIGNMENT: {
@@ -319,9 +326,9 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
     }
 }
 
-void Generator::generate_function_declaration(const AST::FunctionDeclaration& funcDecl) {
+void Generator::generate_function_definition(const AST::FunctionDefinition& funcDef) {
     output_ << "\n";
-    output_ << function_name_with_prefix(funcDecl.identifier_->name_)
+    output_ << function_name_with_prefix(funcDef.identifier_->name_)
             << ":\n";  // Prefix with "fn_" to avoid conflicts with NASM keywords
 
     currentStackOffset_ = INITIAL_STACK_OFFSET;
@@ -329,11 +336,11 @@ void Generator::generate_function_declaration(const AST::FunctionDeclaration& fu
     output_ << "    push rbp\n";        // Save the old base pointer
     output_ << "    mov rbp, rsp\n\n";  // Set the new base pointer
 
-    const std::size_t parametersFrameSize = funcDecl.parameters_.size() * 8;
+    const std::size_t parametersFrameSize = funcDef.parameters_.size() * 8;
     output_ << "    sub rsp, " << parametersFrameSize << "\n";
 
-    for (std::size_t i = 0; i < funcDecl.parameters_.size(); ++i) {
-        const auto& param = funcDecl.parameters_[i];
+    for (std::size_t i = 0; i < funcDef.parameters_.size(); ++i) {
+        const auto& param = funcDef.parameters_[i];
         const std::size_t paramOffset = parametersFrameSize + 8 - i * 8;
         output_ << "    mov rax, [rbp + " << paramOffset << "]\n";
 
@@ -343,9 +350,9 @@ void Generator::generate_function_declaration(const AST::FunctionDeclaration& fu
 
     output_ << "\n";
 
-    generate_stmt(*funcDecl.body_);
+    generate_stmt(*funcDef.body_);
 
-    if (funcDecl.returnType_.raw() == RawType::VOID) {
+    if (funcDef.returnType_.raw() == RawType::VOID) {
         output_ << "\n";
         output_ << "    xor rax, rax\n";  // Return 0
         output_ << "    leave\n";

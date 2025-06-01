@@ -47,6 +47,32 @@ class NeutroniumTester : public ::testing::Test {
         return WEXITSTATUS(std::system(outputBinary_.c_str()));
     }
 
+    struct Output {
+        int exit;
+        std::string output;
+    };
+
+    [[nodiscard]] Output run_with_output(const std::string& code) const {
+        auto [compileStatus, compileErr] = compile(code);
+        EXPECT_EQ(compileStatus, 0) << "Compilation failed unexpectedly:\n" << compileErr;
+
+        chdir(originalCwd_.c_str());
+
+        const std::string cmd = outputBinary_.string() + " 2>&1";
+        FILE* pipe = popen(cmd.c_str(), "r");
+        if (!pipe) {
+            return {.exit = -1, .output = "Failed to run binary"};
+        }
+        std::array<char, 256> buffer;
+        std::string result;
+        while (fgets(buffer.data(), buffer.size(), pipe)) {
+            result += buffer.data();
+        }
+        const int exitCode = WEXITSTATUS(pclose(pipe));
+
+        return {.exit = exitCode, .output = result};
+    }
+
    private:
     std::streambuf* oldCerrBuf_;
     std::ostringstream capturedCerr_;

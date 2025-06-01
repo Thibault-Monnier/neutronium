@@ -30,7 +30,7 @@ enum class NodeKind : uint8_t {
     IDENTIFIER,
     UNARY_EXPRESSION,
     BINARY_EXPRESSION,
-    VARIABLE_DECLARATION,
+    VARIABLE_DEFINITION,
     VARIABLE_ASSIGNMENT,
     EXPRESSION_STATEMENT,
     IF_STATEMENT,
@@ -41,8 +41,9 @@ enum class NodeKind : uint8_t {
     RETURN_STATEMENT,
     EXIT_STATEMENT,
     BLOCK_STATEMENT,
-    CONSTANT_DECLARATION,
-    FUNCTION_DECLARATION,
+    CONSTANT_DEFINITION,
+    EXTERNAL_FUNCTION_DECLARATION,
+    FUNCTION_DEFINITION,
     PROGRAM,
 };
 
@@ -128,10 +129,10 @@ struct BlockStatement final : Statement {
     std::vector<std::unique_ptr<Statement>> body_;
 };
 
-struct VariableDeclaration final : Statement {
-    VariableDeclaration(std::unique_ptr<Identifier> identifier, const Type type,
-                        const bool isMutable, std::unique_ptr<Expression> value = nullptr)
-        : Statement{NodeKind::VARIABLE_DECLARATION},
+struct VariableDefinition final : Statement {
+    VariableDefinition(std::unique_ptr<Identifier> identifier, const Type type,
+                       const bool isMutable, std::unique_ptr<Expression> value = nullptr)
+        : Statement{NodeKind::VARIABLE_DEFINITION},
           identifier_(std::move(identifier)),
           type_(type),
           isMutable_(isMutable),
@@ -205,10 +206,10 @@ struct ReturnStatement final : Statement {
     std::unique_ptr<Expression> returnValue_;
 };
 
-struct ConstantDeclaration final : Node {
-    ConstantDeclaration(std::unique_ptr<Identifier> identifier, const Type type,
-                        std::unique_ptr<Expression> value)
-        : Node{NodeKind::CONSTANT_DECLARATION},
+struct ConstantDefinition final : Node {
+    ConstantDefinition(std::unique_ptr<Identifier> identifier, const Type type,
+                       std::unique_ptr<Expression> value)
+        : Node{NodeKind::CONSTANT_DEFINITION},
           identifier_(std::move(identifier)),
           type_(type),
           value_(std::move(value)) {}
@@ -218,18 +219,32 @@ struct ConstantDeclaration final : Node {
     std::unique_ptr<Expression> value_;
 };
 
-struct FunctionDeclaration final : Node {
-    FunctionDeclaration(std::unique_ptr<Identifier> identifier,
-                        std::vector<std::unique_ptr<VariableDeclaration>> parameters,
-                        const Type returnType, std::unique_ptr<BlockStatement> body)
-        : Node{NodeKind::FUNCTION_DECLARATION},
+struct ExternalFunctionDeclaration final : Node {
+    ExternalFunctionDeclaration(std::unique_ptr<Identifier> identifier,
+                                std::vector<std::unique_ptr<VariableDefinition>> parameters,
+                                const Type returnType)
+        : Node{NodeKind::EXTERNAL_FUNCTION_DECLARATION},
+          identifier_(std::move(identifier)),
+          parameters_(std::move(parameters)),
+          returnType_(returnType) {}
+
+    std::unique_ptr<Identifier> identifier_;
+    const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
+    const Type returnType_;
+};
+
+struct FunctionDefinition final : Node {
+    FunctionDefinition(std::unique_ptr<Identifier> identifier,
+                       std::vector<std::unique_ptr<VariableDefinition>> parameters,
+                       const Type returnType, std::unique_ptr<BlockStatement> body)
+        : Node{NodeKind::FUNCTION_DEFINITION},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
           returnType_(returnType),
           body_(std::move(body)) {}
 
     std::unique_ptr<Identifier> identifier_;
-    const std::vector<std::unique_ptr<VariableDeclaration>> parameters_;
+    const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
     const Type returnType_;
     std::unique_ptr<BlockStatement> body_;
 };
@@ -237,16 +252,21 @@ struct FunctionDeclaration final : Node {
 struct Program final : Node {
     Program() : Node{NodeKind::PROGRAM} {}
 
-    void append_constant(std::unique_ptr<ConstantDeclaration> constant) {
+    void append_constant(std::unique_ptr<ConstantDefinition> constant) {
         constants_.emplace_back(std::move(constant));
     }
 
-    void append_function(std::unique_ptr<FunctionDeclaration> function) {
+    void append_function(std::unique_ptr<FunctionDefinition> function) {
         functions_.emplace_back(std::move(function));
     }
 
-    std::vector<std::unique_ptr<ConstantDeclaration>> constants_;
-    std::vector<std::unique_ptr<FunctionDeclaration>> functions_;
+    void append_extern_function(std::unique_ptr<ExternalFunctionDeclaration> externFunction) {
+        externalFunctions_.emplace_back(std::move(externFunction));
+    }
+
+    std::vector<std::unique_ptr<ConstantDefinition>> constants_;
+    std::vector<std::unique_ptr<ExternalFunctionDeclaration>> externalFunctions_;
+    std::vector<std::unique_ptr<FunctionDefinition>> functions_;
 };
 
 Operator token_kind_to_operator(TokenKind tokenKind);

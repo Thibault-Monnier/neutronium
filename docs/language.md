@@ -8,15 +8,19 @@ control flow.
 <details><summary>Formal EBNF Grammar</summary>
 
 ```
-program ::= { const-declaration } { function-declaration } EOF
+program ::= { const-definition } { external-function-declaration } { function-definition } EOF
 
-function-declaration ::= 'fn' identifier '(' parameter-list ')' [ '->' type-specifier ] ':' block-statement
+function-signature ::= identifier '(' parameter-list ')' [ '->' type-specifier ]
 
-const-declaration ::= 'const' identifier [ ':' type-specifier ] '=' expression ';'
+external-function-declaration ::= 'extern' 'fn' function-signature ';'
+
+function-definition ::= 'fn' function-signature ':' block-statement
+
+const-definition ::= 'const' identifier [ ':' type-specifier ] '=' expression ';'
 
 statement ::= block-statement
-            | assignment
-            | declaration-assignment
+            | variable-definition
+            | variable-assignment
             | if-statement
             | while-statement
             | break-statement
@@ -28,11 +32,11 @@ statement ::= block-statement
 
 block-statement ::= '{' { statement } '}'
 
-type-specifier ::= 'int' | 'bool' | 'void'
+type-specifier ::= 'int' | 'bool'
 
-assignment ::= identifier '=' expression ';'
+variable-definition ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
 
-declaration-assignment ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
+variable-assignment ::= identifier '=' expression ';'
 
 parameter-list ::= [ parameter-declaration { ',' parameter-declaration } ]
 

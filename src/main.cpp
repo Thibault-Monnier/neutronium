@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cstdlib>
+#include <filesystem>
 #include <format>
 #include <fstream>
 #include <iostream>
@@ -93,7 +94,20 @@ int main(const int argc, char* argv[]) {
     }
 
     timed("Assembling", [] { run_or_die("nasm -felf64 neutro/out.asm"); });
-    timed("Linking", [] { run_or_die("ld -o neutro/out neutro/out.o"); });
+
+    const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
+    timed("Assembling runtime", [&] {
+        for (const auto& entry : std::filesystem::directory_iterator(runtimePath)) {
+            if (entry.path().extension() == ".asm") {
+                const std::string src = entry.path().string();
+                const std::string name = entry.path().stem().string();  // filename without extension
+                const std::string out = "neutro/" + name + ".o";
+                run_or_die(("nasm -felf64 " + src + " -o " + out).c_str());
+            }
+        }
+    });
+
+    timed("Linking", [] { run_or_die("ld -o neutro/out neutro/*.o"); });
 
     std::cout << "== Compiled successfully! ==\n";
 

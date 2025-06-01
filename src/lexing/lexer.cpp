@@ -35,6 +35,7 @@ std::optional<TokenKind> Lexer::get_keyword_kind() const {
     if (buffer_ == "break") return TokenKind::BREAK;
     if (buffer_ == "continue") return TokenKind::CONTINUE;
     if (buffer_ == "fn") return TokenKind::FN;
+    if (buffer_ == "extern") return TokenKind::EXTERN;
     if (buffer_ == "return") return TokenKind::RETURN;
     if (buffer_ == "exit") return TokenKind::EXIT;
 
