@@ -197,7 +197,7 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NO
     return labelsCount_ - 1;
 }
 
-void Generator::generate_variable_declaration_assignment(const AST::VariableDefinition& varDecl) {
+void Generator::generate_variable_definition(const AST::VariableDefinition& varDecl) {
     const std::string& varName = varDecl.identifier_->name_;
     insert_variable_stack_offset(varName);
 
@@ -273,7 +273,7 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
     switch (stmt.kind_) {
         case AST::NodeKind::VARIABLE_DEFINITION: {
             const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
-            generate_variable_declaration_assignment(varDecl);
+            generate_variable_definition(varDecl);
             break;
         }
         case AST::NodeKind::VARIABLE_ASSIGNMENT: {

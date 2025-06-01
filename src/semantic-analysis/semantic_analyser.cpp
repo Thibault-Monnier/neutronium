@@ -237,7 +237,7 @@ void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Typ
     }
 }
 
-void SemanticAnalyser::analyse_variable_declaration_assignment(
+void SemanticAnalyser::analyse_variable_definition(
     const AST::VariableDefinition& declaration) {
     const std::string& name = declaration.identifier_->name_;
     const Type variableType = get_expression_type(*declaration.value_);
@@ -318,7 +318,7 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
     switch (stmt.kind_) {
         case AST::NodeKind::VARIABLE_DEFINITION: {
             const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
-            analyse_variable_declaration_assignment(varDecl);
+            analyse_variable_definition(varDecl);
             break;
         }
         case AST::NodeKind::VARIABLE_ASSIGNMENT: {
