@@ -28,7 +28,7 @@ func_print_num:
 
     mov     rax, [rbp + 16]     ; rax ← the int64 we want to print
 
-    ;— Allocate 8 bytes to store “current quotient” across iterations —
+    ; - Allocate 8 bytes to store "current quotient" across iterations -
     sub     rsp, 8
     mov     [rbp - 8], rax     ; store initial value
 
