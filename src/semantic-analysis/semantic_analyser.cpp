@@ -79,7 +79,7 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const Symb
                                 std::to_string(static_cast<int>(kind)));
 }
 
-SymbolInfo& SemanticAnalyser::handle_constant_declaration(const std::string& name,
+SymbolInfo& SemanticAnalyser::handle_constant_definition(const std::string& name,
                                                           const Type type) {
     return declare_symbol(name, SymbolKind::CONSTANT, false, type, false, {});
 }
@@ -448,5 +448,5 @@ void SemanticAnalyser::analyse_constant_definition(const AST::ConstantDefinition
                           name, declaration.type_.to_string(), constantType.to_string()));
     }
 
-    handle_constant_declaration(name, constantType);
+    handle_constant_definition(name, constantType);
 }

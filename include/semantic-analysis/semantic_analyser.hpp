@@ -36,7 +36,7 @@ class SemanticAnalyser {
     SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable, Type type,
                                bool isScoped, std::vector<SymbolInfo> parameters);
 
-    SymbolInfo& handle_constant_declaration(const std::string& name, Type type);
+    SymbolInfo& handle_constant_definition(const std::string& name, Type type);
     SymbolInfo& handle_function_declaration(
         const std::string& name, Type returnType,
         const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
