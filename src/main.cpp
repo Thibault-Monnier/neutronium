@@ -94,8 +94,10 @@ int main(const int argc, char* argv[]) {
     }
 
     timed("Assembling", [] { run_or_die("nasm -felf64 neutro/out.asm"); });
-    timed("Assembling runtime", [] {
-        for (const auto& entry : std::filesystem::directory_iterator("runtime")) {
+
+    const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
+    timed("Assembling runtime", [&] {
+        for (const auto& entry : std::filesystem::directory_iterator(runtimePath)) {
             if (entry.path().extension() == ".asm") {
                 const std::string src = entry.path().string();
                 const std::string name = entry.path().stem().string();  // filename without extension

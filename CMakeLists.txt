@@ -24,6 +24,8 @@ include_directories(include)
 file(GLOB_RECURSE LIB_SOURCES "src/*.cpp")
 list(REMOVE_ITEM LIB_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
+add_compile_definitions(PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}")
+
 add_library(neutronium_lib ${LIB_SOURCES})
 
 add_executable(neutronium src/main.cpp)
@@ -55,9 +57,6 @@ add_executable(tests ${TEST_SOURCES})
 target_link_libraries(tests PRIVATE
         neutronium_lib
         gtest_main
-)
-target_compile_definitions(tests PRIVATE
-        PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}"
 )
 
 include(GoogleTest)
