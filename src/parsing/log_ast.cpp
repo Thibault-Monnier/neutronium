@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "parsing/ast.hpp"
-#include "parsing/parser.hpp"
 
 namespace AST {
 
@@ -39,7 +38,7 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
             std::cout << newPrefix << "└── Arguments\n";
             for (size_t i = 0; i < funcCall.arguments_.size(); ++i) {
                 const auto& arg = funcCall.arguments_[i];
-                bool isLastArg = i == funcCall.arguments_.size() - 1;
+                const bool isLastArg = i == funcCall.arguments_.size() - 1;
                 const std::string argPrefix = next_prefix(newPrefix, true);
                 const std::string argBranch = isLastArg ? "└── " : "├── ";
                 std::cout << argPrefix << argBranch << "Argument" << i + 1 << "\n";
@@ -193,7 +192,8 @@ void log_ast(const Program& programNode) {
                             programNode.constants_.empty() && programNode.functions_.empty();
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
-        const auto& externFunc = as<ExternalFunctionDeclaration>(*programNode.externalFunctions_[i]);
+        const auto& externFunc =
+            as<ExternalFunctionDeclaration>(*programNode.externalFunctions_[i]);
 
         std::cout << prefix << branch << "ExternalFunctionDeclaration\n";
         functionSignature(*externFunc.identifier_, externFunc.parameters_, externFunc.returnType_,
