@@ -3,7 +3,7 @@ global func_print_c
 global func_print_num
 
 ; ------------------------------------------------
-; print_c(char: int);
+; fn print_c(char: int);
 ; ------------------------------------------------
 func_print_c:
     mov rax, [rsp + 8]    ; load full int64 argument
@@ -20,7 +20,7 @@ func_print_c:
 
 
 ; ------------------------------------------------
-; print_num(num: int);
+; fn print_num(num: int);
 ; ------------------------------------------------
 func_print_num:
     push    rbp
