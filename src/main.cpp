@@ -68,6 +68,8 @@ int main(const int argc, char* argv[]) {
 
     if (opts.logCode_) std::cout << code << '\n';
 
+    const auto startTime = Clock::now();
+
     const auto tokens = timed("Lexing", [&] { return Lexer(code).tokenize(); });
     if (opts.logTokens_) {
         for (const auto& token : tokens)
@@ -109,7 +111,7 @@ int main(const int argc, char* argv[]) {
 
     timed("Linking", [] { run_or_die("ld -o neutro/out neutro/*.o"); });
 
-    std::cout << "== Compiled successfully! ==\n";
+    std::cout << "== Compiled successfully in " << std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - startTime).count() << " ms! ==\n";
 
     return 0;
 }
