@@ -11,6 +11,8 @@ CompilerOptions parse_cli(int argc, char** argv) {
     options.positional_help("<input-file>").show_positional_help();
 
     options.add_options()("h,help", "Print help")("v,version", "Print the compiler version")(
+        "target-type", "Compilation target: bin or lib",
+        cxxopts::value<std::string>()->default_value("bin"))(
         "d,debug", "Enable all debug logs")("log-code", "Log source code processing")(
         "log-tokens", "Log token stream")("log-ast", "Log AST construction")(
         "log-assembly", "Log final assembly output")(
@@ -44,6 +46,17 @@ CompilerOptions parse_cli(int argc, char** argv) {
     opts.logTokens_ = result.count("log-tokens");
     opts.logAst_ = result.count("log-ast");
     opts.logAssembly_ = result.count("log-assembly");
+
+    const std::string targetType = result["target-type"].as<std::string>();
+    if (targetType == "bin") {
+        opts.targetType_ = TargetType::EXECUTABLE;
+    } else if (targetType == "lib") {
+        opts.targetType_ = TargetType::LIBRARY;
+    } else {
+        print_error(std::format("Unknown target type: '{}'", targetType));
+        std::cout << '\n' << options.help() << '\n';
+        std::exit(EXIT_FAILURE);
+    }
 
     if (result.count("debug")) {
         opts.logCode_ = opts.logTokens_ = opts.logAst_ = opts.logAssembly_ = true;

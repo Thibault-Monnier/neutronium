@@ -51,11 +51,7 @@ void run_or_die(const char* cmd) {
     }
 }
 
-}  // namespace
-
-int main(const int argc, char* argv[]) {
-    CompilerOptions opts = parse_cli(argc, argv);
-
+void compile_file(const CompilerOptions opts) {
     const std::ifstream source(opts.sourceFilename_);
     if (!source) {
         print_error(std::format("Could not open file '{}'", opts.sourceFilename_));
@@ -68,8 +64,6 @@ int main(const int argc, char* argv[]) {
 
     if (opts.logCode_) std::cout << code << '\n';
 
-    const auto startTime = Clock::now();
-
     const auto tokens = timed("Lexing", [&] { return Lexer(code).tokenize(); });
     if (opts.logTokens_) {
         for (const auto& token : tokens)
@@ -79,7 +73,7 @@ int main(const int argc, char* argv[]) {
     const auto ast = timed("Parsing", [&] { return Parser(tokens).parse(); });
     if (opts.logAst_) AST::log_ast(*ast);
 
-    timed("Semantic analysis", [&] { SemanticAnalyser(*ast).analyse(); });
+    timed("Semantic analysis", [&] { SemanticAnalyser(*ast, opts.targetType_).analyse(); });
 
     const auto assembly = timed("Code generation", [&] { return Generator(*ast).generate(); });
     if (opts.logAssembly_) std::cout << assembly.str();
@@ -96,13 +90,24 @@ int main(const int argc, char* argv[]) {
     }
 
     timed("Assembling", [] { run_or_die("nasm -felf64 neutro/out.asm"); });
+}
+
+}  // namespace
+
+int main(const int argc, char* argv[]) {
+    const CompilerOptions opts = parse_cli(argc, argv);
+
+    const auto startTime = Clock::now();
+
+    compile_file(opts);
 
     const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
     timed("Assembling runtime", [&] {
         for (const auto& entry : std::filesystem::directory_iterator(runtimePath)) {
             if (entry.path().extension() == ".asm") {
                 const std::string src = entry.path().string();
-                const std::string name = entry.path().stem().string();  // filename without extension
+                const std::string name =
+                    entry.path().stem().string();  // filename without extension
                 const std::string out = "neutro/" + name + ".o";
                 run_or_die(("nasm -felf64 " + src + " -o " + out).c_str());
             }
@@ -111,7 +116,10 @@ int main(const int argc, char* argv[]) {
 
     timed("Linking", [] { run_or_die("ld -o neutro/out neutro/*.o"); });
 
-    std::cout << "== Compiled successfully in " << std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - startTime).count() << " ms! ==\n";
+    std::cout
+        << "== Compiled successfully in "
+        << std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - startTime).count()
+        << " ms! ==\n";
 
     return 0;
 }

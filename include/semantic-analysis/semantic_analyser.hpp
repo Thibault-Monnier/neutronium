@@ -3,18 +3,21 @@
 #include <string>
 #include <vector>
 
+#include "cli.hpp"
 #include "parsing/ast.hpp"
 #include "semantic-analysis/symbol_table.hpp"
 #include "semantic-analysis/type.hpp"
 
 class SemanticAnalyser {
    public:
-    explicit SemanticAnalyser(const AST::Program& ast) : ast_(&ast) {}
+    explicit SemanticAnalyser(const AST::Program& ast, const TargetType targetType)
+        : ast_(&ast), targetType_(targetType) {}
 
     void analyse();
 
    private:
     const AST::Program* ast_;
+    const TargetType targetType_;
 
     std::vector<SymbolTable> scopes_;
     SymbolTable functionsTable_;
