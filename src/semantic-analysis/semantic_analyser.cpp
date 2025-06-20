@@ -23,7 +23,7 @@ void SemanticAnalyser::analyse() {
     const auto mainIt = functionsTable_.find("main");
     if (targetType_ == TargetType::EXECUTABLE) {
         if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
-            abort("No `main` function found");
+            abort("No `main` function found in executable target");
         } else if (mainIt->second.type_.raw() != RawType::VOID) {
             abort("`main` function must return `void`");
         } else if (mainIt->second.parameters_.size() != 0) {

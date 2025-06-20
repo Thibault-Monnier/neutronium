@@ -11,11 +11,10 @@ CompilerOptions parse_cli(int argc, char** argv) {
     options.positional_help("<input-file>").show_positional_help();
 
     options.add_options()("h,help", "Print help")("v,version", "Print the compiler version")(
-        "target-type", "Compilation target: bin or lib",
-        cxxopts::value<std::string>()->default_value("bin"))(
-        "d,debug", "Enable all debug logs")("log-code", "Log source code processing")(
-        "log-tokens", "Log token stream")("log-ast", "Log AST construction")(
-        "log-assembly", "Log final assembly output")(
+        "target-type", "Compilation target: bin (executable) or lib (library)",
+        cxxopts::value<std::string>()->default_value("bin"))("d,debug", "Enable all debug logs")(
+        "log-code", "Log source code processing")("log-tokens", "Log token stream")(
+        "log-ast", "Log AST construction")("log-assembly", "Log final assembly output")(
         "log", "Comma-separated logs (code,tokens,ast,assembly)",
         cxxopts::value<std::vector<std::string>>()->implicit_value(""))(
         "input", "Source file", cxxopts::value<std::string>());
@@ -48,9 +47,9 @@ CompilerOptions parse_cli(int argc, char** argv) {
     opts.logAssembly_ = result.count("log-assembly");
 
     const std::string targetType = result["target-type"].as<std::string>();
-    if (targetType == "bin") {
+    if (targetType == "bin" || targetType == "executable") {
         opts.targetType_ = TargetType::EXECUTABLE;
-    } else if (targetType == "lib") {
+    } else if (targetType == "lib" || targetType == "library") {
         opts.targetType_ = TargetType::LIBRARY;
     } else {
         print_error(std::format("Unknown target type: '{}'", targetType));
