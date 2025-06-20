@@ -10,18 +10,22 @@
 std::stringstream Generator::generate() {
     // Declare external functions
     for (const auto& externalFuncDecl : program_.externalFunctions_) {
-        output_ << "extern " << function_name_with_prefix(externalFuncDecl->identifier_->name_) << "\n";
+        output_ << "extern " << function_name_with_prefix(externalFuncDecl->identifier_->name_)
+                << "\n";
     }
 
     output_ << "\n";
 
     // Write the header
     output_ << "section .text\n";
-    output_ << "global _start\n";
-    output_ << "_start:\n";
-    output_ << "    push rbp\n";
-    output_ << "    mov rbp, rsp\n\n";
-    output_ << "    call " << function_name_with_prefix("main") << "\n";
+
+    if (targetType_ == TargetType::EXECUTABLE) {
+        output_ << "global _start\n";
+        output_ << "_start:\n";
+        output_ << "    push rbp\n";
+        output_ << "    mov rbp, rsp\n\n";
+        output_ << "    call " << function_name_with_prefix("main") << "\n";
+    }
 
     generate_exit("0");
 
