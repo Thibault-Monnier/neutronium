@@ -149,6 +149,14 @@ TEST_F(NeutroniumTester, StandardLibrary) {
         extern fn print_c(char: int);
         extern fn print_num(num: int);
 
+        extern fn mod(a: int, b: int) -> int;
+
+        fn print_mod(a: int, b: int): {
+            let result = mod(a, b);
+            print_num(result);
+            print_c(10);
+        }
+
         fn main(): {
             print_c(72);
             print_c(101);
@@ -168,11 +176,13 @@ TEST_F(NeutroniumTester, StandardLibrary) {
             print_num(42);
             print_c(10);
             print_c(10);
+
+            print_mod(654, 10);  # should print 4
         }
     )";
     const auto result = run_with_output(code);
     EXPECT_EQ(result.exit, 0);
-    EXPECT_EQ(result.output, "Hello, World!\n42\n\n");
+    EXPECT_EQ(result.output, "Hello, World!\n42\n\n4\n");
 }
 
 TEST_F(NeutroniumTester, FunctionReturnValues) {
