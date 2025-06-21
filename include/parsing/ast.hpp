@@ -236,16 +236,19 @@ struct ExternalFunctionDeclaration final : Node {
 struct FunctionDefinition final : Node {
     FunctionDefinition(std::unique_ptr<Identifier> identifier,
                        std::vector<std::unique_ptr<VariableDefinition>> parameters,
-                       const Type returnType, std::unique_ptr<BlockStatement> body)
+                       const Type returnType, const bool isExported,
+                       std::unique_ptr<BlockStatement> body)
         : Node{NodeKind::FUNCTION_DEFINITION},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
           returnType_(returnType),
+          isExported_(isExported),
           body_(std::move(body)) {}
 
     std::unique_ptr<Identifier> identifier_;
     const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
     const Type returnType_;
+    const bool isExported_;
     std::unique_ptr<BlockStatement> body_;
 };
 

@@ -322,7 +322,6 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_function_parameter() {
     return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable);
 }
 
-
 ParsedFunctionSignature Parser::parse_function_signature() {
     auto identifier = parse_identifier();
 
@@ -360,15 +359,21 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_functio
 
 std::unique_ptr<AST::FunctionDefinition>
 Parser::parse_function_definition() {  // NOLINT(*-no-recursion)
+    bool isExported = false;
+    if (peek().kind() == TokenKind::EXPORT) {
+        consume(TokenKind::EXPORT);
+        isExported = true;
+    }
+
     consume(TokenKind::FN);
 
     ParsedFunctionSignature signature = parse_function_signature();
 
     consume(TokenKind::COLON);
     auto body = parse_block_statement();
-    return std::make_unique<AST::FunctionDefinition>(std::move(signature.identifier_),
-                                                     std::move(signature.parameters_),
-                                                     signature.returnType_, std::move(body));
+    return std::make_unique<AST::FunctionDefinition>(
+        std::move(signature.identifier_), std::move(signature.parameters_), signature.returnType_,
+        isExported, std::move(body));
 }
 
 std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
@@ -401,7 +406,7 @@ std::unique_ptr<AST::Program> Parser::parse_program() {
         program->append_extern_function(std::move(externFunction));
     }
     while (peek().kind() != TokenKind::EOF_) {
-        if (peek().kind() == TokenKind::FN) {
+        if (peek().kind() == TokenKind::FN || peek().kind() == TokenKind::EXPORT) {
             auto functionDefinition = parse_function_definition();
             program->append_function(std::move(functionDefinition));
         } else {

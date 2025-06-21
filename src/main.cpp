@@ -124,17 +124,26 @@ int main(const int argc, char* argv[]) {
 
             const std::string extension = entry.path().extension();
             const std::string src = entry.path().string();
+
             if (extension == ".nt") {
-                compile_file(CompilerOptions{
-                    .logCode_ = opts.logCode_,
-                    .logTokens_ = opts.logTokens_,
-                    .logAst_ = opts.logAst_,
-                    .logAssembly_ = opts.logAssembly_,
-                    .sourceFilename_ = src,
-                    .targetType_ = TargetType::LIBRARY,
-                }, false);
+                compile_file(
+                    CompilerOptions{
+                        .logCode_ = opts.logCode_,
+                        .logTokens_ = opts.logTokens_,
+                        .logAst_ = opts.logAst_,
+                        .logAssembly_ = opts.logAssembly_,
+                        .sourceFilename_ = src,
+                        .targetType_ = TargetType::LIBRARY,
+                    },
+                    false);
             } else if (extension == ".asm") {
                 const std::string obj = "neutro/" + entry.path().stem().string() + ".o";
+
+                if (std::filesystem::exists(obj)) {
+                    print_error(std::format("Duplicate object name would overwrite `{}`", obj));
+                    exit(EXIT_FAILURE);
+                }
+
                 run_or_die(std::format("nasm -felf64 {} -o {}", src, obj));
             }
         }

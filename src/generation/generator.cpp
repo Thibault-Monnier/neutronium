@@ -25,9 +25,8 @@ std::stringstream Generator::generate() {
         output_ << "    push rbp\n";
         output_ << "    mov rbp, rsp\n\n";
         output_ << "    call " << function_name_with_prefix("main") << "\n";
+        generate_exit("0");
     }
-
-    generate_exit("0");
 
     for (const auto& funcDef : program_.functions_) {
         generate_function_definition(*funcDef);
@@ -332,6 +331,11 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
 
 void Generator::generate_function_definition(const AST::FunctionDefinition& funcDef) {
     output_ << "\n";
+
+    if (funcDef.isExported_) {
+        output_ << "global " << function_name_with_prefix(funcDef.identifier_->name_) << "\n";
+    }
+
     output_ << function_name_with_prefix(funcDef.identifier_->name_)
             << ":\n";  // Prefix with "fn_" to avoid conflicts with NASM keywords
 
