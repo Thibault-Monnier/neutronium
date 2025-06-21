@@ -41,6 +41,13 @@ TEST(CliErrorTest, InvalidSourceFilepath) {
     EXPECT_TRUE(output.contains("Error:")) << output;
 }
 
+TEST(CLIErrorTest, InvalidTargetType) {
+    std::string output;
+    const int status = run_and_capture(neutroniumPath + " --target-type=invalid", output);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(output.contains("Unknown target type")) << output;
+}
+
 TEST(CLITargetTest, LibraryTarget) {
     const std::string tempFile = projectRoot + "/temp_test.nt";
     {
