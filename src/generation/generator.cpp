@@ -90,7 +90,7 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
 }
 
 std::string Generator::function_name_with_prefix(const std::string& name) const {
-    return "__" + name;  // Prefix with "fn_" to avoid conflicts with NASM keywords
+    return "__" + name;  // Prefix with "__" to avoid conflicts with NASM keywords
 }
 
 void Generator::generate_function_call(  // NOLINT(*-no-recursion)

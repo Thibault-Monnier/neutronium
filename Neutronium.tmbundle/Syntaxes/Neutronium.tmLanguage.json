@@ -47,7 +47,7 @@
       "patterns": [
         {
           "name": "keyword.control.neutronium",
-          "match": "\\b(if|elif|else|while|exit|fn|extern|break|continue|let|mut|const|return|export|import)\\b"
+          "match": "\\b(if|elif|else|while|exit|fn|extern|break|continue|let|mut|const|return|export)\\b"
         }
       ]
     },
