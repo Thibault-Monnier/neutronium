@@ -28,23 +28,23 @@ void show_step(std::string_view message) {
 template <typename F>
 decltype(auto) timed(const std::string_view message, bool showStep, F&& f) {
     show_step(message);
+
     const auto start = Clock::now();
+
+    auto printElapsedTime = [&] {
+        if (showStep) {
+            const auto ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
+            std::cout << "\r\33[2K\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
+        }
+    };
 
     if constexpr (std::is_void_v<std::invoke_result_t<F>>) {
         std::forward<F>(f)();
-        if (showStep) {
-            const auto ms =
-                std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
-            std::cout << "\r\33[2K\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
-        }
+        printElapsedTime();
     } else {
-        auto result = std::forward<F>(f)();
-        if (showStep) {
-            const auto ms =
-                std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
-            std::cout << "\r\33[2K\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
-        }
-
+        decltype(auto) result = std::forward<F>(f)();
+        printElapsedTime();
         return result;
     }
 }
