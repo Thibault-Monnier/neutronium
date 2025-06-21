@@ -21,12 +21,18 @@ void SemanticAnalyser::analyse() {
     }
 
     const auto mainIt = functionsTable_.find("main");
-    if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
-        abort("No `main` function found");
-    } else if (mainIt->second.type_.raw() != RawType::VOID) {
-        abort("`main` function must return `void`");
-    } else if (mainIt->second.parameters_.size() != 0) {
-        abort("`main` function must not take any parameters");
+    if (targetType_ == TargetType::EXECUTABLE) {
+        if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
+            abort("No `main` function found in executable target");
+        } else if (mainIt->second.type_.raw() != RawType::VOID) {
+            abort("`main` function must return `void`");
+        } else if (mainIt->second.parameters_.size() != 0) {
+            abort("`main` function must not take any parameters");
+        }
+    } else {
+        if (mainIt != functionsTable_.end()) {
+            abort("`main` function is not allowed in a library target");
+        }
     }
 }
 
@@ -79,8 +85,7 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const Symb
                                 std::to_string(static_cast<int>(kind)));
 }
 
-SymbolInfo& SemanticAnalyser::handle_constant_definition(const std::string& name,
-                                                          const Type type) {
+SymbolInfo& SemanticAnalyser::handle_constant_definition(const std::string& name, const Type type) {
     return declare_symbol(name, SymbolKind::CONSTANT, false, type, false, {});
 }
 
@@ -237,8 +242,7 @@ void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Typ
     }
 }
 
-void SemanticAnalyser::analyse_variable_definition(
-    const AST::VariableDefinition& declaration) {
+void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition& declaration) {
     const std::string& name = declaration.identifier_->name_;
     const Type variableType = get_expression_type(*declaration.value_);
 

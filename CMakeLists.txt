@@ -39,6 +39,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cxxopts)
 
 target_link_libraries(neutronium_lib PRIVATE cxxopts)
+
+# === magic_enum setup ===
+FetchContent_Declare(
+        magic_enum
+        GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+        GIT_TAG v0.9.5
+)
+FetchContent_MakeAvailable(magic_enum)
+
+target_link_libraries(neutronium_lib PRIVATE magic_enum)
+
 target_link_libraries(neutronium PRIVATE neutronium_lib)
 
 # === GoogleTest setup ===

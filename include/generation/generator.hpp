@@ -3,17 +3,21 @@
 #include <sstream>
 #include <string>
 
+#include "cli.hpp"
 #include "semantic-analysis/symbol_table.hpp"
 
 class Generator {
    public:
-    explicit Generator(const AST::Program& ast) : program_(ast) {}
+    explicit Generator(const AST::Program& ast, const TargetType targetType)
+        : program_(ast), targetType_(targetType) {}
 
     [[nodiscard]] std::stringstream generate();
 
    private:
     const AST::Program& program_;
     std::stringstream output_;
+
+    const TargetType targetType_;
 
     int labelsCount_ = 0;
     int innerLoopStartLabel_ = 0;

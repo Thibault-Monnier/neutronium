@@ -1,7 +1,8 @@
 #!/bin/bash
+set -euo pipefail
 
-set -e
 ./compile.sh "$@"
+
 set +e
 
 ./neutro/out

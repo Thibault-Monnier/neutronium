@@ -1,11 +1,11 @@
 section .text
-global func_print_c
-global func_print_num
+global __print_c
+global __print_num
 
 ; ------------------------------------------------
 ; fn print_c(char: int);
 ; ------------------------------------------------
-func_print_c:
+__print_c:
     mov rax, [rsp + 8]    ; load full int64 argument
     push rax              ; store it on the stack (temporary buffer)
 
@@ -22,7 +22,7 @@ func_print_c:
 ; ------------------------------------------------
 ; fn print_num(num: int);
 ; ------------------------------------------------
-func_print_num:
+__print_num:
     push    rbp
     mov     rbp, rsp
 
@@ -56,7 +56,7 @@ func_print_num:
 
     pop     rdx                ; get ASCII digit
     push    rdx
-    call    func_print_c
+    call    __print_c          ; print the digit
     pop     rdx
     jmp     .print_digits
 

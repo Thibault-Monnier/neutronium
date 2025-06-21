@@ -48,6 +48,7 @@ enum class TokenKind : uint8_t {
     CONTINUE,
     FN,
     EXTERN,
+    EXPORT,
     RETURN,
     EXIT,
 

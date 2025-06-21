@@ -10,20 +10,23 @@
 std::stringstream Generator::generate() {
     // Declare external functions
     for (const auto& externalFuncDecl : program_.externalFunctions_) {
-        output_ << "extern " << function_name_with_prefix(externalFuncDecl->identifier_->name_) << "\n";
+        output_ << "extern " << function_name_with_prefix(externalFuncDecl->identifier_->name_)
+                << "\n";
     }
 
     output_ << "\n";
 
     // Write the header
     output_ << "section .text\n";
-    output_ << "global _start\n";
-    output_ << "_start:\n";
-    output_ << "    push rbp\n";
-    output_ << "    mov rbp, rsp\n\n";
-    output_ << "    call " << function_name_with_prefix("main") << "\n";
 
-    generate_exit("0");
+    if (targetType_ == TargetType::EXECUTABLE) {
+        output_ << "global _start\n";
+        output_ << "_start:\n";
+        output_ << "    push rbp\n";
+        output_ << "    mov rbp, rsp\n\n";
+        output_ << "    call " << function_name_with_prefix("main") << "\n";
+        generate_exit("0");
+    }
 
     for (const auto& funcDef : program_.functions_) {
         generate_function_definition(*funcDef);
@@ -87,7 +90,7 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
 }
 
 std::string Generator::function_name_with_prefix(const std::string& name) const {
-    return "func_" + name;  // Prefix with "fn_" to avoid conflicts with NASM keywords
+    return "__" + name;  // Prefix with "__" to avoid conflicts with NASM keywords
 }
 
 void Generator::generate_function_call(  // NOLINT(*-no-recursion)
@@ -328,6 +331,11 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
 
 void Generator::generate_function_definition(const AST::FunctionDefinition& funcDef) {
     output_ << "\n";
+
+    if (funcDef.isExported_) {
+        output_ << "global " << function_name_with_prefix(funcDef.identifier_->name_) << "\n";
+    }
+
     output_ << function_name_with_prefix(funcDef.identifier_->name_)
             << ":\n";  // Prefix with "fn_" to avoid conflicts with NASM keywords
 
