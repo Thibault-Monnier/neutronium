@@ -14,7 +14,7 @@ function-signature ::= identifier '(' parameter-list ')' [ '->' type-specifier ]
 
 external-function-declaration ::= 'extern' 'fn' function-signature ';'
 
-function-definition ::= 'fn' function-signature ':' block-statement
+function-definition ::= [ 'export' ] 'fn' function-signature ':' block-statement
 
 const-definition ::= 'const' identifier [ ':' type-specifier ] '=' expression ';'
 
