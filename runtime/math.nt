@@ -1,3 +1,39 @@
+# Returns a modulo b, undefined if b is non-positive, negative if a is negative
 export fn mod(a: int, b: int) -> int: {
     return a - (a / b) * b;
+}
+
+# Returns the absolute value of a
+export fn abs(val: int) -> int: {
+    if val < 0: {
+        return -val;
+    }
+    return val;
+}
+
+# Returns the minimum of a and b
+export fn min(a: int, b: int) -> int: {
+    if a < b: {
+        return a;
+    }
+    return b;
+}
+
+# Returns the maximum of a and b
+export fn max(a: int, b: int) -> int: {
+    if a > b: {
+        return a;
+    }
+    return b;
+}
+
+# Returns a^b (a to the power of b), undefined if b is negative
+export fn pow(a: int, b: int) -> int: {
+    let mut result = 1;
+    let mut i = 0;
+    while i < b: {
+        result = result * a;
+        i = i + 1;
+    }
+    return result;
 }

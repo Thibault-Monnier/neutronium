@@ -32,6 +32,17 @@ __print_num:
     sub     rsp, 8
     mov     [rbp - 8], rax     ; store initial value
 
+    ; If the number is negative, we print a minus sign first.
+    cmp     rax, 0
+    jge     .no_minus_sign
+    push    '-'
+    call    __print_c          ; print the minus sign
+    pop     rax                ; pop the minus sign from stack
+    mov     rax, [rbp - 8]     ; reload “current” value
+    neg     rax                ; negate it
+    mov     [rbp - 8], rax     ; store the negated value
+
+.no_minus_sign:
 .loop_extract:
     mov     rax, [rbp - 8]     ; reload “current” value
     mov     rbx, 10
