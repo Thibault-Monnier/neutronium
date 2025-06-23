@@ -33,8 +33,7 @@ enum class NodeKind : uint8_t {
     UNARY_EXPRESSION,
     BINARY_EXPRESSION,
     VARIABLE_DEFINITION,
-    VARIABLE_ASSIGNMENT,
-    ARRAY_ASSIGNMENT,
+    ASSIGNMENT,
     EXPRESSION_STATEMENT,
     IF_STATEMENT,
     WHILE_STATEMENT,
@@ -164,24 +163,12 @@ struct VariableDefinition final : Statement {
     std::unique_ptr<Expression> value_;
 };
 
-struct VariableAssignment final : Statement {
-    VariableAssignment(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value)
-        : Statement{NodeKind::VARIABLE_ASSIGNMENT},
-          identifier_(std::move(identifier)),
-          value_(std::move(value)) {}
+struct Assignment final : Statement {
+    Assignment(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right)
+        : Statement{NodeKind::ASSIGNMENT}, left_(std::move(left)), right_(std::move(right)) {}
 
-    std::unique_ptr<Identifier> identifier_;
-    std::unique_ptr<Expression> value_;
-};
-
-struct ArrayAssignment final : Statement {
-    ArrayAssignment(std::unique_ptr<ArrayAccess> arrayAccess, std::unique_ptr<Expression> value)
-        : Statement{NodeKind::ARRAY_ASSIGNMENT},
-          arrayAccess_(std::move(arrayAccess)),
-          value_(std::move(value)) {}
-
-    std::unique_ptr<ArrayAccess> arrayAccess_;
-    std::unique_ptr<Expression> value_;
+    std::unique_ptr<Expression> left_; // Lvalue
+    std::unique_ptr<Expression> right_; // Rvalue
 };
 
 struct ExpressionStatement final : Statement {

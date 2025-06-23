@@ -208,10 +208,10 @@ void Generator::generate_variable_definition(const AST::VariableDefinition& varD
     write_to_variable(varName, "rax");
 }
 
-void Generator::generate_variable_assignment(const AST::VariableAssignment& assignment) {
-    const std::string& varName = assignment.identifier_->name_;
-    evaluate_expression_to_rax(*assignment.value_);
-    write_to_variable(varName, "rax");
+void Generator::generate_variable_assignment(const AST::Assignment& assignment) {
+    // const std::string& varName = assignment.identifier_->name_;
+    // evaluate_expression_to_rax(*assignment.value_);
+    // write_to_variable(varName, "rax");
 }
 
 void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStmt) {
@@ -279,8 +279,8 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
             generate_variable_definition(varDecl);
             break;
         }
-        case AST::NodeKind::VARIABLE_ASSIGNMENT: {
-            const auto& assignment = static_cast<const AST::VariableAssignment&>(stmt);
+        case AST::NodeKind::ASSIGNMENT: {
+            const auto& assignment = static_cast<const AST::Assignment&>(stmt);
             generate_variable_assignment(assignment);
             break;
         }

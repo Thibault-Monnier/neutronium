@@ -57,7 +57,7 @@ class SemanticAnalyser {
 
     // ── Statement analysis ─────────────────────────────────────────────────────
     void analyse_variable_definition(const AST::VariableDefinition& declaration);
-    void analyse_variable_assignment(const AST::VariableAssignment& assignment);
+    void analyse_variable_assignment(const AST::Assignment& assignment);
     void analyse_expression_statement(const AST::ExpressionStatement& exprStmt);
     void analyse_if_statement(const AST::IfStatement& ifStmt);
     void analyse_while_statement(const AST::WhileStatement& whileStmt);

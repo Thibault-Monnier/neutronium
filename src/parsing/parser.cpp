@@ -227,14 +227,6 @@ std::unique_ptr<AST::ExpressionStatement> Parser::parse_expression_statement() {
     return std::make_unique<AST::ExpressionStatement>(std::move(expression));
 }
 
-std::unique_ptr<AST::VariableAssignment> Parser::parse_variable_assignment() {
-    auto identifier = parse_identifier();
-    expect(TokenKind::EQUAL);
-    auto value = parse_expression();
-    expect(TokenKind::SEMICOLON);
-    return std::make_unique<AST::VariableAssignment>(std::move(identifier), std::move(value));
-}
-
 std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
     expect(TokenKind::LET);
 
@@ -260,15 +252,13 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
                                                      std::move(value));
 }
 
-std::unique_ptr<AST::ArrayAssignment> Parser::parse_array_assignment() {
-    auto arrayAccess = parse_array_access();
-
+std::unique_ptr<AST::Assignment> Parser::parse_assignment() {
+    auto left = parse_expression();
     expect(TokenKind::EQUAL);
-    auto value = parse_expression();
-
+    auto right = parse_expression();
     expect(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::ArrayAssignment>(std::move(arrayAccess), std::move(value));
+    return std::make_unique<AST::Assignment>(std::move(left), std::move(right));
 }
 
 std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no-recursion)
@@ -354,10 +344,9 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
     const TokenKind tokenKind = peek().kind();
 
     if (tokenKind == TokenKind::LET) return parse_variable_definition();
-    if (tokenKind == TokenKind::IDENTIFIER && peek(1).kind() == TokenKind::EQUAL)
-        return parse_variable_assignment();
-    if (tokenKind == TokenKind::IDENTIFIER && peek(1).kind() == TokenKind::LEFT_BRACKET)
-        return parse_array_assignment();
+    if (tokenKind == TokenKind::IDENTIFIER &&
+        (peek(1).kind() == TokenKind::EQUAL || peek(1).kind() == TokenKind::LEFT_BRACKET))
+        return parse_assignment();
     if (tokenKind == TokenKind::IF) return parse_if_statement();
     if (tokenKind == TokenKind::WHILE) return parse_while_statement();
     if (tokenKind == TokenKind::BREAK) return parse_break_statement();

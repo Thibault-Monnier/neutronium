@@ -261,26 +261,26 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
     handle_variable_declaration(name, declaration.isMutable_, variableType);
 }
 
-void SemanticAnalyser::analyse_variable_assignment(const AST::VariableAssignment& assignment) {
-    const std::string& name = assignment.identifier_->name_;
-    const auto& declarationInfo = get_symbol_info(name);
-    if (!declarationInfo.has_value()) {
-        abort(std::format("Assignment to undeclared variable: `{}`", name));
-    }
-
-    if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
-        abort(std::format("Assignment to non-variable: `{}`", name));
-    }
-    if (!declarationInfo.value()->isMutable_) {
-        abort(std::format("Assignment to immutable variable: `{}`", name));
-    }
-
-    const Type assignmentType = get_expression_type(*assignment.value_);
-    const Type& declarationType = declarationInfo.value()->type_;
-    if (assignmentType.mismatches(declarationType)) {
-        abort(std::format("Type mismatch: variable `{}` is declared as {}, but assigned to {}",
-                          name, declarationType.to_string(), assignmentType.to_string()));
-    }
+void SemanticAnalyser::analyse_variable_assignment(const AST::Assignment& assignment) {
+    // const std::string& name = assignment.identifier_->name_;
+    // const auto& declarationInfo = get_symbol_info(name);
+    // if (!declarationInfo.has_value()) {
+    //     abort(std::format("Assignment to undeclared variable: `{}`", name));
+    // }
+    //
+    // if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
+    //     abort(std::format("Assignment to non-variable: `{}`", name));
+    // }
+    // if (!declarationInfo.value()->isMutable_) {
+    //     abort(std::format("Assignment to immutable variable: `{}`", name));
+    // }
+    //
+    // const Type assignmentType = get_expression_type(*assignment.value_);
+    // const Type& declarationType = declarationInfo.value()->type_;
+    // if (assignmentType.mismatches(declarationType)) {
+    //     abort(std::format("Type mismatch: variable `{}` is declared as {}, but assigned to {}",
+    //                       name, declarationType.to_string(), assignmentType.to_string()));
+    // }
 }
 
 void SemanticAnalyser::analyse_expression_statement(  // NOLINT(*-no-recursion)
@@ -328,8 +328,8 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
             analyse_variable_definition(varDecl);
             break;
         }
-        case AST::NodeKind::VARIABLE_ASSIGNMENT: {
-            const auto& assignment = static_cast<const AST::VariableAssignment&>(stmt);
+        case AST::NodeKind::ASSIGNMENT: {
+            const auto& assignment = static_cast<const AST::Assignment&>(stmt);
             analyse_variable_assignment(assignment);
             break;
         }

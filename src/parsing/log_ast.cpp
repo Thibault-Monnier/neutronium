@@ -84,14 +84,6 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
     const std::string branch = isLast ? "└── " : "├── ";
 
     switch (stmt.kind_) {
-        case NodeKind::VARIABLE_ASSIGNMENT: {
-            const auto& assignment = as<VariableAssignment>(stmt);
-            std::cout << prefix << branch << "VariableAssignment\n";
-            std::cout << newPrefix << "├── Identifier: " << assignment.identifier_->name_ << "\n";
-            std::cout << newPrefix << "└── Value\n";
-            log_expression(*assignment.value_, next_prefix(newPrefix, true), true);
-            break;
-        }
         case NodeKind::VARIABLE_DEFINITION: {
             const auto& varDecl = as<VariableDefinition>(stmt);
             std::cout << prefix << branch << "VariableDefinition\n";
@@ -103,12 +95,13 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             log_expression(*varDecl.value_, next_prefix(newPrefix, true), true);
             break;
         }
-        case NodeKind::ARRAY_ASSIGNMENT: {
-            const auto& arrayAssign = as<ArrayAssignment>(stmt);
-            std::cout << prefix << branch << "ArrayAssignment\n";
-            log_expression(*arrayAssign.arrayAccess_, newPrefix, false);
-            std::cout << newPrefix << "└── Value\n";
-            log_expression(*arrayAssign.value_, next_prefix(newPrefix, true), true);
+        case NodeKind::ASSIGNMENT: {
+            const auto& assignment = as<Assignment>(stmt);
+            std::cout << prefix << branch << "Assignment\n";
+            std::cout << newPrefix << "├── Left\n";
+            log_expression(*assignment.left_, next_prefix(newPrefix, false), true);
+            std::cout << newPrefix << "└── Right\n";
+            log_expression(*assignment.right_, next_prefix(newPrefix, true), true);
             break;
         }
         case NodeKind::EXPRESSION_STATEMENT: {
