@@ -31,7 +31,25 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
     } else {
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
 
-        if (expr.kind_ == NodeKind::FUNCTION_CALL) {
+        if (expr.kind_ == NodeKind::ARRAY_LITERAL) {
+            const auto& arrayLit = as<ArrayLiteral>(expr);
+            std::cout << prefix << branch << "ArrayLiteral\n";
+            for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
+                const auto& element = arrayLit.elements_[i];
+                const bool isLastElement = i == arrayLit.elements_.size() - 1;
+                const std::string elementBranch = isLastElement ? "└── " : "├── ";
+                std::cout << newPrefix << elementBranch << "Element" << i + 1 << "\n";
+                log_expression(*element, next_prefix(newPrefix, isLastElement), true);
+            }
+
+        } else if (expr.kind_ == NodeKind::ARRAY_ACCESS) {
+            const auto& arrayAccess = as<ArrayAccess>(expr);
+            std::cout << prefix << branch << "ArrayAccess\n";
+            std::cout << newPrefix << "├── Identifier: " << arrayAccess.identifier_->name_ << "\n";
+            std::cout << newPrefix << "└── Index\n";
+            log_expression(*arrayAccess.index_, next_prefix(newPrefix, true), true);
+
+        } else if (expr.kind_ == NodeKind::FUNCTION_CALL) {
             const auto& funcCall = as<FunctionCall>(expr);
             std::cout << prefix << branch << "FunctionCall\n";
             std::cout << newPrefix << "├── Identifier: " << funcCall.identifier_->name_ << "\n";
@@ -44,7 +62,6 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
                 std::cout << argPrefix << argBranch << "Argument" << i + 1 << "\n";
                 log_expression(*arg, next_prefix(argPrefix, isLastArg), true);
             }
-
         } else if (expr.kind_ == NodeKind::BINARY_EXPRESSION) {
             const auto& binaryExpr = as<BinaryExpression>(expr);
             std::cout << prefix << branch << "BinaryExpression\n";
@@ -84,6 +101,14 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
                       << "\n";
             std::cout << newPrefix << "└── Value\n";
             log_expression(*varDecl.value_, next_prefix(newPrefix, true), true);
+            break;
+        }
+        case NodeKind::ARRAY_ASSIGNMENT: {
+            const auto& arrayAssign = as<ArrayAssignment>(stmt);
+            std::cout << prefix << branch << "ArrayAssignment\n";
+            log_expression(*arrayAssign.arrayAccess_, newPrefix, false);
+            std::cout << newPrefix << "└── Value\n";
+            log_expression(*arrayAssign.value_, next_prefix(newPrefix, true), true);
             break;
         }
         case NodeKind::EXPRESSION_STATEMENT: {
@@ -231,6 +256,8 @@ void log_ast(const Program& programNode) {
         std::cout << prefix << branch << "FunctionDefinition\n";
         functionSignature(*funcDef.identifier_, funcDef.parameters_, funcDef.returnType_, newPrefix,
                           true);
+        std::cout << newPrefix << "├── IsExported: " << (funcDef.isExported_ ? "true" : "false")
+                  << "\n";
 
         std::cout << newPrefix << "└── Body\n";
         log_statement(*funcDef.body_, next_prefix(newPrefix, true), true);

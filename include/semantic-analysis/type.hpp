@@ -7,7 +7,6 @@ enum class PrimitiveType : uint8_t {
     BOOLEAN,
     VOID,
     ANY,
-    NOT_A_PRIMITIVE,
 };
 
 enum class TypeKind : uint8_t {
@@ -19,6 +18,11 @@ class Type {
    public:
     // Implicit constructor
     Type(const PrimitiveType t) : primitive_(t) {}
+
+    Type(const Type& elementType, const std::size_t arrayLength)
+        : kind_(TypeKind::ARRAY),
+          arrayElement_(std::make_unique<Type>(elementType)),
+          arrayLength_(arrayLength) {}
 
     Type(const Type& other) { copy_from(other); }
 
@@ -45,7 +49,7 @@ class Type {
         return !matches(other);
     }
 
-    [[nodiscard]] std::string to_string() const {
+    [[nodiscard]] std::string to_string() const {  // NOLINT(*-no-recursion)
         if (kind_ == TypeKind::PRIMITIVE) {
             switch (primitive_) {
                 case PrimitiveType::INTEGER:
@@ -60,15 +64,15 @@ class Type {
                     throw std::invalid_argument("Invalid type passed to TypeInfo::to_string");
             }
         } else if (kind_ == TypeKind::ARRAY) {
-            return "array[" + std::to_string(arrayLength_) + "] of " +
-                   arrayElement_->to_string();
+            return "array[" + arrayElement_->to_string() + " * " + std::to_string(arrayLength_) + "]";
         }
+        throw std::invalid_argument("Invalid type kind in TypeInfo::to_string");
     }
 
    private:
     TypeKind kind_{TypeKind::PRIMITIVE};
 
-    PrimitiveType primitive_;
+    PrimitiveType primitive_{PrimitiveType::ANY};
 
     std::unique_ptr<Type> arrayElement_;
     std::size_t arrayLength_{0};

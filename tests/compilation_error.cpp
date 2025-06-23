@@ -513,6 +513,21 @@ TEST_F(NeutroniumTester, AssignmentToImmutableFunctionParamaterFails) {
                 (error.contains("assignment") || error.contains("Assignment")));
 }
 
+TEST_F(NeutroniumTester, FunctionCallWithoutCommasFails) {
+    const std::string code = R"(
+        fn x(a: int, b: bool): {
+            exit 0;
+        }
+
+        fn main(): {
+            x(1 true);  # missing comma
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("expected") && error.contains("TRUE"));
+}
+
 TEST_F(NeutroniumTester, NonBooleanConditionError) {
     const std::string code = R"(
         fn main(): {

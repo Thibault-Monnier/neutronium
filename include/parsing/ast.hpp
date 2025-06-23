@@ -27,11 +27,14 @@ enum class Operator : uint8_t {
 enum class NodeKind : uint8_t {
     NUMBER_LITERAL,
     BOOLEAN_LITERAL,
+    ARRAY_LITERAL,
     IDENTIFIER,
+    ARRAY_ACCESS,
     UNARY_EXPRESSION,
     BINARY_EXPRESSION,
     VARIABLE_DEFINITION,
     VARIABLE_ASSIGNMENT,
+    ARRAY_ASSIGNMENT,
     EXPRESSION_STATEMENT,
     IF_STATEMENT,
     WHILE_STATEMENT,
@@ -76,11 +79,28 @@ struct BooleanLiteral final : PrimaryExpression {
     const bool value_;
 };
 
+struct ArrayLiteral final : PrimaryExpression {
+    explicit ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements)
+        : PrimaryExpression{NodeKind::ARRAY_LITERAL}, elements_(std::move(elements)) {}
+
+    const std::vector<std::unique_ptr<Expression>> elements_;
+};
+
 struct Identifier final : PrimaryExpression {
     explicit Identifier(std::string name)
         : PrimaryExpression{NodeKind::IDENTIFIER}, name_(std::move(name)) {}
 
     const std::string name_;
+};
+
+struct ArrayAccess final : PrimaryExpression {
+    ArrayAccess(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> index)
+        : PrimaryExpression{NodeKind::ARRAY_ACCESS},
+          identifier_(std::move(identifier)),
+          index_(std::move(index)) {}
+
+    std::unique_ptr<Identifier> identifier_;
+    std::unique_ptr<Expression> index_;
 };
 
 struct FunctionCall final : PrimaryExpression {
@@ -151,6 +171,16 @@ struct VariableAssignment final : Statement {
           value_(std::move(value)) {}
 
     std::unique_ptr<Identifier> identifier_;
+    std::unique_ptr<Expression> value_;
+};
+
+struct ArrayAssignment final : Statement {
+    ArrayAssignment(std::unique_ptr<ArrayAccess> arrayAccess, std::unique_ptr<Expression> value)
+        : Statement{NodeKind::ARRAY_ASSIGNMENT},
+          arrayAccess_(std::move(arrayAccess)),
+          value_(std::move(value)) {}
+
+    std::unique_ptr<ArrayAccess> arrayAccess_;
     std::unique_ptr<Expression> value_;
 };
 

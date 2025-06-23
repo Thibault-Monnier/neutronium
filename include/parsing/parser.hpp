@@ -26,13 +26,16 @@ class Parser {
     size_t currentIndex_ = 0;
 
     [[noreturn]] static void abort(const std::string& errorMessage);
-    [[nodiscard]] const Token& peek(const int amount = 0) const;
-    const Token& consume(const TokenKind expected);
+    [[nodiscard]] const Token& peek(int amount = 0) const;
+    const Token& expect(TokenKind expected);
 
     Type parse_type_specifier();
+    std::unique_ptr<AST::NumberLiteral> parse_number_literal();
+    std::unique_ptr<AST::ArrayLiteral> parse_array_literal();
 
     std::unique_ptr<AST::Identifier> parse_identifier();
     std::unique_ptr<AST::FunctionCall> parse_function_call();
+    std::unique_ptr<AST::ArrayAccess> parse_array_access();
     std::unique_ptr<AST::Expression> parse_primary_expression();
     std::unique_ptr<AST::Expression> parse_unary_expression();
     std::unique_ptr<AST::Expression> parse_binary_expression(
@@ -46,6 +49,7 @@ class Parser {
     std::unique_ptr<AST::ExpressionStatement> parse_expression_statement();
     std::unique_ptr<AST::VariableAssignment> parse_variable_assignment();
     std::unique_ptr<AST::VariableDefinition> parse_variable_definition();
+    std::unique_ptr<AST::ArrayAssignment> parse_array_assignment();
     std::unique_ptr<AST::IfStatement> parse_if_statement();
     std::unique_ptr<AST::WhileStatement> parse_while_statement();
     std::unique_ptr<AST::VariableDefinition> parse_function_parameter();

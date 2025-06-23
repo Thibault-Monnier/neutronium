@@ -128,10 +128,6 @@ int main(const int argc, char* argv[]) {
             if (extension == ".nt") {
                 compile_file(
                     CompilerOptions{
-                        .logCode_ = opts.logCode_,
-                        .logTokens_ = opts.logTokens_,
-                        .logAst_ = opts.logAst_,
-                        .logAssembly_ = opts.logAssembly_,
                         .sourceFilename_ = src,
                         .targetType_ = TargetType::LIBRARY,
                     },

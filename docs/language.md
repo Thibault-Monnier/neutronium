@@ -21,6 +21,7 @@ const-definition ::= 'const' identifier [ ':' type-specifier ] '=' expression ';
 statement ::= block-statement
             | variable-definition
             | variable-assignment
+            | array-assignment
             | if-statement
             | while-statement
             | break-statement
@@ -32,11 +33,17 @@ statement ::= block-statement
 
 block-statement ::= '{' { statement } '}'
 
-type-specifier ::= 'int' | 'bool'
+type-specifier ::= 'int'
+                 | 'bool'
+                 | array-type
+                 
+array-type ::= '[' type-specifier ';' integer-literal ']'
 
 variable-definition ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
 
 variable-assignment ::= identifier '=' expression ';'
+
+array-assignment ::= array-access '=' expression ';'
 
 parameter-list ::= [ parameter-declaration { ',' parameter-declaration } ]
 
@@ -75,21 +82,26 @@ multiplicative-expression ::= unary-expression
 
 unary-expression ::= primary-expression
                    | unary-op primary-expression
+                   
+unary-op ::= '-' | '+' | '!'
 
 primary-expression ::= literal
                      | identifier
+                     | array-access
                      | function-call
                      | '(' expression ')'
 
-function-call ::= identifier '(' argument-list ')'
+array-access ::= identifier '[' expression ']'
 
-argument-list ::= [ expression { ',' expression } ]
+literal ::= integer-literal | boolean-literal | array-literal
 
-unary-op ::= '-' | '+' | '!'
+array-literal ::= '[' expression-list ']'
+
+function-call ::= identifier '(' expression-list ')'
+
+expression-list ::= [ expression { ',' expression } ]
 
 identifier ::= letter { letter | digit | '_' }
-
-literal ::= integer-literal | boolean-literal
 
 integer-literal ::= digit { digit }
 
