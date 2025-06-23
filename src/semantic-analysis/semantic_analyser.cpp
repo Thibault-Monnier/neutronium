@@ -24,7 +24,7 @@ void SemanticAnalyser::analyse() {
     if (targetType_ == TargetType::EXECUTABLE) {
         if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
             abort("No `main` function found in executable target");
-        } else if (mainIt->second.type_.raw() != RawType::VOID) {
+        } else if (!mainIt->second.type_.matches(PrimitiveType::VOID)) {
             abort("`main` function must return `void`");
         } else if (mainIt->second.parameters_.size() != 0) {
             abort("`main` function must not take any parameters");
@@ -60,7 +60,7 @@ std::optional<const SymbolInfo*> SemanticAnalyser::get_symbol_info(const std::st
 }
 
 SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const SymbolKind kind,
-                                             const bool isMutable, const Type type,
+                                             const bool isMutable, const Type& type,
                                              const bool isScoped,
                                              std::vector<SymbolInfo> parameters) {
     if (get_symbol_info(name).has_value()) {
@@ -85,12 +85,13 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const Symb
                                 std::to_string(static_cast<int>(kind)));
 }
 
-SymbolInfo& SemanticAnalyser::handle_constant_definition(const std::string& name, const Type type) {
+SymbolInfo& SemanticAnalyser::handle_constant_definition(const std::string& name,
+                                                         const Type& type) {
     return declare_symbol(name, SymbolKind::CONSTANT, false, type, false, {});
 }
 
 SymbolInfo& SemanticAnalyser::handle_function_declaration(
-    const std::string& name, const Type returnType,
+    const std::string& name, const Type& returnType,
     const std::vector<std::unique_ptr<AST::VariableDefinition>>& params) {
     std::vector<SymbolInfo> parameterSymbols;
     for (const auto& param : params) {
@@ -102,7 +103,7 @@ SymbolInfo& SemanticAnalyser::handle_function_declaration(
 }
 
 SymbolInfo& SemanticAnalyser::handle_variable_declaration(const std::string& name,
-                                                          const bool isMutable, const Type type) {
+                                                          const bool isMutable, const Type& type) {
     return declare_symbol(name, SymbolKind::VARIABLE, isMutable, type, true, {});
 }
 
@@ -130,8 +131,8 @@ Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
 
     for (std::size_t i = 0; i < funcCall.arguments_.size(); i++) {
         const Type argType = get_expression_type(*funcCall.arguments_[i]);
-        const Type paramType = params[i].type_;
-        if (!argType.matches(paramType)) {
+        const Type& paramType = params[i].type_;
+        if (argType.mismatches(paramType)) {
             abort(
                 std::format("Function `{}` called with incorrect argument type for parameter `{}`: "
                             "expected {}, got {}",
@@ -145,14 +146,14 @@ Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
 Type SemanticAnalyser::get_unary_expression_type(  // NOLINT(*-no-recursion)
     const AST::UnaryExpression& unaryExpr) {
     const Type operandType = get_expression_type(*unaryExpr.operand_);
-    if (operandType.raw() == RawType::INTEGER) {
-        if (AST::is_arithmetic_operator(unaryExpr.operator_)) return RawType::INTEGER;
+    if (operandType.matches(PrimitiveType::INTEGER)) {
+        if (AST::is_arithmetic_operator(unaryExpr.operator_)) return PrimitiveType::INTEGER;
 
         abort("Invalid unary operator for integer operand: got " +
               AST::operator_to_string(unaryExpr.operator_));
     }
-    if (operandType.raw() == RawType::BOOLEAN) {
-        if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) return RawType::BOOLEAN;
+    if (operandType.matches(PrimitiveType::BOOLEAN)) {
+        if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) return PrimitiveType::BOOLEAN;
 
         abort("Invalid unary operator for boolean operand: got " +
               AST::operator_to_string(unaryExpr.operator_));
@@ -166,34 +167,35 @@ Type SemanticAnalyser::get_binary_expression_type(  // NOLINT(*-no-recursion)
     const AST::BinaryExpression& binaryExpr) {
     const Type leftType = get_expression_type(*binaryExpr.left_);
     const Type rightType = get_expression_type(*binaryExpr.right_);
-    if (leftType.raw() != rightType.raw()) {
+    if (leftType.mismatches(rightType)) {
         abort(std::format("Type mismatch in binary expression: left is {}, right is {}",
                           leftType.to_string(), rightType.to_string()));
     }
 
     const AST::Operator op = binaryExpr.operator_;
     if (AST::is_arithmetic_operator(op)) {
-        if (leftType.raw() != RawType::INTEGER) {
+        if (leftType.mismatches(PrimitiveType::INTEGER)) {
             abort("Invalid type for arithmetic operation: expected integer, got " +
                   leftType.to_string());
         }
-        return RawType::INTEGER;
+        return PrimitiveType::INTEGER;
     }
 
     if (AST::is_equality_operator(op)) {
-        if (leftType.raw() != RawType::INTEGER && leftType.raw() != RawType::BOOLEAN) {
+        if (leftType.mismatches(PrimitiveType::INTEGER) &&
+            leftType.mismatches(PrimitiveType::BOOLEAN)) {
             abort("Invalid type for equality operation: expected integer or boolean, got " +
                   leftType.to_string());
         }
-        return RawType::BOOLEAN;
+        return PrimitiveType::BOOLEAN;
     }
 
     if (AST::is_relational_operator(op)) {
-        if (leftType.raw() != RawType::INTEGER) {
+        if (leftType.mismatches(PrimitiveType::INTEGER)) {
             abort("Invalid type for relational operation: expected integer, got " +
                   leftType.to_string());
         }
-        return RawType::BOOLEAN;
+        return PrimitiveType::BOOLEAN;
     }
 
     throw std::invalid_argument("Invalid operator in binary expression");
@@ -202,9 +204,9 @@ Type SemanticAnalyser::get_binary_expression_type(  // NOLINT(*-no-recursion)
 Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NOLINT(*-no-recursion)
     switch (expr.kind_) {
         case AST::NodeKind::NUMBER_LITERAL:
-            return RawType::INTEGER;
+            return PrimitiveType::INTEGER;
         case AST::NodeKind::BOOLEAN_LITERAL:
-            return RawType::BOOLEAN;
+            return PrimitiveType::BOOLEAN;
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
             const auto info = get_symbol_info(identifier.name_);
@@ -233,10 +235,10 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
     }
 }
 
-void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Type expected,
+void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Type& expected,
                                           const std::string& location) {
     const Type exprType = get_expression_type(expr);
-    if (!exprType.matches(expected)) {
+    if (exprType.mismatches(expected)) {
         abort(std::format("Invalid expression type for {}: expected {}, got {}", location,
                           expected.to_string(), exprType.to_string()));
     }
@@ -246,11 +248,12 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
     const std::string& name = declaration.identifier_->name_;
     const Type variableType = get_expression_type(*declaration.value_);
 
-    if (variableType.raw() != RawType::INTEGER && variableType.raw() != RawType::BOOLEAN) {
+    if (variableType.mismatches(PrimitiveType::INTEGER) &&
+        variableType.mismatches(PrimitiveType::BOOLEAN)) {
         abort(std::format("Invalid variable type: `{}` is declared as {}", name,
                           variableType.to_string()));
     }
-    if (!variableType.matches(declaration.type_)) {
+    if (variableType.mismatches(declaration.type_)) {
         abort(std::format("Type mismatch: variable `{}` has {} type specifier, but has {} value",
                           name, declaration.type_.to_string(), variableType.to_string()));
     }
@@ -273,8 +276,8 @@ void SemanticAnalyser::analyse_variable_assignment(const AST::VariableAssignment
     }
 
     const Type assignmentType = get_expression_type(*assignment.value_);
-    const Type declarationType = declarationInfo.value()->type_;
-    if (assignmentType.raw() != declarationType.raw()) {
+    const Type& declarationType = declarationInfo.value()->type_;
+    if (assignmentType.mismatches(declarationType)) {
         abort(std::format("Type mismatch: variable `{}` is declared as {}, but assigned to {}",
                           name, declarationType.to_string(), assignmentType.to_string()));
     }
@@ -282,12 +285,12 @@ void SemanticAnalyser::analyse_variable_assignment(const AST::VariableAssignment
 
 void SemanticAnalyser::analyse_expression_statement(  // NOLINT(*-no-recursion)
     const AST::ExpressionStatement& exprStmt) {
-    analyse_expression(*exprStmt.expression_, RawType::ANY, "expression statement");
+    analyse_expression(*exprStmt.expression_, PrimitiveType::ANY, "expression statement");
 }
 
 void SemanticAnalyser::analyse_if_statement(  // NOLINT(*-no-recursion)
     const AST::IfStatement& ifStmt) {
-    analyse_expression(*ifStmt.condition_, RawType::BOOLEAN, "condition");
+    analyse_expression(*ifStmt.condition_, PrimitiveType::BOOLEAN, "condition");
     analyse_statement(*ifStmt.body_);
     if (ifStmt.elseClause_) {
         analyse_statement(*ifStmt.elseClause_);
@@ -296,7 +299,7 @@ void SemanticAnalyser::analyse_if_statement(  // NOLINT(*-no-recursion)
 
 void SemanticAnalyser::analyse_while_statement(  // NOLINT(*-no-recursion)
     const AST::WhileStatement& whileStmt) {
-    analyse_expression(*whileStmt.condition_, RawType::BOOLEAN, "condition");
+    analyse_expression(*whileStmt.condition_, PrimitiveType::BOOLEAN, "condition");
     loopDepth_++;
     analyse_statement(*whileStmt.body_);
     loopDepth_--;
@@ -315,7 +318,7 @@ void SemanticAnalyser::analyse_continue_statement() const {
 }
 
 void SemanticAnalyser::analyse_exit(const AST::ExitStatement& exitStmt) {
-    analyse_expression(*exitStmt.exitCode_, RawType::INTEGER, "exit code");
+    analyse_expression(*exitStmt.exitCode_, PrimitiveType::INTEGER, "exit code");
 }
 
 void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
@@ -354,7 +357,7 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
         case AST::NodeKind::RETURN_STATEMENT: {
             const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
             const Type returnType = get_expression_type(*returnStmt.returnValue_);
-            if (returnType.raw() != currentFunctionReturnType_.raw()) {
+            if (returnType.mismatches(currentFunctionReturnType_)) {
                 abort(
                     std::format("Type mismatch in return statement: function `{}` expects a return "
                                 "value of type {}, but got {} instead",
@@ -428,7 +431,7 @@ void SemanticAnalyser::analyse_function_definition(  // NOLINT(*-no-recursion)
     analyse_statement(*funcDef.body_);
 
     const bool allPathsReturn = verify_statement_returns(*funcDef.body_);
-    if (!allPathsReturn && funcDef.returnType_.raw() != RawType::VOID) {
+    if (!allPathsReturn && funcDef.returnType_.mismatches(PrimitiveType::VOID)) {
         abort(
             std::format("Function `{}` must return a value of type {}, but does not always return",
                         currentFunctionName_, funcDef.returnType_.to_string()));
@@ -443,11 +446,12 @@ void SemanticAnalyser::analyse_constant_definition(const AST::ConstantDefinition
     const std::string& name = declaration.identifier_->name_;
 
     const Type constantType = get_expression_type(*declaration.value_);
-    if (constantType.raw() != RawType::INTEGER && constantType.raw() != RawType::BOOLEAN) {
+    if (constantType.mismatches(PrimitiveType::INTEGER) &&
+        constantType.mismatches(PrimitiveType::BOOLEAN)) {
         abort(std::format("Invalid constant type: `{}` is declared as {}", name,
                           constantType.to_string()));
     }
-    if (!constantType.matches(declaration.type_)) {
+    if (constantType.mismatches(declaration.type_)) {
         abort(std::format("Type mismatch: constant `{}` has {} type specifier, but has {} value",
                           name, declaration.type_.to_string(), constantType.to_string()));
     }

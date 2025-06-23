@@ -42,9 +42,9 @@ Type Parser::parse_type_specifier() {
 
     switch (tokenKind) {
         case TokenKind::INT:
-            return RawType::INTEGER;
+            return PrimitiveType::INTEGER;
         case TokenKind::BOOL:
-            return RawType::BOOLEAN;
+            return PrimitiveType::BOOLEAN;
         default: {
             const std::string errorMessage =
                 std::format("Invalid token at index {} -> expected type specifier, got {}",
@@ -198,7 +198,7 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
 
     auto identifier = parse_identifier();
 
-    Type type = RawType::ANY;
+    Type type = PrimitiveType::ANY;
     if (peek().kind() == TokenKind::COLON) {
         consume(TokenKind::COLON);
         type = parse_type_specifier();
@@ -335,7 +335,7 @@ ParsedFunctionSignature Parser::parse_function_signature() {
     }
     consume(TokenKind::RIGHT_PAREN);
 
-    Type returnType = RawType::VOID;
+    Type returnType = PrimitiveType::VOID;
     if (peek().kind() == TokenKind::RIGHT_ARROW) {
         consume(TokenKind::RIGHT_ARROW);
         returnType = parse_type_specifier();
@@ -381,7 +381,7 @@ std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
 
     auto identifier = parse_identifier();
 
-    Type type = RawType::ANY;
+    Type type = PrimitiveType::ANY;
     if (peek().kind() == TokenKind::COLON) {
         consume(TokenKind::COLON);
         type = parse_type_specifier();

@@ -360,7 +360,7 @@ void Generator::generate_function_definition(const AST::FunctionDefinition& func
 
     generate_stmt(*funcDef.body_);
 
-    if (funcDef.returnType_.raw() == RawType::VOID) {
+    if (funcDef.returnType_.matches(PrimitiveType::VOID)) {
         output_ << "\n";
         output_ << "    xor rax, rax\n";  // Return 0
         output_ << "    leave\n";
