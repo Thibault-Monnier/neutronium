@@ -297,6 +297,8 @@ bool is_equality_operator(Operator op);
 bool is_relational_operator(Operator op);
 bool is_comparison_operator(Operator op);
 
+std::string node_kind_to_string(NodeKind kind);
+
 void log_ast(const Program& programNode);
 
 }  // namespace AST

@@ -31,10 +31,17 @@ class Type {
         return *this;
     }
 
-    [[nodiscard]] bool matches(const Type& other) const {  // NOLINT(*-no-recursion)
+    [[nodiscard]] bool matches(const Type& other,
+                               const bool looseMatch = false) const {  // NOLINT(*-no-recursion)
         if (kind_ == TypeKind::PRIMITIVE && other.kind_ == TypeKind::PRIMITIVE) {
-            return primitive_ == PrimitiveType::ANY || other.primitive_ == PrimitiveType::ANY ||
-                   primitive_ == other.primitive_;
+            if (primitive_ == other.primitive_) {
+                return true;
+            }
+
+            if (looseMatch) {
+                // If loose match, allow ANY type to match with any primitive type
+                return primitive_ == PrimitiveType::ANY || other.primitive_ == PrimitiveType::ANY;
+            }
         }
 
         if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) {
@@ -45,8 +52,9 @@ class Type {
         return false;
     }
 
-    [[nodiscard]] bool mismatches(const Type& other) const {  // NOLINT(*-no-recursion)
-        return !matches(other);
+    [[nodiscard]] bool mismatches(const Type& other,
+                                  const bool looseMatch = false) const {  // NOLINT(*-no-recursion)
+        return !matches(other, looseMatch);
     }
 
     [[nodiscard]] std::string to_string() const {  // NOLINT(*-no-recursion)
@@ -64,9 +72,19 @@ class Type {
                     throw std::invalid_argument("Invalid type passed to TypeInfo::to_string");
             }
         } else if (kind_ == TypeKind::ARRAY) {
-            return "array[" + arrayElement_->to_string() + " * " + std::to_string(arrayLength_) + "]";
+            return "array[" + arrayElement_->to_string() + " * " + std::to_string(arrayLength_) +
+                   "]";
         }
         throw std::invalid_argument("Invalid type kind in TypeInfo::to_string");
+    }
+
+    [[nodiscard]] TypeKind kind() const { return kind_; }
+
+    [[nodiscard]] Type array_element_type() const {
+        if (kind_ == TypeKind::ARRAY) {
+            return *arrayElement_;
+        }
+        throw std::invalid_argument("Type is not an array, cannot get element type");
     }
 
    private:

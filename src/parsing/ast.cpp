@@ -1,6 +1,7 @@
 #include "parsing/ast.hpp"
 
 #include <iostream>
+#include <magic_enum.hpp>
 #include <string>
 #include <unordered_map>
 
@@ -63,6 +64,11 @@ bool is_relational_operator(const Operator op) {
 
 bool is_comparison_operator(const Operator op) {
     return is_equality_operator(op) || is_relational_operator(op);
+}
+
+std::string node_kind_to_string(const NodeKind kind) {
+    const auto enumName = magic_enum::enum_name(kind);
+    return std::string{enumName};
 }
 
 }  // namespace AST

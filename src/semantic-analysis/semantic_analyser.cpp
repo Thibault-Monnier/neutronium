@@ -1,7 +1,7 @@
 #include "semantic-analysis/semantic_analyser.hpp"
 
 #include <format>
-#include <iostream>
+#include <functional>
 #include <stdexcept>
 #include <string>
 
@@ -24,7 +24,7 @@ void SemanticAnalyser::analyse() {
     if (targetType_ == TargetType::EXECUTABLE) {
         if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
             abort("No `main` function found in executable target");
-        } else if (!mainIt->second.type_.matches(PrimitiveType::VOID)) {
+        } else if (mainIt->second.type_.mismatches(PrimitiveType::VOID)) {
             abort("`main` function must return `void`");
         } else if (mainIt->second.parameters_.size() != 0) {
             abort("`main` function must not take any parameters");
@@ -207,6 +207,18 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
             return PrimitiveType::INTEGER;
         case AST::NodeKind::BOOLEAN_LITERAL:
             return PrimitiveType::BOOLEAN;
+        case AST::NodeKind::ARRAY_LITERAL: {
+            const auto& arrayLiteral = static_cast<const AST::ArrayLiteral&>(expr);
+            if (arrayLiteral.elements_.empty()) {
+                return Type{PrimitiveType::ANY, 0};  // Empty array, type is `any`
+            }
+
+            const Type elementType = get_expression_type(*arrayLiteral.elements_[0]);
+            for (const auto& element : arrayLiteral.elements_) {
+                analyse_expression(*element, elementType, "array literal element");
+            }
+            return Type{elementType, arrayLiteral.elements_.size()};
+        }
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
             const auto info = get_symbol_info(identifier.name_);
@@ -217,6 +229,16 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
                 abort(std::format("`{}` is not a variable or constant", identifier.name_));
             }
             return info.value()->type_;
+        }
+        case AST::NodeKind::ARRAY_ACCESS: {
+            const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
+            const Type arrayType = get_expression_type(*arrayAccess.identifier_);
+            if (arrayType.kind() != TypeKind::ARRAY) {
+                abort(std::format("`{}` is indexed as an array, but has type {}",
+                                  arrayAccess.identifier_->name_, arrayType.to_string()));
+            }
+            analyse_expression(*arrayAccess.index_, PrimitiveType::INTEGER, "array access index");
+            return arrayType.array_element_type();
         }
         case AST::NodeKind::FUNCTION_CALL: {
             const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
@@ -231,7 +253,7 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
             return get_binary_expression_type(binaryExpr);
         }
         default:
-            throw std::invalid_argument("Invalid expression kind");
+            throw std::invalid_argument("Invalid expression kind: " + node_kind_to_string(expr.kind_));
     }
 }
 
@@ -248,12 +270,11 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
     const std::string& name = declaration.identifier_->name_;
     const Type variableType = get_expression_type(*declaration.value_);
 
-    if (variableType.mismatches(PrimitiveType::INTEGER) &&
-        variableType.mismatches(PrimitiveType::BOOLEAN)) {
+    if (variableType.matches(PrimitiveType::ANY) || variableType.matches(PrimitiveType::VOID)) {
         abort(std::format("Invalid variable type: `{}` is declared as {}", name,
                           variableType.to_string()));
     }
-    if (variableType.mismatches(declaration.type_)) {
+    if (variableType.mismatches(declaration.type_, true)) {
         abort(std::format("Type mismatch: variable `{}` has {} type specifier, but has {} value",
                           name, declaration.type_.to_string(), variableType.to_string()));
     }
@@ -261,31 +282,44 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
     handle_variable_declaration(name, declaration.isMutable_, variableType);
 }
 
-void SemanticAnalyser::analyse_variable_assignment(const AST::Assignment& assignment) {
-    // const std::string& name = assignment.identifier_->name_;
-    // const auto& declarationInfo = get_symbol_info(name);
-    // if (!declarationInfo.has_value()) {
-    //     abort(std::format("Assignment to undeclared variable: `{}`", name));
-    // }
-    //
-    // if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
-    //     abort(std::format("Assignment to non-variable: `{}`", name));
-    // }
-    // if (!declarationInfo.value()->isMutable_) {
-    //     abort(std::format("Assignment to immutable variable: `{}`", name));
-    // }
-    //
-    // const Type assignmentType = get_expression_type(*assignment.value_);
-    // const Type& declarationType = declarationInfo.value()->type_;
-    // if (assignmentType.mismatches(declarationType)) {
-    //     abort(std::format("Type mismatch: variable `{}` is declared as {}, but assigned to {}",
-    //                       name, declarationType.to_string(), assignmentType.to_string()));
-    // }
+void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
+    const auto& location = assignment.left_;
+
+    std::function<void(const AST::Expression&)> verifyIsAssignable =
+        [&](const AST::Expression& expr) {
+            switch (expr.kind_) {
+                case AST::NodeKind::IDENTIFIER: {
+                    const std::string& varName = static_cast<const AST::Identifier&>(expr).name_;
+                    const auto& declarationInfo = get_symbol_info(varName);
+                    if (declarationInfo.has_value() && !declarationInfo.value()->isMutable_) {
+                        abort(std::format("Assignment to immutable: `{}`", varName));
+                    }
+                    break;
+                }
+                case AST::NodeKind::ARRAY_ACCESS: {
+                    const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
+                    verifyIsAssignable(*arrayAccess.identifier_);
+                    break;
+                }
+                default:
+                    abort("Left-hand side of assignment must be an lvalue, got " +
+                          AST::node_kind_to_string(expr.kind_));
+            }
+        };
+
+    verifyIsAssignable(*location);
+
+    const Type leftType = get_expression_type(*location);
+    const Type rightType = get_expression_type(*assignment.right_);
+    if (leftType.mismatches(rightType)) {
+        abort(std::format("Type mismatch in assignment: {} is assigned to {}", leftType.to_string(),
+                          rightType.to_string()));
+    }
 }
 
 void SemanticAnalyser::analyse_expression_statement(  // NOLINT(*-no-recursion)
     const AST::ExpressionStatement& exprStmt) {
-    analyse_expression(*exprStmt.expression_, PrimitiveType::ANY, "expression statement");
+    get_expression_type(*exprStmt.expression_);
 }
 
 void SemanticAnalyser::analyse_if_statement(  // NOLINT(*-no-recursion)
@@ -330,7 +364,7 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
         }
         case AST::NodeKind::ASSIGNMENT: {
             const auto& assignment = static_cast<const AST::Assignment&>(stmt);
-            analyse_variable_assignment(assignment);
+            analyse_assignment(assignment);
             break;
         }
         case AST::NodeKind::EXPRESSION_STATEMENT: {
