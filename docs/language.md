@@ -20,8 +20,7 @@ const-definition ::= 'const' identifier [ ':' type-specifier ] '=' expression ';
 
 statement ::= block-statement
             | variable-definition
-            | variable-assignment
-            | array-assignment
+            | assignment
             | if-statement
             | while-statement
             | break-statement
@@ -41,9 +40,7 @@ array-type ::= '[' type-specifier ';' integer-literal ']'
 
 variable-definition ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
 
-variable-assignment ::= identifier '=' expression ';'
-
-array-assignment ::= array-access '=' expression ';'
+assignment ::= expression '=' expression ';'
 
 parameter-list ::= [ parameter-declaration { ',' parameter-declaration } ]
 
