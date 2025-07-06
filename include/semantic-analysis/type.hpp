@@ -31,16 +31,16 @@ class Type {
         return *this;
     }
 
-    [[nodiscard]] bool matches(const Type& other,
-                               const bool looseMatch = false) const {  // NOLINT(*-no-recursion)
+    [[nodiscard]] bool matches(const Type& other, const bool looseMatch = false) const {
+        if (looseMatch) {
+            // If loose match, allow ANY type to match with any type
+            if (primitive_ == PrimitiveType::ANY || other.primitive_ == PrimitiveType::ANY)
+                return true;
+        }
+
         if (kind_ == TypeKind::PRIMITIVE && other.kind_ == TypeKind::PRIMITIVE) {
             if (primitive_ == other.primitive_) {
                 return true;
-            }
-
-            if (looseMatch) {
-                // If loose match, allow ANY type to match with any primitive type
-                return primitive_ == PrimitiveType::ANY || other.primitive_ == PrimitiveType::ANY;
             }
         }
 
