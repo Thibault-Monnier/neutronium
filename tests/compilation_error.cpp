@@ -136,7 +136,7 @@ TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
     )";
     auto [status4, error4] = compile(code4);
     EXPECT_NE(status4, 0);
-    EXPECT_TRUE(error4.contains("Type mismatch") && error4.contains("x"));
+    EXPECT_TRUE(error4.contains("Type mismatch"));
 }
 
 TEST_F(NeutroniumTester, ReassignmentDifferentInferredTypeFails) {

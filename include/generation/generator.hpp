@@ -27,7 +27,7 @@ class Generator {
     int currentStackOffset_ = INITIAL_STACK_OFFSET;
     std::unordered_map<std::string, int> variablesStackOffset_;
 
-    int get_current_scope_frame_size(const AST::BlockStatement& blockStmt) const;
+    static int get_current_scope_frame_size(const AST::BlockStatement& blockStmt);
 
     void stack_allocate_scope_variables(const AST::BlockStatement& blockStmt);
     void stack_deallocate_scope_variables(const AST::BlockStatement& blockStmt);
@@ -38,7 +38,10 @@ class Generator {
 
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
     void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit);
-    std::string function_name_with_prefix(const std::string& name) const;
+    void write_array_to_heap(const AST::ArrayLiteral& arrayLit);
+    void evaluate_array_access_address_to_rax(const AST::ArrayAccess& arrayAccess);
+    void evaluate_array_access_to_rax(const AST::ArrayAccess& arrayAccess);
+    static std::string function_name_with_prefix(const std::string& name);
     void generate_function_call(const AST::FunctionCall& funcCall);
     void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr);
     void evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr);

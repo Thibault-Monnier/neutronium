@@ -47,12 +47,12 @@ void SemanticAnalyser::exit_scope() { scopes_.pop_back(); }
 
 std::optional<const SymbolInfo*> SemanticAnalyser::get_symbol_info(const std::string& name) const {
     {
-        auto it = functionsTable_.find(name);
+        const auto it = functionsTable_.find(name);
         if (it != functionsTable_.end()) return &it->second;
     }
 
     for (auto const& scope : scopes_) {
-        auto it = scope.find(name);
+        const auto it = scope.find(name);
         if (it != scope.end()) return &it->second;
     }
 
@@ -253,7 +253,8 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
             return get_binary_expression_type(binaryExpr);
         }
         default:
-            throw std::invalid_argument("Invalid expression kind: " + node_kind_to_string(expr.kind_));
+            throw std::invalid_argument("Invalid expression kind: " +
+                                        node_kind_to_string(expr.kind_));
     }
 }
 
@@ -283,7 +284,7 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
 }
 
 void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
-    const auto& location = assignment.left_;
+    const auto& place = assignment.place_;
 
     std::function<void(const AST::Expression&)> verifyIsAssignable =
         [&](const AST::Expression& expr) {
@@ -291,7 +292,11 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
                 case AST::NodeKind::IDENTIFIER: {
                     const std::string& varName = static_cast<const AST::Identifier&>(expr).name_;
                     const auto& declarationInfo = get_symbol_info(varName);
-                    if (declarationInfo.has_value() && !declarationInfo.value()->isMutable_) {
+                    if (!declarationInfo.has_value()) {
+                        abort(std::format("Assignment to undeclared variable: `{}`", varName));
+                    } else if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
+                        abort(std::format("Assignment to non-variable: `{}`", varName));
+                    } else if (!declarationInfo.value()->isMutable_) {
                         abort(std::format("Assignment to immutable: `{}`", varName));
                     }
                     break;
@@ -302,18 +307,18 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
                     break;
                 }
                 default:
-                    abort("Left-hand side of assignment must be an lvalue, got " +
+                    abort("Left-hand side of assignment must be a place expression, got " +
                           AST::node_kind_to_string(expr.kind_));
             }
         };
 
-    verifyIsAssignable(*location);
+    verifyIsAssignable(*place);
 
-    const Type leftType = get_expression_type(*location);
-    const Type rightType = get_expression_type(*assignment.right_);
-    if (leftType.mismatches(rightType)) {
-        abort(std::format("Type mismatch in assignment: {} is assigned to {}", leftType.to_string(),
-                          rightType.to_string()));
+    const Type placeType = get_expression_type(*place);
+    const Type valueType = get_expression_type(*assignment.value_);
+    if (placeType.mismatches(valueType)) {
+        abort(std::format("Type mismatch in assignment: {} is assigned to {}",
+                          placeType.to_string(), valueType.to_string()));
     }
 }
 

@@ -164,11 +164,11 @@ struct VariableDefinition final : Statement {
 };
 
 struct Assignment final : Statement {
-    Assignment(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right)
-        : Statement{NodeKind::ASSIGNMENT}, left_(std::move(left)), right_(std::move(right)) {}
+    Assignment(std::unique_ptr<Expression> place, std::unique_ptr<Expression> value)
+        : Statement{NodeKind::ASSIGNMENT}, place_(std::move(place)), value_(std::move(value)) {}
 
-    std::unique_ptr<Expression> left_; // Lvalue
-    std::unique_ptr<Expression> right_; // Rvalue
+    std::unique_ptr<Expression> place_;
+    std::unique_ptr<Expression> value_;
 };
 
 struct ExpressionStatement final : Statement {

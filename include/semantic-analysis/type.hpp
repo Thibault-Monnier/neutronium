@@ -39,11 +39,8 @@ class Type {
         }
 
         if (kind_ == TypeKind::PRIMITIVE && other.kind_ == TypeKind::PRIMITIVE) {
-            if (primitive_ == other.primitive_) {
-                return true;
-            }
+            return primitive_ == other.primitive_;
         }
-
         if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) {
             return arrayLength_ == other.arrayLength_ &&
                    arrayElement_->matches(*other.arrayElement_);
@@ -69,13 +66,13 @@ class Type {
                 case PrimitiveType::ANY:
                     return "any";
                 default:
-                    throw std::invalid_argument("Invalid type passed to TypeInfo::to_string");
+                    throw std::invalid_argument("Invalid type passed to Type::to_string");
             }
         } else if (kind_ == TypeKind::ARRAY) {
             return "array[" + arrayElement_->to_string() + " * " + std::to_string(arrayLength_) +
                    "]";
         }
-        throw std::invalid_argument("Invalid type kind in TypeInfo::to_string");
+        throw std::invalid_argument("Invalid type kind in Type::to_string");
     }
 
     [[nodiscard]] TypeKind kind() const { return kind_; }
