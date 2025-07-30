@@ -87,7 +87,7 @@ class Type {
    private:
     TypeKind kind_{TypeKind::PRIMITIVE};
 
-    PrimitiveType primitive_{PrimitiveType::ANY};
+    PrimitiveType primitive_{PrimitiveType::VOID};
 
     std::unique_ptr<Type> arrayElement_;
     std::size_t arrayLength_{0};

@@ -126,7 +126,7 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
     ::testing::Values(
         LexCase{
             "true false int bool let mut if elif else continue break while fn extern return exit "
-            "+ - * / = == != < <= > >= ( ) { } : ; , 0 foo_1Bar2_",
+            "+ - * / = == != < <= > >= ( ) { } [ ] : ; , 0 foo_1Bar2_",
             {
                 TokenKind::TRUE, TokenKind::FALSE, TokenKind::INT, TokenKind::BOOL,
                 TokenKind::LET, TokenKind::MUT, TokenKind::IF, TokenKind::ELIF, TokenKind::ELSE,
@@ -138,6 +138,7 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
                 TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL,
                 TokenKind::LEFT_PAREN, TokenKind::RIGHT_PAREN,
                 TokenKind::LEFT_BRACE, TokenKind::RIGHT_BRACE,
+                TokenKind::LEFT_BRACKET, TokenKind::RIGHT_BRACKET,
                 TokenKind::COLON, TokenKind::SEMICOLON, TokenKind::COMMA,
                 TokenKind::NUMBER_LITERAL, TokenKind::IDENTIFIER,
                 TokenKind::EOF_
