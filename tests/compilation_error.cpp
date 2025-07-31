@@ -72,6 +72,19 @@ TEST_F(NeutroniumTester, MainFunctionErrors) {
                 error3.contains("return") && error3.contains("void"));
 }
 
+TEST_F(NeutroniumTester, NonPlaceExpressionInLeftOfAssignmentFails) {
+    const std::string code = R"(
+        fn main(): {
+            let x = 1;
+            x + 2 = 3;  # illegal: expression on left side
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Left") && error.contains("place expression") &&
+                error.contains("assignment"));
+}
+
 TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
     const std::string code = R"(
         fn main(): {
@@ -439,6 +452,30 @@ TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("call") && error.contains("function") && error.contains("x"));
+}
+
+TEST_F(NeutroniumTester, AttemptToArrayAccessANonArray) {
+    const std::string code = R"(
+        fn main(): {
+            let x = 1;
+            x[0];
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("array") && error.contains("indexed") && error.contains("x") &&
+                error.contains("int"));
+
+    const std::string code2 = R"(
+        fn a(): {}
+
+        fn main(): {
+            a[0];
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("not") && error2.contains("variable") && error2.contains("a"));
 }
 
 TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {

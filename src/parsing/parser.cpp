@@ -344,9 +344,10 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
     const TokenKind tokenKind = peek().kind();
 
     if (tokenKind == TokenKind::LET) return parse_variable_definition();
-    if (tokenKind == TokenKind::IDENTIFIER &&
-        (peek(1).kind() == TokenKind::EQUAL || peek(1).kind() == TokenKind::LEFT_BRACKET))
-        return parse_assignment();
+    if (tokenKind == TokenKind::IDENTIFIER)
+        for (int i = 0; peek(i).kind() != TokenKind::EOF_ && peek(i).kind() != TokenKind::SEMICOLON;
+             i++)
+            if (peek(i).kind() == TokenKind::EQUAL) return parse_assignment();
     if (tokenKind == TokenKind::IF) return parse_if_statement();
     if (tokenKind == TokenKind::WHILE) return parse_while_statement();
     if (tokenKind == TokenKind::BREAK) return parse_break_statement();
