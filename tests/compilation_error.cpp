@@ -76,13 +76,26 @@ TEST_F(NeutroniumTester, NonPlaceExpressionInLeftOfAssignmentFails) {
     const std::string code = R"(
         fn main(): {
             let x = 1;
-            x + 2 = 3;  # illegal: expression on left side
+            x + 2 = 3;
         }
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("Left") && error.contains("place expression") &&
                 error.contains("assignment"));
+
+    const std::string code2 = R"(
+        fn a() -> int: { return 0; }
+
+        fn main(): {
+            let x = 1;
+            a() = 3;
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("Left") && error2.contains("place expression") &&
+                error2.contains("assignment"));
 }
 
 TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
