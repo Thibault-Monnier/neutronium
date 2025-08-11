@@ -34,28 +34,20 @@ sudo apt update
 sudo apt install build-essential cmake ninja-build nasm
 ````
 
+Make sure your `cmake` version is at least 3.28.
+
 ## 🛠️ Compile and Run
 
-Display the help message for the compiler by running:
-
+You can use the following shell scripts to compile and run the Neutronium compiler:
 ```bash
-./run.sh -h
+./cmake-build.sh # Reconfigure cmake + build the compiler
+./compile.sh <path-to-source-file> [OPTIONS] # Compile a Neutronium source file
+./run.sh <path-to-source-file> [OPTIONS] # Run the generated machine code
 ```
 
-To build the compiler and run it on a Neutronium source file, run:
+Each script calls the previous one, so you never need to run several of them.
 
-```bash
-./run.sh <path-to-source-file> [OPTIONS]
-```
-
-Alternatively, you can build the compiler and run it, then execute the machine code manually by executing:
-
-```bash
-./cmake-build.sh # Build the compiler
-./build/neutronium <path-to-source-file> [OPTIONS] # Run the compiler on a source file
-./neutro/out # Execute the generated machine code
-echo $? # Print the exit code of the Neutronium program
-```
+As of August 11, 2024, the compiler always writes the generated executable to `neutro/out`.
 
 > 💡 Tip: you can write your scripts in the scripts/ directory, which is ignored by version control.
 

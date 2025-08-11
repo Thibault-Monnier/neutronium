@@ -565,3 +565,71 @@ TEST_F(NeutroniumTester, ExpressionStatements) {
     )";
     EXPECT_EQ(run(code), 0);
 }
+
+TEST_F(NeutroniumTester, Arrays) {
+    const std::string code = R"(
+        fn main(): {
+            # initialize with literal and read an element
+            let arr = [10, 20, 30, 40, 50];
+            exit arr[2];   # should be 30
+        }
+    )";
+    EXPECT_EQ(run(code), 30);
+
+    const std::string code2 = R"(
+        fn main(): {
+            # mutable array; update elements and reassign
+            let mut arr: [int; 4] = [0, 0, 0, 0];
+            arr[0] = 7;
+            arr[3] = arr[0] + 1;
+            exit arr[3];
+        }
+    )";
+    EXPECT_EQ(run(code2), 8);
+
+    const std::string code3 = R"(
+        fn sum(arr: [int; 3]) -> int: {
+            return arr[0] + arr[1] + arr[2];
+        }
+
+        fn main(): {
+            let a = [5, 6, 7];
+            exit sum(a);
+        }
+    )";
+    EXPECT_EQ(run(code3), 18);
+
+    const std::string code4 = R"(
+        fn getArray() -> [int; 3]: {
+            return [1, 2, 3];
+        }
+
+        fn main(): {
+            let mut arr = getArray();
+            arr[1] = arr[1] * arr[0];
+            exit arr[1];  # should be 2
+        }
+    )";
+    EXPECT_EQ(run(code4), 2);
+
+    const std::string code2dArray = R"(
+        fn getArray() -> [[int; 2]; 2]: {
+            return [[1, 2], [3, 4]];
+        }
+
+        fn main(): {
+            let mut arr = getArray();
+            arr[0][1] = arr[1][0] + arr[0][0];  # arr[0][1] = 3 + 1 = 4
+            exit arr[0][1];  # should be 4
+        }
+    )";
+    EXPECT_EQ(run(code2dArray), 4);
+
+    const std::string codeArrayLiteralAccess = R"(
+        fn main(): {
+            let val = [1, 2, 3, 4, 5][2];
+            exit val;  # Should be 3
+        }
+    )";
+    EXPECT_EQ(run(codeArrayLiteralAccess), 3);
+}

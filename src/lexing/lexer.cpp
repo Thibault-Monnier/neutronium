@@ -135,6 +135,10 @@ std::vector<Token> Lexer::tokenize() {
             tokens_.emplace_back(TokenKind::LEFT_BRACE, "{");
         } else if (c == '}') {
             tokens_.emplace_back(TokenKind::RIGHT_BRACE, "}");
+        } else if (c == '[') {
+            tokens_.emplace_back(TokenKind::LEFT_BRACKET, "[");
+        } else if (c == ']') {
+            tokens_.emplace_back(TokenKind::RIGHT_BRACKET, "]");
         } else if (c == ':') {
             tokens_.emplace_back(TokenKind::COLON, ":");
         } else if (c == ';') {

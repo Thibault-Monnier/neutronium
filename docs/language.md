@@ -1,9 +1,4 @@
-# Neutronium Language
-
-Neutronium is a lightweight C-like programming language that supports basic constructs such as variables, functions, and
-control flow.
-
-## Grammar
+# Grammar
 
 <details><summary>Formal EBNF Grammar</summary>
 
@@ -20,7 +15,7 @@ const-definition ::= 'const' identifier [ ':' type-specifier ] '=' expression ';
 
 statement ::= block-statement
             | variable-definition
-            | variable-assignment
+            | assignment
             | if-statement
             | while-statement
             | break-statement
@@ -32,11 +27,15 @@ statement ::= block-statement
 
 block-statement ::= '{' { statement } '}'
 
-type-specifier ::= 'int' | 'bool'
+type-specifier ::= 'int'
+                 | 'bool'
+                 | array-type
+                 
+array-type ::= '[' type-specifier ';' integer-literal ']'
 
 variable-definition ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
 
-variable-assignment ::= identifier '=' expression ';'
+assignment ::= expression '=' expression ';'
 
 parameter-list ::= [ parameter-declaration { ',' parameter-declaration } ]
 
@@ -65,31 +64,36 @@ comment ::= '#' { any-character-except-newline }
 expression ::= comparison-expression
 
 comparison-expression ::= additive-expression
-                        | additive-expression ("==" | "!=" | "<" | "<=" | ">" | ">=") additive-expression
+                        | additive-expression ('==' | '!=' | '<' | '<=' | '>' | '>=') additive-expression
 
 additive-expression ::= multiplicative-expression
                       | additive-expression ('+' | '-') multiplicative-expression
 
 multiplicative-expression ::= unary-expression
                             | multiplicative-expression ('*' | '/') unary-expression
+                            
+unary-expression ::= postfix-expression
+                    | unary-op postfix-expression
+                    
+unary-op ::= '-' | '+' | '!'
 
-unary-expression ::= primary-expression
-                   | unary-op primary-expression
-
+postfix-expression ::= primary-expression
+                     | postfix-expression '[' expression ']'
+                                        
 primary-expression ::= literal
                      | identifier
                      | function-call
                      | '(' expression ')'
 
-function-call ::= identifier '(' argument-list ')'
+literal ::= integer-literal | boolean-literal | array-literal
 
-argument-list ::= [ expression { ',' expression } ]
+array-literal ::= '[' expression-list ']'
 
-unary-op ::= '-' | '+' | '!'
+function-call ::= identifier '(' expression-list ')'
+
+expression-list ::= [ expression { ',' expression } ]
 
 identifier ::= letter { letter | digit | '_' }
-
-literal ::= integer-literal | boolean-literal
 
 integer-literal ::= digit { digit }
 

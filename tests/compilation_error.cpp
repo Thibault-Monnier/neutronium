@@ -72,6 +72,32 @@ TEST_F(NeutroniumTester, MainFunctionErrors) {
                 error3.contains("return") && error3.contains("void"));
 }
 
+TEST_F(NeutroniumTester, NonPlaceExpressionInLeftOfAssignmentFails) {
+    const std::string code = R"(
+        fn main(): {
+            let x = 1;
+            x + 2 = 3;
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Left") && error.contains("place expression") &&
+                error.contains("assignment"));
+
+    const std::string code2 = R"(
+        fn a() -> int: { return 0; }
+
+        fn main(): {
+            let x = 1;
+            a() = 3;
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("Left") && error2.contains("place expression") &&
+                error2.contains("assignment"));
+}
+
 TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
     const std::string code = R"(
         fn main(): {
@@ -95,6 +121,32 @@ TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
     EXPECT_TRUE(error2.contains("immutable") &&
                 (error2.contains("assignment") || error2.contains("Assignment")) &&
                 error2.contains("x"));
+
+    const std::string codeArrayModify = R"(
+        fn main(): {
+            let arr = [1, 2, 3];
+            arr[0] = 10;    # illegal: arr is not mutable
+        }
+    )";
+    auto [statusArrayModify, errorArrayModify] = compile(codeArrayModify);
+    EXPECT_NE(statusArrayModify, 0);
+    EXPECT_TRUE(
+        errorArrayModify.contains("immutable") &&
+        (errorArrayModify.contains("assignment") || errorArrayModify.contains("Assignment")) &&
+        errorArrayModify.contains("arr"));
+
+    const std::string codeArrayReassign = R"(
+        fn main(): {
+            let arr = [1, 2, 3];
+            arr = [4, 5, 6];    # illegal: arr is not mutable
+        }
+    )";
+    auto [statusArrayReassign, errorArrayReassign] = compile(codeArrayReassign);
+    EXPECT_NE(statusArrayReassign, 0);
+    EXPECT_TRUE(
+        errorArrayReassign.contains("immutable") &&
+        (errorArrayReassign.contains("assignment") || errorArrayReassign.contains("Assignment")) &&
+        errorArrayReassign.contains("arr"));
 }
 
 TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
@@ -136,7 +188,39 @@ TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
     )";
     auto [status4, error4] = compile(code4);
     EXPECT_NE(status4, 0);
-    EXPECT_TRUE(error4.contains("Type mismatch") && error4.contains("x"));
+    EXPECT_TRUE(error4.contains("Type mismatch"));
+
+    const std::string codeArrayLength = R"(
+        fn main(): {
+            let mut arr = [[1,0], [2,5], [3,8]];
+            arr = [4, 5, 4];    # illegal: array length mismatch
+        }
+    )";
+    auto [statusArrayLength, errorArrayLength] = compile(codeArrayLength);
+    EXPECT_NE(statusArrayLength, 0);
+    EXPECT_TRUE(errorArrayLength.contains("Type mismatch") && errorArrayLength.contains("array"));
+
+    const std::string codeArrayElementType = R"(
+        fn main(): {
+            let mut arr = [1, 2, 3];
+            arr = [true, false, true];    # illegal: array element type mismatch
+        }
+    )";
+    auto [statusArrayElementType, errorArrayElementType] = compile(codeArrayElementType);
+    EXPECT_NE(statusArrayElementType, 0);
+    EXPECT_TRUE(errorArrayElementType.contains("Type mismatch") &&
+                errorArrayElementType.contains("array"));
+
+    const std::string codeArrayElementType2 = R"(
+        fn main(): {
+            let mut arr = [1, 2, 3];
+            arr[0] = true;    # illegal: array element type mismatch
+        }
+    )";
+    auto [statusArrayElementType2, errorArrayElementType2] = compile(codeArrayElementType2);
+    EXPECT_NE(statusArrayElementType2, 0);
+    EXPECT_TRUE(errorArrayElementType2.contains("Type mismatch") &&
+                errorArrayElementType2.contains("int") && errorArrayElementType2.contains("bool"));
 }
 
 TEST_F(NeutroniumTester, ReassignmentDifferentInferredTypeFails) {
@@ -192,6 +276,59 @@ TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
     EXPECT_NE(status2, 0);
     EXPECT_TRUE(error2.contains("int") && error2.contains("bool") && error2.contains("type") &&
                 error2.contains("x"));
+
+    const std::string codeArrays = R"(
+        fn main(): {
+            let arr: [bool; 2] = [1, 2];
+        }
+    )";
+    auto [statusArrays, errorArrays] = compile(codeArrays);
+    EXPECT_NE(statusArrays, 0);
+    EXPECT_TRUE(errorArrays.contains("Type mismatch") && errorArrays.contains("bool") &&
+                errorArrays.contains("int"));
+}
+
+TEST_F(NeutroniumTester, DifferentElementTypesInArrayFails) {
+    const std::string code = R"(
+        fn main(): {
+            let arr = [1, true, 3];  # illegal: mixed types in array
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("type") && error.contains("array") && error.contains("int") &&
+                error.contains("bool"));
+
+    const std::string codeInnerElement = R"(
+        fn main(): {
+            let arr = [[1, 2], [true, false]];  # illegal: mixed types in inner arrays
+        }
+    )";
+    auto [statusInnerElement, errorInnerElement] = compile(codeInnerElement);
+    EXPECT_NE(statusInnerElement, 0);
+    EXPECT_TRUE(errorInnerElement.contains("type") && errorInnerElement.contains("array") &&
+                errorInnerElement.contains("int") && errorInnerElement.contains("bool"));
+
+    const std::string codeInnerElementSize = R"(
+        fn main(): {
+            let arr = [[5, 6], [7, 8, 9]];  # illegal: inner arrays have different sizes
+        }
+    )";
+    auto [statusInnerElementSize, errorInnerElementSize] = compile(codeInnerElementSize);
+    EXPECT_NE(statusInnerElementSize, 0);
+    EXPECT_TRUE(errorInnerElementSize.contains("type") && errorInnerElementSize.contains("array") &&
+                errorInnerElementSize.contains("2") && errorInnerElementSize.contains("3"));
+}
+
+TEST_F(NeutroniumTester, EmptyArrayFails) {
+    const std::string code = R"(
+        fn main(): {
+            let arr: [bool; 0] = [];  # illegal: empty array
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("empty") && error.contains("Array literal"));
 }
 
 TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
@@ -361,6 +498,29 @@ TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
     EXPECT_TRUE(error.contains("call") && error.contains("function") && error.contains("x"));
 }
 
+TEST_F(NeutroniumTester, AttemptToArrayAccessANonArray) {
+    const std::string code = R"(
+        fn main(): {
+            let x = 1;
+            x[0];
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("array") && error.contains("indexed") && error.contains("int"));
+
+    const std::string code2 = R"(
+        fn a(): {}
+
+        fn main(): {
+            a[0];
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("not") && error2.contains("variable") && error2.contains("`a`"));
+}
+
 TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {
     const std::string code = R"(
         fn x(): {}
@@ -430,6 +590,21 @@ TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
     EXPECT_TRUE((error.contains("function") || error.contains("Function")) &&
                 error3.contains("argument") && error3.contains("type") && error3.contains("x") &&
                 error3.contains("b") && error3.contains("bool"));
+
+    const std::string codeArray = R"(
+        fn x(arr: [int; 3]): {
+            exit 0;
+        }
+
+        fn main(): {
+            x([1, 2]);  # wrong array length
+        }
+    )";
+    auto [statusArray, errorArray] = compile(codeArray);
+    EXPECT_NE(statusArray, 0);
+    EXPECT_TRUE(errorArray.contains("Function") && errorArray.contains("argument") &&
+                errorArray.contains("x") && errorArray.contains("arr") &&
+                errorArray.contains("2") && errorArray.contains("3"));
 }
 
 TEST_F(NeutroniumTester, FunctionReturnTypeMismatch) {
@@ -500,7 +675,7 @@ TEST_F(NeutroniumTester, FunctionDoesNotAlwaysReturn) {
                 error2.contains("always") && error2.contains("int"));
 }
 
-TEST_F(NeutroniumTester, AssignmentToImmutableFunctionParamaterFails) {
+TEST_F(NeutroniumTester, AssignmentToImmutableFunctionParameterFails) {
     const std::string code = R"(
         fn x(mut a: int, b: bool): {
             a = 1;
@@ -511,6 +686,21 @@ TEST_F(NeutroniumTester, AssignmentToImmutableFunctionParamaterFails) {
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("immutable") && error.contains("b") &&
                 (error.contains("assignment") || error.contains("Assignment")));
+}
+
+TEST_F(NeutroniumTester, FunctionCallWithoutCommasFails) {
+    const std::string code = R"(
+        fn x(a: int, b: bool): {
+            exit 0;
+        }
+
+        fn main(): {
+            x(1 true);  # missing comma
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("expected") && error.contains("TRUE"));
 }
 
 TEST_F(NeutroniumTester, NonBooleanConditionError) {

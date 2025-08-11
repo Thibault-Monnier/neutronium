@@ -35,7 +35,7 @@ std::stringstream Generator::generate() {
     return std::move(output_);
 }
 
-int Generator::get_current_scope_frame_size(const AST::BlockStatement& blockStmt) const {
+int Generator::get_current_scope_frame_size(const AST::BlockStatement& blockStmt) {
     int frameSize = 0;
     for (const auto& stmt : blockStmt.body_) {
         if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
@@ -47,7 +47,7 @@ int Generator::get_current_scope_frame_size(const AST::BlockStatement& blockStmt
 
 void Generator::stack_allocate_scope_variables(const AST::BlockStatement& blockStmt) {
     const int frameSize = get_current_scope_frame_size(blockStmt);
-    if (frameSize != 0) {
+    if (frameSize > 0) {
         output_ << "    sub rsp, " << frameSize << "\n";
     }
 }
@@ -89,7 +89,47 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
     output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
 }
 
-std::string Generator::function_name_with_prefix(const std::string& name) const {
+void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {  // NOLINT(*-no-recursion)
+    // Get the current break address
+    output_ << "    mov rax, 12\n";
+    output_ << "    xor rdi, rdi\n";
+    output_ << "    syscall\n";
+
+    // Store the address of the array base
+    output_ << "    push rax\n";
+
+    // Set the new break address
+    output_ << "    add rax, " << (arrayLit.elements_.size() * 8) << "\n";  // 8 bytes per element
+    output_ << "    mov rdi, rax\n";
+    output_ << "    mov rax, 12\n";
+    output_ << "    syscall\n";
+
+    for (std::size_t i = 0; i < arrayLit.elements_.size(); ++i) {
+        evaluate_expression_to_rax(*arrayLit.elements_[i]);
+        output_ << "    mov rbx, [rsp]\n";  // Get the address of the allocated memory
+        output_ << "    mov [rbx + " << (i * 8) << "], rax\n";  // Write each element to the array
+    }
+
+    output_ << "    pop rax\n";
+}
+
+void Generator::evaluate_array_access_address_to_rax(  // NOLINT(*-no-recursion)
+    const AST::ArrayAccess& arrayAccess) {
+    evaluate_expression_to_rax(*arrayAccess.base_);  // Pointer to the array
+    output_ << "    push rax\n";
+    evaluate_expression_to_rax(*arrayAccess.index_);
+    output_ << "    pop rbx\n";
+    output_ << "    shl rax, 3\n";    // Multiply index by 8 (size of qword)
+    output_ << "    add rax, rbx\n";  // Add the base
+}
+
+void Generator::evaluate_array_access_to_rax(  // NOLINT(*-no-recursion)
+    const AST::ArrayAccess& arrayAccess) {
+    evaluate_array_access_address_to_rax(arrayAccess);
+    output_ << "    mov rax, [rax]\n";  // Dereference
+}
+
+std::string Generator::function_name_with_prefix(const std::string& name) {
     return "__" + name;  // Prefix with "__" to avoid conflicts with NASM keywords
 }
 
@@ -100,7 +140,7 @@ void Generator::generate_function_call(  // NOLINT(*-no-recursion)
         output_ << "    push rax\n";
     }
 
-    output_ << "    call " << function_name_with_prefix(funcCall.identifier_->name_) << "\n";
+    output_ << "    call " << function_name_with_prefix(funcCall.callee_->name_) << "\n";
 
     // Clean up the stack after the function call
     for (int i = 0; i < funcCall.arguments_.size(); ++i) {
@@ -168,9 +208,19 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NO
             move_boolean_lit_to_rax(booleanLit);
             break;
         }
+        case AST::NodeKind::ARRAY_LITERAL: {
+            const auto& arrayLit = static_cast<const AST::ArrayLiteral&>(expr);
+            write_array_to_heap(arrayLit);
+            break;
+        }
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
             move_variable_to_rax(identifier.name_);
+            break;
+        }
+        case AST::NodeKind::ARRAY_ACCESS: {
+            const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
+            evaluate_array_access_to_rax(arrayAccess);
             break;
         }
         case AST::NodeKind::FUNCTION_CALL: {
@@ -208,10 +258,23 @@ void Generator::generate_variable_definition(const AST::VariableDefinition& varD
     write_to_variable(varName, "rax");
 }
 
-void Generator::generate_variable_assignment(const AST::VariableAssignment& assignment) {
-    const std::string& varName = assignment.identifier_->name_;
-    evaluate_expression_to_rax(*assignment.value_);
-    write_to_variable(varName, "rax");
+void Generator::generate_variable_assignment(const AST::Assignment& assignment) {
+    const auto& place = assignment.place_;
+    const auto& value = assignment.value_;
+    evaluate_expression_to_rax(*value);
+
+    if (place->kind_ == AST::NodeKind::IDENTIFIER) {
+        const auto& identifier = static_cast<const AST::Identifier&>(*place);
+        write_to_variable(identifier.name_, "rax");
+    } else if (place->kind_ == AST::NodeKind::ARRAY_ACCESS) {
+        const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(*place);
+        output_ << "    push rax\n";
+        evaluate_array_access_address_to_rax(arrayAccess);
+        output_ << "    pop rbx\n";
+        output_ << "    mov [rax], rbx\n";
+    } else {
+        throw std::invalid_argument("Invalid place expression kind");
+    }
 }
 
 void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStmt) {
@@ -279,8 +342,8 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
             generate_variable_definition(varDecl);
             break;
         }
-        case AST::NodeKind::VARIABLE_ASSIGNMENT: {
-            const auto& assignment = static_cast<const AST::VariableAssignment&>(stmt);
+        case AST::NodeKind::ASSIGNMENT: {
+            const auto& assignment = static_cast<const AST::Assignment&>(stmt);
             generate_variable_assignment(assignment);
             break;
         }
@@ -337,7 +400,7 @@ void Generator::generate_function_definition(const AST::FunctionDefinition& func
     }
 
     output_ << function_name_with_prefix(funcDef.identifier_->name_)
-            << ":\n";  // Prefix with "fn_" to avoid conflicts with NASM keywords
+            << ":\n";  // Prefix with "__" to avoid conflicts with NASM keywords
 
     currentStackOffset_ = INITIAL_STACK_OFFSET;
 
@@ -345,22 +408,24 @@ void Generator::generate_function_definition(const AST::FunctionDefinition& func
     output_ << "    mov rbp, rsp\n\n";  // Set the new base pointer
 
     const std::size_t parametersFrameSize = funcDef.parameters_.size() * 8;
-    output_ << "    sub rsp, " << parametersFrameSize << "\n";
+    if (parametersFrameSize > 0) {
+        output_ << "    sub rsp, " << parametersFrameSize << "\n";
 
-    for (std::size_t i = 0; i < funcDef.parameters_.size(); ++i) {
-        const auto& param = funcDef.parameters_[i];
-        const std::size_t paramOffset = parametersFrameSize + 8 - i * 8;
-        output_ << "    mov rax, [rbp + " << paramOffset << "]\n";
+        for (std::size_t i = 0; i < funcDef.parameters_.size(); ++i) {
+            const auto& param = funcDef.parameters_[i];
+            const std::size_t paramOffset = parametersFrameSize + 8 - i * 8;
+            output_ << "    mov rax, [rbp + " << paramOffset << "]\n";
 
-        insert_variable_stack_offset(param->identifier_->name_);
-        write_to_variable(param->identifier_->name_, "rax");
+            insert_variable_stack_offset(param->identifier_->name_);
+            write_to_variable(param->identifier_->name_, "rax");
+        }
+
+        output_ << "\n";
     }
-
-    output_ << "\n";
 
     generate_stmt(*funcDef.body_);
 
-    if (funcDef.returnType_.raw() == RawType::VOID) {
+    if (funcDef.returnType_.matches(PrimitiveType::VOID)) {
         output_ << "\n";
         output_ << "    xor rax, rax\n";  // Return 0
         output_ << "    leave\n";

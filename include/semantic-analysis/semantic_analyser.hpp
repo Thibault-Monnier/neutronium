@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -25,7 +26,7 @@ class SemanticAnalyser {
     int loopDepth_ = 0;
 
     std::string currentFunctionName_;
-    Type currentFunctionReturnType_ = RawType::VOID;
+    Type currentFunctionReturnType_ = PrimitiveType::VOID;
 
     [[noreturn]] static void abort(const std::string& errorMessage);
 
@@ -36,14 +37,15 @@ class SemanticAnalyser {
     [[nodiscard]] std::optional<const SymbolInfo*> get_symbol_info(const std::string& name) const;
 
     // ── Symbol declaration helpers ──────────────────────────────────────────────
-    SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable, Type type,
-                               bool isScoped, std::vector<SymbolInfo> parameters);
+    SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable,
+                               const Type& type, bool isScoped, std::vector<SymbolInfo> parameters);
 
-    SymbolInfo& handle_constant_definition(const std::string& name, Type type);
+    SymbolInfo& handle_constant_definition(const std::string& name, const Type& type);
     SymbolInfo& handle_function_declaration(
-        const std::string& name, Type returnType,
+        const std::string& name, const Type& returnType,
         const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
-    SymbolInfo& handle_variable_declaration(const std::string& name, bool isMutable, Type type);
+    SymbolInfo& handle_variable_declaration(const std::string& name, bool isMutable,
+                                            const Type& type);
 
     // ── Expression utilities ───────────────────────────────────────────────────
     Type get_function_call_type(const AST::FunctionCall& funcCall);
@@ -51,12 +53,12 @@ class SemanticAnalyser {
     Type get_binary_expression_type(const AST::BinaryExpression& binaryExpr);
     Type get_expression_type(const AST::Expression& expr);
 
-    void analyse_expression(const AST::Expression& expr, Type expected,
+    void analyse_expression(const AST::Expression& expr, const Type& expected,
                             const std::string& location);
 
     // ── Statement analysis ─────────────────────────────────────────────────────
     void analyse_variable_definition(const AST::VariableDefinition& declaration);
-    void analyse_variable_assignment(const AST::VariableAssignment& assignment);
+    void analyse_assignment(const AST::Assignment& assignment);
     void analyse_expression_statement(const AST::ExpressionStatement& exprStmt);
     void analyse_if_statement(const AST::IfStatement& ifStmt);
     void analyse_while_statement(const AST::WhileStatement& whileStmt);

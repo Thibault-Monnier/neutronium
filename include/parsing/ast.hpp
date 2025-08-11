@@ -27,11 +27,13 @@ enum class Operator : uint8_t {
 enum class NodeKind : uint8_t {
     NUMBER_LITERAL,
     BOOLEAN_LITERAL,
+    ARRAY_LITERAL,
     IDENTIFIER,
+    ARRAY_ACCESS,
     UNARY_EXPRESSION,
     BINARY_EXPRESSION,
     VARIABLE_DEFINITION,
-    VARIABLE_ASSIGNMENT,
+    ASSIGNMENT,
     EXPRESSION_STATEMENT,
     IF_STATEMENT,
     WHILE_STATEMENT,
@@ -76,6 +78,13 @@ struct BooleanLiteral final : PrimaryExpression {
     const bool value_;
 };
 
+struct ArrayLiteral final : PrimaryExpression {
+    explicit ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements)
+        : PrimaryExpression{NodeKind::ARRAY_LITERAL}, elements_(std::move(elements)) {}
+
+    const std::vector<std::unique_ptr<Expression>> elements_;
+};
+
 struct Identifier final : PrimaryExpression {
     explicit Identifier(std::string name)
         : PrimaryExpression{NodeKind::IDENTIFIER}, name_(std::move(name)) {}
@@ -83,14 +92,24 @@ struct Identifier final : PrimaryExpression {
     const std::string name_;
 };
 
+struct ArrayAccess final : PrimaryExpression {
+    ArrayAccess(std::unique_ptr<Expression> base, std::unique_ptr<Expression> index)
+        : PrimaryExpression{NodeKind::ARRAY_ACCESS},
+          base_(std::move(base)),
+          index_(std::move(index)) {}
+
+    std::unique_ptr<Expression> base_;
+    std::unique_ptr<Expression> index_;
+};
+
 struct FunctionCall final : PrimaryExpression {
-    FunctionCall(std::unique_ptr<Identifier> identifier,
+    FunctionCall(std::unique_ptr<Identifier> callee,
                  std::vector<std::unique_ptr<Expression>> arguments)
         : PrimaryExpression{NodeKind::FUNCTION_CALL},
-          identifier_(std::move(identifier)),
+          callee_(std::move(callee)),
           arguments_(std::move(arguments)) {}
 
-    std::unique_ptr<Identifier> identifier_;
+    std::unique_ptr<Identifier> callee_;
     const std::vector<std::unique_ptr<Expression>> arguments_;
 };
 
@@ -103,7 +122,7 @@ struct UnaryExpression final : Expression {
 };
 
 struct BinaryExpression final : Expression {
-    BinaryExpression(std::unique_ptr<Expression> left, Operator op,
+    BinaryExpression(std::unique_ptr<Expression> left, const Operator op,
                      std::unique_ptr<Expression> right)
         : Expression{NodeKind::BINARY_EXPRESSION},
           left_(std::move(left)),
@@ -144,13 +163,11 @@ struct VariableDefinition final : Statement {
     std::unique_ptr<Expression> value_;
 };
 
-struct VariableAssignment final : Statement {
-    VariableAssignment(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> value)
-        : Statement{NodeKind::VARIABLE_ASSIGNMENT},
-          identifier_(std::move(identifier)),
-          value_(std::move(value)) {}
+struct Assignment final : Statement {
+    Assignment(std::unique_ptr<Expression> place, std::unique_ptr<Expression> value)
+        : Statement{NodeKind::ASSIGNMENT}, place_(std::move(place)), value_(std::move(value)) {}
 
-    std::unique_ptr<Identifier> identifier_;
+    std::unique_ptr<Expression> place_;
     std::unique_ptr<Expression> value_;
 };
 
@@ -279,6 +296,8 @@ bool is_arithmetic_operator(Operator op);
 bool is_equality_operator(Operator op);
 bool is_relational_operator(Operator op);
 bool is_comparison_operator(Operator op);
+
+std::string node_kind_to_string(NodeKind kind);
 
 void log_ast(const Program& programNode);
 

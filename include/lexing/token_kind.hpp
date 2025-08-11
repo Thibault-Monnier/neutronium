@@ -27,6 +27,8 @@ enum class TokenKind : uint8_t {
     RIGHT_PAREN,
     LEFT_BRACE,
     RIGHT_BRACE,
+    LEFT_BRACKET,
+    RIGHT_BRACKET,
     COLON,
     SEMICOLON,
     COMMA,

@@ -1,4 +1,15 @@
 cmake_minimum_required(VERSION 3.28)
+
+if (DEFINED COMPILER)
+    if (COMPILER STREQUAL "gcc")
+        set(CMAKE_C_COMPILER gcc)
+        set(CMAKE_CXX_COMPILER g++)
+    elseif (COMPILER STREQUAL "clang")
+        set(CMAKE_C_COMPILER clang)
+        set(CMAKE_CXX_COMPILER clang++)
+    endif ()
+endif ()
+
 project(neutronium)
 
 include(FetchContent)
@@ -12,6 +23,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address,undefined -g -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-fdiagnostics-color=always -fdiagnostics-show-template-tree)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    add_compile_options(-fdiagnostics-color=always)
+endif ()
 
 if (COVERAGE)
     message(STATUS "Building with code coverage flags")

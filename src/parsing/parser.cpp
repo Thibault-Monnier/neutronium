@@ -22,7 +22,7 @@ void Parser::abort(const std::string& errorMessage) {
 
 const Token& Parser::peek(const int amount) const { return tokens_.at(currentIndex_ + amount); }
 
-const Token& Parser::consume(const TokenKind expected) {
+const Token& Parser::expect(const TokenKind expected) {
     const Token& token = peek();
 
     if (token.kind() != expected) {
@@ -36,15 +36,23 @@ const Token& Parser::consume(const TokenKind expected) {
     return token;
 }
 
-Type Parser::parse_type_specifier() {
+Type Parser::parse_type_specifier() {  // NOLINT(*-no-recursion)
     const TokenKind tokenKind = peek().kind();
-    consume(tokenKind);
+    expect(tokenKind);
 
     switch (tokenKind) {
         case TokenKind::INT:
-            return RawType::INTEGER;
+            return PrimitiveType::INTEGER;
         case TokenKind::BOOL:
-            return RawType::BOOLEAN;
+            return PrimitiveType::BOOLEAN;
+        case TokenKind::LEFT_BRACKET: {
+            const Type elementType = parse_type_specifier();
+            expect(TokenKind::SEMICOLON);
+            const std::size_t arrayLength = parse_number_literal()->value_;
+            expect(TokenKind::RIGHT_BRACKET);
+            return Type{elementType, arrayLength};
+        }
+
         default: {
             const std::string errorMessage =
                 std::format("Invalid token at index {} -> expected type specifier, got {}",
@@ -54,25 +62,59 @@ Type Parser::parse_type_specifier() {
     }
 }
 
+std::unique_ptr<AST::NumberLiteral> Parser::parse_number_literal() {
+    const Token& token = expect(TokenKind::NUMBER_LITERAL);
+    return std::make_unique<AST::NumberLiteral>(std::stoll(token.lexeme()));
+}
+
+std::unique_ptr<AST::ArrayLiteral> Parser::parse_array_literal() {
+    std::vector<std::unique_ptr<AST::Expression>> elements;
+
+    expect(TokenKind::LEFT_BRACKET);
+    while (peek().kind() != TokenKind::RIGHT_BRACKET) {
+        elements.push_back(parse_expression());
+        if (peek().kind() == TokenKind::COMMA) {
+            expect(TokenKind::COMMA);
+        } else {
+            break;
+        }
+    }
+    expect(TokenKind::RIGHT_BRACKET);
+
+    return std::make_unique<AST::ArrayLiteral>(std::move(elements));
+}
+
 std::unique_ptr<AST::Identifier> Parser::parse_identifier() {
-    const std::string& name = consume(TokenKind::IDENTIFIER).lexeme();
+    const std::string& name = expect(TokenKind::IDENTIFIER).lexeme();
     return std::make_unique<AST::Identifier>(name);
 }
 
 std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
-    auto identifier = parse_identifier();
+    auto callee = parse_identifier();
 
-    consume(TokenKind::LEFT_PAREN);
     std::vector<std::unique_ptr<AST::Expression>> arguments;
+
+    expect(TokenKind::LEFT_PAREN);
     while (peek().kind() != TokenKind::RIGHT_PAREN) {
         arguments.push_back(parse_expression());
         if (peek().kind() == TokenKind::COMMA) {
-            consume(TokenKind::COMMA);
+            expect(TokenKind::COMMA);
+        } else {
+            break;
         }
     }
-    consume(TokenKind::RIGHT_PAREN);
+    expect(TokenKind::RIGHT_PAREN);
 
-    return std::make_unique<AST::FunctionCall>(std::move(identifier), std::move(arguments));
+    return std::make_unique<AST::FunctionCall>(std::move(callee), std::move(arguments));
+}
+
+std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access(
+    std::unique_ptr<AST::Expression>& base) {
+    expect(TokenKind::LEFT_BRACKET);
+    auto index = parse_expression();
+    expect(TokenKind::RIGHT_BRACKET);
+
+    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index));
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT(*-no-recursion)
@@ -80,28 +122,29 @@ std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT
 
     switch (token.kind()) {
         case TokenKind::NUMBER_LITERAL:
-            consume(TokenKind::NUMBER_LITERAL);
-            return std::make_unique<AST::NumberLiteral>(std::stoll(token.lexeme()));
+            return parse_number_literal();
+
+        case TokenKind::LEFT_BRACKET:
+            return parse_array_literal();
 
         case TokenKind::TRUE:
-            consume(TokenKind::TRUE);
+            expect(TokenKind::TRUE);
             return std::make_unique<AST::BooleanLiteral>(true);
+
         case TokenKind::FALSE:
-            consume(TokenKind::FALSE);
+            expect(TokenKind::FALSE);
             return std::make_unique<AST::BooleanLiteral>(false);
 
         case TokenKind::IDENTIFIER:
             if (peek(1).kind() == TokenKind::LEFT_PAREN) {
                 return parse_function_call();
-            } else {
-                consume(TokenKind::IDENTIFIER);
-                return std::make_unique<AST::Identifier>(token.lexeme());
             }
+            return parse_identifier();
 
         case TokenKind::LEFT_PAREN: {
-            consume(TokenKind::LEFT_PAREN);
+            expect(TokenKind::LEFT_PAREN);
             auto inner = parse_expression();
-            consume(TokenKind::RIGHT_PAREN);
+            expect(TokenKind::RIGHT_PAREN);
             return inner;
         }
 
@@ -113,18 +156,33 @@ std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT
     }
 }
 
+std::unique_ptr<AST::Expression> Parser::parse_postfix_expression() {
+    auto postfixExpr = parse_primary_expression();
+
+    while (true) {
+        const Token& token = peek();
+        if (token.kind() == TokenKind::LEFT_BRACKET) {
+            postfixExpr = parse_array_access(postfixExpr);
+        } else {
+            break;
+        }
+    }
+
+    return postfixExpr;
+}
+
 std::unique_ptr<AST::Expression> Parser::parse_unary_expression() {  // NOLINT(*-no-recursion)
     const Token& token = peek();
 
     const AST::Operator op = AST::token_kind_to_operator(token.kind());
     if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT ||
         op == AST::Operator::LOGICAL_NOT) {
-        consume(token.kind());
-        auto operand = parse_primary_expression();
+        expect(token.kind());
+        auto operand = parse_postfix_expression();
         return std::make_unique<AST::UnaryExpression>(op, std::move(operand));
     }
 
-    return parse_primary_expression();
+    return parse_postfix_expression();
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_binary_expression(
@@ -135,7 +193,7 @@ std::unique_ptr<AST::Expression> Parser::parse_binary_expression(
         const Token& token = peek();
         const AST::Operator op = AST::token_kind_to_operator(token.kind());
         if (allowedOps.contains(op)) {
-            consume(token.kind());
+            expect(token.kind());
             auto right = parseOperand();
             left = std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right));
 
@@ -175,47 +233,48 @@ std::unique_ptr<AST::Expression> Parser::parse_expression() {
 
 std::unique_ptr<AST::ExpressionStatement> Parser::parse_expression_statement() {
     auto expression = parse_expression();
-    consume(TokenKind::SEMICOLON);
+    expect(TokenKind::SEMICOLON);
     return std::make_unique<AST::ExpressionStatement>(std::move(expression));
 }
 
-std::unique_ptr<AST::VariableAssignment> Parser::parse_variable_assignment() {
-    auto identifier = parse_identifier();
-    consume(TokenKind::EQUAL);
-    auto value = parse_expression();
-    consume(TokenKind::SEMICOLON);
-    return std::make_unique<AST::VariableAssignment>(std::move(identifier), std::move(value));
-}
-
 std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
-    consume(TokenKind::LET);
+    expect(TokenKind::LET);
 
     bool isMutable = false;
     if (peek().kind() == TokenKind::MUT) {
-        consume(TokenKind::MUT);
+        expect(TokenKind::MUT);
         isMutable = true;
     }
 
     auto identifier = parse_identifier();
 
-    Type type = RawType::ANY;
+    Type type = PrimitiveType::ANY;
     if (peek().kind() == TokenKind::COLON) {
-        consume(TokenKind::COLON);
+        expect(TokenKind::COLON);
         type = parse_type_specifier();
     }
 
-    consume(TokenKind::EQUAL);
+    expect(TokenKind::EQUAL);
     auto value = parse_expression();
-    consume(TokenKind::SEMICOLON);
+    expect(TokenKind::SEMICOLON);
 
     return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable,
                                                      std::move(value));
 }
 
+std::unique_ptr<AST::Assignment> Parser::parse_assignment() {
+    auto left = parse_expression();
+    expect(TokenKind::EQUAL);
+    auto right = parse_expression();
+    expect(TokenKind::SEMICOLON);
+
+    return std::make_unique<AST::Assignment>(std::move(left), std::move(right));
+}
+
 std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no-recursion)
-    consume(TokenKind::IF);
+    expect(TokenKind::IF);
     auto condition = parse_expression();
-    consume(TokenKind::COLON);
+    expect(TokenKind::COLON);
 
     auto body = parse_block_statement();
 
@@ -224,9 +283,9 @@ std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no
     AST::IfStatement* lastIf = ifStmt.get();
 
     while (peek().kind() == TokenKind::ELIF) {
-        consume(TokenKind::ELIF);
+        expect(TokenKind::ELIF);
         auto elifCondition = parse_expression();
-        consume(TokenKind::COLON);
+        expect(TokenKind::COLON);
         auto elifBody = parse_block_statement();
 
         auto elifStmt = std::make_unique<AST::BlockStatement>();
@@ -238,8 +297,8 @@ std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no
     }
 
     if (peek().kind() == TokenKind::ELSE) {
-        consume(TokenKind::ELSE);
-        consume(TokenKind::COLON);
+        expect(TokenKind::ELSE);
+        expect(TokenKind::COLON);
         auto elseBody = parse_block_statement();
         lastIf->elseClause_ = std::move(elseBody);
     }
@@ -248,46 +307,46 @@ std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no
 }
 
 std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLINT(*-no-recursion)
-    consume(TokenKind::WHILE);
+    expect(TokenKind::WHILE);
     auto condition = parse_expression();
-    consume(TokenKind::COLON);
+    expect(TokenKind::COLON);
     auto body = parse_block_statement();
     return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body));
 }
 
 std::unique_ptr<AST::BreakStatement> Parser::parse_break_statement() {
-    consume(TokenKind::BREAK);
-    consume(TokenKind::SEMICOLON);
+    expect(TokenKind::BREAK);
+    expect(TokenKind::SEMICOLON);
     return std::make_unique<AST::BreakStatement>();
 }
 
 std::unique_ptr<AST::ContinueStatement> Parser::parse_continue_statement() {
-    consume(TokenKind::CONTINUE);
-    consume(TokenKind::SEMICOLON);
+    expect(TokenKind::CONTINUE);
+    expect(TokenKind::SEMICOLON);
     return std::make_unique<AST::ContinueStatement>();
 }
 
 std::unique_ptr<AST::ReturnStatement> Parser::parse_return_statement() {
-    consume(TokenKind::RETURN);
+    expect(TokenKind::RETURN);
     auto returnValue = parse_expression();
-    consume(TokenKind::SEMICOLON);
+    expect(TokenKind::SEMICOLON);
     return std::make_unique<AST::ReturnStatement>(std::move(returnValue));
 }
 
 std::unique_ptr<AST::ExitStatement> Parser::parse_exit_statement() {
-    consume(TokenKind::EXIT);
+    expect(TokenKind::EXIT);
     auto exitCode = parse_expression();
-    consume(TokenKind::SEMICOLON);
+    expect(TokenKind::SEMICOLON);
     return std::make_unique<AST::ExitStatement>(std::move(exitCode));
 }
 
 std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLINT(*-no-recursion)
-    consume(TokenKind::LEFT_BRACE);
+    expect(TokenKind::LEFT_BRACE);
     auto block = std::make_unique<AST::BlockStatement>();
     while (peek().kind() != TokenKind::RIGHT_BRACE) {
         block->append_statement(parse_statement());
     }
-    consume(TokenKind::RIGHT_BRACE);
+    expect(TokenKind::RIGHT_BRACE);
     return block;
 }
 
@@ -295,8 +354,10 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
     const TokenKind tokenKind = peek().kind();
 
     if (tokenKind == TokenKind::LET) return parse_variable_definition();
-    if (tokenKind == TokenKind::IDENTIFIER && peek(1).kind() == TokenKind::EQUAL)
-        return parse_variable_assignment();
+    if (tokenKind == TokenKind::IDENTIFIER)
+        for (int i = 0; peek(i).kind() != TokenKind::EOF_ && peek(i).kind() != TokenKind::SEMICOLON;
+             i++)
+            if (peek(i).kind() == TokenKind::EQUAL) return parse_assignment();
     if (tokenKind == TokenKind::IF) return parse_if_statement();
     if (tokenKind == TokenKind::WHILE) return parse_while_statement();
     if (tokenKind == TokenKind::BREAK) return parse_break_statement();
@@ -310,13 +371,13 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recu
 std::unique_ptr<AST::VariableDefinition> Parser::parse_function_parameter() {
     bool isMutable = false;
     if (peek().kind() == TokenKind::MUT) {
-        consume(TokenKind::MUT);
+        expect(TokenKind::MUT);
         isMutable = true;
     }
 
     auto identifier = parse_identifier();
 
-    consume(TokenKind::COLON);
+    expect(TokenKind::COLON);
     const Type type = parse_type_specifier();
 
     return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable);
@@ -325,19 +386,19 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_function_parameter() {
 ParsedFunctionSignature Parser::parse_function_signature() {
     auto identifier = parse_identifier();
 
-    consume(TokenKind::LEFT_PAREN);
+    expect(TokenKind::LEFT_PAREN);
     std::vector<std::unique_ptr<AST::VariableDefinition>> parameters;
     while (peek().kind() != TokenKind::RIGHT_PAREN) {
         parameters.push_back(parse_function_parameter());
         if (peek().kind() == TokenKind::COMMA) {
-            consume(TokenKind::COMMA);
+            expect(TokenKind::COMMA);
         }
     }
-    consume(TokenKind::RIGHT_PAREN);
+    expect(TokenKind::RIGHT_PAREN);
 
-    Type returnType = RawType::VOID;
+    Type returnType = PrimitiveType::VOID;
     if (peek().kind() == TokenKind::RIGHT_ARROW) {
-        consume(TokenKind::RIGHT_ARROW);
+        expect(TokenKind::RIGHT_ARROW);
         returnType = parse_type_specifier();
     }
 
@@ -347,12 +408,12 @@ ParsedFunctionSignature Parser::parse_function_signature() {
 }
 
 std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_function_declaration() {
-    consume(TokenKind::EXTERN);
-    consume(TokenKind::FN);
+    expect(TokenKind::EXTERN);
+    expect(TokenKind::FN);
 
     ParsedFunctionSignature signature = parse_function_signature();
 
-    consume(TokenKind::SEMICOLON);
+    expect(TokenKind::SEMICOLON);
     return std::make_unique<AST::ExternalFunctionDeclaration>(
         std::move(signature.identifier_), std::move(signature.parameters_), signature.returnType_);
 }
@@ -361,15 +422,15 @@ std::unique_ptr<AST::FunctionDefinition>
 Parser::parse_function_definition() {  // NOLINT(*-no-recursion)
     bool isExported = false;
     if (peek().kind() == TokenKind::EXPORT) {
-        consume(TokenKind::EXPORT);
+        expect(TokenKind::EXPORT);
         isExported = true;
     }
 
-    consume(TokenKind::FN);
+    expect(TokenKind::FN);
 
     ParsedFunctionSignature signature = parse_function_signature();
 
-    consume(TokenKind::COLON);
+    expect(TokenKind::COLON);
     auto body = parse_block_statement();
     return std::make_unique<AST::FunctionDefinition>(
         std::move(signature.identifier_), std::move(signature.parameters_), signature.returnType_,
@@ -377,19 +438,19 @@ Parser::parse_function_definition() {  // NOLINT(*-no-recursion)
 }
 
 std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
-    consume(TokenKind::CONST);
+    expect(TokenKind::CONST);
 
     auto identifier = parse_identifier();
 
-    Type type = RawType::ANY;
+    Type type = PrimitiveType::ANY;
     if (peek().kind() == TokenKind::COLON) {
-        consume(TokenKind::COLON);
+        expect(TokenKind::COLON);
         type = parse_type_specifier();
     }
 
-    consume(TokenKind::EQUAL);
+    expect(TokenKind::EQUAL);
     auto value = parse_expression();
-    consume(TokenKind::SEMICOLON);
+    expect(TokenKind::SEMICOLON);
 
     return std::make_unique<AST::ConstantDefinition>(std::move(identifier), type, std::move(value));
 }
