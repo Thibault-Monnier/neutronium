@@ -210,7 +210,7 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
         case AST::NodeKind::ARRAY_LITERAL: {
             const auto& arrayLiteral = static_cast<const AST::ArrayLiteral&>(expr);
             if (arrayLiteral.elements_.empty()) {
-                return Type{PrimitiveType::ANY, 0};  // Empty array, type is `any`
+                abort("Array literal cannot be empty");
             }
 
             const Type elementType = get_expression_type(*arrayLiteral.elements_[0]);

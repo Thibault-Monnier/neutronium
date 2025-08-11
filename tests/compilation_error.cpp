@@ -306,6 +306,8 @@ TEST_F(NeutroniumTester, DifferentElementTypesInArrayFails) {
     )";
     auto [statusInnerElement, errorInnerElement] = compile(codeInnerElement);
     EXPECT_NE(statusInnerElement, 0);
+    EXPECT_TRUE(errorInnerElement.contains("type") && errorInnerElement.contains("array") &&
+                errorInnerElement.contains("int") && errorInnerElement.contains("bool"));
 
     const std::string codeInnerElementSize = R"(
         fn main(): {
@@ -314,8 +316,19 @@ TEST_F(NeutroniumTester, DifferentElementTypesInArrayFails) {
     )";
     auto [statusInnerElementSize, errorInnerElementSize] = compile(codeInnerElementSize);
     EXPECT_NE(statusInnerElementSize, 0);
-    EXPECT_TRUE(errorInnerElement.contains("type") && errorInnerElement.contains("array") &&
-                errorInnerElement.contains("2") && errorInnerElement.contains("3"));
+    EXPECT_TRUE(errorInnerElementSize.contains("type") && errorInnerElementSize.contains("array") &&
+                errorInnerElementSize.contains("2") && errorInnerElementSize.contains("3"));
+}
+
+TEST_F(NeutroniumTester, EmptyArrayFails) {
+    const std::string code = R"(
+        fn main(): {
+            let arr: [bool; 0] = [];  # illegal: empty array
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("empty") && error.contains("Array literal"));
 }
 
 TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
