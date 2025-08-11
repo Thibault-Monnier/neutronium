@@ -93,23 +93,23 @@ struct Identifier final : PrimaryExpression {
 };
 
 struct ArrayAccess final : PrimaryExpression {
-    ArrayAccess(std::unique_ptr<Identifier> identifier, std::unique_ptr<Expression> index)
+    ArrayAccess(std::unique_ptr<Expression> base, std::unique_ptr<Expression> index)
         : PrimaryExpression{NodeKind::ARRAY_ACCESS},
-          identifier_(std::move(identifier)),
+          base_(std::move(base)),
           index_(std::move(index)) {}
 
-    std::unique_ptr<Identifier> identifier_;
+    std::unique_ptr<Expression> base_;
     std::unique_ptr<Expression> index_;
 };
 
 struct FunctionCall final : PrimaryExpression {
-    FunctionCall(std::unique_ptr<Identifier> identifier,
+    FunctionCall(std::unique_ptr<Identifier> callee,
                  std::vector<std::unique_ptr<Expression>> arguments)
         : PrimaryExpression{NodeKind::FUNCTION_CALL},
-          identifier_(std::move(identifier)),
+          callee_(std::move(callee)),
           arguments_(std::move(arguments)) {}
 
-    std::unique_ptr<Identifier> identifier_;
+    std::unique_ptr<Identifier> callee_;
     const std::vector<std::unique_ptr<Expression>> arguments_;
 };
 
@@ -122,7 +122,7 @@ struct UnaryExpression final : Expression {
 };
 
 struct BinaryExpression final : Expression {
-    BinaryExpression(std::unique_ptr<Expression> left, Operator op,
+    BinaryExpression(std::unique_ptr<Expression> left, const Operator op,
                      std::unique_ptr<Expression> right)
         : Expression{NodeKind::BINARY_EXPRESSION},
           left_(std::move(left)),

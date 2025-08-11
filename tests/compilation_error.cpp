@@ -476,8 +476,7 @@ TEST_F(NeutroniumTester, AttemptToArrayAccessANonArray) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("array") && error.contains("indexed") && error.contains("x") &&
-                error.contains("int"));
+    EXPECT_TRUE(error.contains("array") && error.contains("indexed") && error.contains("int"));
 
     const std::string code2 = R"(
         fn a(): {}
@@ -488,7 +487,7 @@ TEST_F(NeutroniumTester, AttemptToArrayAccessANonArray) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("not") && error2.contains("variable") && error2.contains("a"));
+    EXPECT_TRUE(error2.contains("not") && error2.contains("variable") && error2.contains("`a`"));
 }
 
 TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {

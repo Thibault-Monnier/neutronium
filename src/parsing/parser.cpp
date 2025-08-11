@@ -90,7 +90,7 @@ std::unique_ptr<AST::Identifier> Parser::parse_identifier() {
 }
 
 std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
-    auto identifier = parse_identifier();
+    auto callee = parse_identifier();
 
     std::vector<std::unique_ptr<AST::Expression>> arguments;
 
@@ -105,17 +105,16 @@ std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
     }
     expect(TokenKind::RIGHT_PAREN);
 
-    return std::make_unique<AST::FunctionCall>(std::move(identifier), std::move(arguments));
+    return std::make_unique<AST::FunctionCall>(std::move(callee), std::move(arguments));
 }
 
-std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access() {
-    auto identifier = parse_identifier();
-
+std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access(
+    std::unique_ptr<AST::Expression>& base) {
     expect(TokenKind::LEFT_BRACKET);
     auto index = parse_expression();
     expect(TokenKind::RIGHT_BRACKET);
 
-    return std::make_unique<AST::ArrayAccess>(std::move(identifier), std::move(index));
+    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index));
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT(*-no-recursion)
@@ -139,12 +138,8 @@ std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT
         case TokenKind::IDENTIFIER:
             if (peek(1).kind() == TokenKind::LEFT_PAREN) {
                 return parse_function_call();
-            } else if (peek(1).kind() == TokenKind::LEFT_BRACKET) {
-                return parse_array_access();
-            } else {
-                expect(TokenKind::IDENTIFIER);
-                return std::make_unique<AST::Identifier>(token.lexeme());
             }
+            return parse_identifier();
 
         case TokenKind::LEFT_PAREN: {
             expect(TokenKind::LEFT_PAREN);
@@ -161,6 +156,21 @@ std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT
     }
 }
 
+std::unique_ptr<AST::Expression> Parser::parse_postfix_expression() {
+    auto postfixExpr = parse_primary_expression();
+
+    while (true) {
+        const Token& token = peek();
+        if (token.kind() == TokenKind::LEFT_BRACKET) {
+            postfixExpr = parse_array_access(postfixExpr);
+        } else {
+            break;
+        }
+    }
+
+    return postfixExpr;
+}
+
 std::unique_ptr<AST::Expression> Parser::parse_unary_expression() {  // NOLINT(*-no-recursion)
     const Token& token = peek();
 
@@ -168,11 +178,11 @@ std::unique_ptr<AST::Expression> Parser::parse_unary_expression() {  // NOLINT(*
     if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT ||
         op == AST::Operator::LOGICAL_NOT) {
         expect(token.kind());
-        auto operand = parse_primary_expression();
+        auto operand = parse_postfix_expression();
         return std::make_unique<AST::UnaryExpression>(op, std::move(operand));
     }
 
-    return parse_primary_expression();
+    return parse_postfix_expression();
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_binary_expression(

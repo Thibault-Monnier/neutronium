@@ -35,8 +35,9 @@ class Parser {
 
     std::unique_ptr<AST::Identifier> parse_identifier();
     std::unique_ptr<AST::FunctionCall> parse_function_call();
-    std::unique_ptr<AST::ArrayAccess> parse_array_access();
+    std::unique_ptr<AST::ArrayAccess> parse_array_access(std::unique_ptr<AST::Expression>& operand);
     std::unique_ptr<AST::Expression> parse_primary_expression();
+    std::unique_ptr<AST::Expression> parse_postfix_expression();
     std::unique_ptr<AST::Expression> parse_unary_expression();
     std::unique_ptr<AST::Expression> parse_binary_expression(
         const std::function<std::unique_ptr<AST::Expression>()>& parseOperand,

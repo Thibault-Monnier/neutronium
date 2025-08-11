@@ -69,26 +69,26 @@ comment ::= '#' { any-character-except-newline }
 expression ::= comparison-expression
 
 comparison-expression ::= additive-expression
-                        | additive-expression ("==" | "!=" | "<" | "<=" | ">" | ">=") additive-expression
+                        | additive-expression ('==' | '!=' | '<' | '<=' | '>' | '>=') additive-expression
 
 additive-expression ::= multiplicative-expression
                       | additive-expression ('+' | '-') multiplicative-expression
 
 multiplicative-expression ::= unary-expression
                             | multiplicative-expression ('*' | '/') unary-expression
-
-unary-expression ::= primary-expression
-                   | unary-op primary-expression
-                   
+                            
+unary-expression ::= postfix-expression
+                    | unary-op postfix-expression
+                    
 unary-op ::= '-' | '+' | '!'
 
+postfix-expression ::= primary-expression
+                     | postfix-expression '[' expression ']'
+                                        
 primary-expression ::= literal
                      | identifier
-                     | array-access
                      | function-call
                      | '(' expression ')'
-
-array-access ::= identifier '[' expression ']'
 
 literal ::= integer-literal | boolean-literal | array-literal
 

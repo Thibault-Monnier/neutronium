@@ -45,14 +45,16 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
         } else if (expr.kind_ == NodeKind::ARRAY_ACCESS) {
             const auto& arrayAccess = as<ArrayAccess>(expr);
             std::cout << prefix << branch << "ArrayAccess\n";
-            std::cout << newPrefix << "├── Identifier: " << arrayAccess.identifier_->name_ << "\n";
+            std::cout << newPrefix << "├── Base\n";
+            log_expression(*arrayAccess.base_, next_prefix(newPrefix, false), true);
             std::cout << newPrefix << "└── Index\n";
             log_expression(*arrayAccess.index_, next_prefix(newPrefix, true), true);
 
         } else if (expr.kind_ == NodeKind::FUNCTION_CALL) {
             const auto& funcCall = as<FunctionCall>(expr);
             std::cout << prefix << branch << "FunctionCall\n";
-            std::cout << newPrefix << "├── Identifier: " << funcCall.identifier_->name_ << "\n";
+            std::cout << newPrefix << "├── Callee\n";
+            log_expression(*funcCall.callee_, next_prefix(newPrefix, false), true);
             std::cout << newPrefix << "└── Arguments\n";
             for (size_t i = 0; i < funcCall.arguments_.size(); ++i) {
                 const auto& arg = funcCall.arguments_[i];

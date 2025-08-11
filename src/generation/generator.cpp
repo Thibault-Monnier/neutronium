@@ -115,7 +115,7 @@ void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {  // NOL
 
 void Generator::evaluate_array_access_address_to_rax(  // NOLINT(*-no-recursion)
     const AST::ArrayAccess& arrayAccess) {
-    move_variable_to_rax(arrayAccess.identifier_->name_);  // Pointer to the array
+    evaluate_expression_to_rax(*arrayAccess.base_);  // Pointer to the array
     output_ << "    push rax\n";
     evaluate_expression_to_rax(*arrayAccess.index_);
     output_ << "    pop rbx\n";
@@ -140,7 +140,7 @@ void Generator::generate_function_call(  // NOLINT(*-no-recursion)
         output_ << "    push rax\n";
     }
 
-    output_ << "    call " << function_name_with_prefix(funcCall.identifier_->name_) << "\n";
+    output_ << "    call " << function_name_with_prefix(funcCall.callee_->name_) << "\n";
 
     // Clean up the stack after the function call
     for (int i = 0; i < funcCall.arguments_.size(); ++i) {

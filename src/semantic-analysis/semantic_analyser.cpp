@@ -109,7 +109,7 @@ SymbolInfo& SemanticAnalyser::handle_variable_declaration(const std::string& nam
 
 Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
     const AST::FunctionCall& funcCall) {
-    const std::string& name = funcCall.identifier_->name_;
+    const std::string& name = funcCall.callee_->name_;
 
     const auto info = get_symbol_info(name);
     if (!info.has_value()) {
@@ -232,10 +232,9 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
         }
         case AST::NodeKind::ARRAY_ACCESS: {
             const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
-            const Type arrayType = get_expression_type(*arrayAccess.identifier_);
+            const Type arrayType = get_expression_type(*arrayAccess.base_);
             if (arrayType.kind() != TypeKind::ARRAY) {
-                abort(std::format("`{}` is indexed as an array, but has type {}",
-                                  arrayAccess.identifier_->name_, arrayType.to_string()));
+                abort(std::format("{} is indexed as an array", arrayType.to_string()));
             }
             analyse_expression(*arrayAccess.index_, PrimitiveType::INTEGER, "array access index");
             return arrayType.array_element_type();
@@ -303,7 +302,7 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
                 }
                 case AST::NodeKind::ARRAY_ACCESS: {
                     const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
-                    verifyIsAssignable(*arrayAccess.identifier_);
+                    verifyIsAssignable(*arrayAccess.base_);
                     break;
                 }
                 default:
