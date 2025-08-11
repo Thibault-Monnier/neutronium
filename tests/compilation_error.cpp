@@ -192,8 +192,8 @@ TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
 
     const std::string codeArrayLength = R"(
         fn main(): {
-            let mut arr = [1, 2, 3];
-            arr = [4, 5];    # illegal: array length mismatch
+            let mut arr = [[1,0], [2,5], [3,8]];
+            arr = [4, 5, 4];    # illegal: array length mismatch
         }
     )";
     auto [statusArrayLength, errorArrayLength] = compile(codeArrayLength);
@@ -298,6 +298,24 @@ TEST_F(NeutroniumTester, DifferentElementTypesInArrayFails) {
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("type") && error.contains("array") && error.contains("int") &&
                 error.contains("bool"));
+
+    const std::string codeInnerElement = R"(
+        fn main(): {
+            let arr = [[1, 2], [true, false]];  # illegal: mixed types in inner arrays
+        }
+    )";
+    auto [statusInnerElement, errorInnerElement] = compile(codeInnerElement);
+    EXPECT_NE(statusInnerElement, 0);
+
+    const std::string codeInnerElementSize = R"(
+        fn main(): {
+            let arr = [[5, 6], [7, 8, 9]];  # illegal: inner arrays have different sizes
+        }
+    )";
+    auto [statusInnerElementSize, errorInnerElementSize] = compile(codeInnerElementSize);
+    EXPECT_NE(statusInnerElementSize, 0);
+    EXPECT_TRUE(errorInnerElement.contains("type") && errorInnerElement.contains("array") &&
+                errorInnerElement.contains("2") && errorInnerElement.contains("3"));
 }
 
 TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {

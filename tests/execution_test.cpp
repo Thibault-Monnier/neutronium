@@ -611,4 +611,25 @@ TEST_F(NeutroniumTester, Arrays) {
         }
     )";
     EXPECT_EQ(run(code4), 2);
+
+    const std::string code2dArray = R"(
+        fn getArray() -> [[int; 2]; 2]: {
+            return [[1, 2], [3, 4]];
+        }
+
+        fn main(): {
+            let mut arr = getArray();
+            arr[0][1] = arr[1][0] + arr[0][0];  # arr[0][1] = 3 + 1 = 4
+            exit arr[0][1];  # should be 4
+        }
+    )";
+    EXPECT_EQ(run(code2dArray), 4);
+
+    const std::string codeArrayLiteralAccess = R"(
+        fn main(): {
+            let val = [1, 2, 3, 4, 5][2];
+            exit val;  # Should be 3
+        }
+    )";
+    EXPECT_EQ(run(codeArrayLiteralAccess), 3);
 }
