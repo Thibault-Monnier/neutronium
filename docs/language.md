@@ -1,9 +1,4 @@
-# Neutronium Language
-
-Neutronium is a lightweight C-like programming language that supports basic constructs such as variables, functions, and
-control flow.
-
-## Grammar
+# Grammar
 
 <details><summary>Formal EBNF Grammar</summary>
 
