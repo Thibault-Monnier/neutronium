@@ -417,8 +417,7 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_functio
         std::move(signature.identifier_), std::move(signature.parameters_), signature.returnType_);
 }
 
-std::unique_ptr<AST::FunctionDefinition>
-Parser::parse_function_definition() {
+std::unique_ptr<AST::FunctionDefinition> Parser::parse_function_definition() {
     bool isExported = false;
     if (peek().kind() == TokenKind::EXPORT) {
         expect(TokenKind::EXPORT);

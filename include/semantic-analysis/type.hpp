@@ -50,8 +50,7 @@ class Type {
         return false;
     }
 
-    [[nodiscard]] bool mismatches(const Type& other,
-                                  const bool looseMatch = false) const {
+    [[nodiscard]] bool mismatches(const Type& other, const bool looseMatch = false) const {
         return !matches(other, looseMatch);
     }
 

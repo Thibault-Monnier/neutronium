@@ -114,8 +114,7 @@ void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {
     output_ << "    pop rax\n";
 }
 
-void Generator::evaluate_array_access_address_to_rax(
-    const AST::ArrayAccess& arrayAccess) {
+void Generator::evaluate_array_access_address_to_rax(const AST::ArrayAccess& arrayAccess) {
     evaluate_expression_to_rax(*arrayAccess.base_);  // Pointer to the array
     output_ << "    push rax\n";
     evaluate_expression_to_rax(*arrayAccess.index_);
@@ -124,8 +123,7 @@ void Generator::evaluate_array_access_address_to_rax(
     output_ << "    add rax, rbx\n";  // Add the base
 }
 
-void Generator::evaluate_array_access_to_rax(
-    const AST::ArrayAccess& arrayAccess) {
+void Generator::evaluate_array_access_to_rax(const AST::ArrayAccess& arrayAccess) {
     evaluate_array_access_address_to_rax(arrayAccess);
     output_ << "    mov rax, [rax]\n";  // Dereference
 }
@@ -134,8 +132,7 @@ std::string Generator::function_name_with_prefix(const std::string& name) {
     return "__" + name;  // Prefix with "__" to avoid conflicts with NASM keywords
 }
 
-void Generator::generate_function_call(
-    const AST::FunctionCall& funcCall) {
+void Generator::generate_function_call(const AST::FunctionCall& funcCall) {
     for (const auto& argument : funcCall.arguments_) {
         evaluate_expression_to_rax(*argument);
         output_ << "    push rax\n";
@@ -149,8 +146,7 @@ void Generator::generate_function_call(
     }
 }
 
-void Generator::evaluate_unary_expression_to_rax(
-    const AST::UnaryExpression& unaryExpr) {
+void Generator::evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr) {
     evaluate_expression_to_rax(*unaryExpr.operand_);
     if (unaryExpr.operator_ == AST::Operator::SUBTRACT) {
         output_ << "    neg rax\n";
@@ -159,8 +155,7 @@ void Generator::evaluate_unary_expression_to_rax(
     }
 }
 
-void Generator::evaluate_binary_expression_to_rax(
-    const AST::BinaryExpression& binaryExpr) {
+void Generator::evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr) {
     // First evaluate right side to prevent an additional move in case of division, because the
     // numerator has to be in rax
     evaluate_expression_to_rax(*binaryExpr.right_);
@@ -298,8 +293,7 @@ void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {
     output_ << "." << endifLabel << ":\t; endif\n";
 }
 
-void Generator::generate_while_stmt(
-    const AST::WhileStatement& whileStmt) {
+void Generator::generate_while_stmt(const AST::WhileStatement& whileStmt) {
     const int whileLabel = labelsCount_++;
     innerLoopStartLabel_ = whileLabel;
     output_ << "." << whileLabel << ":\n";
