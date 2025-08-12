@@ -106,7 +106,7 @@ SymbolInfo& SemanticAnalyser::handle_variable_declaration(const std::string& nam
     return declare_symbol(name, SymbolKind::VARIABLE, isMutable, type, true, {});
 }
 
-Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
+Type SemanticAnalyser::get_function_call_type(
     const AST::FunctionCall& funcCall) {
     const std::string& name = funcCall.callee_->name_;
 
@@ -142,7 +142,7 @@ Type SemanticAnalyser::get_function_call_type(  // NOLINT(*-no-recursion)
     return info.value()->type_;
 }
 
-Type SemanticAnalyser::get_unary_expression_type(  // NOLINT(*-no-recursion)
+Type SemanticAnalyser::get_unary_expression_type(
     const AST::UnaryExpression& unaryExpr) {
     const Type operandType = get_expression_type(*unaryExpr.operand_);
     if (operandType.matches(PrimitiveType::INTEGER)) {
@@ -162,7 +162,7 @@ Type SemanticAnalyser::get_unary_expression_type(  // NOLINT(*-no-recursion)
           operandType.to_string());
 }
 
-Type SemanticAnalyser::get_binary_expression_type(  // NOLINT(*-no-recursion)
+Type SemanticAnalyser::get_binary_expression_type(
     const AST::BinaryExpression& binaryExpr) {
     const Type leftType = get_expression_type(*binaryExpr.left_);
     const Type rightType = get_expression_type(*binaryExpr.right_);
@@ -200,7 +200,7 @@ Type SemanticAnalyser::get_binary_expression_type(  // NOLINT(*-no-recursion)
     std::unreachable();
 }
 
-Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NOLINT(*-no-recursion)
+Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
     switch (expr.kind_) {
         case AST::NodeKind::NUMBER_LITERAL:
             return PrimitiveType::INTEGER;
@@ -319,12 +319,12 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
     }
 }
 
-void SemanticAnalyser::analyse_expression_statement(  // NOLINT(*-no-recursion)
+void SemanticAnalyser::analyse_expression_statement(
     const AST::ExpressionStatement& exprStmt) {
     get_expression_type(*exprStmt.expression_);
 }
 
-void SemanticAnalyser::analyse_if_statement(  // NOLINT(*-no-recursion)
+void SemanticAnalyser::analyse_if_statement(
     const AST::IfStatement& ifStmt) {
     analyse_expression(*ifStmt.condition_, PrimitiveType::BOOLEAN, "condition");
     analyse_statement(*ifStmt.body_);
@@ -333,7 +333,7 @@ void SemanticAnalyser::analyse_if_statement(  // NOLINT(*-no-recursion)
     }
 }
 
-void SemanticAnalyser::analyse_while_statement(  // NOLINT(*-no-recursion)
+void SemanticAnalyser::analyse_while_statement(
     const AST::WhileStatement& whileStmt) {
     analyse_expression(*whileStmt.condition_, PrimitiveType::BOOLEAN, "condition");
     loopDepth_++;
@@ -357,7 +357,7 @@ void SemanticAnalyser::analyse_exit(const AST::ExitStatement& exitStmt) {
     analyse_expression(*exitStmt.exitCode_, PrimitiveType::INTEGER, "exit code");
 }
 
-void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
+void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {
     switch (stmt.kind_) {
         case AST::NodeKind::VARIABLE_DEFINITION: {
             const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
@@ -421,7 +421,7 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
     }
 }
 
-bool SemanticAnalyser::verify_statement_returns(  // NOLINT(*-no-recursion)
+bool SemanticAnalyser::verify_statement_returns(
     const AST::Statement& stmt) {
     const AST::NodeKind kind = stmt.kind_;
 
@@ -455,7 +455,7 @@ void SemanticAnalyser::analyse_external_function_declaration(
     exit_scope();
 }
 
-void SemanticAnalyser::analyse_function_definition(  // NOLINT(*-no-recursion)
+void SemanticAnalyser::analyse_function_definition(
     const AST::FunctionDefinition& funcDef) {
     enter_scope();
     currentFunctionName_ = funcDef.identifier_->name_;

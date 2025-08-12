@@ -51,11 +51,11 @@ class Type {
     }
 
     [[nodiscard]] bool mismatches(const Type& other,
-                                  const bool looseMatch = false) const {  // NOLINT(*-no-recursion)
+                                  const bool looseMatch = false) const {
         return !matches(other, looseMatch);
     }
 
-    [[nodiscard]] std::string to_string() const {  // NOLINT(*-no-recursion)
+    [[nodiscard]] std::string to_string() const {
         if (kind_ == TypeKind::PRIMITIVE) {
             switch (primitive_) {
                 case PrimitiveType::INTEGER:

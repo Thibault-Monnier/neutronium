@@ -35,7 +35,7 @@ const Token& Parser::expect(const TokenKind expected) {
     return token;
 }
 
-Type Parser::parse_type_specifier() {  // NOLINT(*-no-recursion)
+Type Parser::parse_type_specifier() {
     const TokenKind tokenKind = peek().kind();
     expect(tokenKind);
 
@@ -116,7 +116,7 @@ std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access(
     return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index));
 }
 
-std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {  // NOLINT(*-no-recursion)
+std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {
     const Token& token = peek();
 
     switch (token.kind()) {
@@ -170,7 +170,7 @@ std::unique_ptr<AST::Expression> Parser::parse_postfix_expression() {
     return postfixExpr;
 }
 
-std::unique_ptr<AST::Expression> Parser::parse_unary_expression() {  // NOLINT(*-no-recursion)
+std::unique_ptr<AST::Expression> Parser::parse_unary_expression() {
     const Token& token = peek();
 
     const AST::Operator op = AST::token_kind_to_operator(token.kind());
@@ -270,7 +270,7 @@ std::unique_ptr<AST::Assignment> Parser::parse_assignment() {
     return std::make_unique<AST::Assignment>(std::move(left), std::move(right));
 }
 
-std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no-recursion)
+std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {
     expect(TokenKind::IF);
     auto condition = parse_expression();
     expect(TokenKind::COLON);
@@ -305,7 +305,7 @@ std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {  // NOLINT(*-no
     return ifStmt;
 }
 
-std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {  // NOLINT(*-no-recursion)
+std::unique_ptr<AST::WhileStatement> Parser::parse_while_statement() {
     expect(TokenKind::WHILE);
     auto condition = parse_expression();
     expect(TokenKind::COLON);
@@ -339,7 +339,7 @@ std::unique_ptr<AST::ExitStatement> Parser::parse_exit_statement() {
     return std::make_unique<AST::ExitStatement>(std::move(exitCode));
 }
 
-std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLINT(*-no-recursion)
+std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {
     expect(TokenKind::LEFT_BRACE);
     auto block = std::make_unique<AST::BlockStatement>();
     while (peek().kind() != TokenKind::RIGHT_BRACE) {
@@ -349,7 +349,7 @@ std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {  // NOLIN
     return block;
 }
 
-std::unique_ptr<AST::Statement> Parser::parse_statement() {  // NOLINT(*-no-recursion)
+std::unique_ptr<AST::Statement> Parser::parse_statement() {
     const TokenKind tokenKind = peek().kind();
 
     if (tokenKind == TokenKind::LET) return parse_variable_definition();
@@ -418,7 +418,7 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_functio
 }
 
 std::unique_ptr<AST::FunctionDefinition>
-Parser::parse_function_definition() {  // NOLINT(*-no-recursion)
+Parser::parse_function_definition() {
     bool isExported = false;
     if (peek().kind() == TokenKind::EXPORT) {
         expect(TokenKind::EXPORT);

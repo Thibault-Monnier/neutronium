@@ -90,7 +90,7 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
     output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
 }
 
-void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {  // NOLINT(*-no-recursion)
+void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {
     // Get the current break address
     output_ << "    mov rax, 12\n";
     output_ << "    xor rdi, rdi\n";
@@ -114,7 +114,7 @@ void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {  // NOL
     output_ << "    pop rax\n";
 }
 
-void Generator::evaluate_array_access_address_to_rax(  // NOLINT(*-no-recursion)
+void Generator::evaluate_array_access_address_to_rax(
     const AST::ArrayAccess& arrayAccess) {
     evaluate_expression_to_rax(*arrayAccess.base_);  // Pointer to the array
     output_ << "    push rax\n";
@@ -124,7 +124,7 @@ void Generator::evaluate_array_access_address_to_rax(  // NOLINT(*-no-recursion)
     output_ << "    add rax, rbx\n";  // Add the base
 }
 
-void Generator::evaluate_array_access_to_rax(  // NOLINT(*-no-recursion)
+void Generator::evaluate_array_access_to_rax(
     const AST::ArrayAccess& arrayAccess) {
     evaluate_array_access_address_to_rax(arrayAccess);
     output_ << "    mov rax, [rax]\n";  // Dereference
@@ -134,7 +134,7 @@ std::string Generator::function_name_with_prefix(const std::string& name) {
     return "__" + name;  // Prefix with "__" to avoid conflicts with NASM keywords
 }
 
-void Generator::generate_function_call(  // NOLINT(*-no-recursion)
+void Generator::generate_function_call(
     const AST::FunctionCall& funcCall) {
     for (const auto& argument : funcCall.arguments_) {
         evaluate_expression_to_rax(*argument);
@@ -149,7 +149,7 @@ void Generator::generate_function_call(  // NOLINT(*-no-recursion)
     }
 }
 
-void Generator::evaluate_unary_expression_to_rax(  // NOLINT(*-no-recursion)
+void Generator::evaluate_unary_expression_to_rax(
     const AST::UnaryExpression& unaryExpr) {
     evaluate_expression_to_rax(*unaryExpr.operand_);
     if (unaryExpr.operator_ == AST::Operator::SUBTRACT) {
@@ -159,7 +159,7 @@ void Generator::evaluate_unary_expression_to_rax(  // NOLINT(*-no-recursion)
     }
 }
 
-void Generator::evaluate_binary_expression_to_rax(  // NOLINT(*-no-recursion)
+void Generator::evaluate_binary_expression_to_rax(
     const AST::BinaryExpression& binaryExpr) {
     // First evaluate right side to prevent an additional move in case of division, because the
     // numerator has to be in rax
@@ -197,7 +197,7 @@ void Generator::evaluate_binary_expression_to_rax(  // NOLINT(*-no-recursion)
     }
 }
 
-void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NOLINT(*-no-recursion)
+void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {
     switch (expr.kind_) {
         case AST::NodeKind::NUMBER_LITERAL: {
             const auto& numberLit = static_cast<const AST::NumberLiteral&>(expr);
@@ -282,7 +282,7 @@ void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStm
     evaluate_expression_to_rax(*exprStmt.expression_);
 }
 
-void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {  // NOLINT(*-no-recursion)
+void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {
     const int elseLabel = generate_condition(*ifStmt.condition_);
     const int endifLabel = ifStmt.elseClause_ ? labelsCount_++ : elseLabel;
 
@@ -298,7 +298,7 @@ void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {  // NOLINT(*-
     output_ << "." << endifLabel << ":\t; endif\n";
 }
 
-void Generator::generate_while_stmt(  // NOLINT(*-no-recursion)
+void Generator::generate_while_stmt(
     const AST::WhileStatement& whileStmt) {
     const int whileLabel = labelsCount_++;
     innerLoopStartLabel_ = whileLabel;
@@ -336,7 +336,7 @@ void Generator::generate_exit(const AST::ExitStatement& exitStmt) {
     generate_exit("rax");
 }
 
-void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recursion)
+void Generator::generate_stmt(const AST::Statement& stmt) {
     switch (stmt.kind_) {
         case AST::NodeKind::VARIABLE_DEFINITION: {
             const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
