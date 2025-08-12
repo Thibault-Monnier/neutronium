@@ -1,5 +1,6 @@
 #include "parsing/ast.hpp"
 
+#include <cassert>
 #include <iostream>
 #include <magic_enum.hpp>
 #include <string>
@@ -44,8 +45,8 @@ std::string operator_to_string(const Operator op) {
     };
 
     auto it = table.find(op);
-    if (it != table.end()) return it->second;
-    throw std::invalid_argument("Invalid operator");
+    assert(it != table.end() && "Invalid operator");
+    return it->second;
 }
 
 bool is_arithmetic_operator(const Operator op) {

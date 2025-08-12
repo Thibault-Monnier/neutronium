@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 
 enum class PrimitiveType : uint8_t {
     INTEGER,
@@ -65,14 +66,13 @@ class Type {
                     return "void";
                 case PrimitiveType::ANY:
                     return "any";
-                default:
-                    throw std::invalid_argument("Invalid type passed to Type::to_string");
             }
+            std::unreachable();
         } else if (kind_ == TypeKind::ARRAY) {
             return "array[" + arrayElement_->to_string() + " * " + std::to_string(arrayLength_) +
                    "]";
         }
-        throw std::invalid_argument("Invalid type kind in Type::to_string");
+        std::unreachable();
     }
 
     [[nodiscard]] TypeKind kind() const { return kind_; }
@@ -81,7 +81,7 @@ class Type {
         if (kind_ == TypeKind::ARRAY) {
             return *arrayElement_;
         }
-        throw std::invalid_argument("Type is not an array, cannot get element type");
+        std::unreachable();
     }
 
    private:

@@ -2,8 +2,8 @@
 
 #include <format>
 #include <functional>
-#include <stdexcept>
 #include <string>
+#include <utility>
 
 #include "utils/log.hpp"
 
@@ -81,8 +81,7 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const std::string& name, const Symb
         return it->second;
     }
 
-    throw std::invalid_argument("Invalid symbol kind for non-scoped symbol: " +
-                                std::to_string(static_cast<int>(kind)));
+    std::unreachable();
 }
 
 SymbolInfo& SemanticAnalyser::handle_constant_definition(const std::string& name,
@@ -198,7 +197,7 @@ Type SemanticAnalyser::get_binary_expression_type(  // NOLINT(*-no-recursion)
         return PrimitiveType::BOOLEAN;
     }
 
-    throw std::invalid_argument("Invalid operator in binary expression");
+    std::unreachable();
 }
 
 Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NOLINT(*-no-recursion)
@@ -252,8 +251,7 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {  // NO
             return get_binary_expression_type(binaryExpr);
         }
         default:
-            throw std::invalid_argument("Invalid expression kind: " +
-                                        node_kind_to_string(expr.kind_));
+            std::unreachable();
     }
 }
 
@@ -419,7 +417,7 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {  // NOLIN
             break;
         }
         default:
-            throw std::invalid_argument("Invalid statement kind at semantic analysis");
+            std::unreachable();
     }
 }
 

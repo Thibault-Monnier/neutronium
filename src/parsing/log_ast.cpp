@@ -1,4 +1,5 @@
 #include <iostream>
+#include <utility>
 
 #include "parsing/ast.hpp"
 
@@ -168,7 +169,7 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             break;
         }
         default:
-            throw std::invalid_argument("Invalid statement kind");
+            std::unreachable();
     }
 
     if (!isLast) {

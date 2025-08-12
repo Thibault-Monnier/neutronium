@@ -1,9 +1,11 @@
 #include "generation/generator.hpp"
 
+#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "parsing/ast.hpp"
 
@@ -60,9 +62,8 @@ void Generator::stack_deallocate_scope_variables(const AST::BlockStatement& bloc
 }
 
 int Generator::get_variable_stack_offset(const std::string& name) const {
-    if (!variablesStackOffset_.contains(name)) {
-        throw std::invalid_argument("Variable not found: " + name);
-    }
+    assert(variablesStackOffset_.contains(name) && "Variable not found in stack offset map");
+
     return variablesStackOffset_.at(name);
 }
 
@@ -239,7 +240,7 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {  // NO
             break;
         }
         default:
-            throw std::invalid_argument("Invalid expression kind");
+            std::unreachable();
     }
 }
 
@@ -273,7 +274,7 @@ void Generator::generate_variable_assignment(const AST::Assignment& assignment) 
         output_ << "    pop rbx\n";
         output_ << "    mov [rax], rbx\n";
     } else {
-        throw std::invalid_argument("Invalid place expression kind");
+        std::unreachable();
     }
 }
 
@@ -388,7 +389,7 @@ void Generator::generate_stmt(const AST::Statement& stmt) {  // NOLINT(*-no-recu
             break;
         }
         default:
-            throw std::invalid_argument("Invalid statement kind at generation");
+            std::unreachable();
     }
 }
 
