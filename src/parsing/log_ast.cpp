@@ -195,17 +195,17 @@ void log_ast(const Program& programNode) {
 
             const std::string parametersBranch = hasBody ? "├── " : "└── ";
             std::cout << newPrefix << parametersBranch << "Parameters\n";
+            const std::string paramsPrefix = next_prefix(newPrefix, !hasBody);
             for (size_t j = 0; j < params.size(); ++j) {
                 const auto& param = params[j];
-                const std::string paramPrefix =
-                    next_prefix(newPrefix, (j == params.size() - 1) && !hasBody);
+
                 const std::string paramBranch = j == params.size() - 1 ? "└── " : "├── ";
-                std::cout << paramPrefix << paramBranch << "Parameter" << j + 1 << "\n";
-                std::cout << next_prefix(paramPrefix, j == params.size() - 1)
+                std::cout << paramsPrefix << paramBranch << "Parameter" << j + 1 << "\n";
+                std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
                           << "├── Identifier: " << param->identifier_->name_ << "\n";
-                std::cout << next_prefix(paramPrefix, j == params.size() - 1)
+                std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
                           << "├── Type: " << param->type_.to_string() << "\n";
-                std::cout << next_prefix(paramPrefix, j == params.size() - 1)
+                std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
                           << "└── IsMutable: " << (param->isMutable_ ? "true" : "false") << "\n";
             }
         };

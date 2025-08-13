@@ -101,9 +101,25 @@ TEST(CliErrorTest, InvalidLogType) {
 
 TEST(CliNonErrorTest, HelpOption) {
     std::string output;
-    const int status = run_and_capture(neutroniumPath + " --help", output);
+ const int status = run_and_capture(neutroniumPath + " --help", output);
     EXPECT_EQ(status, 0);
     EXPECT_TRUE(output.contains("Usage:")) << output;
+
+    const int status2 = run_and_capture(neutroniumPath + " -h", output);
+    EXPECT_EQ(status2, 0);
+    EXPECT_TRUE(output.contains("Usage:")) << output;
+}
+
+TEST(CliNonErrorTest, VersionOption) {
+    std::string output;
+
+    const int status = run_and_capture(neutroniumPath + " --version", output);
+    EXPECT_EQ(status, 0);
+    EXPECT_TRUE(output.contains("Neutronium version")) << output;
+
+    const int status2 = run_and_capture(neutroniumPath + " -v", output);
+    EXPECT_EQ(status2, 0);
+    EXPECT_TRUE(output.contains("Neutronium version")) << output;
 }
 
 TEST(CliNonErrorTest, ValidMinimalSourceFile) {
@@ -163,6 +179,10 @@ TEST(CliNonErrorTest, LogArguments) {
     status = run_and_capture(baseCompileCommand + " --log=code,ast", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("fn main():") && output.contains("Program")) << output;
+
+    status = run_and_capture(baseCompileCommand + " --log=tokens,assembly", output);
+    EXPECT_EQ(status, 0) << output;
+    EXPECT_TRUE(output.contains("EOF_:") && output.contains("_start:")) << output;
 
     std::remove(tempFile.c_str());
 }
