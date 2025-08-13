@@ -36,7 +36,7 @@ CompilerOptions parse_cli(int argc, char** argv) {
     }
 
     if (result.count("version")) {
-        std::cout << "Neutronium Compiler v2.0.0\n";
+        std::cout << "Neutronium Compiler v2.0.0-alpha\n";
         std::exit(EXIT_SUCCESS);
     }
 
