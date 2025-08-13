@@ -256,6 +256,31 @@ TEST_F(NeutroniumTester, ReassignmentDifferentInferredTypeFails) {
     EXPECT_TRUE(error3.contains("Type mismatch"));
 }
 
+TEST_F(NeutroniumTester, CompoundAssignmentWithNonIntegersFails) {
+    const std::string code2 = R"(
+        fn main(): {
+            let mut x = true;
+            x *= false;       # illegal: bool -= int
+        }
+    )";
+    auto [status2, error2] = compile(code2);
+    EXPECT_NE(status2, 0);
+    EXPECT_TRUE(error2.contains("type") && error2.contains("assignment operator") &&
+                error2.contains("boolean"));
+
+    const std::string code3 = R"(
+        fn main(): {
+            let mut x = [[false], [false]];
+            let y = [[true], [false]];
+            x[0] -= y[1];       # illegal: int -= bool
+        }
+    )";
+    auto [status3, error3] = compile(code3);
+    EXPECT_NE(status3, 0);
+    EXPECT_TRUE(error3.contains("type") && error3.contains("assignment operator") &&
+                error3.contains("array"));
+}
+
 TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
     const std::string code = R"(
         fn main(): {

@@ -90,6 +90,28 @@ void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
     output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
 }
 
+void Generator::evaluate_array_access_address_to_rax(const AST::ArrayAccess& arrayAccess) {
+    evaluate_expression_to_rax(*arrayAccess.base_);  // Pointer to the array
+    output_ << "    push rax\n";
+    evaluate_expression_to_rax(*arrayAccess.index_);
+    output_ << "    pop rbx\n";
+    output_ << "    shl rax, 3\n";    // Multiply index by 8 (size of qword)
+    output_ << "    add rax, rbx\n";  // Add the base
+}
+
+void Generator::evaluate_place_expression_address_to_rax(const AST::Expression& place) {
+    if (place.kind_ == AST::NodeKind::IDENTIFIER) {
+        const auto& identifier = static_cast<const AST::Identifier&>(place);
+        output_ << "    mov rax, rbp\n";
+        output_ << "    sub rax, " << get_variable_stack_offset(identifier.name_) << "\n";
+    } else if (place.kind_ == AST::NodeKind::ARRAY_ACCESS) {
+        const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(place);
+        evaluate_array_access_address_to_rax(arrayAccess);
+    } else {
+        std::unreachable();
+    }
+}
+
 void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {
     // Get the current break address
     output_ << "    mov rax, 12\n";
@@ -114,15 +136,6 @@ void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {
     output_ << "    pop rax\n";
 }
 
-void Generator::evaluate_array_access_address_to_rax(const AST::ArrayAccess& arrayAccess) {
-    evaluate_expression_to_rax(*arrayAccess.base_);  // Pointer to the array
-    output_ << "    push rax\n";
-    evaluate_expression_to_rax(*arrayAccess.index_);
-    output_ << "    pop rbx\n";
-    output_ << "    shl rax, 3\n";    // Multiply index by 8 (size of qword)
-    output_ << "    add rax, rbx\n";  // Add the base
-}
-
 void Generator::evaluate_array_access_to_rax(const AST::ArrayAccess& arrayAccess) {
     evaluate_array_access_address_to_rax(arrayAccess);
     output_ << "    mov rax, [rax]\n";  // Dereference
@@ -141,7 +154,7 @@ void Generator::generate_function_call(const AST::FunctionCall& funcCall) {
     output_ << "    call " << function_name_with_prefix(funcCall.callee_->name_) << "\n";
 
     // Clean up the stack after the function call
-    for (int i = 0; i < funcCall.arguments_.size(); ++i) {
+    for (size_t i = 0; i < funcCall.arguments_.size(); ++i) {
         output_ << "    pop rcx\n";
     }
 }
@@ -152,6 +165,21 @@ void Generator::evaluate_unary_expression_to_rax(const AST::UnaryExpression& una
         output_ << "    neg rax\n";
     } else if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) {
         output_ << "    xor rax, 1\n";
+    }
+}
+
+void Generator::apply_arithmetic_operator_to_rax(const AST::Operator op, const std::string& other) {
+    if (op == AST::Operator::DIVIDE) {
+        output_ << "    cqo\n";
+        output_ << "    idiv " << other << "\n";
+    } else {
+        const std::unordered_map<AST::Operator, std::string> arithmeticOperatorPrefixes = {
+            {AST::Operator::ADD, "add"},
+            {AST::Operator::SUBTRACT, "sub"},
+            {AST::Operator::MULTIPLY, "imul"},
+        };
+        assert(arithmeticOperatorPrefixes.contains(op) && "Unsupported arithmetic operator");
+        output_ << "    " << arithmeticOperatorPrefixes.at(op) << " rax, " << other << "\n";
     }
 }
 
@@ -168,18 +196,7 @@ void Generator::evaluate_binary_expression_to_rax(const AST::BinaryExpression& b
     const AST::Operator op = binaryExpr.operator_;
 
     if (AST::is_arithmetic_operator(op)) {
-        if (op == AST::Operator::DIVIDE) {
-            output_ << "    cqo\n";
-            output_ << "    idiv rbx\n";
-        } else {
-            const std::unordered_map<AST::Operator, std::string> arithmeticOperatorPrefixes = {
-                {AST::Operator::ADD, "add"},
-                {AST::Operator::SUBTRACT, "sub"},
-                {AST::Operator::MULTIPLY, "imul"},
-            };
-            output_ << "    " << arithmeticOperatorPrefixes.at(op) << " rax, rbx\n";
-        }
-
+        apply_arithmetic_operator_to_rax(op, "rbx");
     } else if (AST::is_comparison_operator(op)) {
         const std::unordered_map<AST::Operator, std::string> comparisonSuffixes = {
             {AST::Operator::EQUALS, "e"},       {AST::Operator::NOT_EQUALS, "ne"},
@@ -257,20 +274,46 @@ void Generator::generate_variable_definition(const AST::VariableDefinition& varD
 void Generator::generate_variable_assignment(const AST::Assignment& assignment) {
     const auto& place = assignment.place_;
     const auto& value = assignment.value_;
-    evaluate_expression_to_rax(*value);
 
-    if (place->kind_ == AST::NodeKind::IDENTIFIER) {
-        const auto& identifier = static_cast<const AST::Identifier&>(*place);
-        write_to_variable(identifier.name_, "rax");
-    } else if (place->kind_ == AST::NodeKind::ARRAY_ACCESS) {
-        const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(*place);
-        output_ << "    push rax\n";
-        evaluate_array_access_address_to_rax(arrayAccess);
-        output_ << "    pop rbx\n";
-        output_ << "    mov [rax], rbx\n";
-    } else {
-        std::unreachable();
+    if (assignment.operator_ == AST::Operator::ASSIGN) {
+        evaluate_expression_to_rax(*value);
+        if (place->kind_ == AST::NodeKind::IDENTIFIER) {
+            const auto& identifier = static_cast<const AST::Identifier&>(*place);
+            write_to_variable(identifier.name_, "rax");
+        } else if (place->kind_ == AST::NodeKind::ARRAY_ACCESS) {
+            const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(*place);
+            output_ << "    push rax\n";
+            evaluate_array_access_address_to_rax(arrayAccess);
+            output_ << "    pop rbx\n";
+            output_ << "    mov [rax], rbx\n";
+        } else {
+            std::unreachable();
+        }
+        return;
     }
+
+    AST::Operator op;
+    if (assignment.operator_ == AST::Operator::ADD_ASSIGN)
+        op = AST::Operator::ADD;
+    else if (assignment.operator_ == AST::Operator::SUBTRACT_ASSIGN)
+        op = AST::Operator::SUBTRACT;
+    else if (assignment.operator_ == AST::Operator::MULTIPLY_ASSIGN)
+        op = AST::Operator::MULTIPLY;
+    else if (assignment.operator_ == AST::Operator::DIVIDE_ASSIGN)
+        op = AST::Operator::DIVIDE;
+    else
+        std::unreachable();
+
+    evaluate_place_expression_address_to_rax(*place);
+
+    output_ << "    push rax\n";
+    evaluate_expression_to_rax(*value);
+    output_ << "    mov rbx, rax\n";
+    output_ << "    pop rcx\n";
+    output_ << "    mov rax, [rcx]\n";
+
+    apply_arithmetic_operator_to_rax(op, "rbx");
+    output_ << "    mov [rcx], rax\n";  // Write the result back to the place
 }
 
 void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStmt) {

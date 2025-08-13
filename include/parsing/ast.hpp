@@ -15,6 +15,11 @@ enum class Operator : uint8_t {
     MULTIPLY,
     DIVIDE,
     LOGICAL_NOT,
+    ASSIGN,
+    ADD_ASSIGN,
+    SUBTRACT_ASSIGN,
+    MULTIPLY_ASSIGN,
+    DIVIDE_ASSIGN,
     EQUALS,
     NOT_EQUALS,
     LESS_THAN,
@@ -164,10 +169,15 @@ struct VariableDefinition final : Statement {
 };
 
 struct Assignment final : Statement {
-    Assignment(std::unique_ptr<Expression> place, std::unique_ptr<Expression> value)
-        : Statement{NodeKind::ASSIGNMENT}, place_(std::move(place)), value_(std::move(value)) {}
+    Assignment(std::unique_ptr<Expression> place, const Operator op,
+               std::unique_ptr<Expression> value)
+        : Statement{NodeKind::ASSIGNMENT},
+          place_(std::move(place)),
+          operator_(op),
+          value_(std::move(value)) {}
 
     std::unique_ptr<Expression> place_;
+    const Operator operator_;
     std::unique_ptr<Expression> value_;
 };
 
@@ -296,6 +306,7 @@ bool is_arithmetic_operator(Operator op);
 bool is_equality_operator(Operator op);
 bool is_relational_operator(Operator op);
 bool is_comparison_operator(Operator op);
+bool is_assignment_operator(Operator op);
 
 std::string node_kind_to_string(NodeKind kind);
 

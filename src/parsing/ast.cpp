@@ -17,6 +17,11 @@ Operator token_kind_to_operator(const TokenKind tokenKind) {
         {TokenKind::STAR, Operator::MULTIPLY},
         {TokenKind::SLASH, Operator::DIVIDE},
         {TokenKind::BANG, Operator::LOGICAL_NOT},
+        {TokenKind::EQUAL, Operator::ASSIGN},
+        {TokenKind::PLUS_EQUAL, Operator::ADD_ASSIGN},
+        {TokenKind::MINUS_EQUAL, Operator::SUBTRACT_ASSIGN},
+        {TokenKind::STAR_EQUAL, Operator::MULTIPLY_ASSIGN},
+        {TokenKind::SLASH_EQUAL, Operator::DIVIDE_ASSIGN},
         {TokenKind::EQUAL_EQUAL, Operator::EQUALS},
         {TokenKind::BANG_EQUAL, Operator::NOT_EQUALS},
         {TokenKind::LESS_THAN, Operator::LESS_THAN},
@@ -36,6 +41,11 @@ std::string operator_to_string(const Operator op) {
         {Operator::MULTIPLY, "*"},
         {Operator::DIVIDE, "/"},
         {Operator::LOGICAL_NOT, "!"},
+        {Operator::ASSIGN, "="},
+        {Operator::ADD_ASSIGN, "+="},
+        {Operator::SUBTRACT_ASSIGN, "-="},
+        {Operator::MULTIPLY_ASSIGN, "*="},
+        {Operator::DIVIDE_ASSIGN, "/="},
         {Operator::EQUALS, "=="},
         {Operator::NOT_EQUALS, "!="},
         {Operator::LESS_THAN, "<"},
@@ -65,6 +75,12 @@ bool is_relational_operator(const Operator op) {
 
 bool is_comparison_operator(const Operator op) {
     return is_equality_operator(op) || is_relational_operator(op);
+}
+
+bool is_assignment_operator(const Operator op) {
+    return op == Operator::ASSIGN || op == Operator::ADD_ASSIGN ||
+           op == Operator::SUBTRACT_ASSIGN || op == Operator::MULTIPLY_ASSIGN ||
+           op == Operator::DIVIDE_ASSIGN;
 }
 
 std::string node_kind_to_string(const NodeKind kind) {

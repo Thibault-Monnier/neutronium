@@ -35,7 +35,7 @@ array-type ::= '[' type-specifier ';' integer-literal ']'
 
 variable-definition ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
 
-assignment ::= expression '=' expression ';'
+assignment ::= expression ('=' | '+=' | '-=' | '*=' | '/=') expression ';'
 
 parameter-list ::= [ parameter-declaration { ',' parameter-declaration } ]
 

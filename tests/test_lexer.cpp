@@ -80,7 +80,7 @@ INSTANTIATE_TEST_SUITE_P(CommentsAndBlocks, LexerTokenKindTest,
             "fn main: {\n"
             "  let mut x: int = 1;\n"
             "  while x < 10: {\n"
-            "    x = x + 1;\n"
+            "    x += 1;\n"
             "  }\n"
             "  exit 0;\n"
             "}",
@@ -90,11 +90,9 @@ INSTANTIATE_TEST_SUITE_P(CommentsAndBlocks, LexerTokenKindTest,
                 TokenKind::EQUAL, TokenKind::NUMBER_LITERAL, TokenKind::SEMICOLON,
                 TokenKind::WHILE, TokenKind::IDENTIFIER, TokenKind::LESS_THAN,
                 TokenKind::NUMBER_LITERAL, TokenKind::COLON, TokenKind::LEFT_BRACE,
-                TokenKind::IDENTIFIER, TokenKind::EQUAL, TokenKind::IDENTIFIER,
-                TokenKind::PLUS, TokenKind::NUMBER_LITERAL, TokenKind::SEMICOLON,
-                TokenKind::RIGHT_BRACE,
-                TokenKind::EXIT, TokenKind::NUMBER_LITERAL, TokenKind::SEMICOLON,
-                TokenKind::RIGHT_BRACE,
+                TokenKind::IDENTIFIER, TokenKind::PLUS_EQUAL, TokenKind::NUMBER_LITERAL,
+                TokenKind::SEMICOLON, TokenKind::RIGHT_BRACE, TokenKind::EXIT,
+                TokenKind::NUMBER_LITERAL, TokenKind::SEMICOLON, TokenKind::RIGHT_BRACE,
                 TokenKind::EOF_}
         }
     )
@@ -126,14 +124,16 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
     ::testing::Values(
         LexCase{
             "true false int bool let mut if elif else continue break while fn extern return exit "
-            "+ - * / = == != < <= > >= ( ) { } [ ] : ; , 0 foo_1Bar2_",
+            "+ - * / = += -= *= /= == != < <= > >= ( ) { } [ ] : ; , 0 foo_1Bar2_",
             {
                 TokenKind::TRUE, TokenKind::FALSE, TokenKind::INT, TokenKind::BOOL,
                 TokenKind::LET, TokenKind::MUT, TokenKind::IF, TokenKind::ELIF, TokenKind::ELSE,
                 TokenKind::CONTINUE, TokenKind::BREAK, TokenKind::WHILE, TokenKind::FN,
                 TokenKind::EXTERN, TokenKind::RETURN, TokenKind::EXIT,
                 TokenKind::PLUS, TokenKind::MINUS, TokenKind::STAR, TokenKind::SLASH,
-                TokenKind::EQUAL, TokenKind::EQUAL_EQUAL, TokenKind::BANG_EQUAL,
+                TokenKind::EQUAL, TokenKind::PLUS_EQUAL, TokenKind::MINUS_EQUAL,
+                TokenKind::STAR_EQUAL, TokenKind::SLASH_EQUAL,
+                TokenKind::EQUAL_EQUAL, TokenKind::BANG_EQUAL,
                 TokenKind::LESS_THAN, TokenKind::LESS_THAN_EQUAL,
                 TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL,
                 TokenKind::LEFT_PAREN, TokenKind::RIGHT_PAREN,
@@ -172,6 +172,12 @@ INSTANTIATE_TEST_SUITE_P(LexingExtras, LexerTokenKindTest,
         // “===”: should split into == then =
         LexCase{"===", {
             TokenKind::EQUAL_EQUAL,
+            TokenKind::EQUAL,
+            TokenKind::EOF_
+        }},
+        // “+==”: should split into + then ==
+        LexCase{"+==", {
+            TokenKind::PLUS_EQUAL,
             TokenKind::EQUAL,
             TokenKind::EOF_
         }},

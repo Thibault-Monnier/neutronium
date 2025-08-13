@@ -13,7 +13,7 @@ TEST_F(NeutroniumTester, PrimeNumberCheck) {
                     return curr;
                 }
 
-                curr = curr + 1;
+                curr += 1;
             }
 
             return 0;
@@ -85,8 +85,8 @@ TEST_F(NeutroniumTester, FastIterativeFibonacci) {
             while n > 0: {
                 let temp = a;
                 a = b;
-                b = temp + b;
-                n = n - 1;
+                b += temp;
+                n -= 1;
             }
             return a;
         }
@@ -112,12 +112,39 @@ TEST_F(NeutroniumTester, MutableReassignment) {
     const std::string code = R"(
         fn main(): {
             let mut x = 42;
-            x = x + 1;
+            x += 1;
             exit x;
         }
     )";
 
     EXPECT_EQ(run(code), 43);
+}
+
+TEST_F(NeutroniumTester, CompoundAssignments) {
+    const std::string code = R"(
+        fn main(): {
+            let mut x = 10;
+            x += 5;  # x = 15
+            x -= 3;  # x = 12
+            x *= 2;  # x = 24
+            x /= 4;  # x = 6
+
+            let mut y = 3;
+            {
+                y *= 2;  # y = 6
+                let arr = [1, 2, 3, 4, 5];
+                y += arr[2];  # y = 6 + 3 = 9
+                y -= x / (arr[1] + 0);  # y = 9 - 6 / 2 = 6
+            }
+
+            if (x == y): {
+                exit x;  # should exit with 6
+            } else: {
+                exit 0;  # should not reach here
+            }
+        }
+    )";
+    EXPECT_EQ(run(code), 6);
 }
 
 TEST_F(NeutroniumTester, TypeSpecifiers) {
@@ -134,7 +161,7 @@ TEST_F(NeutroniumTester, TypeSpecifiers) {
                 w = !w;
             }
             if w: {
-                y = y + 1; # y = 44
+                y += 1; # y = 44
             }
 
             exit x;
@@ -225,7 +252,7 @@ TEST_F(NeutroniumTester, FunctionReturnValues) {
                 if i > 10: {
                     return i;
                 }
-                i = i + 1;
+                i += 1;
             }
             exit 1; # unreachable
         }
@@ -334,12 +361,12 @@ TEST_F(NeutroniumTester, FunctionWithParameters) {
 TEST_F(NeutroniumTester, FunctionCalls) {
     const std::string code = R"(
         fn inc(mut var: int) -> int: {
-            var = var + 1;
+            var -= -1;
             return var;
         }
 
         fn dec(mut var: int) -> int: {
-            var = var - 1;
+            var -= 1;
             return var;
         }
 
@@ -389,7 +416,7 @@ TEST_F(NeutroniumTester, WhileLoop) {
         fn main(): {
             let mut i: int = 0;
             while i <= 5: {
-                i = i + 1;
+                i += 1;
             }
             exit i;
         }
@@ -407,11 +434,11 @@ TEST_F(NeutroniumTester, WhileLoopWithContinueAndBreak) {
                 if i == 5: {
                     break;
                 }
-                i = i + 1;
+                i += 1;
                 if i >= 3: {
                     continue;
                 }
-                j = j + i;
+                j += i;
             }
             exit j;
         }
@@ -459,7 +486,7 @@ TEST_F(NeutroniumTester, ExitFromNestedIfInsideLoop) {
                 if i == 3: {
                     exit i;
                 } else: {
-                    i = i + 1;
+                    i += 1;
                 }
             }
         }
@@ -473,7 +500,7 @@ TEST_F(NeutroniumTester, WhileFalseSkipsBody) {
         fn main(): {
             let mut i = 0;
             while false: {
-                i = i + 1;        # should never run
+                i += 1;        # should never run
             }
             exit i;               # expect 0
         }
@@ -489,7 +516,7 @@ TEST_F(NeutroniumTester, ScopeDeclaration) {
                 let mut y = 3;
                 {
                     let z = 4;
-                    y = y + z;      # y = 3 + 4 = 7
+                    y += z;      # y = 3 + 4 = 7
                 }
                 exit x + y;  # = 2 + 7 = 9
             }
@@ -503,7 +530,7 @@ TEST_F(NeutroniumTester, ScopeDeclaration) {
             let mut y = 3;
             {
                 let z = 4;
-                y = y + z;      # y = 3 + 4 = 7
+                y += z;      # y = 3 + 4 = 7
             }
             let z = 5;
             exit x + y + z;  # = 2 + 7 + 5 = 14
@@ -606,7 +633,7 @@ TEST_F(NeutroniumTester, Arrays) {
 
         fn main(): {
             let mut arr = getArray();
-            arr[1] = arr[1] * arr[0];
+            arr[1] *= arr[0];
             exit arr[1];  # should be 2
         }
     )";

@@ -43,12 +43,42 @@ std::optional<TokenKind> Lexer::get_keyword_kind() const {
     return std::nullopt;
 }
 
+void Lexer::lex_plus() {
+    if (peek() == '=') {
+        advance();
+        tokens_.emplace_back(TokenKind::PLUS_EQUAL, "+=");
+    } else {
+        tokens_.emplace_back(TokenKind::PLUS, "+");
+    }
+}
+
 void Lexer::lex_minus() {
-    if (peek() == '>') {
+    if (peek() == '=') {
+        advance();
+        tokens_.emplace_back(TokenKind::MINUS_EQUAL, "-=");
+    } else if (peek() == '>') {
         advance();
         tokens_.emplace_back(TokenKind::RIGHT_ARROW, "->");
     } else {
         tokens_.emplace_back(TokenKind::MINUS, "-");
+    }
+}
+
+void Lexer::lex_star() {
+    if (peek() == '=') {
+        advance();
+        tokens_.emplace_back(TokenKind::STAR_EQUAL, "*=");
+    } else {
+        tokens_.emplace_back(TokenKind::STAR, "*");
+    }
+}
+
+void Lexer::lex_slash() {
+    if (peek() == '=') {
+        advance();
+        tokens_.emplace_back(TokenKind::SLASH_EQUAL, "/=");
+    } else {
+        tokens_.emplace_back(TokenKind::SLASH, "/");
     }
 }
 
@@ -112,13 +142,13 @@ std::vector<Token> Lexer::tokenize() {
             read_to_buffer_while(isdigit);
             tokens_.emplace_back(TokenKind::NUMBER_LITERAL, buffer_);
         } else if (c == '+') {
-            tokens_.emplace_back(TokenKind::PLUS, "+");
+            lex_plus();
         } else if (c == '-') {
             lex_minus();
         } else if (c == '*') {
-            tokens_.emplace_back(TokenKind::STAR, "*");
+            lex_star();
         } else if (c == '/') {
-            tokens_.emplace_back(TokenKind::SLASH, "/");
+            lex_slash();
         } else if (c == '!') {
             lex_bang();
         } else if (c == '=') {

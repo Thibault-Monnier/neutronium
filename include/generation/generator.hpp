@@ -33,17 +33,21 @@ class Generator {
     void stack_deallocate_scope_variables(const AST::BlockStatement& blockStmt);
     int get_variable_stack_offset(const std::string& name) const;
     void insert_variable_stack_offset(const std::string& name);
+
     void write_to_variable(const std::string& name, const std::string& source);
     void move_variable_to_rax(const std::string& name);
-
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
     void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit);
-    void write_array_to_heap(const AST::ArrayLiteral& arrayLit);
+
     void evaluate_array_access_address_to_rax(const AST::ArrayAccess& arrayAccess);
+    void evaluate_place_expression_address_to_rax(const AST::Expression& place);
+
+    void write_array_to_heap(const AST::ArrayLiteral& arrayLit);
     void evaluate_array_access_to_rax(const AST::ArrayAccess& arrayAccess);
     static std::string function_name_with_prefix(const std::string& name);
     void generate_function_call(const AST::FunctionCall& funcCall);
     void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr);
+    void apply_arithmetic_operator_to_rax(AST::Operator op, const std::string& other);
     void evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr);
     void evaluate_expression_to_rax(const AST::Expression& expr);
 

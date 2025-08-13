@@ -103,6 +103,8 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             std::cout << prefix << branch << "Assignment\n";
             std::cout << newPrefix << "├── Place\n";
             log_expression(*assignment.place_, next_prefix(newPrefix, false), true);
+            std::cout << newPrefix << "├── Operator: " << operator_to_string(assignment.operator_)
+                      << "\n";
             std::cout << newPrefix << "└── Value\n";
             log_expression(*assignment.value_, next_prefix(newPrefix, true), true);
             break;

@@ -26,7 +26,10 @@ class Lexer {
     void read_to_buffer_while(auto predicate);
 
     [[nodiscard]] std::optional<TokenKind> get_keyword_kind() const;
+    void lex_plus();
     void lex_minus();
+    void lex_star();
+    void lex_slash();
 
     void lex_equal();
     void lex_less_than();

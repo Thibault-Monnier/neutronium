@@ -68,7 +68,7 @@ class SemanticAnalyser {
     void analyse_statement(const AST::Statement& stmt);
 
     // ── Function analysis ──────────────────────────────────────────────────────
-    bool verify_statement_returns(const AST::Statement& stmt);
+    static bool verify_statement_returns(const AST::Statement& stmt);
     void analyse_external_function_declaration(const AST::ExternalFunctionDeclaration& funcDecl);
     void analyse_function_definition(const AST::FunctionDefinition& funcDef);
 

@@ -263,11 +263,11 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
 
 std::unique_ptr<AST::Assignment> Parser::parse_assignment() {
     auto left = parse_expression();
-    expect(TokenKind::EQUAL);
+    const AST::Operator op = AST::token_kind_to_operator(expect(peek().kind()).kind());
     auto right = parse_expression();
     expect(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::Assignment>(std::move(left), std::move(right));
+    return std::make_unique<AST::Assignment>(std::move(left), op, std::move(right));
 }
 
 std::unique_ptr<AST::IfStatement> Parser::parse_if_statement() {
@@ -356,7 +356,8 @@ std::unique_ptr<AST::Statement> Parser::parse_statement() {
     if (tokenKind == TokenKind::IDENTIFIER)
         for (int i = 0; peek(i).kind() != TokenKind::EOF_ && peek(i).kind() != TokenKind::SEMICOLON;
              i++)
-            if (peek(i).kind() == TokenKind::EQUAL) return parse_assignment();
+            if (AST::is_assignment_operator(AST::token_kind_to_operator(peek(i).kind())))
+                return parse_assignment();
     if (tokenKind == TokenKind::IF) return parse_if_statement();
     if (tokenKind == TokenKind::WHILE) return parse_while_statement();
     if (tokenKind == TokenKind::BREAK) return parse_break_statement();

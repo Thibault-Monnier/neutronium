@@ -314,6 +314,14 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
         abort(std::format("Type mismatch in assignment: {} is assigned to {}",
                           placeType.to_string(), valueType.to_string()));
     }
+
+    if (assignment.operator_ != AST::Operator::ASSIGN) {
+        if (placeType.mismatches(PrimitiveType::INTEGER)) {
+            abort(std::format("Invalid assignment operator: `{}` used for type {}",
+                              AST::operator_to_string(assignment.operator_),
+                              placeType.to_string()));
+        }
+    }
 }
 
 void SemanticAnalyser::analyse_expression_statement(const AST::ExpressionStatement& exprStmt) {
