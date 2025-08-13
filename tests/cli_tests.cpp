@@ -115,11 +115,11 @@ TEST(CliNonErrorTest, VersionOption) {
 
     const int status = run_and_capture(neutroniumPath + " --version", output);
     EXPECT_EQ(status, 0);
-    EXPECT_TRUE(output.contains("Neutronium version")) << output;
+    EXPECT_TRUE(output.contains("Neutronium Compiler")) << output;
 
     const int status2 = run_and_capture(neutroniumPath + " -v", output);
     EXPECT_EQ(status2, 0);
-    EXPECT_TRUE(output.contains("Neutronium version")) << output;
+    EXPECT_TRUE(output.contains("Neutronium Compiler")) << output;
 }
 
 TEST(CliNonErrorTest, ValidMinimalSourceFile) {
