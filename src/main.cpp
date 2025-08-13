@@ -11,6 +11,7 @@
 #include "cli.hpp"
 #include "generation/generator.hpp"
 #include "lexing/lexer.hpp"
+#include "lexing/source_location.hpp"
 #include "lexing/token.hpp"
 #include "lexing/token_kind.hpp"
 #include "parsing/parser.hpp"
@@ -69,10 +70,13 @@ void compile_file(const CompilerOptions& opts, bool verbose = true) {
 
     if (opts.logCode_) std::cout << code << '\n';
 
-    const auto tokens = timed("Lexing", verbose, [&] { return Lexer(code).tokenize(); });
+    const auto tokens =
+        timed("Lexing", verbose, [&] { return Lexer(code, opts.sourceFilename_).tokenize(); });
     if (opts.logTokens_) {
         for (const auto& token : tokens)
-            std::cout << token_kind_to_string(token.kind()) << ": `" << token.lexeme() << "`\n";
+            std::cout << token_kind_to_string(token.kind()) << ": '" << token.lexeme() << "' at "
+                      << token.location().filename() << ":" << token.location().line() << ":"
+                      << token.location().column() << '\n';
     }
 
     const auto ast = timed("Parsing", verbose, [&] { return Parser(tokens).parse(); });

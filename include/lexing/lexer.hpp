@@ -8,13 +8,19 @@
 
 class Lexer {
    public:
-    explicit Lexer(std::string source) : source_(std::move(source)) {}
+    explicit Lexer(std::string sourceCode, std::string filename)
+        : sourceCode_(std::move(sourceCode)), filename_(std::move(filename)) {}
 
     [[nodiscard]] std::vector<Token> tokenize();
 
    private:
+    const std::string sourceCode_;
+    const std::string filename_;
     size_t currentIndex_ = 0;
-    const std::string source_;
+
+    int currentLine_ = 1;
+    int currentColumn_ = 1;
+
     std::string buffer_;
 
     std::vector<Token> tokens_;
@@ -23,7 +29,9 @@ class Lexer {
     [[nodiscard]] char peek() const;
     char advance();
 
-    void read_to_buffer_while(auto predicate);
+    void create_token(TokenKind kind);
+
+    void advance_while(auto predicate);
 
     [[nodiscard]] std::optional<TokenKind> get_keyword_kind() const;
     void lex_plus();
