@@ -8,18 +8,15 @@
 
 class Lexer {
    public:
-    explicit Lexer(std::string sourceCode, std::string filename)
-        : sourceCode_(std::move(sourceCode)), filename_(std::move(filename)) {}
+    explicit Lexer(const std::string_view sourceCode, const int fileID)
+        : sourceCode_(sourceCode), fileID_(fileID) {}
 
     [[nodiscard]] std::vector<Token> tokenize();
 
    private:
-    const std::string sourceCode_;
-    const std::string filename_;
+    const std::string_view sourceCode_;
+    const int fileID_;
     size_t currentIndex_ = 0;
-
-    int currentLine_ = 1;
-    int currentColumn_ = 1;
 
     std::string buffer_;
 

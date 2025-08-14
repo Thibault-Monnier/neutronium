@@ -11,7 +11,7 @@ struct LexCase {
 class LexerTokenKindTest : public ::testing::TestWithParam<LexCase> {};
 
 TEST_P(LexerTokenKindTest, ProducesExpectedKinds) {
-    Lexer lex(GetParam().src, "test_input");
+    Lexer lex(GetParam().src, 0);
     auto toks = lex.tokenize();
     std::vector<TokenKind> got;
     std::transform(toks.begin(), toks.end(), std::back_inserter(got),
@@ -155,7 +155,7 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
 
     for (const auto& input : badInputs) {
         EXPECT_EXIT({
-            Lexer lexer(input, "test_input");
+            Lexer lexer(input, 0);
             auto _ = lexer.tokenize();
         },
         ::testing::ExitedWithCode(EXIT_FAILURE),

@@ -11,7 +11,6 @@
 #include "cli.hpp"
 #include "generation/generator.hpp"
 #include "lexing/lexer.hpp"
-#include "lexing/source_location.hpp"
 #include "lexing/token.hpp"
 #include "lexing/token_kind.hpp"
 #include "parsing/parser.hpp"
@@ -57,26 +56,28 @@ void run_or_die(const std::string& cmd) {
     }
 }
 
-void compile_file(const CompilerOptions& opts, bool verbose = true) {
-    const std::ifstream source(opts.sourceFilename_);
-    if (!source) {
-        print_error(std::format("Could not open file '{}'", opts.sourceFilename_));
+void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, bool verbose = true) {
+    int fileID = -1;
+    std::string_view fileContents;
+
+    try {
+        std::tie(fileID, fileContents) = sourceManager.load_new_source_file(opts.sourceFilename_);
+    } catch (const std::exception& e) {
+        print_error(std::format("Could not open file '{}': {}", opts.sourceFilename_, e.what()));
         exit(EXIT_FAILURE);
     }
 
-    std::stringstream buffer;
-    buffer << source.rdbuf();
-    const std::string code = buffer.str();
-
-    if (opts.logCode_) std::cout << code << '\n';
+    if (opts.logCode_) std::cout << fileContents << '\n';
 
     const auto tokens =
-        timed("Lexing", verbose, [&] { return Lexer(code, opts.sourceFilename_).tokenize(); });
+        timed("Lexing", verbose, [&] { return Lexer(fileContents, fileID).tokenize(); });
     if (opts.logTokens_) {
-        for (const auto& token : tokens)
+        const std::string_view filePath = sourceManager.get_source_file_path(fileID);
+        for (const auto& token : tokens) {
+            const auto [line, column] = sourceManager.get_line_column(fileID, token.byte_offset());
             std::cout << token_kind_to_string(token.kind()) << ": '" << token.lexeme() << "' at "
-                      << token.location().filename() << ":" << token.location().line() << ":"
-                      << token.location().column() << '\n';
+                      << filePath << ":" << line << ":" << column << '\n';
+        }
     }
 
     const auto ast = timed("Parsing", verbose, [&] { return Parser(tokens).parse(); });
@@ -118,7 +119,9 @@ int main(const int argc, char* argv[]) {
 
     run_or_die("rm -rf neutro && mkdir neutro");
 
-    compile_file(opts);
+    SourceManager sourceManager;
+
+    compile_file(opts, sourceManager);
 
     const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
 
@@ -127,15 +130,16 @@ int main(const int argc, char* argv[]) {
             if (!entry.is_regular_file()) continue;
 
             const std::string extension = entry.path().extension();
-            const std::string src = entry.path().string();
+            std::string src = entry.path().string();
 
             if (extension == ".nt") {
                 compile_file(
                     CompilerOptions{
-                        .sourceFilename_ = src,
+                        .sourceFilename_ = std::move(src),
                         .targetType_ = TargetType::LIBRARY,
                     },
-                    false);
+                    sourceManager, false);
+                src.push_back('d');
             } else if (extension == ".asm") {
                 const std::string obj = "neutro/" + entry.path().stem().string() + ".o";
 

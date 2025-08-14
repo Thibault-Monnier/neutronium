@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "lexing/source_location.hpp"
 #include "lexing/token.hpp"
 #include "utils/log.hpp"
 
@@ -17,18 +16,11 @@ char Lexer::advance() {
     const char currentChar = peek();
     buffer_.push_back(currentChar);
     currentIndex_++;
-    if (currentChar == '\n') {
-        currentLine_++;
-        currentColumn_ = 1;
-    } else {
-        currentColumn_++;
-    }
     return currentChar;
 }
 
 void Lexer::create_token(const TokenKind kind) {
-    const SourceLocation location{currentLine_, currentColumn_, filename_};
-    tokens_.emplace_back(kind, buffer_, location);
+    tokens_.emplace_back(kind, buffer_, currentIndex_ - buffer_.length());
 }
 
 void Lexer::advance_while(auto predicate) {
@@ -137,8 +129,8 @@ void Lexer::lex_bang() {
 
 std::vector<Token> Lexer::tokenize() {
     while (!is_at_end()) {
+        buffer_.clear();
         char c = advance();
-        buffer_ = c;
 
         if (std::isspace(c)) continue;
 
@@ -200,6 +192,9 @@ std::vector<Token> Lexer::tokenize() {
             exit(EXIT_FAILURE);
         }
     }
+
+    buffer_.clear();
+    advance();
     create_token(TokenKind::EOF_);
     return tokens_;
 }
