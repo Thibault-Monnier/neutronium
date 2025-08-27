@@ -2,22 +2,24 @@
 
 #include <string>
 
-#include "source/source_manager.hpp"
 #include "token_kind.hpp"
 
 class Token {
    public:
-    explicit Token(const TokenKind kind, std::string lexeme, const int byteOffset)
+    explicit Token(const TokenKind kind, std::string lexeme, const uint32_t byteOffset)
         : kind_(kind), lexeme_(std::move(lexeme)), byteOffset_(byteOffset) {}
 
     [[nodiscard]] TokenKind kind() const { return kind_; }
     [[nodiscard]] const std::string& lexeme() const { return lexeme_; }
 
-    [[nodiscard]] int byte_offset() const { return byteOffset_; }
+    [[nodiscard]] uint32_t byte_offset_start() const { return byteOffset_; }
+    [[nodiscard]] uint32_t byte_offset_end() const {
+        return byteOffset_ + static_cast<uint32_t>(lexeme_.size());
+    }
 
    private:
     TokenKind kind_;
     std::string lexeme_;
 
-    const int byteOffset_;
+    const uint32_t byteOffset_;
 };

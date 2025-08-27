@@ -15,6 +15,7 @@
 #include "lexing/token_kind.hpp"
 #include "parsing/parser.hpp"
 #include "semantic-analysis/semantic_analyser.hpp"
+#include "source/source_manager.hpp"
 #include "utils/log.hpp"
 
 using Clock = std::chrono::high_resolution_clock;
@@ -74,7 +75,8 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
     if (opts.logTokens_) {
         const std::string_view filePath = sourceManager.get_source_file_path(fileID);
         for (const auto& token : tokens) {
-            const auto [line, column] = sourceManager.get_line_column(fileID, token.byte_offset());
+            const auto [line, column] =
+                sourceManager.get_line_column(fileID, token.byte_offset_start());
             std::cout << token_kind_to_string(token.kind()) << ": '" << token.lexeme() << "' at "
                       << filePath << ":" << line << ":" << column << '\n';
         }

@@ -26,7 +26,7 @@ std::pair<int, std::string_view> SourceManager::load_new_source_file(std::string
     return {static_cast<int>(sourceFiles_.size() - 1), sourceFiles_.back().contents()};
 }
 
-std::pair<int, int> SourceManager::get_line_column(const int fileID, const int offset) const {
+std::pair<int, int> SourceManager::get_line_column(const int fileID, const uint32_t offset) const {
     const SourceFile& file = sourceFiles_[fileID];
     const auto it = std::ranges::upper_bound(file.lines_starts(), offset) - 1;
     const int line = static_cast<int>(std::distance(file.lines_starts().begin(), it));

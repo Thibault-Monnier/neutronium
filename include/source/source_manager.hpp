@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bits/stdint-uintn.h>
+
 #include <string>
 #include <utility>
 #include <vector>
@@ -33,7 +35,7 @@ class SourceManager {
      * @return A pair of integers where the first element is the line number and
      *         the second element is the column number, 1-based.
      */
-    [[nodiscard]] std::pair<int, int> get_line_column(int fileID, int offset) const;
+    [[nodiscard]] std::pair<int, int> get_line_column(int fileID, uint32_t offset) const;
 
     /**
      * Returns the file system path of the source file identified by the given file ID.
