@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "source_manager.hpp"
 #include "cli.hpp"
 #include "generation/generator.hpp"
 #include "lexing/lexer.hpp"
@@ -15,7 +16,6 @@
 #include "lexing/token_kind.hpp"
 #include "parsing/parser.hpp"
 #include "semantic-analysis/semantic_analyser.hpp"
-#include "source/source_manager.hpp"
 #include "utils/log.hpp"
 
 using Clock = std::chrono::high_resolution_clock;

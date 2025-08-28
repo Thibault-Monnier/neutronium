@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
+#include "source_manager.hpp"
 #include "lexing/token.hpp"
 #include "parsing/ast.hpp"
-#include "source/source_manager.hpp"
 
 struct ParsedFunctionSignature {
     std::unique_ptr<AST::Identifier> identifier_;
