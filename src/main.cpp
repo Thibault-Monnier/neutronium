@@ -82,7 +82,8 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
         }
     }
 
-    const auto ast = timed("Parsing", verbose, [&] { return Parser(tokens).parse(); });
+    const auto ast =
+        timed("Parsing", verbose, [&] { return Parser(tokens, sourceManager, fileID).parse(); });
     if (opts.logAst_) AST::log_ast(*ast);
 
     timed("Semantic analysis", verbose,

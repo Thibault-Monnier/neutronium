@@ -35,7 +35,7 @@ class SourceManager {
      * @return A pair of integers where the first element is the line number and
      *         the second element is the column number, 1-based.
      */
-    [[nodiscard]] std::pair<int, int> get_line_column(int fileID, uint32_t offset) const;
+    [[nodiscard]] std::pair<uint32_t, uint32_t> get_line_column(int fileID, uint32_t offset) const;
 
     /**
      * Returns the file system path of the source file identified by the given file ID.
@@ -50,21 +50,35 @@ class SourceManager {
         return sourceFiles_[fileID].path();
     }
 
+    /**
+     * Retrieves the contents of a specific line from a source file.
+     *
+     * This method returns a string view representing the text content of the specified line
+     * within a previously loaded source file. If the provided file ID or line number is invalid,
+     * the behavior is undefined.
+     *
+     * @param fileID The unique identifier of the source file.
+     * @param lineNumber The 1-based line number of the line to retrieve.
+     * @return A string view containing the contents of the specified line, excluding the newline
+     *         character at the end of the line.
+     */
+    [[nodiscard]] std::string_view get_line_contents(int fileID, uint32_t lineNumber) const;
+
    private:
     class SourceFile {
        public:
-        SourceFile(std::string path, std::string contents, std::vector<int> linesStarts)
+        SourceFile(std::string path, std::string contents, std::vector<uint32_t> linesStarts)
             : path_(std::move(path)),
               contents_(std::move(contents)),
               linesStarts_(std::move(linesStarts)) {}
 
         [[nodiscard]] const std::string& path() const { return path_; }
         [[nodiscard]] const std::string& contents() const { return contents_; }
-        [[nodiscard]] const std::vector<int>& lines_starts() const { return linesStarts_; }
+        [[nodiscard]] const std::vector<uint32_t>& lines_starts() const { return linesStarts_; }
 
        private:
         std::string path_, contents_;
-        std::vector<int> linesStarts_;
+        std::vector<uint32_t> linesStarts_;
     };
     std::vector<SourceFile> sourceFiles_;
 };

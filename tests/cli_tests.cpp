@@ -38,7 +38,7 @@ TEST(CliErrorTest, InvalidSourceFilepath) {
     std::string output;
     const int status = run_and_capture(neutroniumPath + " nonexistent_file.nt", output);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(output.contains("Error:")) << output;
+    EXPECT_TRUE(output.contains("error:")) << output;
 }
 
 TEST(CLIErrorTest, InvalidTargetType) {
@@ -140,7 +140,7 @@ TEST(CliErrorTest, InvalidOption) {
     std::string output;
     const int status = run_and_capture(neutroniumPath + " --invalid-option", output);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(output.contains("Error") && output.contains("does not exist")) << output;
+    EXPECT_TRUE(output.contains("error") && output.contains("does not exist")) << output;
 }
 
 TEST(CliNonErrorTest, LogArguments) {
