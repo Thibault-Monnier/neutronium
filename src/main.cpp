@@ -145,7 +145,6 @@ int main(const int argc, char* argv[]) {
                         .targetType_ = TargetType::LIBRARY,
                     },
                     sourceManager, false);
-                src.push_back('d');
             } else if (extension == ".asm") {
                 const std::string obj = "neutro/" + entry.path().stem().string() + ".o";
 
