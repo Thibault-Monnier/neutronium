@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "source_manager.hpp"
+#include "diagnostics_engine.hpp"
 #include "lexing/token.hpp"
 #include "parsing/ast.hpp"
 
@@ -18,19 +18,17 @@ struct ParsedFunctionSignature {
 
 class Parser {
    public:
-    explicit Parser(std::vector<Token> tokens, const SourceManager& sourceManager, const int fileID)
-        : sourceManager_(sourceManager), fileID_(fileID), tokens_(std::move(tokens)) {}
+    explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine)
+        : diagnosticsEngine_(diagnosticsEngine), tokens_(std::move(tokens)) {}
 
     [[nodiscard]] std::unique_ptr<AST::Program> parse();
 
    private:
-    const SourceManager& sourceManager_;
-    const int fileID_;
+    DiagnosticsEngine& diagnosticsEngine_;
 
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
 
-    void print_error_context() const;
     [[noreturn]] void abort(const std::string& errorMessage) const;
 
     [[nodiscard]] const Token& peek(int amount = 0) const;

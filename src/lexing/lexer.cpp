@@ -186,15 +186,20 @@ std::vector<Token> Lexer::tokenize() {
             create_token(TokenKind::COMMA);
         } else {
             const std::string errorMessage =
-                std::format("Invalid character at index {}, got '{}' at beginning of word",
-                            currentIndex_ - 1, c);
-            print_error(errorMessage);
-            exit(EXIT_FAILURE);
+                std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
+                            static_cast<int>(c));
+            diagnosticsEngine_.report_error(errorMessage, currentIndex_ - 1, currentIndex_);
         }
     }
 
     buffer_.clear();
     advance();
     create_token(TokenKind::EOF_);
+
+    if (diagnosticsEngine_.has_errors()) {
+        diagnosticsEngine_.emit_errors();
+        std::exit(EXIT_FAILURE);
+    }
+
     return tokens_;
 }

@@ -4,18 +4,20 @@
 #include <string>
 #include <vector>
 
+#include "diagnostics_engine.hpp"
 #include "lexing/token.hpp"
 
 class Lexer {
    public:
-    explicit Lexer(const std::string_view sourceCode, const int fileID)
-        : sourceCode_(sourceCode), fileID_(fileID) {}
+    explicit Lexer(const std::string_view sourceCode, DiagnosticsEngine& diagnosticsEngine)
+        : diagnosticsEngine_(diagnosticsEngine), sourceCode_(sourceCode) {}
 
     [[nodiscard]] std::vector<Token> tokenize();
 
    private:
+    DiagnosticsEngine& diagnosticsEngine_;
+
     const std::string_view sourceCode_;
-    const int fileID_;
     size_t currentIndex_ = 0;
 
     std::string buffer_;

@@ -2,47 +2,24 @@
 
 #include <format>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <print>
 #include <set>
 #include <string>
 
 #include "lexing/token.hpp"
-#include "utils/log.hpp"
 
 std::unique_ptr<AST::Program> Parser::parse() {
     auto program = parse_program();
     return program;
 }
 
-void Parser::print_error_context() const {
-    const Token& token = peek();
-    const auto [line, column] = sourceManager_.get_line_column(fileID_, token.byte_offset_start());
-    const std::string_view filePath = sourceManager_.get_source_file_path(fileID_);
-    const std::string_view lineContents = sourceManager_.get_line_contents(fileID_, line);
-
-    const size_t lineNumberWidth = std::to_string(line).size();
-    constexpr std::string_view BLUE = "\x1b[1;94m";
-    constexpr std::string_view RED = "\x1b[91m";
-    constexpr std::string_view RESET = "\x1b[0m";
-
-    const std::string padding(lineNumberWidth, ' ');
-    const std::string separator = std::format(" {}|{} ", BLUE, RESET);
-
-    std::println("{}{}-->{} {}:{}:{}", padding, BLUE, RESET, filePath, line, column);
-    std::println("{}{}", padding, separator);
-    std::println("{}{}{}{}{}", BLUE, line, RESET, separator, lineContents);
-
-    std::println("{}{}{}{}{}{}", padding, separator, std::string(column - 1, ' '), RED,
-                 std::string(token.lexeme().size(), '^'), RESET);
-    std::println("");
-}
-
 void Parser::abort(const std::string& errorMessage) const {
-    print_error(errorMessage);
-    print_error_context();
+    const Token& token = peek();
+    diagnosticsEngine_.report_error(errorMessage, token.byte_offset_start(),
+                                    token.byte_offset_end());
 
+    diagnosticsEngine_.emit_errors();
     exit(EXIT_FAILURE);
 }
 
