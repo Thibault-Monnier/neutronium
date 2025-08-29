@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "lexing/token.hpp"
-#include "utils/log.hpp"
 
 bool Lexer::is_at_end() const { return currentIndex_ >= sourceCode_.length(); }
 
@@ -193,7 +192,7 @@ std::vector<Token> Lexer::tokenize() {
     }
 
     buffer_.clear();
-    advance();
+    buffer_ = " ";
     create_token(TokenKind::EOF_);
 
     if (diagnosticsEngine_.has_errors()) {
