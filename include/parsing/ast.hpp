@@ -158,13 +158,9 @@ struct Statement : Node {
 };
 
 struct BlockStatement final : Statement {
-    explicit BlockStatement(const uint32_t start, const uint32_t end)
-        : Statement{NodeKind::BLOCK_STATEMENT, start, end} {}
-
-    void append_statement(std::unique_ptr<Statement> statement) {
-        body_.emplace_back(std::move(statement));
-        sourceEndIndex_ = body_.back()->source_end_index();
-    }
+    explicit BlockStatement(std::vector<std::unique_ptr<Statement>> body, const uint32_t start,
+                            const uint32_t end)
+        : Statement{NodeKind::BLOCK_STATEMENT, start, end}, body_(std::move(body)) {}
 
     std::vector<std::unique_ptr<Statement>> body_;
 };

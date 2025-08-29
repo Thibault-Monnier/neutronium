@@ -41,14 +41,16 @@ const Token& Parser::expect(const TokenKind expected) {
 
 Type Parser::parse_type_specifier() {
     const TokenKind tokenKind = peek().kind();
-    expect(tokenKind);
 
     switch (tokenKind) {
         case TokenKind::INT:
+            expect(tokenKind);
             return PrimitiveType::INTEGER;
         case TokenKind::BOOL:
+            expect(tokenKind);
             return PrimitiveType::BOOLEAN;
         case TokenKind::LEFT_BRACKET: {
+            expect(tokenKind);
             const Type elementType = parse_type_specifier();
             expect(TokenKind::SEMICOLON);
             const std::size_t arrayLength = parse_number_literal()->value_;
@@ -309,9 +311,11 @@ std::unique_ptr<AST::BlockStatement> Parser::parse_else_clause() {
                 elifBody->source_end_index());
         }
 
-        auto block = std::make_unique<AST::BlockStatement>(elifStmt->source_start_index(),
-                                                           elifStmt->source_start_index());
-        block->append_statement(std::move(elifStmt));
+        std::vector<std::unique_ptr<AST::Statement>> statements;
+        statements.push_back(std::move(elifStmt));
+        auto block = std::make_unique<AST::BlockStatement>(std::move(statements),
+                                                           statements.front()->source_start_index(),
+                                                           statements.back()->source_end_index());
         return block;
     } else if (peek().kind() == TokenKind::ELSE) {
         expect(TokenKind::ELSE);
@@ -387,13 +391,16 @@ std::unique_ptr<AST::ExitStatement> Parser::parse_exit_statement() {
 
 std::unique_ptr<AST::BlockStatement> Parser::parse_block_statement() {
     const Token& lBrace = expect(TokenKind::LEFT_BRACE);
-    auto block =
-        std::make_unique<AST::BlockStatement>(lBrace.byte_offset_start(), lBrace.byte_offset_end());
+
+    std::vector<std::unique_ptr<AST::Statement>> statements;
     while (peek().kind() != TokenKind::RIGHT_BRACE) {
-        block->append_statement(parse_statement());
+        statements.push_back(parse_statement());
     }
-    expect(TokenKind::RIGHT_BRACE);
-    return block;
+
+    const Token& rBrace = expect(TokenKind::RIGHT_BRACE);
+
+    return std::make_unique<AST::BlockStatement>(std::move(statements), lBrace.byte_offset_start(),
+                                                 rBrace.byte_offset_end());
 }
 
 std::unique_ptr<AST::Statement> Parser::parse_statement() {

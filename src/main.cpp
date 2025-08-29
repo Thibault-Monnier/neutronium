@@ -90,7 +90,7 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
     if (opts.logAst_) AST::log_ast(*ast);
 
     timed("Semantic analysis", verbose,
-          [&] { SemanticAnalyser(*ast, opts.targetType_).analyse(); });
+          [&] { SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine).analyse(); });
 
     const auto assembly = timed("Code generation", verbose,
                                 [&] { return Generator(*ast, opts.targetType_).generate(); });
