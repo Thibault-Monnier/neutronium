@@ -14,7 +14,7 @@ class Token {
 
     [[nodiscard]] uint32_t byte_offset_start() const { return byteOffset_; }
     [[nodiscard]] uint32_t byte_offset_end() const {
-        return byteOffset_ + static_cast<uint32_t>(lexeme_.size());
+        return byteOffset_ + static_cast<uint32_t>(lexeme_.size()) - 1;
     }
 
    private:

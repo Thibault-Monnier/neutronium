@@ -26,7 +26,7 @@ void DiagnosticsEngine::emit_error_context(const uint32_t byteOffsetStart,
                      lineContents);
 
         const uint32_t errorColumnStart = (line == lineStart) ? columnStart : 1;
-        const uint32_t errorColumnEnd = (line == lineEnd) ? columnEnd : lineContents.size() + 1;
+        const uint32_t errorColumnEnd = (line == lineEnd) ? columnEnd + 1 : lineContents.size() + 1;
         std::println("{}{}{}{}{}{}", padding, separator, std::string(errorColumnStart - 1, ' '),
                      RED, std::string(errorColumnEnd - errorColumnStart, '^'), RESET);
     }

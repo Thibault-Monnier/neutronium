@@ -1,4 +1,4 @@
-#include "../include/source_manager.hpp"
+#include "source_manager.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -20,13 +20,13 @@ std::pair<int, std::string_view> SourceManager::load_new_source_file(std::string
     // The first line always starts at index 0
     std::vector<uint32_t> lineStarts;
     lineStarts.push_back(0);
-    for (size_t i = 0; i < contents.size() - 1; ++i) {
+    for (size_t i = 0; i < contents.size(); ++i) {
         if (contents[i] == '\n') {
             lineStarts.push_back(i + 1);
         }
     }
     // Add a sentinel value for easier calculations later
-    lineStarts.push_back(static_cast<int>(contents.size() + 1));
+    lineStarts.push_back(static_cast<int>(contents.size()) + 1);
 
     sourceFiles_.emplace_back(std::move(path), std::move(contents), std::move(lineStarts));
     return {static_cast<int>(sourceFiles_.size() - 1), sourceFiles_.back().contents()};
@@ -54,5 +54,7 @@ std::string_view SourceManager::get_line_contents(const int fileID,
     const uint32_t nextLineStart = lineStarts[lineNumber];
 
     // Exclude the newline character at the end of the line
-    return std::string_view(contents).substr(lineStart, nextLineStart - lineStart - 1);
+    uint32_t length = nextLineStart - lineStart;
+    if (contents[nextLineStart - 1] == '\n') --length;
+    return std::string_view(contents).substr(lineStart, length);
 }

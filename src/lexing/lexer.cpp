@@ -187,12 +187,12 @@ std::vector<Token> Lexer::tokenize() {
             const std::string errorMessage =
                 std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
                             static_cast<int>(c));
-            diagnosticsEngine_.report_error(errorMessage, currentIndex_ - 1, currentIndex_);
+            diagnosticsEngine_.report_error(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
         }
     }
 
     buffer_.clear();
-    buffer_ = " ";
+    advance();
     create_token(TokenKind::EOF_);
 
     if (diagnosticsEngine_.has_errors()) {
