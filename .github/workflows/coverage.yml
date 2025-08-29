@@ -24,12 +24,12 @@ jobs:
 
       - name: Configure with coverage flags
         run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON .
-
-      - name: Build
-        run: cmake --build build
         env:
           CXX: g++-14
           CC: gcc-14
+
+      - name: Build
+        run: cmake --build build
 
       - name: Run tests
         run: cd build && ctest --output-on-failure
@@ -37,10 +37,9 @@ jobs:
       - name: Capture and generate coverage
         run: |
           cd build
-          lcov --capture --directory . --output-file coverage.info --ignore-errors mismatch
+          lcov --gcov-tool gcov-14 --capture --directory . --output-file coverage.info --ignore-errors mismatch
           lcov --remove coverage.info '/usr/*' '*/_deps/*' --output-file coverage.info
           genhtml coverage.info --output-directory coverage_html --ignore-errors source
-
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
