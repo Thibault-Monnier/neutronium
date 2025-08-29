@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <lexing/lexer.hpp>
 #include <lexing/token_kind.hpp>
 
@@ -11,10 +12,13 @@ struct LexCase {
 class LexerTokenKindTest : public ::testing::TestWithParam<LexCase> {};
 
 TEST_P(LexerTokenKindTest, ProducesExpectedKinds) {
-    Lexer lex(GetParam().src);
+    const SourceManager sm;
+    DiagnosticsEngine de(sm, 0);
+
+    Lexer lex(GetParam().src, de);
     auto toks = lex.tokenize();
     std::vector<TokenKind> got;
-    std::transform(toks.begin(), toks.end(), std::back_inserter(got),
+    std::ranges::transform(toks, std::back_inserter(got),
                    [](const Token& t) { return t.kind(); });
     EXPECT_EQ(got, GetParam().kinds);
 }
@@ -155,11 +159,13 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
 
     for (const auto& input : badInputs) {
         EXPECT_EXIT({
-            Lexer lexer(input);
+            const SourceManager sm;
+            DiagnosticsEngine de(sm, 0);
+            Lexer lexer(input, de);
             auto _ = lexer.tokenize();
         },
         ::testing::ExitedWithCode(EXIT_FAILURE),
-        "Invalid character at index");
+        "Invalid character");
     }
 }
 

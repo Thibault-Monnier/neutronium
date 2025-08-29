@@ -476,6 +476,33 @@ TEST_F(NeutroniumTester, IfElifElse) {
     testWithX(5, 2);   // x == 5 → exit 2
     testWithX(6, 10);  // x == 6 → exit 10
     testWithX(7, 4);   // x > 6 → exit 4
+
+    const std::string noEndingElse = R"(
+        fn main(): {
+            let mut x = {val};
+            if x < 5: {
+                exit 1;
+            } elif x == 5: {
+                exit 2;
+            } elif x == 6: {
+                while x < 10: {
+                    x = x + 1;
+                }
+            }
+            exit x;
+        }
+    )";
+
+    auto testWithXNoElse = [&](const int x, const int expectedExit) {
+        std::string code = noEndingElse;
+        code.replace(code.find("{val}"), 5, std::to_string(x));
+        EXPECT_EQ(run(code), expectedExit);
+    };
+
+    testWithXNoElse(4, 1);   // x < 5 → exit 1
+    testWithXNoElse(5, 2);   // x == 5 → exit 2
+    testWithXNoElse(6, 10);  // x == 6 → exit 10
+    testWithXNoElse(7, 7);   // x > 6 → exit x
 }
 
 TEST_F(NeutroniumTester, ExitFromNestedIfInsideLoop) {

@@ -55,10 +55,18 @@ enum class NodeKind : uint8_t {
 };
 
 struct Node {
-    explicit Node(const NodeKind kind) : kind_(kind) {}
+    Node(const NodeKind kind, const uint32_t sourceStartIndex, const uint32_t sourceEndIndex)
+        : kind_(kind), sourceStartIndex_(sourceStartIndex), sourceEndIndex_(sourceEndIndex) {}
     virtual ~Node() = default;
 
     const NodeKind kind_;
+
+    [[nodiscard]] uint32_t source_start_index() const { return sourceStartIndex_; }
+    [[nodiscard]] uint32_t source_end_index() const { return sourceEndIndex_; }
+
+   protected:
+    uint32_t sourceStartIndex_;
+    uint32_t sourceEndIndex_;
 };
 
 struct Expression : Node {
@@ -70,36 +78,38 @@ struct PrimaryExpression : Expression {
 };
 
 struct NumberLiteral final : PrimaryExpression {
-    explicit NumberLiteral(const std::int64_t value)
-        : PrimaryExpression{NodeKind::NUMBER_LITERAL}, value_(value) {}
+    NumberLiteral(const std::int64_t value, const uint32_t start, const uint32_t end)
+        : PrimaryExpression{NodeKind::NUMBER_LITERAL, start, end}, value_(value) {}
 
     const std::int64_t value_;
 };
 
 struct BooleanLiteral final : PrimaryExpression {
-    explicit BooleanLiteral(const bool value)
-        : PrimaryExpression{NodeKind::BOOLEAN_LITERAL}, value_(value) {}
+    BooleanLiteral(const bool value, const uint32_t start, const uint32_t end)
+        : PrimaryExpression{NodeKind::BOOLEAN_LITERAL, start, end}, value_(value) {}
 
     const bool value_;
 };
 
 struct ArrayLiteral final : PrimaryExpression {
-    explicit ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements)
-        : PrimaryExpression{NodeKind::ARRAY_LITERAL}, elements_(std::move(elements)) {}
+    ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements, const uint32_t start,
+                 const uint32_t end)
+        : PrimaryExpression{NodeKind::ARRAY_LITERAL, start, end}, elements_(std::move(elements)) {}
 
     const std::vector<std::unique_ptr<Expression>> elements_;
 };
 
 struct Identifier final : PrimaryExpression {
-    explicit Identifier(std::string name)
-        : PrimaryExpression{NodeKind::IDENTIFIER}, name_(std::move(name)) {}
+    Identifier(std::string name, const uint32_t start, const uint32_t end)
+        : PrimaryExpression{NodeKind::IDENTIFIER, start, end}, name_(std::move(name)) {}
 
     const std::string name_;
 };
 
 struct ArrayAccess final : PrimaryExpression {
-    ArrayAccess(std::unique_ptr<Expression> base, std::unique_ptr<Expression> index)
-        : PrimaryExpression{NodeKind::ARRAY_ACCESS},
+    ArrayAccess(std::unique_ptr<Expression> base, std::unique_ptr<Expression> index,
+                const uint32_t start, const uint32_t end)
+        : PrimaryExpression{NodeKind::ARRAY_ACCESS, start, end},
           base_(std::move(base)),
           index_(std::move(index)) {}
 
@@ -109,8 +119,9 @@ struct ArrayAccess final : PrimaryExpression {
 
 struct FunctionCall final : PrimaryExpression {
     FunctionCall(std::unique_ptr<Identifier> callee,
-                 std::vector<std::unique_ptr<Expression>> arguments)
-        : PrimaryExpression{NodeKind::FUNCTION_CALL},
+                 std::vector<std::unique_ptr<Expression>> arguments, const uint32_t start,
+                 const uint32_t end)
+        : PrimaryExpression{NodeKind::FUNCTION_CALL, start, end},
           callee_(std::move(callee)),
           arguments_(std::move(arguments)) {}
 
@@ -119,8 +130,11 @@ struct FunctionCall final : PrimaryExpression {
 };
 
 struct UnaryExpression final : Expression {
-    UnaryExpression(Operator op, std::unique_ptr<Expression> operand)
-        : Expression{NodeKind::UNARY_EXPRESSION}, operator_(op), operand_(std::move(operand)) {}
+    UnaryExpression(const Operator op, std::unique_ptr<Expression> operand, const uint32_t start,
+                    const uint32_t end)
+        : Expression{NodeKind::UNARY_EXPRESSION, start, end},
+          operator_(op),
+          operand_(std::move(operand)) {}
 
     const Operator operator_;
     std::unique_ptr<Expression> operand_;
@@ -128,8 +142,8 @@ struct UnaryExpression final : Expression {
 
 struct BinaryExpression final : Expression {
     BinaryExpression(std::unique_ptr<Expression> left, const Operator op,
-                     std::unique_ptr<Expression> right)
-        : Expression{NodeKind::BINARY_EXPRESSION},
+                     std::unique_ptr<Expression> right, const uint32_t start, const uint32_t end)
+        : Expression{NodeKind::BINARY_EXPRESSION, start, end},
           left_(std::move(left)),
           operator_(op),
           right_(std::move(right)) {}
@@ -144,19 +158,25 @@ struct Statement : Node {
 };
 
 struct BlockStatement final : Statement {
-    BlockStatement() : Statement{NodeKind::BLOCK_STATEMENT} {}
-
-    void append_statement(std::unique_ptr<Statement> statement) {
-        body_.emplace_back(std::move(statement));
-    }
+    explicit BlockStatement(std::vector<std::unique_ptr<Statement>> body, const uint32_t start,
+                            const uint32_t end)
+        : Statement{NodeKind::BLOCK_STATEMENT, start, end}, body_(std::move(body)) {}
 
     std::vector<std::unique_ptr<Statement>> body_;
 };
 
 struct VariableDefinition final : Statement {
-    VariableDefinition(std::unique_ptr<Identifier> identifier, const Type type,
-                       const bool isMutable, std::unique_ptr<Expression> value = nullptr)
-        : Statement{NodeKind::VARIABLE_DEFINITION},
+    VariableDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
+                       const bool isMutable, const uint32_t start, const uint32_t end)
+        : Statement{NodeKind::VARIABLE_DEFINITION, start, end},
+          identifier_(std::move(identifier)),
+          type_(type),
+          isMutable_(isMutable) {}
+
+    VariableDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
+                       const bool isMutable, std::unique_ptr<Expression> value,
+                       const uint32_t start, const uint32_t end)
+        : Statement{NodeKind::VARIABLE_DEFINITION, start, end},
           identifier_(std::move(identifier)),
           type_(type),
           isMutable_(isMutable),
@@ -170,8 +190,8 @@ struct VariableDefinition final : Statement {
 
 struct Assignment final : Statement {
     Assignment(std::unique_ptr<Expression> place, const Operator op,
-               std::unique_ptr<Expression> value)
-        : Statement{NodeKind::ASSIGNMENT},
+               std::unique_ptr<Expression> value, const uint32_t start, const uint32_t end)
+        : Statement{NodeKind::ASSIGNMENT, start, end},
           place_(std::move(place)),
           operator_(op),
           value_(std::move(value)) {}
@@ -182,16 +202,25 @@ struct Assignment final : Statement {
 };
 
 struct ExpressionStatement final : Statement {
-    explicit ExpressionStatement(std::unique_ptr<Expression> expression)
-        : Statement{NodeKind::EXPRESSION_STATEMENT}, expression_(std::move(expression)) {}
+    ExpressionStatement(std::unique_ptr<Expression> expression, const uint32_t start,
+                        const uint32_t end)
+        : Statement{NodeKind::EXPRESSION_STATEMENT, start, end},
+          expression_(std::move(expression)) {}
 
     std::unique_ptr<Expression> expression_;
 };
 
 struct IfStatement final : Statement {
     IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
-                std::unique_ptr<BlockStatement> elseClause = nullptr)
-        : Statement{NodeKind::IF_STATEMENT},
+                const uint32_t start, const uint32_t end)
+        : Statement{NodeKind::IF_STATEMENT, start, end},
+          condition_(std::move(condition)),
+          body_(std::move(body)) {}
+
+    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
+                std::unique_ptr<BlockStatement> elseClause, const uint32_t start,
+                const uint32_t end)
+        : Statement{NodeKind::IF_STATEMENT, start, end},
           condition_(std::move(condition)),
           body_(std::move(body)),
           elseClause_(std::move(elseClause)) {}
@@ -202,8 +231,9 @@ struct IfStatement final : Statement {
 };
 
 struct WhileStatement final : Statement {
-    WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body)
-        : Statement{NodeKind::WHILE_STATEMENT},
+    WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
+                   const uint32_t start, const uint32_t end)
+        : Statement{NodeKind::WHILE_STATEMENT, start, end},
           condition_(std::move(condition)),
           body_(std::move(body)) {}
 
@@ -212,31 +242,34 @@ struct WhileStatement final : Statement {
 };
 
 struct BreakStatement final : Statement {
-    explicit BreakStatement() : Statement{NodeKind::BREAK_STATEMENT} {}
+    BreakStatement(const uint32_t start, const uint32_t end)
+        : Statement{NodeKind::BREAK_STATEMENT, start, end} {}
 };
 
 struct ContinueStatement final : Statement {
-    explicit ContinueStatement() : Statement{NodeKind::CONTINUE_STATEMENT} {}
+    ContinueStatement(const uint32_t start, const uint32_t end)
+        : Statement{NodeKind::CONTINUE_STATEMENT, start, end} {}
 };
 
 struct ExitStatement final : Statement {
-    explicit ExitStatement(std::unique_ptr<Expression> exitCode)
-        : Statement{NodeKind::EXIT_STATEMENT}, exitCode_(std::move(exitCode)) {}
+    ExitStatement(std::unique_ptr<Expression> exitCode, const uint32_t start, const uint32_t end)
+        : Statement{NodeKind::EXIT_STATEMENT, start, end}, exitCode_(std::move(exitCode)) {}
 
     std::unique_ptr<Expression> exitCode_;
 };
 
 struct ReturnStatement final : Statement {
-    explicit ReturnStatement(std::unique_ptr<Expression> returnValue)
-        : Statement{NodeKind::RETURN_STATEMENT}, returnValue_(std::move(returnValue)) {}
+    ReturnStatement(std::unique_ptr<Expression> returnValue, const uint32_t start,
+                    const uint32_t end)
+        : Statement{NodeKind::RETURN_STATEMENT, start, end}, returnValue_(std::move(returnValue)) {}
 
     std::unique_ptr<Expression> returnValue_;
 };
 
 struct ConstantDefinition final : Node {
-    ConstantDefinition(std::unique_ptr<Identifier> identifier, const Type type,
-                       std::unique_ptr<Expression> value)
-        : Node{NodeKind::CONSTANT_DEFINITION},
+    ConstantDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
+                       std::unique_ptr<Expression> value, const uint32_t start, const uint32_t end)
+        : Node{NodeKind::CONSTANT_DEFINITION, start, end},
           identifier_(std::move(identifier)),
           type_(type),
           value_(std::move(value)) {}
@@ -249,8 +282,8 @@ struct ConstantDefinition final : Node {
 struct ExternalFunctionDeclaration final : Node {
     ExternalFunctionDeclaration(std::unique_ptr<Identifier> identifier,
                                 std::vector<std::unique_ptr<VariableDefinition>> parameters,
-                                const Type returnType)
-        : Node{NodeKind::EXTERNAL_FUNCTION_DECLARATION},
+                                const Type& returnType, const uint32_t start, const uint32_t end)
+        : Node{NodeKind::EXTERNAL_FUNCTION_DECLARATION, start, end},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
           returnType_(returnType) {}
@@ -263,9 +296,10 @@ struct ExternalFunctionDeclaration final : Node {
 struct FunctionDefinition final : Node {
     FunctionDefinition(std::unique_ptr<Identifier> identifier,
                        std::vector<std::unique_ptr<VariableDefinition>> parameters,
-                       const Type returnType, const bool isExported,
-                       std::unique_ptr<BlockStatement> body)
-        : Node{NodeKind::FUNCTION_DEFINITION},
+                       const Type& returnType, const bool isExported,
+                       std::unique_ptr<BlockStatement> body, const uint32_t start,
+                       const uint32_t end)
+        : Node{NodeKind::FUNCTION_DEFINITION, start, end},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
           returnType_(returnType),
@@ -280,18 +314,21 @@ struct FunctionDefinition final : Node {
 };
 
 struct Program final : Node {
-    Program() : Node{NodeKind::PROGRAM} {}
+    explicit Program() : Node{NodeKind::PROGRAM, 0, 0} {}
 
     void append_constant(std::unique_ptr<ConstantDefinition> constant) {
         constants_.emplace_back(std::move(constant));
+        sourceEndIndex_ = constants_.back()->source_end_index();
     }
 
     void append_function(std::unique_ptr<FunctionDefinition> function) {
         functions_.emplace_back(std::move(function));
+        sourceEndIndex_ = functions_.back()->source_end_index();
     }
 
     void append_extern_function(std::unique_ptr<ExternalFunctionDeclaration> externFunction) {
         externalFunctions_.emplace_back(std::move(externFunction));
+        sourceEndIndex_ = externalFunctions_.back()->source_end_index();
     }
 
     std::vector<std::unique_ptr<ConstantDefinition>> constants_;

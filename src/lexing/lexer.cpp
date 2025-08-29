@@ -6,17 +6,25 @@
 #include <vector>
 
 #include "lexing/token.hpp"
-#include "utils/log.hpp"
 
-bool Lexer::is_at_end() const { return currentIndex_ >= source_.length(); }
+bool Lexer::is_at_end() const { return currentIndex_ >= sourceCode_.length(); }
 
-char Lexer::peek() const { return is_at_end() ? '\0' : source_.at(currentIndex_); }
+char Lexer::peek() const { return is_at_end() ? '\0' : sourceCode_.at(currentIndex_); }
 
-char Lexer::advance() { return source_.at(currentIndex_++); }
+char Lexer::advance() {
+    const char currentChar = peek();
+    buffer_.push_back(currentChar);
+    currentIndex_++;
+    return currentChar;
+}
 
-void Lexer::read_to_buffer_while(auto predicate) {
+void Lexer::create_token(const TokenKind kind) {
+    tokens_.emplace_back(kind, buffer_, currentIndex_ - buffer_.length());
+}
+
+void Lexer::advance_while(auto predicate) {
     while (!is_at_end() && predicate(peek())) {
-        buffer_ += advance();
+        advance();
     }
 }
 
@@ -46,82 +54,82 @@ std::optional<TokenKind> Lexer::get_keyword_kind() const {
 void Lexer::lex_plus() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::PLUS_EQUAL, "+=");
+        create_token(TokenKind::PLUS_EQUAL);
     } else {
-        tokens_.emplace_back(TokenKind::PLUS, "+");
+        create_token(TokenKind::PLUS);
     }
 }
 
 void Lexer::lex_minus() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::MINUS_EQUAL, "-=");
+        create_token(TokenKind::MINUS_EQUAL);
     } else if (peek() == '>') {
         advance();
-        tokens_.emplace_back(TokenKind::RIGHT_ARROW, "->");
+        create_token(TokenKind::RIGHT_ARROW);
     } else {
-        tokens_.emplace_back(TokenKind::MINUS, "-");
+        create_token(TokenKind::MINUS);
     }
 }
 
 void Lexer::lex_star() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::STAR_EQUAL, "*=");
+        create_token(TokenKind::STAR_EQUAL);
     } else {
-        tokens_.emplace_back(TokenKind::STAR, "*");
+        create_token(TokenKind::STAR);
     }
 }
 
 void Lexer::lex_slash() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::SLASH_EQUAL, "/=");
+        create_token(TokenKind::SLASH_EQUAL);
     } else {
-        tokens_.emplace_back(TokenKind::SLASH, "/");
+        create_token(TokenKind::SLASH);
     }
 }
 
 void Lexer::lex_equal() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::EQUAL_EQUAL, "==");
+        create_token(TokenKind::EQUAL_EQUAL);
     } else {
-        tokens_.emplace_back(TokenKind::EQUAL, "=");
+        create_token(TokenKind::EQUAL);
     }
 }
 
 void Lexer::lex_less_than() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::LESS_THAN_EQUAL, "<=");
+        create_token(TokenKind::LESS_THAN_EQUAL);
     } else {
-        tokens_.emplace_back(TokenKind::LESS_THAN, "<");
+        create_token(TokenKind::LESS_THAN);
     }
 }
 
 void Lexer::lex_greater_than() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::GREATER_THAN_EQUAL, ">=");
+        create_token(TokenKind::GREATER_THAN_EQUAL);
     } else {
-        tokens_.emplace_back(TokenKind::GREATER_THAN, ">");
+        create_token(TokenKind::GREATER_THAN);
     }
 }
 
 void Lexer::lex_bang() {
     if (peek() == '=') {
         advance();
-        tokens_.emplace_back(TokenKind::BANG_EQUAL, "!=");
+        create_token(TokenKind::BANG_EQUAL);
     } else {
-        tokens_.emplace_back(TokenKind::BANG, "!");
+        create_token(TokenKind::BANG);
     }
 }
 
 std::vector<Token> Lexer::tokenize() {
     while (!is_at_end()) {
+        buffer_.clear();
         char c = advance();
-        buffer_ = c;
 
         if (std::isspace(c)) continue;
 
@@ -131,16 +139,16 @@ std::vector<Token> Lexer::tokenize() {
         }
 
         if (std::isalpha(c)) {
-            read_to_buffer_while([](char ch) { return std::isalnum(ch) || ch == '_'; });
+            advance_while([](const char ch) { return std::isalnum(ch) || ch == '_'; });
             if (auto keywordKind = get_keyword_kind()) {
-                tokens_.emplace_back(*keywordKind, buffer_);
+                create_token(*keywordKind);
             } else {
-                tokens_.emplace_back(TokenKind::IDENTIFIER, buffer_);
+                create_token(TokenKind::IDENTIFIER);
             }
 
         } else if (std::isdigit(c)) {
-            read_to_buffer_while(isdigit);
-            tokens_.emplace_back(TokenKind::NUMBER_LITERAL, buffer_);
+            advance_while(isdigit);
+            create_token(TokenKind::NUMBER_LITERAL);
         } else if (c == '+') {
             lex_plus();
         } else if (c == '-') {
@@ -158,31 +166,39 @@ std::vector<Token> Lexer::tokenize() {
         } else if (c == '>') {
             lex_greater_than();
         } else if (c == '(') {
-            tokens_.emplace_back(TokenKind::LEFT_PAREN, "(");
+            create_token(TokenKind::LEFT_PAREN);
         } else if (c == ')') {
-            tokens_.emplace_back(TokenKind::RIGHT_PAREN, ")");
+            create_token(TokenKind::RIGHT_PAREN);
         } else if (c == '{') {
-            tokens_.emplace_back(TokenKind::LEFT_BRACE, "{");
+            create_token(TokenKind::LEFT_BRACE);
         } else if (c == '}') {
-            tokens_.emplace_back(TokenKind::RIGHT_BRACE, "}");
+            create_token(TokenKind::RIGHT_BRACE);
         } else if (c == '[') {
-            tokens_.emplace_back(TokenKind::LEFT_BRACKET, "[");
+            create_token(TokenKind::LEFT_BRACKET);
         } else if (c == ']') {
-            tokens_.emplace_back(TokenKind::RIGHT_BRACKET, "]");
+            create_token(TokenKind::RIGHT_BRACKET);
         } else if (c == ':') {
-            tokens_.emplace_back(TokenKind::COLON, ":");
+            create_token(TokenKind::COLON);
         } else if (c == ';') {
-            tokens_.emplace_back(TokenKind::SEMICOLON, ";");
+            create_token(TokenKind::SEMICOLON);
         } else if (c == ',') {
-            tokens_.emplace_back(TokenKind::COMMA, ",");
+            create_token(TokenKind::COMMA);
         } else {
             const std::string errorMessage =
-                std::format("Invalid character at index {}, got '{}' at beginning of word",
-                            currentIndex_ - 1, c);
-            print_error(errorMessage);
-            exit(EXIT_FAILURE);
+                std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
+                            static_cast<int>(c));
+            diagnosticsEngine_.report_error(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
         }
     }
-    tokens_.emplace_back(TokenKind::EOF_, "");
+
+    buffer_.clear();
+    advance();
+    create_token(TokenKind::EOF_);
+
+    if (diagnosticsEngine_.has_errors()) {
+        diagnosticsEngine_.emit_errors();
+        std::exit(EXIT_FAILURE);
+    }
+
     return tokens_;
 }

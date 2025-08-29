@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "diagnostics_engine.hpp"
 #include "lexing/token.hpp"
 #include "parsing/ast.hpp"
 
@@ -17,15 +18,19 @@ struct ParsedFunctionSignature {
 
 class Parser {
    public:
-    explicit Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
+    explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine)
+        : diagnosticsEngine_(diagnosticsEngine), tokens_(std::move(tokens)) {}
 
     [[nodiscard]] std::unique_ptr<AST::Program> parse();
 
    private:
+    DiagnosticsEngine& diagnosticsEngine_;
+
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
 
-    [[noreturn]] static void abort(const std::string& errorMessage);
+    [[noreturn]] void abort(const std::string& errorMessage) const;
+
     [[nodiscard]] const Token& peek(int amount = 0) const;
     const Token& expect(TokenKind expected);
 
@@ -35,7 +40,7 @@ class Parser {
 
     std::unique_ptr<AST::Identifier> parse_identifier();
     std::unique_ptr<AST::FunctionCall> parse_function_call();
-    std::unique_ptr<AST::ArrayAccess> parse_array_access(std::unique_ptr<AST::Expression>& operand);
+    std::unique_ptr<AST::ArrayAccess> parse_array_access(std::unique_ptr<AST::Expression>& base);
     std::unique_ptr<AST::Expression> parse_primary_expression();
     std::unique_ptr<AST::Expression> parse_postfix_expression();
     std::unique_ptr<AST::Expression> parse_unary_expression();
@@ -50,6 +55,7 @@ class Parser {
     std::unique_ptr<AST::ExpressionStatement> parse_expression_statement();
     std::unique_ptr<AST::VariableDefinition> parse_variable_definition();
     std::unique_ptr<AST::Assignment> parse_assignment();
+    std::unique_ptr<AST::BlockStatement> parse_else_clause();
     std::unique_ptr<AST::IfStatement> parse_if_statement();
     std::unique_ptr<AST::WhileStatement> parse_while_statement();
     std::unique_ptr<AST::VariableDefinition> parse_function_parameter();

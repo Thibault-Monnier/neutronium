@@ -5,20 +5,24 @@
 #include <vector>
 
 #include "cli.hpp"
+#include "diagnostics_engine.hpp"
 #include "parsing/ast.hpp"
 #include "semantic-analysis/symbol_table.hpp"
 #include "semantic-analysis/type.hpp"
 
 class SemanticAnalyser {
    public:
-    explicit SemanticAnalyser(const AST::Program& ast, const TargetType targetType)
-        : ast_(&ast), targetType_(targetType) {}
+    explicit SemanticAnalyser(const AST::Program& ast, const TargetType targetType,
+                              DiagnosticsEngine& diagnosticsEngine)
+        : ast_(&ast), targetType_(targetType), diagnosticsEngine_(diagnosticsEngine) {}
 
     void analyse();
 
    private:
     const AST::Program* ast_;
     const TargetType targetType_;
+
+    DiagnosticsEngine& diagnosticsEngine_;
 
     std::vector<SymbolTable> scopes_;
     SymbolTable functionsTable_;
@@ -28,7 +32,7 @@ class SemanticAnalyser {
     std::string currentFunctionName_;
     Type currentFunctionReturnType_ = PrimitiveType::VOID;
 
-    [[noreturn]] static void abort(const std::string& errorMessage);
+    [[noreturn]] void abort(const std::string& errorMessage, const AST::Node& node) const;
 
     void enter_scope();
     void exit_scope();
@@ -37,14 +41,17 @@ class SemanticAnalyser {
     [[nodiscard]] std::optional<const SymbolInfo*> get_symbol_info(const std::string& name) const;
 
     // ── Symbol declaration helpers ──────────────────────────────────────────────
-    SymbolInfo& declare_symbol(const std::string& name, SymbolKind kind, bool isMutable,
-                               const Type& type, bool isScoped, std::vector<SymbolInfo> parameters);
+    SymbolInfo& declare_symbol(const AST::Node* declarationNode, const std::string& name,
+                               SymbolKind kind, bool isMutable, const Type& type, bool isScoped,
+                               std::vector<SymbolInfo> parameters);
 
-    SymbolInfo& handle_constant_definition(const std::string& name, const Type& type);
+    SymbolInfo& handle_constant_definition(const AST::ConstantDefinition* declNode,
+                                           const std::string& name, const Type& type);
     SymbolInfo& handle_function_declaration(
-        const std::string& name, const Type& returnType,
+        const AST::Node* declNode, const std::string& name, const Type& returnType,
         const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
-    SymbolInfo& handle_variable_declaration(const std::string& name, bool isMutable,
+    SymbolInfo& handle_variable_declaration(const AST::VariableDefinition* declNode,
+                                            const std::string& name, bool isMutable,
                                             const Type& type);
 
     // ── Expression utilities ───────────────────────────────────────────────────
@@ -62,8 +69,8 @@ class SemanticAnalyser {
     void analyse_expression_statement(const AST::ExpressionStatement& exprStmt);
     void analyse_if_statement(const AST::IfStatement& ifStmt);
     void analyse_while_statement(const AST::WhileStatement& whileStmt);
-    void analyse_break_statement() const;
-    void analyse_continue_statement() const;
+    void analyse_break_statement(const AST::BreakStatement& breakStmt) const;
+    void analyse_continue_statement(const AST::ContinueStatement& continueStmt) const;
     void analyse_exit(const AST::ExitStatement& exitStmt);
     void analyse_statement(const AST::Statement& stmt);
 

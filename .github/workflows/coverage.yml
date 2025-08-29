@@ -17,8 +17,16 @@ jobs:
       - name: Install dependencies
         run: sudo apt update && sudo apt install -y cmake ninja-build build-essential nasm lcov
 
+      - name: Setup GCC 14
+        uses: egor-tensin/setup-gcc@v1
+        with:
+          version: 14
+
       - name: Configure with coverage flags
         run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON .
+        env:
+          CXX: g++-14
+          CC: gcc-14
 
       - name: Build
         run: cmake --build build
@@ -29,10 +37,9 @@ jobs:
       - name: Capture and generate coverage
         run: |
           cd build
-          lcov --capture --directory . --output-file coverage.info --ignore-errors mismatch
+          lcov --gcov-tool gcov-14 --capture --directory . --output-file coverage.info --ignore-errors mismatch
           lcov --remove coverage.info '/usr/*' '*/_deps/*' --output-file coverage.info
           genhtml coverage.info --output-directory coverage_html --ignore-errors source
-
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
