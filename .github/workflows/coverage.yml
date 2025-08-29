@@ -17,11 +17,19 @@ jobs:
       - name: Install dependencies
         run: sudo apt update && sudo apt install -y cmake ninja-build build-essential nasm lcov
 
+      - name: Setup GCC 14
+        uses: egor-tensin/setup-gcc@v1
+        with:
+          version: 14
+
       - name: Configure with coverage flags
         run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON .
 
       - name: Build
         run: cmake --build build
+        env:
+          CXX: g++-14
+          CC: gcc-14
 
       - name: Run tests
         run: cd build && ctest --output-on-failure
