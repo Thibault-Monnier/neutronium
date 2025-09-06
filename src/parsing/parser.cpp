@@ -45,22 +45,22 @@ Type Parser::parse_type_specifier() {
     switch (tokenKind) {
         case TokenKind::INT:
             expect(tokenKind);
-            return PrimitiveType::INT;
+            return PrimitiveKind::INT;
         case TokenKind::INT8:
             expect(tokenKind);
-            return PrimitiveType::INT8;
+            return PrimitiveKind::INT8;
         case TokenKind::INT16:
             expect(tokenKind);
-            return PrimitiveType::INT16;
+            return PrimitiveKind::INT16;
         case TokenKind::INT32:
             expect(tokenKind);
-            return PrimitiveType::INT32;
+            return PrimitiveKind::INT32;
         case TokenKind::INT64:
             expect(tokenKind);
-            return PrimitiveType::INT64;
+            return PrimitiveKind::INT64;
         case TokenKind::BOOL:
             expect(tokenKind);
-            return PrimitiveType::BOOL;
+            return PrimitiveKind::BOOL;
         case TokenKind::LEFT_BRACKET: {
             expect(tokenKind);
             const Type elementType = parse_type_specifier();
@@ -278,7 +278,7 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
 
     auto identifier = parse_identifier();
 
-    Type type = PrimitiveType::ANY;
+    Type type = PrimitiveKind::ANY;
     if (peek().kind() == TokenKind::COLON) {
         expect(TokenKind::COLON);
         type = parse_type_specifier();
@@ -465,7 +465,7 @@ ParsedFunctionSignature Parser::parse_function_signature() {
     }
     expect(TokenKind::RIGHT_PAREN);
 
-    Type returnType = PrimitiveType::VOID;
+    Type returnType = PrimitiveKind::VOID;
     if (peek().kind() == TokenKind::RIGHT_ARROW) {
         expect(TokenKind::RIGHT_ARROW);
         returnType = parse_type_specifier();
@@ -514,7 +514,7 @@ std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
 
     auto identifier = parse_identifier();
 
-    Type type = PrimitiveType::ANY;
+    Type type = PrimitiveKind::ANY;
     if (peek().kind() == TokenKind::COLON) {
         expect(TokenKind::COLON);
         type = parse_type_specifier();

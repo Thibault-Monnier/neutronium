@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-enum class PrimitiveType : uint8_t {
+enum class PrimitiveKind : uint8_t {
     INT,
     INT8,
     INT16,

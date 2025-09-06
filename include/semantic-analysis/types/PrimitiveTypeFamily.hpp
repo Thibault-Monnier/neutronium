@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PrimitiveType.hpp"
+#include "PrimitiveKind.hpp"
 
 class PrimitiveTypeFamily {
    public:
@@ -11,9 +11,9 @@ class PrimitiveTypeFamily {
         INTEGER,
     };
 
-    [[nodiscard]] virtual bool isInFamily(PrimitiveType) const = 0;
+    [[nodiscard]] virtual bool isInFamily(PrimitiveKind) const = 0;
 
-    static const PrimitiveTypeFamily* familyForType(PrimitiveType t);
+    static const PrimitiveTypeFamily* familyForType(PrimitiveKind t);
 };
 
 class IntegerTypeFamily final : public PrimitiveTypeFamily {
@@ -23,9 +23,9 @@ class IntegerTypeFamily final : public PrimitiveTypeFamily {
         return instance;
     }
 
-    [[nodiscard]] bool isInFamily(const PrimitiveType t) const override {
-        return t == PrimitiveType::INT || t == PrimitiveType::INT8 || t == PrimitiveType::INT16 ||
-               t == PrimitiveType::INT32 || t == PrimitiveType::INT64;
+    [[nodiscard]] bool isInFamily(const PrimitiveKind t) const override {
+        return t == PrimitiveKind::INT || t == PrimitiveKind::INT8 || t == PrimitiveKind::INT16 ||
+               t == PrimitiveKind::INT32 || t == PrimitiveKind::INT64;
     }
 };
 
@@ -36,5 +36,5 @@ class NoTypeFamily final : public PrimitiveTypeFamily {
         return instance;
     }
 
-    [[nodiscard]] bool isInFamily(const PrimitiveType) const override { return false; }
+    [[nodiscard]] bool isInFamily(const PrimitiveKind) const override { return false; }
 };

@@ -30,7 +30,7 @@ class SemanticAnalyser {
     int loopDepth_ = 0;
 
     std::string currentFunctionName_;
-    Type currentFunctionReturnType_ = PrimitiveType::VOID;
+    Type currentFunctionReturnType_ = PrimitiveKind::VOID;
 
     [[noreturn]] void abort(const std::string& errorMessage, const AST::Node& node) const;
 

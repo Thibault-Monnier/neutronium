@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "PrimitiveType.hpp"
+#include "PrimitiveKind.hpp"
 #include "PrimitiveTypeFamily.hpp"
 
 enum class TypeKind : uint8_t {
@@ -15,7 +15,7 @@ enum class TypeKind : uint8_t {
 class Type {
    public:
     // Voluntary implicit constructor
-    Type(const PrimitiveType t, const bool inFamily = false)
+    Type(const PrimitiveKind t, const bool inFamily = false)
         : kind_(TypeKind::PRIMITIVE), primitive_(t) {
         if (inFamily) {
             family_ = PrimitiveTypeFamily::familyForType(t);
@@ -25,7 +25,7 @@ class Type {
 
     Type(const Type& elementType, const std::size_t arrayLength)
         : kind_(TypeKind::ARRAY),
-          primitive_(PrimitiveType::VOID),
+          primitive_(PrimitiveKind::VOID),
           arrayElement_(std::make_unique<Type>(elementType)),
           arrayLength_(arrayLength) {}
 
@@ -65,29 +65,53 @@ class Type {
      * @return The resolved type.
      */
     [[nodiscard]] Type resolve(const Type& other) const {
-        Type resolvedType = (primitive_ == PrimitiveType::ANY) ? other : *this;
+        Type resolvedType = (primitive_ == PrimitiveKind::ANY) ? other : *this;
         resolvedType.family_ = &NoTypeFamily::getInstance();
         return resolvedType;
+    }
+
+    [[nodiscard]] int sizeBytes() const {
+        if (kind_ == TypeKind::PRIMITIVE) {
+            switch (primitive_) {
+                case PrimitiveKind::INT:
+                case PrimitiveKind::INT8:
+                case PrimitiveKind::BOOL:
+                    return 1;
+                case PrimitiveKind::INT16:
+                    return 2;
+                case PrimitiveKind::INT32:
+                    return 4;
+                case PrimitiveKind::INT64:
+                    return 8;
+                case PrimitiveKind::VOID:
+                case PrimitiveKind::ANY:
+                    return 0;
+            }
+            std::unreachable();
+        } else if (kind_ == TypeKind::ARRAY) {
+            return arrayElement_->sizeBytes() * static_cast<int>(arrayLength_);
+        }
+        std::unreachable();
     }
 
     [[nodiscard]] std::string to_string() const {
         if (kind_ == TypeKind::PRIMITIVE) {
             switch (primitive_) {
-                case PrimitiveType::INT:
+                case PrimitiveKind::INT:
                     return "int";
-                case PrimitiveType::INT8:
+                case PrimitiveKind::INT8:
                     return "int8";
-                case PrimitiveType::INT16:
+                case PrimitiveKind::INT16:
                     return "int16";
-                case PrimitiveType::INT32:
+                case PrimitiveKind::INT32:
                     return "int32";
-                case PrimitiveType::INT64:
+                case PrimitiveKind::INT64:
                     return "int64";
-                case PrimitiveType::BOOL:
+                case PrimitiveKind::BOOL:
                     return "bool";
-                case PrimitiveType::VOID:
+                case PrimitiveKind::VOID:
                     return "void";
-                case PrimitiveType::ANY:
+                case PrimitiveKind::ANY:
                     return "any";
             }
             std::unreachable();
@@ -100,7 +124,7 @@ class Type {
 
     [[nodiscard]] TypeKind kind() const { return kind_; }
 
-    [[nodiscard]] Type array_element_type() const {
+    [[nodiscard]] Type& array_element_type() const {
         if (kind_ == TypeKind::ARRAY) {
             return *arrayElement_;
         }
@@ -110,7 +134,7 @@ class Type {
    private:
     TypeKind kind_;
     const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
-    PrimitiveType primitive_;
+    PrimitiveKind primitive_;
 
     std::unique_ptr<Type> arrayElement_;
     std::size_t arrayLength_{0};
