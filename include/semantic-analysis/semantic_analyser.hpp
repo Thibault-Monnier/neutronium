@@ -8,7 +8,7 @@
 #include "diagnostics_engine.hpp"
 #include "parsing/ast.hpp"
 #include "semantic-analysis/symbol_table.hpp"
-#include "semantic-analysis/type.hpp"
+#include "types/type.hpp"
 
 class SemanticAnalyser {
    public:

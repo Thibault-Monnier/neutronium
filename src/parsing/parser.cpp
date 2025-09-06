@@ -45,10 +45,22 @@ Type Parser::parse_type_specifier() {
     switch (tokenKind) {
         case TokenKind::INT:
             expect(tokenKind);
-            return PrimitiveType::INTEGER;
+            return PrimitiveType::INT;
+        case TokenKind::INT8:
+            expect(tokenKind);
+            return PrimitiveType::INT8;
+        case TokenKind::INT16:
+            expect(tokenKind);
+            return PrimitiveType::INT16;
+        case TokenKind::INT32:
+            expect(tokenKind);
+            return PrimitiveType::INT32;
+        case TokenKind::INT64:
+            expect(tokenKind);
+            return PrimitiveType::INT64;
         case TokenKind::BOOL:
             expect(tokenKind);
-            return PrimitiveType::BOOLEAN;
+            return PrimitiveType::BOOL;
         case TokenKind::LEFT_BRACKET: {
             expect(tokenKind);
             const Type elementType = parse_type_specifier();

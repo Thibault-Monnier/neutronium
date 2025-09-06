@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "semantic-analysis/type.hpp"
+#include "types/type.hpp"
 
 enum class SymbolKind : uint8_t { CONSTANT, FUNCTION, VARIABLE };
 
