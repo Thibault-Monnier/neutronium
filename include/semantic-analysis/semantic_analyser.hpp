@@ -8,7 +8,7 @@
 #include "diagnostics_engine.hpp"
 #include "parsing/ast.hpp"
 #include "semantic-analysis/symbol_table.hpp"
-#include "semantic-analysis/type.hpp"
+#include "types/type.hpp"
 
 class SemanticAnalyser {
    public:
@@ -30,7 +30,7 @@ class SemanticAnalyser {
     int loopDepth_ = 0;
 
     std::string currentFunctionName_;
-    Type currentFunctionReturnType_ = PrimitiveType::VOID;
+    Type currentFunctionReturnType_ = PrimitiveKind::VOID;
 
     [[noreturn]] void abort(const std::string& errorMessage, const AST::Node& node) const;
 
