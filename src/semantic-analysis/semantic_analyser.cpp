@@ -55,7 +55,14 @@ void SemanticAnalyser::abort(const std::string& errorMessage, const AST::Node& n
 
 void SemanticAnalyser::enter_scope() { scopes_.emplace_back(); }
 
-void SemanticAnalyser::exit_scope() { scopes_.pop_back(); }
+void SemanticAnalyser::exit_scope() {
+    std::cout << "Exiting scope with " << scopes_.back().size() << " symbols\n";
+    std::cout << "Symbols were:\n";
+    for (const auto& [name, info] : scopes_.back()) {
+        std::cout << " - " << name << ": " << info.type_.to_string() << "\n";
+    }
+    scopes_.pop_back();
+}
 
 std::optional<const SymbolInfo*> SemanticAnalyser::get_symbol_info(const std::string& name) const {
     {
@@ -160,8 +167,8 @@ Type SemanticAnalyser::get_function_call_type(const AST::FunctionCall& funcCall)
 
 Type SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& unaryExpr) {
     const Type operandType = get_expression_type(*unaryExpr.operand_);
-    if (operandType.matches(PrimitiveKind::INT)) {
-        if (AST::is_arithmetic_operator(unaryExpr.operator_)) return PrimitiveKind::INT;
+    if (operandType.matches(Type::integerFamilyType())) {
+        if (AST::is_arithmetic_operator(unaryExpr.operator_)) return operandType;
 
         abort("Invalid unary operator for integer operand: got " +
                   AST::operator_to_string(unaryExpr.operator_),
@@ -191,16 +198,17 @@ Type SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression& b
 
     const AST::Operator op = binaryExpr.operator_;
     if (AST::is_arithmetic_operator(op)) {
-        if (leftType.mismatches(PrimitiveKind::INT)) {
+        if (leftType.mismatches(Type::integerFamilyType())) {
             abort("Invalid type for arithmetic operation: expected integer, got " +
                       leftType.to_string(),
                   binaryExpr);
         }
-        return PrimitiveKind::INT;
+        return leftType.resolve(rightType);
     }
 
     if (AST::is_equality_operator(op)) {
-        if (leftType.mismatches(PrimitiveKind::INT) && leftType.mismatches(PrimitiveKind::BOOL)) {
+        if (leftType.mismatches(Type::integerFamilyType()) &&
+            leftType.mismatches(PrimitiveKind::BOOL)) {
             abort("Invalid type for equality operation: expected integer or boolean, got " +
                       leftType.to_string(),
                   binaryExpr);
@@ -209,7 +217,7 @@ Type SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression& b
     }
 
     if (AST::is_relational_operator(op)) {
-        if (leftType.mismatches(PrimitiveKind::INT)) {
+        if (leftType.mismatches(Type::integerFamilyType())) {
             abort("Invalid type for relational operation: expected integer, got " +
                       leftType.to_string(),
                   binaryExpr);
@@ -223,7 +231,7 @@ Type SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression& b
 Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
     switch (expr.kind_) {
         case AST::NodeKind::NUMBER_LITERAL:
-            return Type{PrimitiveKind::INT, true};
+            return Type::integerFamilyType();
         case AST::NodeKind::BOOLEAN_LITERAL:
             return PrimitiveKind::BOOL;
         case AST::NodeKind::ARRAY_LITERAL: {
@@ -257,7 +265,8 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
             if (arrayType.kind() != TypeKind::ARRAY) {
                 abort(std::format("{} is indexed as an array", arrayType.to_string()), arrayAccess);
             }
-            analyse_expression(*arrayAccess.index_, PrimitiveKind::INT, "array access index");
+            analyse_expression(*arrayAccess.index_, Type::integerFamilyType(),
+                               "array access index");
             return arrayType.array_element_type();
         }
         case AST::NodeKind::FUNCTION_CALL: {
@@ -291,13 +300,12 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
     const std::string& name = declaration.identifier_->name_;
     const Type assignedType = get_expression_type(*declaration.value_);
 
-    if (assignedType.matches(PrimitiveKind::ANY) || assignedType.matches(PrimitiveKind::VOID)) {
+    if (assignedType.matches(PrimitiveKind::VOID)) {
         abort(std::format("Invalid variable type: `{}` is declared as {}", name,
                           assignedType.to_string()),
               declaration);
     }
-    if (assignedType.mismatches(declaration.type_) &&
-        declaration.type_.mismatches(PrimitiveKind::ANY)) {
+    if (assignedType.mismatches(declaration.type_)) {
         abort(std::format("Type mismatch: variable `{}` has {} type specifier, but has {} value",
                           name, declaration.type_.to_string(), assignedType.to_string()),
               declaration);
@@ -349,7 +357,7 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
     }
 
     if (assignment.operator_ != AST::Operator::ASSIGN) {
-        if (placeType.mismatches(PrimitiveKind::INT)) {
+        if (placeType.mismatches(Type::integerFamilyType())) {
             abort(std::format("Invalid assignment operator: `{}` used for type {}",
                               AST::operator_to_string(assignment.operator_), placeType.to_string()),
                   assignment);
@@ -390,7 +398,7 @@ void SemanticAnalyser::analyse_continue_statement(
 }
 
 void SemanticAnalyser::analyse_exit(const AST::ExitStatement& exitStmt) {
-    analyse_expression(*exitStmt.exitCode_, PrimitiveKind::INT, "exit code");
+    analyse_expression(*exitStmt.exitCode_, Type::integerFamilyType(), "exit code");
 }
 
 void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {

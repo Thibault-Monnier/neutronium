@@ -10,5 +10,4 @@ enum class PrimitiveKind : uint8_t {
     INT64,
     BOOL,
     VOID,
-    ANY,
 };

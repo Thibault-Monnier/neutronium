@@ -153,11 +153,15 @@ TEST_F(NeutroniumTester, TypeSpecifiers) {
             let x: int = 42;
             let mut y: int = 0;
 
+            let mut a: int8 = 100;
+            let b: int8 = 27 + -1;
+
             let z: bool = true;
             let mut w: bool = false;
 
             if z: {
                 y = x + 1; # y = 43
+                a += +b;  # a = 127
                 w = !w;
             }
             if w: {

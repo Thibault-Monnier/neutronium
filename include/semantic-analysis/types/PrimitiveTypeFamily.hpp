@@ -29,6 +29,16 @@ class IntegerTypeFamily final : public PrimitiveTypeFamily {
     }
 };
 
+class AnyTypeFamily final : public PrimitiveTypeFamily {
+   public:
+    static const AnyTypeFamily& getInstance() {
+        static const AnyTypeFamily instance;
+        return instance;
+    }
+
+    [[nodiscard]] bool isInFamily(const PrimitiveKind) const override { return true; }
+};
+
 class NoTypeFamily final : public PrimitiveTypeFamily {
    public:
     static const NoTypeFamily& getInstance() {

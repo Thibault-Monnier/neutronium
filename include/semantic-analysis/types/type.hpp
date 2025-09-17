@@ -23,6 +23,11 @@ class Type {
         }
     }
 
+    Type(const PrimitiveKind t, const PrimitiveTypeFamily* family)
+        : kind_(TypeKind::PRIMITIVE), family_(family), primitive_(t) {
+        assert(family_->isInFamily(t) && "Type must be in its own family");
+    }
+
     Type(const Type& elementType, const std::size_t arrayLength)
         : kind_(TypeKind::ARRAY),
           primitive_(PrimitiveKind::VOID),
@@ -36,10 +41,22 @@ class Type {
         return *this;
     }
 
+    static const Type& integerFamilyType() {
+        static const Type instance{PrimitiveKind::INT, true};
+        return instance;
+    }
+
+    static const Type& anyFamilyType() {
+        static const Type instance{PrimitiveKind::VOID, &AnyTypeFamily::getInstance()};
+        return instance;
+    }
+
     [[nodiscard]] bool matches(const Type& other) const {
+        if (family_->isInFamily(other.primitive_) || other.family_->isInFamily(primitive_))
+            return true;
+
         if (kind_ == TypeKind::PRIMITIVE && other.kind_ == TypeKind::PRIMITIVE) {
-            return primitive_ == other.primitive_ || family_->isInFamily(other.primitive_) ||
-                   other.family_->isInFamily(primitive_);
+            return primitive_ == other.primitive_;
         }
         if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) {
             return arrayLength_ == other.arrayLength_ &&
@@ -55,19 +72,29 @@ class Type {
     const Type& resolve(Type&&) const = delete;
 
     /**
-     * Resolves the current type against another provided type to determine the resulting type.
-     * If the current type is of primitive type `ANY`, the resulting type will be the provided type.
-     * Otherwise, the resulting type will be the current type.
+     * Resolves the current type against another provided type that matches.
      *
-     * The resulting type's family is reset to default (NoTypeFamily).
+     * If one of the types is definitely known (not in a family), that type is chosen.
+     * If both types are in families, the most specific type is chosen.
      *
-     * @param other The type to resolve against the current type.
+     * @param other The type to resolve against the current type. This type \b must match the current type, or it is undefined behavior.
      * @return The resolved type.
      */
     [[nodiscard]] Type resolve(const Type& other) const {
-        Type resolvedType = (primitive_ == PrimitiveKind::ANY) ? other : *this;
-        resolvedType.family_ = &NoTypeFamily::getInstance();
-        return resolvedType;
+        if (family_ == &NoTypeFamily::getInstance()) return *this;
+        if (other.family_ == &NoTypeFamily::getInstance()) return other;
+
+        if (kind_ == TypeKind::PRIMITIVE && other.kind_ == TypeKind::PRIMITIVE) {
+            if (family_->isInFamily(other.primitive_)) return other;
+            if (other.family_->isInFamily(primitive_)) return *this;
+            std::unreachable();
+        }
+
+        if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) {
+            return Type{arrayElement_->resolve(*other.arrayElement_), arrayLength_};
+        }
+
+        std::unreachable();
     }
 
     [[nodiscard]] int sizeBytes() const {
@@ -84,7 +111,6 @@ class Type {
                 case PrimitiveKind::INT64:
                     return 8;
                 case PrimitiveKind::VOID:
-                case PrimitiveKind::ANY:
                     return 0;
             }
             std::unreachable();
@@ -111,8 +137,6 @@ class Type {
                     return "bool";
                 case PrimitiveKind::VOID:
                     return "void";
-                case PrimitiveKind::ANY:
-                    return "any";
             }
             std::unreachable();
         } else if (kind_ == TypeKind::ARRAY) {

@@ -278,7 +278,7 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
 
     auto identifier = parse_identifier();
 
-    Type type = PrimitiveKind::ANY;
+    Type type = Type::anyFamilyType();
     if (peek().kind() == TokenKind::COLON) {
         expect(TokenKind::COLON);
         type = parse_type_specifier();
@@ -514,7 +514,7 @@ std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
 
     auto identifier = parse_identifier();
 
-    Type type = PrimitiveKind::ANY;
+    Type type = Type::anyFamilyType();
     if (peek().kind() == TokenKind::COLON) {
         expect(TokenKind::COLON);
         type = parse_type_specifier();
