@@ -1,12 +1,11 @@
 #pragma once
 
-#include <parsing/ast.hpp>
 #include <string>
 #include <unordered_map>
 
 #include "types/type.hpp"
 
-enum class SymbolKind : uint8_t { CONSTANT, FUNCTION, VARIABLE };
+enum class SymbolKind : uint8_t { FUNCTION, VARIABLE };
 
 struct SymbolInfo {
     const std::string name_;

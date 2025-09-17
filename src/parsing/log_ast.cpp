@@ -211,8 +211,8 @@ void log_ast(const Program& programNode) {
         };
 
     for (size_t i = 0; i < programNode.externalFunctions_.size(); ++i) {
-        const bool isLast = i == programNode.externalFunctions_.size() - 1 &&
-                            programNode.constants_.empty() && programNode.functions_.empty();
+        const bool isLast =
+            i == programNode.externalFunctions_.size() - 1 && programNode.functions_.empty();
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
         const auto& externFunc =
@@ -222,24 +222,6 @@ void log_ast(const Program& programNode) {
         functionSignature(*externFunc.identifier_, externFunc.parameters_, externFunc.returnType_,
                           newPrefix, false);
 
-        if (!isLast) {
-            std::cout << prefix << "│\n";
-        }
-    }
-
-    for (size_t i = 0; i < programNode.constants_.size(); ++i) {
-        const bool isLast =
-            i == programNode.constants_.size() - 1 && programNode.functions_.empty();
-        const std::string branch = isLast ? "└── " : "├── ";
-        const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
-
-        const auto& constant = as<ConstantDefinition>(*programNode.constants_[i]);
-
-        std::cout << prefix << branch << "ConstantDefinition\n";
-        std::cout << newPrefix << "├── Identifier: " << constant.identifier_->name_ << "\n";
-        std::cout << newPrefix << "├── Type: " << constant.type_.to_string() << "\n";
-        std::cout << newPrefix << "└── Value\n";
-        log_expression(*constant.value_, next_prefix(newPrefix, true), true);
         if (!isLast) {
             std::cout << prefix << "│\n";
         }

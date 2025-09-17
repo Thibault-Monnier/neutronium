@@ -48,7 +48,6 @@ enum class NodeKind : uint8_t {
     RETURN_STATEMENT,
     EXIT_STATEMENT,
     BLOCK_STATEMENT,
-    CONSTANT_DEFINITION,
     EXTERNAL_FUNCTION_DECLARATION,
     FUNCTION_DEFINITION,
     PROGRAM,
@@ -266,19 +265,6 @@ struct ReturnStatement final : Statement {
     std::unique_ptr<Expression> returnValue_;
 };
 
-struct ConstantDefinition final : Node {
-    ConstantDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
-                       std::unique_ptr<Expression> value, const uint32_t start, const uint32_t end)
-        : Node{NodeKind::CONSTANT_DEFINITION, start, end},
-          identifier_(std::move(identifier)),
-          type_(type),
-          value_(std::move(value)) {}
-
-    std::unique_ptr<Identifier> identifier_;
-    const Type type_;
-    std::unique_ptr<Expression> value_;
-};
-
 struct ExternalFunctionDeclaration final : Node {
     ExternalFunctionDeclaration(std::unique_ptr<Identifier> identifier,
                                 std::vector<std::unique_ptr<VariableDefinition>> parameters,
@@ -316,11 +302,6 @@ struct FunctionDefinition final : Node {
 struct Program final : Node {
     explicit Program() : Node{NodeKind::PROGRAM, 0, 0} {}
 
-    void append_constant(std::unique_ptr<ConstantDefinition> constant) {
-        constants_.emplace_back(std::move(constant));
-        sourceEndIndex_ = constants_.back()->source_end_index();
-    }
-
     void append_function(std::unique_ptr<FunctionDefinition> function) {
         functions_.emplace_back(std::move(function));
         sourceEndIndex_ = functions_.back()->source_end_index();
@@ -331,7 +312,6 @@ struct Program final : Node {
         sourceEndIndex_ = externalFunctions_.back()->source_end_index();
     }
 
-    std::vector<std::unique_ptr<ConstantDefinition>> constants_;
     std::vector<std::unique_ptr<ExternalFunctionDeclaration>> externalFunctions_;
     std::vector<std::unique_ptr<FunctionDefinition>> functions_;
 };

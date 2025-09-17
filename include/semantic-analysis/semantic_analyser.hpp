@@ -45,8 +45,6 @@ class SemanticAnalyser {
                                SymbolKind kind, bool isMutable, const Type& type, bool isScoped,
                                std::vector<SymbolInfo> parameters);
 
-    SymbolInfo& handle_constant_definition(const AST::ConstantDefinition* declNode,
-                                           const std::string& name, const Type& type);
     SymbolInfo& handle_function_declaration(
         const AST::Node* declNode, const std::string& name, const Type& returnType,
         const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
@@ -78,7 +76,4 @@ class SemanticAnalyser {
     static bool verify_statement_returns(const AST::Statement& stmt);
     void analyse_external_function_declaration(const AST::ExternalFunctionDeclaration& funcDecl);
     void analyse_function_definition(const AST::FunctionDefinition& funcDef);
-
-    // ── Constant analysis ───────────────────────────────────────────
-    void analyse_constant_definition(const AST::ConstantDefinition& declaration);
 };

@@ -69,6 +69,5 @@ class Parser {
     std::unique_ptr<AST::ExternalFunctionDeclaration> parse_external_function_declaration();
 
     std::unique_ptr<AST::FunctionDefinition> parse_function_definition();
-    std::unique_ptr<AST::ConstantDefinition> parse_constant_definition();
     std::unique_ptr<AST::Program> parse_program();
 };

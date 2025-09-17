@@ -4,6 +4,7 @@
 #include <string>
 
 #include "cli.hpp"
+#include "parsing/ast.hpp"
 #include "semantic-analysis/symbol_table.hpp"
 
 class Generator {

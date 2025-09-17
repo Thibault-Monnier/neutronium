@@ -509,33 +509,9 @@ std::unique_ptr<AST::FunctionDefinition> Parser::parse_function_definition() {
         isExported, std::move(body), sourceStartIndex, body->source_end_index());
 }
 
-std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
-    const Token& constTok = expect(TokenKind::CONST);
-
-    auto identifier = parse_identifier();
-
-    Type type = Type::anyFamilyType();
-    if (peek().kind() == TokenKind::COLON) {
-        expect(TokenKind::COLON);
-        type = parse_type_specifier();
-    }
-
-    expect(TokenKind::EQUAL);
-    auto value = parse_expression();
-    const Token& semi = expect(TokenKind::SEMICOLON);
-
-    return std::make_unique<AST::ConstantDefinition>(std::move(identifier), type, std::move(value),
-                                                     constTok.byte_offset_start(),
-                                                     semi.byte_offset_end());
-}
-
 std::unique_ptr<AST::Program> Parser::parse_program() {
     auto program = std::make_unique<AST::Program>();
 
-    while (peek().kind() == TokenKind::CONST) {
-        auto constant = parse_constant_definition();
-        program->append_constant(std::move(constant));
-    }
     while (peek().kind() == TokenKind::EXTERN) {
         auto externFunction = parse_external_function_declaration();
         program->append_extern_function(std::move(externFunction));

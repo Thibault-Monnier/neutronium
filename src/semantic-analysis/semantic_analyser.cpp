@@ -7,10 +7,6 @@
 #include <utility>
 
 void SemanticAnalyser::analyse() {
-    for (const auto& constDef : ast_->constants_) {
-        analyse_constant_definition(*constDef);
-    }
-
     for (const auto& externalFuncDecl : ast_->externalFunctions_) {
         analyse_external_function_declaration(*externalFuncDecl);
     }
@@ -102,12 +98,6 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const AST::Node* declarationNode,
     }
 
     std::unreachable();
-}
-
-SymbolInfo& SemanticAnalyser::handle_constant_definition(const AST::ConstantDefinition* declNode,
-                                                         const std::string& name,
-                                                         const Type& type) {
-    return declare_symbol(declNode, name, SymbolKind::CONSTANT, false, type, false, {});
 }
 
 SymbolInfo& SemanticAnalyser::handle_function_declaration(
@@ -252,10 +242,8 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
             if (!info.has_value()) {
                 abort(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_),
                       identifier);
-            } else if (info.value()->kind_ != SymbolKind::VARIABLE &&
-                       info.value()->kind_ != SymbolKind::CONSTANT) {
-                abort(std::format("`{}` is not a variable or constant", identifier.name_),
-                      identifier);
+            } else if (info.value()->kind_ != SymbolKind::VARIABLE) {
+                abort(std::format("`{}` is not a variable", identifier.name_), identifier);
             }
             return info.value()->type_;
         }
@@ -519,24 +507,4 @@ void SemanticAnalyser::analyse_function_definition(const AST::FunctionDefinition
 
     currentFunctionName_.clear();
     exit_scope();
-}
-
-void SemanticAnalyser::analyse_constant_definition(const AST::ConstantDefinition& declaration) {
-    abort("Constants are not supported yet", declaration);
-    const std::string& name = declaration.identifier_->name_;
-
-    const Type constantType = get_expression_type(*declaration.value_);
-    if (constantType.mismatches(PrimitiveKind::INT) &&
-        constantType.mismatches(PrimitiveKind::BOOL)) {
-        abort(std::format("Invalid constant type: `{}` is declared as {}", name,
-                          constantType.to_string()),
-              declaration);
-    }
-    if (constantType.mismatches(declaration.type_)) {
-        abort(std::format("Type mismatch: constant `{}` has {} type specifier, but has {} value",
-                          name, declaration.type_.to_string(), constantType.to_string()),
-              declaration);
-    }
-
-    handle_constant_definition(&declaration, name, constantType);
 }

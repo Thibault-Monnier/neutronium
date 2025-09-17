@@ -40,10 +40,11 @@ include_directories(include)
 
 file(GLOB_RECURSE LIB_SOURCES "src/*.cpp")
 list(REMOVE_ITEM LIB_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
+file(GLOB_RECURSE HEADER_FILES "include/*.hpp" "include/*.h")
 
 add_compile_definitions(PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}")
 
-add_library(neutronium_lib ${LIB_SOURCES})
+add_library(neutronium_lib ${LIB_SOURCES} ${HEADER_FILES})
 
 add_executable(neutronium src/main.cpp)
 
