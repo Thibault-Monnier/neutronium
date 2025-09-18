@@ -19,9 +19,9 @@ struct ParsedFunctionSignature {
 class Parser {
    public:
     explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine,
-                    TypeEngine& typeEngine)
+                    TypeManager& typeManager)
         : diagnosticsEngine_(diagnosticsEngine),
-          typeEngine_(typeEngine),
+          typeManager_(typeManager),
           tokens_(std::move(tokens)) {}
 
     [[nodiscard]] std::unique_ptr<AST::Program> parse();
@@ -29,7 +29,7 @@ class Parser {
    private:
     DiagnosticsEngine& diagnosticsEngine_;
 
-    TypeEngine& typeEngine_;
+    TypeManager& typeManager_;
 
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;

@@ -9,9 +9,9 @@
 
 class Generator {
    public:
-    explicit Generator(const AST::Program& ast, const TypeEngine& typeEngine,
+    explicit Generator(const AST::Program& ast, const TypeManager& typeManager,
                        const TargetType targetType)
-        : program_(ast), typeEngine_(typeEngine), targetType_(targetType) {}
+        : program_(ast), typeManager_(typeManager), targetType_(targetType) {}
 
     [[nodiscard]] std::stringstream generate();
 
@@ -19,7 +19,7 @@ class Generator {
     const AST::Program& program_;
     std::stringstream output_;
 
-    const TypeEngine& typeEngine_;
+    const TypeManager& typeManager_;
 
     const TargetType targetType_;
 

@@ -463,7 +463,7 @@ void Generator::generate_function_definition(const AST::FunctionDefinition& func
 
     generate_stmt(*funcDef.body_);
 
-    const Type& returnType = typeEngine_.getType(funcDef.returnTypeID_);
+    const Type& returnType = typeManager_.getType(funcDef.returnTypeID_);
     if (returnType.matches(PrimitiveKind::VOID)) {
         output_ << "\n";
         output_ << "    xor rax, rax\n";  // Return 0

@@ -85,18 +85,18 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
         }
     }
 
-    TypeEngine typeEngine;
+    TypeManager typeManager;
 
     const auto ast = timed("Parsing", verbose,
-                           [&] { return Parser(tokens, diagnosticsEngine, typeEngine).parse(); });
-    if (opts.logAst_) AST::log_ast(*ast, typeEngine);
+                           [&] { return Parser(tokens, diagnosticsEngine, typeManager).parse(); });
+    if (opts.logAst_) AST::log_ast(*ast, typeManager);
 
     timed("Semantic analysis", verbose, [&] {
-        SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeEngine).analyse();
+        SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeManager).analyse();
     });
 
     const auto assembly = timed("Code generation", verbose, [&] {
-        return Generator(*ast, typeEngine, opts.targetType_).generate();
+        return Generator(*ast, typeManager, opts.targetType_).generate();
     });
     if (opts.logAssembly_) std::cout << assembly.str();
 

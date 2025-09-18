@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "lexing/token_kind.hpp"
-#include "semantic-analysis/types/TypeEngine.hpp"
+#include "semantic-analysis/types/TypeManager.hpp"
 
 namespace AST {
 
@@ -327,6 +327,6 @@ bool is_assignment_operator(Operator op);
 
 std::string node_kind_to_string(NodeKind kind);
 
-void log_ast(const Program& programNode, const TypeEngine& typeEngine);
+void log_ast(const Program& programNode, const TypeManager& typeManager);
 
 }  // namespace AST

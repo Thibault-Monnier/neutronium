@@ -105,7 +105,7 @@ SymbolInfo& SemanticAnalyser::handle_function_declaration(
     const std::vector<std::unique_ptr<AST::VariableDefinition>>& params) {
     std::vector<SymbolInfo> parameterSymbols;
     for (const auto& param : params) {
-        const Type& paramType = typeEngine_.getType(param->typeID_);
+        const Type& paramType = typeManager_.getType(param->typeID_);
         parameterSymbols.emplace_back(handle_variable_declaration(
             param.get(), param->identifier_->name_, param->isMutable_, paramType));
     }
@@ -295,7 +295,7 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
               declaration);
     }
 
-    const Type& declarationType = typeEngine_.getType(declaration.typeID_);
+    const Type& declarationType = typeManager_.getType(declaration.typeID_);
     if (assignedType.mismatches(declarationType)) {
         abort(std::format("Type mismatch: variable `{}` has {} type specifier, but has {} value",
                           name, declarationType.to_string(), assignedType.to_string()),
@@ -485,7 +485,7 @@ bool SemanticAnalyser::verify_statement_returns(const AST::Statement& stmt) {
 void SemanticAnalyser::analyse_external_function_declaration(
     const AST::ExternalFunctionDeclaration& funcDecl) {
     enter_scope();
-    const Type& returnTypeID = typeEngine_.getType(funcDecl.returnTypeID_);
+    const Type& returnTypeID = typeManager_.getType(funcDecl.returnTypeID_);
     handle_function_declaration(&funcDecl, funcDecl.identifier_->name_, returnTypeID,
                                 funcDecl.parameters_);
     exit_scope();
@@ -494,7 +494,7 @@ void SemanticAnalyser::analyse_external_function_declaration(
 void SemanticAnalyser::analyse_function_definition(const AST::FunctionDefinition& funcDef) {
     enter_scope();
     currentFunctionName_ = funcDef.identifier_->name_;
-    const Type& returnType = typeEngine_.getType(funcDef.returnTypeID_);
+    const Type& returnType = typeManager_.getType(funcDef.returnTypeID_);
     currentFunctionReturnType_ = returnType;
 
     handle_function_declaration(&funcDef, funcDef.identifier_->name_, returnType,

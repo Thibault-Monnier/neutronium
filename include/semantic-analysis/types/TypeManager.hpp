@@ -1,24 +1,23 @@
 #pragma once
 
 #include <vector>
-
 #include "Type.hpp"
 
 using TypeID = uint32_t;
 
 /**
- * @class TypeEngine
+ * @class TypeManager
  * @brief Manages a collection of Type objects.
  *
- * The TypeEngine class provides functionality to manage a collection
+ * The TypeManager class provides functionality to manage a collection
  * of Type objects, and gives each type a unique TypeID for easy reference.
  *
  * This class is specific to each translation unit and is not shared globally.
  */
 
-class TypeEngine {
+class TypeManager {
    public:
-    TypeEngine() = default;
+    TypeManager() = default;
 
     [[nodiscard]] TypeID createType(const Type& type) {
         types_.push_back(type);

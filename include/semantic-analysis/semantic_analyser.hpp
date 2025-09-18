@@ -13,11 +13,11 @@
 class SemanticAnalyser {
    public:
     explicit SemanticAnalyser(const AST::Program& ast, const TargetType targetType,
-                              DiagnosticsEngine& diagnosticsEngine, TypeEngine& typeEngine)
+                              DiagnosticsEngine& diagnosticsEngine, TypeManager& typeManager)
         : ast_(&ast),
           targetType_(targetType),
           diagnosticsEngine_(diagnosticsEngine),
-          typeEngine_(typeEngine) {}
+          typeManager_(typeManager) {}
 
     void analyse();
 
@@ -26,7 +26,7 @@ class SemanticAnalyser {
     const TargetType targetType_;
 
     DiagnosticsEngine& diagnosticsEngine_;
-    TypeEngine& typeEngine_;
+    TypeManager& typeManager_;
 
     std::vector<SymbolTable> scopes_;
     SymbolTable functionsTable_;

@@ -283,7 +283,7 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
         expect(TokenKind::COLON);
         type = parse_type_specifier();
     }
-    const TypeID typeID = typeEngine_.createType(type);
+    const TypeID typeID = typeManager_.createType(type);
 
     expect(TokenKind::EQUAL);
     auto value = parse_expression();
@@ -448,7 +448,7 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_function_parameter() {
 
     expect(TokenKind::COLON);
     const Type type = parse_type_specifier();
-    const TypeID typeID = typeEngine_.createType(type);
+    const TypeID typeID = typeManager_.createType(type);
 
     return std::make_unique<AST::VariableDefinition>(
         std::move(identifier), typeID, isMutable, sourceStartIndex, identifier->source_end_index());
@@ -483,7 +483,7 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_functio
     expect(TokenKind::FN);
 
     ParsedFunctionSignature signature = parse_function_signature();
-    const TypeID returnTypeID = typeEngine_.createType(signature.returnType_);
+    const TypeID returnTypeID = typeManager_.createType(signature.returnType_);
 
     const Token& semi = expect(TokenKind::SEMICOLON);
 
@@ -504,7 +504,7 @@ std::unique_ptr<AST::FunctionDefinition> Parser::parse_function_definition() {
     expect(TokenKind::FN);
 
     ParsedFunctionSignature signature = parse_function_signature();
-    const TypeID returnTypeID = typeEngine_.createType(signature.returnType_);
+    const TypeID returnTypeID = typeManager_.createType(signature.returnType_);
 
     expect(TokenKind::COLON);
     auto body = parse_block_statement();
