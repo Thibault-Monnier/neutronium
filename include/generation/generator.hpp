@@ -9,14 +9,17 @@
 
 class Generator {
    public:
-    explicit Generator(const AST::Program& ast, const TargetType targetType)
-        : program_(ast), targetType_(targetType) {}
+    explicit Generator(const AST::Program& ast, const TypeEngine& typeEngine,
+                       const TargetType targetType)
+        : program_(ast), typeEngine_(typeEngine), targetType_(targetType) {}
 
     [[nodiscard]] std::stringstream generate();
 
    private:
     const AST::Program& program_;
     std::stringstream output_;
+
+    const TypeEngine& typeEngine_;
 
     const TargetType targetType_;
 

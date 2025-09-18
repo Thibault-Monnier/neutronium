@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "../semantic-analysis/types/type.hpp"
 #include "lexing/token_kind.hpp"
+#include "semantic-analysis/types/TypeEngine.hpp"
 
 namespace AST {
 
@@ -165,24 +165,24 @@ struct BlockStatement final : Statement {
 };
 
 struct VariableDefinition final : Statement {
-    VariableDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
+    VariableDefinition(std::unique_ptr<Identifier> identifier, const TypeID typeID,
                        const bool isMutable, const uint32_t start, const uint32_t end)
         : Statement{NodeKind::VARIABLE_DEFINITION, start, end},
           identifier_(std::move(identifier)),
-          type_(type),
+          typeID_(typeID),
           isMutable_(isMutable) {}
 
-    VariableDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
+    VariableDefinition(std::unique_ptr<Identifier> identifier, const TypeID typeID,
                        const bool isMutable, std::unique_ptr<Expression> value,
                        const uint32_t start, const uint32_t end)
         : Statement{NodeKind::VARIABLE_DEFINITION, start, end},
           identifier_(std::move(identifier)),
-          type_(type),
+          typeID_(typeID),
           isMutable_(isMutable),
           value_(std::move(value)) {}
 
     std::unique_ptr<Identifier> identifier_;
-    const Type type_;
+    const TypeID typeID_;
     const bool isMutable_;
     std::unique_ptr<Expression> value_;
 };
@@ -268,33 +268,33 @@ struct ReturnStatement final : Statement {
 struct ExternalFunctionDeclaration final : Node {
     ExternalFunctionDeclaration(std::unique_ptr<Identifier> identifier,
                                 std::vector<std::unique_ptr<VariableDefinition>> parameters,
-                                const Type& returnType, const uint32_t start, const uint32_t end)
+                                const TypeID returnTypeID, const uint32_t start, const uint32_t end)
         : Node{NodeKind::EXTERNAL_FUNCTION_DECLARATION, start, end},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
-          returnType_(returnType) {}
+          returnTypeID_(returnTypeID) {}
 
     std::unique_ptr<Identifier> identifier_;
     const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
-    const Type returnType_;
+    const TypeID returnTypeID_;
 };
 
 struct FunctionDefinition final : Node {
     FunctionDefinition(std::unique_ptr<Identifier> identifier,
                        std::vector<std::unique_ptr<VariableDefinition>> parameters,
-                       const Type& returnType, const bool isExported,
+                       const TypeID returnTypeID, const bool isExported,
                        std::unique_ptr<BlockStatement> body, const uint32_t start,
                        const uint32_t end)
         : Node{NodeKind::FUNCTION_DEFINITION, start, end},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
-          returnType_(returnType),
+          returnTypeID_(returnTypeID),
           isExported_(isExported),
           body_(std::move(body)) {}
 
     std::unique_ptr<Identifier> identifier_;
     const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
-    const Type returnType_;
+    const TypeID returnTypeID_;
     const bool isExported_;
     std::unique_ptr<BlockStatement> body_;
 };
@@ -327,6 +327,6 @@ bool is_assignment_operator(Operator op);
 
 std::string node_kind_to_string(NodeKind kind);
 
-void log_ast(const Program& programNode);
+void log_ast(const Program& programNode, const TypeEngine& typeEngine);
 
 }  // namespace AST

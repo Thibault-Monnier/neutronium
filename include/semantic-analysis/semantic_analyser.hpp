@@ -8,13 +8,16 @@
 #include "diagnostics_engine.hpp"
 #include "parsing/ast.hpp"
 #include "semantic-analysis/symbol_table.hpp"
-#include "types/type.hpp"
+#include "types/Type.hpp"
 
 class SemanticAnalyser {
    public:
     explicit SemanticAnalyser(const AST::Program& ast, const TargetType targetType,
-                              DiagnosticsEngine& diagnosticsEngine)
-        : ast_(&ast), targetType_(targetType), diagnosticsEngine_(diagnosticsEngine) {}
+                              DiagnosticsEngine& diagnosticsEngine, TypeEngine& typeEngine)
+        : ast_(&ast),
+          targetType_(targetType),
+          diagnosticsEngine_(diagnosticsEngine),
+          typeEngine_(typeEngine) {}
 
     void analyse();
 
@@ -23,6 +26,7 @@ class SemanticAnalyser {
     const TargetType targetType_;
 
     DiagnosticsEngine& diagnosticsEngine_;
+    TypeEngine& typeEngine_;
 
     std::vector<SymbolTable> scopes_;
     SymbolTable functionsTable_;

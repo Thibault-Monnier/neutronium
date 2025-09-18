@@ -85,15 +85,19 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
         }
     }
 
-    const auto ast =
-        timed("Parsing", verbose, [&] { return Parser(tokens, diagnosticsEngine).parse(); });
-    if (opts.logAst_) AST::log_ast(*ast);
+    TypeEngine typeEngine;
 
-    timed("Semantic analysis", verbose,
-          [&] { SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine).analyse(); });
+    const auto ast = timed("Parsing", verbose,
+                           [&] { return Parser(tokens, diagnosticsEngine, typeEngine).parse(); });
+    if (opts.logAst_) AST::log_ast(*ast, typeEngine);
 
-    const auto assembly = timed("Code generation", verbose,
-                                [&] { return Generator(*ast, opts.targetType_).generate(); });
+    timed("Semantic analysis", verbose, [&] {
+        SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeEngine).analyse();
+    });
+
+    const auto assembly = timed("Code generation", verbose, [&] {
+        return Generator(*ast, typeEngine, opts.targetType_).generate();
+    });
     if (opts.logAssembly_) std::cout << assembly.str();
 
     std::string outFilename;

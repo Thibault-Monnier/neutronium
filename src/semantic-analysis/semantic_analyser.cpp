@@ -105,8 +105,9 @@ SymbolInfo& SemanticAnalyser::handle_function_declaration(
     const std::vector<std::unique_ptr<AST::VariableDefinition>>& params) {
     std::vector<SymbolInfo> parameterSymbols;
     for (const auto& param : params) {
+        const Type& paramType = typeEngine_.getType(param->typeID_);
         parameterSymbols.emplace_back(handle_variable_declaration(
-            param.get(), param->identifier_->name_, param->isMutable_, param->type_));
+            param.get(), param->identifier_->name_, param->isMutable_, paramType));
     }
 
     return declare_symbol(declNode, name, SymbolKind::FUNCTION, false, returnType, false,
@@ -293,13 +294,15 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
                           assignedType.to_string()),
               declaration);
     }
-    if (assignedType.mismatches(declaration.type_)) {
+
+    const Type& declarationType = typeEngine_.getType(declaration.typeID_);
+    if (assignedType.mismatches(declarationType)) {
         abort(std::format("Type mismatch: variable `{}` has {} type specifier, but has {} value",
-                          name, declaration.type_.to_string(), assignedType.to_string()),
+                          name, declarationType.to_string(), assignedType.to_string()),
               declaration);
     }
 
-    const Type& resolvedType = declaration.type_.resolve(assignedType);
+    const Type& resolvedType = declarationType.resolve(assignedType);
     handle_variable_declaration(&declaration, name, declaration.isMutable_, resolvedType);
 }
 
@@ -482,7 +485,8 @@ bool SemanticAnalyser::verify_statement_returns(const AST::Statement& stmt) {
 void SemanticAnalyser::analyse_external_function_declaration(
     const AST::ExternalFunctionDeclaration& funcDecl) {
     enter_scope();
-    handle_function_declaration(&funcDecl, funcDecl.identifier_->name_, funcDecl.returnType_,
+    const Type& returnTypeID = typeEngine_.getType(funcDecl.returnTypeID_);
+    handle_function_declaration(&funcDecl, funcDecl.identifier_->name_, returnTypeID,
                                 funcDecl.parameters_);
     exit_scope();
 }
@@ -490,18 +494,19 @@ void SemanticAnalyser::analyse_external_function_declaration(
 void SemanticAnalyser::analyse_function_definition(const AST::FunctionDefinition& funcDef) {
     enter_scope();
     currentFunctionName_ = funcDef.identifier_->name_;
-    currentFunctionReturnType_ = funcDef.returnType_;
+    const Type& returnType = typeEngine_.getType(funcDef.returnTypeID_);
+    currentFunctionReturnType_ = returnType;
 
-    handle_function_declaration(&funcDef, funcDef.identifier_->name_, funcDef.returnType_,
+    handle_function_declaration(&funcDef, funcDef.identifier_->name_, returnType,
                                 funcDef.parameters_);
 
     analyse_statement(*funcDef.body_);
 
     const bool allPathsReturn = verify_statement_returns(*funcDef.body_);
-    if (!allPathsReturn && funcDef.returnType_.mismatches(PrimitiveKind::VOID)) {
+    if (!allPathsReturn && returnType.mismatches(PrimitiveKind::VOID)) {
         abort(
             std::format("Function `{}` must return a value of type {}, but does not always return",
-                        currentFunctionName_, funcDef.returnType_.to_string()),
+                        currentFunctionName_, returnType.to_string()),
             funcDef);
     }
 

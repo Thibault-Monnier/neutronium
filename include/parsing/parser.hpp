@@ -18,13 +18,18 @@ struct ParsedFunctionSignature {
 
 class Parser {
    public:
-    explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine)
-        : diagnosticsEngine_(diagnosticsEngine), tokens_(std::move(tokens)) {}
+    explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine,
+                    TypeEngine& typeEngine)
+        : diagnosticsEngine_(diagnosticsEngine),
+          typeEngine_(typeEngine),
+          tokens_(std::move(tokens)) {}
 
     [[nodiscard]] std::unique_ptr<AST::Program> parse();
 
    private:
     DiagnosticsEngine& diagnosticsEngine_;
+
+    TypeEngine& typeEngine_;
 
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;

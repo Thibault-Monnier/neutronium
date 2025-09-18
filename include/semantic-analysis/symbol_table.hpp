@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "types/type.hpp"
+#include "types/Type.hpp"
 
 enum class SymbolKind : uint8_t { FUNCTION, VARIABLE };
 
