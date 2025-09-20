@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "types/Type.hpp"
 
@@ -11,7 +12,7 @@ struct SymbolInfo {
     const std::string name_;
     const SymbolKind kind_;
     const bool isMutable_;
-    const Type type_;
+    const TypeID typeID_;
     const std::vector<SymbolInfo> parameters_;  // Only for functions
 };
 

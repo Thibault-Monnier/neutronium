@@ -14,6 +14,7 @@
 #include "lexing/lexer.hpp"
 #include "lexing/token.hpp"
 #include "lexing/token_kind.hpp"
+#include "parsing/debug.hpp"
 #include "parsing/parser.hpp"
 #include "semantic-analysis/semantic_analyser.hpp"
 #include "source_manager.hpp"

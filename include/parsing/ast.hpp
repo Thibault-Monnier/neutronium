@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "lexing/token_kind.hpp"
-#include "semantic-analysis/types/TypeManager.hpp"
+#include "semantic-analysis/types/Type.hpp"
 
 namespace AST {
 
@@ -317,16 +317,11 @@ struct Program final : Node {
 };
 
 Operator token_kind_to_operator(TokenKind tokenKind);
-std::string operator_to_string(Operator op);
 
 bool is_arithmetic_operator(Operator op);
 bool is_equality_operator(Operator op);
 bool is_relational_operator(Operator op);
 bool is_comparison_operator(Operator op);
 bool is_assignment_operator(Operator op);
-
-std::string node_kind_to_string(NodeKind kind);
-
-void log_ast(const Program& programNode, const TypeManager& typeManager);
 
 }  // namespace AST

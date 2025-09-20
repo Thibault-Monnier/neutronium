@@ -63,11 +63,11 @@ Type Parser::parse_type_specifier() {
             return PrimitiveKind::BOOL;
         case TokenKind::LEFT_BRACKET: {
             expect(tokenKind);
-            const Type elementType = parse_type_specifier();
+            const TypeID elementTypeID = typeManager_.createType(parse_type_specifier());
             expect(TokenKind::SEMICOLON);
             const std::size_t arrayLength = parse_number_literal()->value_;
             expect(TokenKind::RIGHT_BRACKET);
-            return Type{elementType, arrayLength};
+            return Type{typeManager_.getType(elementTypeID), elementTypeID, arrayLength};
         }
 
         default: {
@@ -475,7 +475,7 @@ ParsedFunctionSignature Parser::parse_function_signature() {
 
     return {.identifier_ = std::move(identifier),
             .parameters_ = std::move(parameters),
-            .returnType_ = returnType};
+            .returnTypeID_ = typeManager_.createType(returnType)};
 }
 
 std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_function_declaration() {
@@ -483,12 +483,11 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_functio
     expect(TokenKind::FN);
 
     ParsedFunctionSignature signature = parse_function_signature();
-    const TypeID returnTypeID = typeManager_.createType(signature.returnType_);
 
     const Token& semi = expect(TokenKind::SEMICOLON);
 
     return std::make_unique<AST::ExternalFunctionDeclaration>(
-        std::move(signature.identifier_), std::move(signature.parameters_), returnTypeID,
+        std::move(signature.identifier_), std::move(signature.parameters_), signature.returnTypeID_,
         externTok.byte_offset_start(), semi.byte_offset_end());
 }
 
@@ -504,12 +503,11 @@ std::unique_ptr<AST::FunctionDefinition> Parser::parse_function_definition() {
     expect(TokenKind::FN);
 
     ParsedFunctionSignature signature = parse_function_signature();
-    const TypeID returnTypeID = typeManager_.createType(signature.returnType_);
 
     expect(TokenKind::COLON);
     auto body = parse_block_statement();
     return std::make_unique<AST::FunctionDefinition>(
-        std::move(signature.identifier_), std::move(signature.parameters_), returnTypeID,
+        std::move(signature.identifier_), std::move(signature.parameters_), signature.returnTypeID_,
         isExported, std::move(body), sourceStartIndex, body->source_end_index());
 }
 

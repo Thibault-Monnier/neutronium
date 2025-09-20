@@ -6,6 +6,7 @@
 #include "cli.hpp"
 #include "parsing/ast.hpp"
 #include "semantic-analysis/symbol_table.hpp"
+#include "semantic-analysis/types/TypeManager.hpp"
 
 class Generator {
    public:

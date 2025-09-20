@@ -9,6 +9,7 @@
 #include "parsing/ast.hpp"
 #include "semantic-analysis/symbol_table.hpp"
 #include "types/Type.hpp"
+#include "types/TypeManager.hpp"
 
 class SemanticAnalyser {
    public:
@@ -34,7 +35,7 @@ class SemanticAnalyser {
     int loopDepth_ = 0;
 
     std::string currentFunctionName_;
-    Type currentFunctionReturnType_ = PrimitiveKind::VOID;
+    TypeID currentFunctionReturnTypeID_ = 0;
 
     [[noreturn]] void abort(const std::string& errorMessage, const AST::Node& node) const;
 
@@ -46,27 +47,25 @@ class SemanticAnalyser {
 
     // ── Symbol declaration helpers ──────────────────────────────────────────────
     SymbolInfo& declare_symbol(const AST::Node* declarationNode, const std::string& name,
-                               SymbolKind kind, bool isMutable, const Type& type, bool isScoped,
+                               SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,
                                std::vector<SymbolInfo> parameters);
 
     SymbolInfo& handle_function_declaration(
-        const AST::Node* declNode, const std::string& name, const Type& returnType,
+        const AST::Node* declNode, const std::string& name, TypeID returnTypeID,
         const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
     SymbolInfo& handle_variable_declaration(const AST::VariableDefinition* declNode,
-                                            const std::string& name, bool isMutable,
-                                            const Type& type);
+                                            const std::string& name, bool isMutable, TypeID typeID);
 
     // ── Expression utilities ───────────────────────────────────────────────────
-    Type get_function_call_type(const AST::FunctionCall& funcCall);
-    Type get_unary_expression_type(const AST::UnaryExpression& unaryExpr);
-    Type get_binary_expression_type(const AST::BinaryExpression& binaryExpr);
-    Type get_expression_type(const AST::Expression& expr);
+    TypeID get_function_call_type(const AST::FunctionCall& funcCall);
+    TypeID get_unary_expression_type(const AST::UnaryExpression& unaryExpr);
+    TypeID get_binary_expression_type(const AST::BinaryExpression& binaryExpr);
+    TypeID get_expression_type(const AST::Expression& expr);
 
-    void analyse_expression(const AST::Expression& expr, const Type& expected,
-                            const std::string& location);
+    void analyse_expression(const AST::Expression& expr, TypeID expected);
 
     // ── Statement analysis ─────────────────────────────────────────────────────
-    void analyse_variable_definition(const AST::VariableDefinition& declaration);
+    void analyse_variable_definition(const AST::VariableDefinition& definition);
     void analyse_assignment(const AST::Assignment& assignment);
     void analyse_expression_statement(const AST::ExpressionStatement& exprStmt);
     void analyse_if_statement(const AST::IfStatement& ifStmt);

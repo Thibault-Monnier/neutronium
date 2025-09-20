@@ -7,7 +7,8 @@
 
 #include "PrimitiveKind.hpp"
 #include "PrimitiveTypeFamily.hpp"
-#include "TypeInferrer.hpp"
+
+using TypeID = uint32_t;
 
 enum class TypeKind : uint8_t {
     PRIMITIVE,
@@ -30,10 +31,11 @@ class Type {
         assert(family_->isInFamily(t) && "Type must be in its own family");
     }
 
-    Type(const Type& elementType, const std::size_t arrayLength)
+    Type(const Type& elementType, const TypeID elementTypeID, const std::size_t arrayLength)
         : kind_(TypeKind::ARRAY),
           primitive_(PrimitiveKind::VOID),
           arrayElement_(std::make_unique<Type>(elementType)),
+          arrayElementTypeID_(elementTypeID),
           arrayLength_(arrayLength) {}
 
     Type(const Type& other) { copy_from(other); }
@@ -47,24 +49,9 @@ class Type {
 
     static const Type& anyFamilyType();
 
-    [[nodiscard]] bool matches(const Type& other) const;
-
-    [[nodiscard]] bool mismatches(const Type& other) const { return !matches(other); }
-
-    // Prevent rvalue overload to avoid dangling references
-    const Type& resolve(Type&&) const = delete;
-
-    /**
-     * Resolves the current type against another provided type that matches.
-     *
-     * If one of the types is definitely known (not in a family), that type is chosen.
-     * If both types are in families, the most specific type is chosen.
-     *
-     * @param other The type to resolve against the current type. This type \b must match the
-     * current type, or it is undefined behavior.
-     * @return The resolved type.
-     */
-    [[nodiscard]] Type resolve(const Type& other) const;
+    [[nodiscard]] bool isVoid() const {
+        return kind_ == TypeKind::PRIMITIVE && primitive_ == PrimitiveKind::VOID;
+    }
 
     [[nodiscard]] int sizeBytes() const;
 
@@ -72,21 +59,20 @@ class Type {
 
     [[nodiscard]] TypeKind kind() const { return kind_; }
 
-    [[nodiscard]] Type& array_element_type() const {
+    [[nodiscard]] TypeID array_element_type_id() const {
         if (kind_ == TypeKind::ARRAY) {
-            return *arrayElement_;
+            return arrayElementTypeID_;
         }
         std::unreachable();
     }
 
    private:
-    TypeInferrer typeInferrer_;
-
     TypeKind kind_;
     const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
     PrimitiveKind primitive_;
 
     std::unique_ptr<Type> arrayElement_;
+    TypeID arrayElementTypeID_{0};
     std::size_t arrayLength_{0};
 
     // IMPORTANT NOTE:
@@ -96,6 +82,7 @@ class Type {
         kind_ = other.kind_;
         family_ = other.family_;
         primitive_ = other.primitive_;
+        arrayElementTypeID_ = other.arrayElementTypeID_;
         arrayLength_ = other.arrayLength_;
         if (other.arrayElement_)
             arrayElement_ = std::make_unique<Type>(*other.arrayElement_);

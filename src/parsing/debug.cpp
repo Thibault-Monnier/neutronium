@@ -1,11 +1,45 @@
+#include "parsing/debug.hpp"
+
 #include <iostream>
 #include <utility>
 
-#include "parsing/ast.hpp"
+#include "magic_enum.hpp"
 
 namespace AST {
 
-namespace {
+std::string operator_to_string(const Operator op) {
+    static const std::unordered_map<Operator, std::string> table = {
+        {Operator::ADD, "+"},
+        {Operator::SUBTRACT, "-"},
+        {Operator::MULTIPLY, "*"},
+        {Operator::DIVIDE, "/"},
+        {Operator::LOGICAL_NOT, "!"},
+        {Operator::ASSIGN, "="},
+        {Operator::ADD_ASSIGN, "+="},
+        {Operator::SUBTRACT_ASSIGN, "-="},
+        {Operator::MULTIPLY_ASSIGN, "*="},
+        {Operator::DIVIDE_ASSIGN, "/="},
+        {Operator::EQUALS, "=="},
+        {Operator::NOT_EQUALS, "!="},
+        {Operator::LESS_THAN, "<"},
+        {Operator::LESS_THAN_OR_EQUAL, "<="},
+        {Operator::GREATER_THAN, ">"},
+        {Operator::GREATER_THAN_OR_EQUAL, ">="},
+    };
+
+    const auto it = table.find(op);
+    assert(it != table.end() && "Invalid operator");
+    return it->second;
+}
+
+std::string node_kind_to_string(const NodeKind kind) {
+    const auto enumName = magic_enum::enum_name(kind);
+    return std::string{enumName};
+}
+
+// =========================================== //
+// ============= Log AST helpers ============= //
+// =========================================== //
 
 std::string next_prefix(const std::string& p, const bool isLast) {
     return p + (isLast ? "    " : "│   ");
@@ -180,8 +214,6 @@ void log_statement(const Statement& stmt, const TypeManager& typeManager, const 
         std::cout << prefix << "│\n";
     }
 }
-
-}  // namespace
 
 void log_ast(const Program& programNode, const TypeManager& typeManager) {
     std::cout << "Program\n";

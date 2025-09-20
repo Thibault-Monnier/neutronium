@@ -6,6 +6,7 @@ Checks: >
   readability-identifier-naming,
   performance-*,
   bugprone-*,
+  -bugprone-easily-swappable-parameters,
   clang-analyzer-*,
   -modernize-use-trailing-return-type,
   readability-identifier-namingWarningsAsErrors: 'modernize-*',

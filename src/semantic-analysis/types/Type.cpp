@@ -10,36 +10,6 @@ const Type& Type::anyFamilyType() {
     return instance;
 }
 
-bool Type::matches(const Type& other) const {
-    if (family_->isInFamily(other.primitive_) || other.family_->isInFamily(primitive_)) return true;
-
-    if (kind_ == TypeKind::PRIMITIVE && other.kind_ == TypeKind::PRIMITIVE) {
-        return primitive_ == other.primitive_;
-    }
-    if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) {
-        return arrayLength_ == other.arrayLength_ && arrayElement_->matches(*other.arrayElement_);
-    }
-
-    return false;
-}
-
-Type Type::resolve(const Type& other) const {
-    if (family_ == &NoTypeFamily::getInstance()) return *this;
-    if (other.family_ == &NoTypeFamily::getInstance()) return other;
-
-    if (kind_ == TypeKind::PRIMITIVE && other.kind_ == TypeKind::PRIMITIVE) {
-        if (family_->isInFamily(other.primitive_)) return other;
-        if (other.family_->isInFamily(primitive_)) return *this;
-        std::unreachable();
-    }
-
-    if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) {
-        return Type{arrayElement_->resolve(*other.arrayElement_), arrayLength_};
-    }
-
-    std::unreachable();
-}
-
 int Type::sizeBytes() const {
     if (kind_ == TypeKind::PRIMITIVE) {
         switch (primitive_) {

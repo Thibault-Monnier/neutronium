@@ -9,11 +9,12 @@
 #include "diagnostics_engine.hpp"
 #include "lexing/token.hpp"
 #include "parsing/ast.hpp"
+#include "semantic-analysis/types/TypeManager.hpp"
 
 struct ParsedFunctionSignature {
     std::unique_ptr<AST::Identifier> identifier_;
     std::vector<std::unique_ptr<AST::VariableDefinition>> parameters_;
-    Type returnType_;
+    TypeID returnTypeID_;
 };
 
 class Parser {

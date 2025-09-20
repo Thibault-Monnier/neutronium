@@ -2,11 +2,11 @@
 
 #include <vector>
 
-struct Constraint {};
+#include "Constraint.hpp"
 
-class TypeInferrer {
+class TypeSolver {
    public:
-    TypeInferrer() = default;
+    TypeSolver() = default;
 
     void addConstraint(const Constraint& constraint) { constraints_.push_back(constraint); }
 
