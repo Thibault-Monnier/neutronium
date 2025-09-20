@@ -2,20 +2,26 @@
 
 #include "PrimitiveKind.hpp"
 
+/**
+ * @class PrimitiveTypeFamily
+ * @brief Abstract base class containing basic operations to handle primitive type families.
+ */
 class PrimitiveTypeFamily {
    public:
     virtual ~PrimitiveTypeFamily() = default;
-
-    enum class Family : uint8_t {
-        NONE,
-        INTEGER,
-    };
 
     [[nodiscard]] virtual bool isInFamily(PrimitiveKind) const = 0;
 
     static const PrimitiveTypeFamily* familyForType(PrimitiveKind t);
 };
 
+/**
+ * @class IntegerTypeFamily
+ * @brief Defines the integer type family.
+ *
+ * This class is a specialization of the PrimitiveTypeFamily that specifically handles
+ * types categorized as integers, such as INT, INT8, INT16, INT32, and INT64.
+ */
 class IntegerTypeFamily final : public PrimitiveTypeFamily {
    public:
     static const IntegerTypeFamily& getInstance() {
@@ -29,6 +35,13 @@ class IntegerTypeFamily final : public PrimitiveTypeFamily {
     }
 };
 
+/**
+ * @class AnyTypeFamily
+ * @brief Represents a special primitive type family encompassing all possible primitive kinds.
+ *
+ * This class is an implementation of the `PrimitiveTypeFamily` interface, providing
+ * functionality to represent a type family that includes all types defined in the system.
+ */
 class AnyTypeFamily final : public PrimitiveTypeFamily {
    public:
     static const AnyTypeFamily& getInstance() {

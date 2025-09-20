@@ -15,6 +15,17 @@ enum class TypeKind : uint8_t {
     ARRAY,
 };
 
+/**
+ * @class Type
+ * @brief Represents a type in the type system, which may be a primitive type or an array type.
+ *
+ * The `Type` class provides functionality to define and manage different types, such as
+ * primitive types (e.g., integers, booleans) or array types. It supports initialization
+ * with various constructors and supports the concept of type families for primitive types.
+ *
+ * The class maintains internal state to represent type-specific details like element types
+ * for arrays. In the future, TypeKind will be replaced by an inheritance hierarchy.
+ */
 class Type {
    public:
     // Voluntary implicit constructor
@@ -45,16 +56,45 @@ class Type {
         return *this;
     }
 
+    /**
+     * @brief Retrieves the predefined type representing the integer family of primitive types.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the integer family.
+     *
+     * @return A constant reference to the singleton instance of the integer family type.
+     */
     static const Type& integerFamilyType();
 
+    /**
+     * @brief Retrieves the predefined type representing any family of primitive types.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the "any" family.
+     *
+     * @return A constant reference to the singleton instance of the "any" family type.
+     */
     static const Type& anyFamilyType();
 
+    /**
+     * @brief Determines if the type represents a void primitive type.
+     *
+     * @return True if the type is a primitive type of kind `VOID`, false otherwise.
+     */
     [[nodiscard]] bool isVoid() const {
         return kind_ == TypeKind::PRIMITIVE && primitive_ == PrimitiveKind::VOID;
     }
 
     [[nodiscard]] int sizeBytes() const;
 
+    /**
+     * @brief Converts the type information into a string representation.
+     *
+     * This method generates a string description of the type, including its kind
+     * and relevant details. This is useful for debugging and logging purposes.
+     *
+     * @return A string that represents the type.
+     */
     [[nodiscard]] std::string to_string() const;
 
     [[nodiscard]] TypeKind kind() const { return kind_; }
