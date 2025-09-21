@@ -60,7 +60,9 @@ class TypeManager {
      *
      * @return A reference to the TypeSolver managed by the TypeManager.
      */
-    [[nodiscard]] TypeSolver& getTypeSolver() { return typeSolver_; }
+    [[nodiscard]] TypeSolver& getTypeSolver() {
+        return typeSolver_;
+    }
 
    private:
     std::vector<std::unique_ptr<Type>> types_;

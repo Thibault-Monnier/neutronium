@@ -8,9 +8,12 @@
  */
 class PrimitiveTypeFamily {
    public:
+    enum class Kind : uint8_t { INTEGER, ANY, NONE };
+
     virtual ~PrimitiveTypeFamily() = default;
 
     [[nodiscard]] virtual bool isInFamily(PrimitiveKind) const = 0;
+    [[nodiscard]] virtual Kind kind() const = 0;
 
     static const PrimitiveTypeFamily* familyForType(PrimitiveKind t);
 };
@@ -28,6 +31,8 @@ class IntegerTypeFamily final : public PrimitiveTypeFamily {
         static const IntegerTypeFamily instance;
         return instance;
     }
+
+    [[nodiscard]] Kind kind() const override { return Kind::INTEGER; }
 
     [[nodiscard]] bool isInFamily(const PrimitiveKind t) const override {
         return t == PrimitiveKind::INT || t == PrimitiveKind::INT8 || t == PrimitiveKind::INT16 ||
@@ -49,6 +54,8 @@ class AnyTypeFamily final : public PrimitiveTypeFamily {
         return instance;
     }
 
+    [[nodiscard]] Kind kind() const override { return Kind::ANY; }
+
     [[nodiscard]] bool isInFamily(const PrimitiveKind) const override { return true; }
 };
 
@@ -58,6 +65,8 @@ class NoTypeFamily final : public PrimitiveTypeFamily {
         static const NoTypeFamily instance;
         return instance;
     }
+
+    [[nodiscard]] Kind kind() const override { return Kind::NONE; }
 
     [[nodiscard]] bool isInFamily(const PrimitiveKind) const override { return false; }
 };

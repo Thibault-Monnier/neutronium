@@ -23,10 +23,12 @@ class TypeSolver {
      * by the TypeSolver. Type constraints are used for ensuring type consistency and resolving
      * type relationships during semantic analysis.
      *
-     * @param constraint The constraint to be added.
+     * @param constraint A unique pointer to the Constraint object to be added.
      */
-    void addConstraint(const Constraint& constraint) { constraints_.push_back(constraint); }
+    void addConstraint(std::unique_ptr<Constraint> constraint) {
+        constraints_.push_back(std::move(constraint));
+    }
 
    private:
-    std::vector<Constraint> constraints_;
+    std::vector<std::unique_ptr<Constraint>> constraints_;
 };

@@ -38,7 +38,7 @@ void SemanticAnalyser::analyse() {
 
         const TypeID voidTypeID = typeManager_.createType(PrimitiveKind::VOID);
         typeManager_.getTypeSolver().addConstraint(
-            EqualityConstraint(mainIt->second.typeID_, voidTypeID, *mainDef));
+            std::make_unique<EqualityConstraint>(mainIt->second.typeID_, voidTypeID, *mainDef));
     } else {
         if (mainIt != functionsTable_.end()) {
             abort("`main` function is not allowed in a library target", *mainDef);
@@ -145,7 +145,7 @@ TypeID SemanticAnalyser::get_function_call_type(const AST::FunctionCall& funcCal
         const TypeID paramType = params[i].typeID_;
 
         typeManager_.getTypeSolver().addConstraint(
-            EqualityConstraint(argType, paramType, *funcCall.arguments_[i]));
+            std::make_unique<EqualityConstraint>(argType, paramType, *funcCall.arguments_[i]));
     }
 
     return info.value()->typeID_;
@@ -156,14 +156,14 @@ TypeID SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& u
 
     if (unaryExpr.operator_ == AST::Operator::ADD ||
         unaryExpr.operator_ == AST::Operator::SUBTRACT) {
-        typeManager_.getTypeSolver().addConstraint(HasTraitConstraint(
+        typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
             operandType, trait_from_operator(unaryExpr.operator_).value(), unaryExpr));
         return operandType;
     }
 
     if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) {
         typeManager_.getTypeSolver().addConstraint(
-            HasTraitConstraint(operandType, Trait::NOT, unaryExpr));
+            std::make_unique<HasTraitConstraint>(operandType, Trait::NOT, unaryExpr));
         return typeManager_.createType(PrimitiveKind::BOOL);
     }
 
@@ -173,26 +173,27 @@ TypeID SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& u
 TypeID SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression& binaryExpr) {
     const TypeID leftType = get_expression_type(*binaryExpr.left_);
     const TypeID rightType = get_expression_type(*binaryExpr.right_);
-    typeManager_.getTypeSolver().addConstraint(EqualityConstraint(leftType, rightType, binaryExpr));
+    typeManager_.getTypeSolver().addConstraint(
+        std::make_unique<EqualityConstraint>(leftType, rightType, binaryExpr));
 
     const AST::Operator op = binaryExpr.operator_;
     if (AST::is_arithmetic_operator(op)) {
-        typeManager_.getTypeSolver().addConstraint(
-            HasTraitConstraint(leftType, trait_from_operator(op).value(), binaryExpr));
+        typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
+            leftType, trait_from_operator(op).value(), binaryExpr));
 
         return leftType;
     }
 
     if (AST::is_equality_operator(op)) {
         typeManager_.getTypeSolver().addConstraint(
-            HasTraitConstraint(leftType, Trait::EQ, binaryExpr));
+            std::make_unique<HasTraitConstraint>(leftType, Trait::EQ, binaryExpr));
 
         return typeManager_.createType(PrimitiveKind::BOOL);
     }
 
     if (AST::is_relational_operator(op)) {
-        typeManager_.getTypeSolver().addConstraint(
-            HasTraitConstraint(leftType, trait_from_operator(op).value(), binaryExpr));
+        typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
+            leftType, trait_from_operator(op).value(), binaryExpr));
 
         return typeManager_.createType(PrimitiveKind::BOOL);
     }
@@ -236,7 +237,7 @@ TypeID SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
             const TypeID arrayType = get_expression_type(*arrayAccess.base_);
 
             typeManager_.getTypeSolver().addConstraint(
-                HasTraitConstraint(arrayType, Trait::INDEX, *arrayAccess.base_));
+                std::make_unique<HasTraitConstraint>(arrayType, Trait::INDEX, *arrayAccess.base_));
 
             const TypeID integerTypeID = typeManager_.createType(Type::integerFamilyType());
             analyse_expression(*arrayAccess.index_, integerTypeID);
@@ -262,7 +263,8 @@ TypeID SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
 
 void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const TypeID expected) {
     const TypeID exprType = get_expression_type(expr);
-    typeManager_.getTypeSolver().addConstraint(EqualityConstraint(exprType, expected, expr));
+    typeManager_.getTypeSolver().addConstraint(
+        std::make_unique<EqualityConstraint>(exprType, expected, expr));
 }
 
 void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition& definition) {
@@ -270,7 +272,7 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
     const TypeID assignedType = get_expression_type(*definition.value_);
 
     typeManager_.getTypeSolver().addConstraint(
-        EqualityConstraint(definition.typeID_, assignedType, definition));
+        std::make_unique<EqualityConstraint>(definition.typeID_, assignedType, definition));
 
     handle_variable_declaration(&definition, name, definition.isMutable_, definition.typeID_);
 }
@@ -311,10 +313,10 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
     const TypeID placeType = get_expression_type(*place);
     const TypeID valueType = get_expression_type(*assignment.value_);
     typeManager_.getTypeSolver().addConstraint(
-        EqualityConstraint(placeType, valueType, assignment));
+        std::make_unique<EqualityConstraint>(placeType, valueType, assignment));
 
     if (assignment.operator_ != AST::Operator::ASSIGN) {
-        typeManager_.getTypeSolver().addConstraint(HasTraitConstraint(
+        typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
             placeType, trait_from_operator(assignment.operator_).value(), assignment));
     }
 }
@@ -391,8 +393,8 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {
         case AST::NodeKind::RETURN_STATEMENT: {
             const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
             const TypeID returnTypeID = get_expression_type(*returnStmt.returnValue_);
-            typeManager_.getTypeSolver().addConstraint(
-                EqualityConstraint(returnTypeID, currentFunctionReturnTypeID_, returnStmt));
+            typeManager_.getTypeSolver().addConstraint(std::make_unique<EqualityConstraint>(
+                returnTypeID, currentFunctionReturnTypeID_, returnStmt));
             break;
         }
         case AST::NodeKind::EXIT_STATEMENT: {

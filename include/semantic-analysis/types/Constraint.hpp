@@ -33,7 +33,7 @@ class Constraint {
  * The EqualityConstraint class defines a constraint that asserts two types
  * must be strictly equal.
  */
-class EqualityConstraint : public Constraint {
+class EqualityConstraint final : public Constraint {
    public:
     EqualityConstraint(const TypeID a, const TypeID b, const AST::Node& sourceNode)
         : Constraint(sourceNode), a_(a), b_(b) {}
@@ -51,7 +51,7 @@ class EqualityConstraint : public Constraint {
  * The HasTraitConstraint class defines a constraint that asserts a specific type
  * must implement or possess a given trait.
  */
-class HasTraitConstraint : public Constraint {
+class HasTraitConstraint final : public Constraint {
    public:
     HasTraitConstraint(const TypeID type, const Trait trait, const AST::Node& sourceNode)
         : Constraint(sourceNode), type_(type), trait_(trait) {}
