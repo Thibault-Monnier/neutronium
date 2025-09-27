@@ -3,6 +3,9 @@
 #include <vector>
 
 #include "Constraint.hpp"
+#include "source_manager.hpp"
+
+class TypeManager;
 
 /**
  * @class TypeSolver
@@ -14,7 +17,7 @@
 
 class TypeSolver {
    public:
-    TypeSolver() = default;
+    explicit TypeSolver(TypeManager& typeManager) : typeManager_(typeManager) {};
 
     /**
      * @brief Registers a new type constraint to the collection of constraints.
@@ -29,6 +32,13 @@ class TypeSolver {
         constraints_.push_back(std::move(constraint));
     }
 
+    void solve();
+
    private:
     std::vector<std::unique_ptr<Constraint>> constraints_;
+
+    TypeManager& typeManager_;
+
+    void solveEqualityConstraints() const;
+    void solveHasTraitConstraints();
 };

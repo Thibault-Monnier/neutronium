@@ -5,29 +5,10 @@
 #include <vector>
 
 #include "lexing/token_kind.hpp"
+#include "operator.hpp"
 #include "semantic-analysis/types/Type.hpp"
 
 namespace AST {
-
-enum class Operator : uint8_t {
-    ADD,
-    SUBTRACT,
-    MULTIPLY,
-    DIVIDE,
-    LOGICAL_NOT,
-    ASSIGN,
-    ADD_ASSIGN,
-    SUBTRACT_ASSIGN,
-    MULTIPLY_ASSIGN,
-    DIVIDE_ASSIGN,
-    EQUALS,
-    NOT_EQUALS,
-    LESS_THAN,
-    LESS_THAN_OR_EQUAL,
-    GREATER_THAN,
-    GREATER_THAN_OR_EQUAL,
-    UNDEFINED_OPERATOR,
-};
 
 enum class NodeKind : uint8_t {
     NUMBER_LITERAL,

@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
-#include "parsing/ast.hpp"
+#include "parsing/operator.hpp"
 
 enum class Trait : uint8_t {
     // Arithmetic traits

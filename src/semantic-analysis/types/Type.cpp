@@ -57,3 +57,20 @@ std::string Type::to_string() const {
     }
     std::unreachable();
 }
+
+// bool Type::mergeWith(const Type& other) {
+//     if (kind_ == TypeKind::PRIMITIVE && other.kind_ == TypeKind::PRIMITIVE) {
+//         if (family_->isInFamily(other.primitive_)) {
+//             return true;
+//         }
+//         if (other.family_->isInFamily(primitive_)) return true;
+//         return false;
+//     }
+//
+//     if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) {
+//         return Type{arrayElement_->resolve(*other.arrayElement_), arrayLength_};
+//     }
+//
+//     // Types are not compatible
+//     return false;
+// }

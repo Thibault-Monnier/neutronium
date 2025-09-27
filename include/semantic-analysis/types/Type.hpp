@@ -4,9 +4,11 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "PrimitiveKind.hpp"
 #include "PrimitiveTypeFamily.hpp"
+#include "Trait.hpp"
 
 using TypeID = uint32_t;
 
@@ -106,6 +108,22 @@ class Type {
         std::unreachable();
     }
 
+    // [[nodiscard]] bool mergeWith(const Type& other);
+
+    /**
+     * @brief Adds a trait to the list of traits associated with the type.
+     *
+     * @param trait The trait to be added.
+     */
+    void addTrait(const Trait trait) { traits_.push_back(trait); }
+
+    /**
+     * @brief Retrieves the list of traits associated with the type.
+     *
+     * @return A constant reference to a vector containing the traits associated with the type.
+     */
+    [[nodiscard]] const std::vector<Trait>& traits() const { return traits_; }
+
    private:
     TypeKind kind_;
     const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
@@ -114,6 +132,8 @@ class Type {
     std::unique_ptr<Type> arrayElement_;
     TypeID arrayElementTypeID_{0};
     std::size_t arrayLength_{0};
+
+    std::vector<Trait> traits_;
 
     // IMPORTANT NOTE:
     // All members must be copied here when adding new ones.
@@ -128,5 +148,6 @@ class Type {
             arrayElement_ = std::make_unique<Type>(*other.arrayElement_);
         else
             arrayElement_.reset();
+        traits_ = other.traits_;
     }
 };

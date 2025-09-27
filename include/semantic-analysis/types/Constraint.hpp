@@ -40,6 +40,9 @@ class EqualityConstraint final : public Constraint {
 
     [[nodiscard]] Kind kind() const override { return Kind::EQUALITY; }
 
+    [[nodiscard]] TypeID a() const { return a_; }
+    [[nodiscard]] TypeID b() const { return b_; }
+
    private:
     const TypeID a_;
     const TypeID b_;
@@ -57,6 +60,9 @@ class HasTraitConstraint final : public Constraint {
         : Constraint(sourceNode), type_(type), trait_(trait) {}
 
     [[nodiscard]] Kind kind() const override { return Kind::HAS_TRAIT; }
+
+    [[nodiscard]] TypeID type() const { return type_; }
+    [[nodiscard]] Trait trait() const { return trait_; }
 
    private:
     const TypeID type_;

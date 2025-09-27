@@ -29,20 +29,11 @@ class TypeManager {
      * @return The unique TypeID assigned to the newly registered type.
      */
     [[nodiscard]] TypeID createType(const Type& type) {
+        const auto id = static_cast<TypeID>(types_.size());
         types_.push_back(std::make_unique<Type>(type));
-        return static_cast<TypeID>(types_.size() - 1);
+        linkingTable_.push_back(id);
+        return id;
     }
-
-    /**
-     * @brief Retrieves a reference to a previously registered type.
-     *
-     * This function fetches the type corresponding to the provided TypeID
-     * from the managed collection of types.
-     *
-     * @param id The unique TypeID of the type to retrieve.
-     * @return A reference to the Type object associated with the provided TypeID.
-     */
-    [[nodiscard]] Type& getType(const TypeID id) { return *types_.at(id); }
 
     /**
      * @brief Retrieves a reference to a previously registered type.
@@ -53,18 +44,58 @@ class TypeManager {
      * @param id The unique TypeID of the type to retrieve.
      * @return A constant reference to the Type object associated with the provided TypeID.
      */
-    [[nodiscard]] const Type& getType(const TypeID id) const { return *types_.at(id); }
+    [[nodiscard]] const Type& getType(const TypeID id) const {
+        const TypeID resolvedID = linkingTable_.at(id);
+        return *types_.at(resolvedID);
+    }
+
+    /**
+     * @brief Retrieves a reference to a previously registered type.
+     *
+     * This function fetches the type corresponding to the provided TypeID
+     * from the managed collection of types.
+     *
+     * @param id The unique TypeID of the type to retrieve.
+     * @return A mutable reference to the Type object associated with the provided TypeID.
+     */
+    [[nodiscard]] Type& getType(const TypeID id) {
+        return const_cast<Type&>(std::as_const(*this).getType(id));
+    }
+
+    /**
+     * @brief Retrieves the total number of registered types.
+     *
+     * @warning This includes types that may have been linked to others via the linking table. It
+     * does not reflect the number of unique types that result from the type-merging.
+     *
+     * @return The number of types registered in the TypeManager.
+     */
+    [[nodiscard]] size_t getTypeCount() const { return types_.size(); }
 
     /**
      * @brief Provides access to the TypeSolver instance within the TypeManager.
      *
      * @return A reference to the TypeSolver managed by the TypeManager.
      */
-    [[nodiscard]] TypeSolver& getTypeSolver() {
-        return typeSolver_;
-    }
+    [[nodiscard]] TypeSolver& getTypeSolver() { return typeSolver_; }
+
+    /**
+     * @brief Maps the second TypeID to the first TypeID in the linking table.
+     *
+     * @param a The TypeID to which the second TypeID will be linked.
+     * @param b The TypeID to be linked to the first TypeID.
+     */
+    void linkTypes(const TypeID a, const TypeID b) { linkingTable_[b] = a; }
 
    private:
     std::vector<std::unique_ptr<Type>> types_;
-    TypeSolver typeSolver_;
+    TypeSolver typeSolver_{*this};
+
+    /** @brief A mapping of TypeIDs to their linked TypeIDs.
+     *
+     * This vector adds a layer of indirection for TypeIDs, allowing one TypeID to reference
+     * another. This is used to allow type equivalence, where modifying one type affects all linked
+     * types. Initially, every TypeID maps to itself.
+     */
+    std::vector<TypeID> linkingTable_;
 };
