@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Constraint.hpp"
-#include "source_manager.hpp"
+#include "diagnostics_engine.hpp"
 
 class TypeManager;
 
@@ -17,7 +17,8 @@ class TypeManager;
 
 class TypeSolver {
    public:
-    explicit TypeSolver(TypeManager& typeManager) : typeManager_(typeManager) {};
+    TypeSolver(TypeManager& typeManager, DiagnosticsEngine& diagnosticsEngine)
+        : typeManager_(typeManager), diagnosticsEngine_(diagnosticsEngine) {};
 
     /**
      * @brief Registers a new type constraint to the collection of constraints.
@@ -32,6 +33,14 @@ class TypeSolver {
         constraints_.push_back(std::move(constraint));
     }
 
+    /**
+     * @brief Solves all registered type constraints to ensure type consistency.
+     *
+     * The solve method resolves all collected type constraints, including equality constraints and
+     * trait requirements. It ensures that all types and their relationships satisfy the constraints
+     * imposed during semantic analysis. This method internally uses the union-find algorithm
+     * for equality constraints and processes trait requirements to finalize type resolution.
+     */
     void solve();
 
    private:
@@ -39,6 +48,18 @@ class TypeSolver {
 
     TypeManager& typeManager_;
 
-    void solveEqualityConstraints() const;
-    void solveHasTraitConstraints();
+    DiagnosticsEngine& diagnosticsEngine_;
+
+    struct Node {
+        TypeID parent_;
+        int setSize_;
+    };
+
+    std::vector<Node> nodes_;
+
+    [[nodiscard]] TypeID findRoot(TypeID x);
+    [[nodiscard]] bool unify(TypeID dst, TypeID src);
+    void solveEqualityConstraints();
+
+    void solveHasTraitConstraints() const;
 };

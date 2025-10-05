@@ -22,7 +22,7 @@ enum class Trait : uint8_t {
     GT,
     GTE,
 
-    INDEX,
+    SUBSCRIPT,
 };
 
 [[nodiscard]] std::optional<Trait> trait_from_operator(AST::Operator op);

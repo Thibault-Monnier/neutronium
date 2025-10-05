@@ -68,8 +68,8 @@ TEST_F(NeutroniumTester, MainFunctionErrors) {
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
-    EXPECT_TRUE(error3.contains("main") && error3.contains("function") &&
-                error3.contains("return") && error3.contains("void"));
+    EXPECT_TRUE(error3.contains("Type mismatch") && error3.contains("int") &&
+                error3.contains("void"));
 }
 
 TEST_F(NeutroniumTester, NonPlaceExpressionInLeftOfAssignmentFails) {
@@ -152,27 +152,15 @@ TEST_F(NeutroniumTester, ImmutableReassignmentFails) {
 TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
     const std::string codeIntSizes = R"(
         fn main(): {
-            let mut x = 1;
-            let y: int8 = 2;
-            x = y;       # illegal: int -> int8
-        }
-    )";
-    auto [statusIntSizes, errorIntSizes] = compile(codeIntSizes);
-    EXPECT_NE(statusIntSizes, 0);
-    EXPECT_TRUE(errorIntSizes.contains("Type mismatch") && errorIntSizes.contains("int8") &&
-                errorIntSizes.contains("int"));
-
-    const std::string codeIntSizes2 = R"(
-        fn main(): {
             let mut x: int32 = 1;
             let y: int64 = 2;
             x = y;       # illegal: int32 -> int64
         }
     )";
-    auto [statusIntSizes2, errorIntSizes2] = compile(codeIntSizes2);
-    EXPECT_NE(statusIntSizes2, 0);
-    EXPECT_TRUE(errorIntSizes2.contains("Type mismatch") && errorIntSizes2.contains("int32") &&
-                errorIntSizes2.contains("int64"));
+    auto [statusIntSizes, errorIntSizes] = compile(codeIntSizes);
+    EXPECT_NE(statusIntSizes, 0);
+    EXPECT_TRUE(errorIntSizes.contains("Type mismatch") && errorIntSizes.contains("int32") &&
+                errorIntSizes.contains("int64"));
 
     const std::string code = R"(
         fn main(): {
@@ -209,10 +197,12 @@ TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
         fn foo(mut x: bool): {
             x = 1;      # illegal: bool -> int
         }
+        fn main(): {}
     )";
     auto [status4, error4] = compile(code4);
     EXPECT_NE(status4, 0);
-    EXPECT_TRUE(error4.contains("Type mismatch"));
+    EXPECT_TRUE(error4.contains("Type mismatch") && error4.contains("bool") &&
+                error4.contains("int"));
 
     const std::string codeArrayLength = R"(
         fn main(): {
@@ -290,6 +280,22 @@ TEST_F(NeutroniumTester, ReassignmentDifferentInferredTypeFails) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("Type mismatch"));
+
+    const std::string code4 = R"(
+        fn main(): {
+            let mut a = 1;
+            let b: int8 = 2;
+            a = b;              # a inferred as int8
+            let x: int16 = 3;
+            let y = x;          # x inferred as int16
+
+            x * a;              # illegal: int16 * int8
+        }
+    )";
+    auto [status4, error4] = compile(code4);
+    EXPECT_NE(status4, 0);
+    EXPECT_TRUE(error4.contains("Type mismatch") && error4.contains("int8") &&
+                error4.contains("int"));
 }
 
 TEST_F(NeutroniumTester, CompoundAssignmentWithNonIntegersFails) {

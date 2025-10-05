@@ -1,6 +1,5 @@
 #include "parsing/ast.hpp"
 
-#include <magic_enum.hpp>
 #include <unordered_map>
 
 #include "lexing/token_kind.hpp"

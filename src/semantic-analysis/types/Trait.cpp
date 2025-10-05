@@ -3,12 +3,16 @@
 [[nodiscard]] std::optional<Trait> trait_from_operator(const AST::Operator op) {
     switch (op) {
         case AST::Operator::ADD:
+        case AST::Operator::ADD_ASSIGN:
             return Trait::ADD;
         case AST::Operator::SUBTRACT:
+        case AST::Operator::SUBTRACT_ASSIGN:
             return Trait::SUB;
         case AST::Operator::MULTIPLY:
+        case AST::Operator::MULTIPLY_ASSIGN:
             return Trait::MUL;
         case AST::Operator::DIVIDE:
+        case AST::Operator::DIVIDE_ASSIGN:
             return Trait::DIV;
         case AST::Operator::LOGICAL_NOT:
             return Trait::NOT;

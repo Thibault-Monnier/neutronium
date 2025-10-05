@@ -2,33 +2,55 @@
 
 #include "semantic-analysis/types/TypeManager.hpp"
 
-void TypeSolver::solveEqualityConstraints() const {
-    // Uses the union-find algorithm to solve equality constraints
+TypeID TypeSolver::findRoot(TypeID x) {
+    // Find the root of the set containing x
+    TypeID root = x;
+    while (root != nodes_[root].parent_) root = nodes_[root].parent_;
 
-    struct Node {
-        TypeID parent_;
-        int setSize_;
-    };
-
-    std::vector<Node> nodes(typeManager_.getTypeCount());
-    for (TypeID i = 0; i < nodes.size(); ++i) {
-        nodes[i] = {.parent_ = i, .setSize_ = 1};
+    // Path compression
+    while (x != root) {
+        const TypeID parent = nodes_[x].parent_;
+        nodes_[x].parent_ = root;
+        x = parent;
     }
 
-    const auto find = [&](TypeID x) {
-        TypeID root = x;
-        // Find the root
-        while (root != nodes[root].parent_) root = nodes[root].parent_;
+    return root;
+}
 
-        // Path compression
-        while (x != root) {
-            const TypeID parent = nodes[x].parent_;
-            nodes[x].parent_ = root;
-            x = parent;
-        }
+bool TypeSolver::unify(const TypeID dst, const TypeID src) {
+    nodes_[src].parent_ = dst;
+    nodes_[dst].setSize_ += nodes_[src].setSize_;
 
-        return root;
-    };
+    Type& dstType = typeManager_.getType(dst);
+    const Type& srcType = typeManager_.getType(src);
+
+    // The following modifies dstType only, but it is fine since src will never be root
+    // again, so we don't care about its type anymore
+
+    if (dstType.isUnknownKind() || srcType.isUnknownKind()) return dstType.mergeWith(srcType);
+
+    if (dstType.kind() != srcType.kind()) return false;
+
+    switch (dstType.kind()) {
+        case TypeKind::UNKNOWN:
+            std::unreachable();
+        case TypeKind::PRIMITIVE:
+            return dstType.mergeWith(srcType);
+        case TypeKind::ARRAY:
+            if (!dstType.matches(srcType)) return false;
+            return unify(dstType.array_element_type_id(), srcType.array_element_type_id());
+    }
+    std::unreachable();
+}
+
+void TypeSolver::solveEqualityConstraints() {
+    // Uses a union-find algorithm to solve equality constraints
+
+    nodes_.resize(typeManager_.getTypeCount());
+
+    for (TypeID i = 0; i < nodes_.size(); ++i) {
+        nodes_[i] = {.parent_ = i, .setSize_ = 1};
+    }
 
     for (const auto& constraint : constraints_) {
         if (constraint->kind() != Constraint::Kind::EQUALITY) {
@@ -39,35 +61,37 @@ void TypeSolver::solveEqualityConstraints() const {
         const TypeID a = equalityConstraint.a();
         const TypeID b = equalityConstraint.b();
 
-        const TypeID rootA = find(a);
-        const TypeID rootB = find(b);
+        TypeID rootA = findRoot(a);
+        TypeID rootB = findRoot(b);
 
-        if (rootA != rootB) {
-            const auto unionSets = [&](const TypeID x, const TypeID y) {
-                nodes[y].parent_ = x;
-                nodes[x].setSize_ += nodes[y].setSize_;
-            };
+        if (rootA == rootB) continue;
 
-            if (nodes[rootA].setSize_ >= nodes[rootB].setSize_)
-                unionSets(rootA, rootB);
-            else
-                unionSets(rootB, rootA);
+        if (nodes_[rootA].setSize_ < nodes_[rootB].setSize_) std::swap(rootA, rootB);
+
+        if (!unify(rootA, rootB)) {
+            // Types are not compatible
+            const Type& aType = typeManager_.getType(a);
+            const Type& bType = typeManager_.getType(b);
+
+            diagnosticsEngine_.report_error(
+                std::format("Type mismatch: cannot unify types '{}' and '{}'", aType.to_string(),
+                            bType.to_string()),
+                equalityConstraint.sourceNode().source_start_index(),
+                equalityConstraint.sourceNode().source_end_index());
+            diagnosticsEngine_.emit_errors();
+            exit(EXIT_FAILURE);
         }
     }
 
-    for (TypeID node = 0; node < nodes.size(); ++node) {
-        const TypeID root = find(node);
+    for (TypeID node = 0; node < nodes_.size(); ++node) {
+        const TypeID root = findRoot(node);
         if (root == node) continue;
-
-        // const Type& nodeType = typeManager_.getType(node);
-        // Type& rootType = typeManager_.getType(root);
-        // rootType.mergeWith(nodeType);
 
         typeManager_.linkTypes(root, node);
     }
 }
 
-void TypeSolver::solveHasTraitConstraints() {
+void TypeSolver::solveHasTraitConstraints() const {
     for (const auto& constraint : constraints_) {
         if (constraint->kind() != Constraint::Kind::HAS_TRAIT) {
             continue;

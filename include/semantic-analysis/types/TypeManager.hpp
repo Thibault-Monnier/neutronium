@@ -17,7 +17,8 @@
 
 class TypeManager {
    public:
-    TypeManager() = default;
+    explicit TypeManager(DiagnosticsEngine& diagnosticsEngine)
+        : typeSolver_(*this, diagnosticsEngine) {}
 
     /**
      * @brief Registers a new type in the type manager.
@@ -80,16 +81,18 @@ class TypeManager {
     [[nodiscard]] TypeSolver& getTypeSolver() { return typeSolver_; }
 
     /**
-     * @brief Maps the second TypeID to the first TypeID in the linking table.
+     * @brief Add a type-equivalence entry to the linking table.
      *
-     * @param a The TypeID to which the second TypeID will be linked.
-     * @param b The TypeID to be linked to the first TypeID.
+     * Stores a mapping so that any lookup of @p src resolves to @p dst.
+     *
+     * @param dst TypeID that becomes the target of the mapping.
+     * @param src TypeID that will be redirected to dst.
      */
-    void linkTypes(const TypeID a, const TypeID b) { linkingTable_[b] = a; }
+    void linkTypes(const TypeID dst, const TypeID src) { linkingTable_[src] = dst; }
 
    private:
     std::vector<std::unique_ptr<Type>> types_;
-    TypeSolver typeSolver_{*this};
+    TypeSolver typeSolver_;
 
     /** @brief A mapping of TypeIDs to their linked TypeIDs.
      *

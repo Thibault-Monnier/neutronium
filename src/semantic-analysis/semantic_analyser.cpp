@@ -44,6 +44,8 @@ void SemanticAnalyser::analyse() {
             abort("`main` function is not allowed in a library target", *mainDef);
         }
     }
+
+    typeManager_.getTypeSolver().solve();
 }
 
 void SemanticAnalyser::abort(const std::string& errorMessage, const AST::Node& node) const {
@@ -236,13 +238,19 @@ TypeID SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
             const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
             const TypeID arrayType = get_expression_type(*arrayAccess.base_);
 
-            typeManager_.getTypeSolver().addConstraint(
-                std::make_unique<HasTraitConstraint>(arrayType, Trait::INDEX, *arrayAccess.base_));
+            typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
+                arrayType, Trait::SUBSCRIPT, *arrayAccess.base_));
 
             const TypeID integerTypeID = typeManager_.createType(Type::integerFamilyType());
             analyse_expression(*arrayAccess.index_, integerTypeID);
 
-            return typeManager_.getType(arrayType).array_element_type_id();
+            const TypeID elementTypeID = typeManager_.createType(Type::anyFamilyType());
+            const TypeID arrayFromElementType = typeManager_.createType(Type{
+                typeManager_.getType(elementTypeID), elementTypeID, &AnyTypeFamily::getInstance()});
+            typeManager_.getTypeSolver().addConstraint(
+                std::make_unique<EqualityConstraint>(arrayType, arrayFromElementType, arrayAccess));
+
+            return elementTypeID;
         }
         case AST::NodeKind::FUNCTION_CALL: {
             const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);

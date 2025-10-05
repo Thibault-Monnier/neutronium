@@ -86,7 +86,7 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
         }
     }
 
-    TypeManager typeManager;
+    TypeManager typeManager{diagnosticsEngine};
 
     const auto ast = timed("Parsing", verbose,
                            [&] { return Parser(tokens, diagnosticsEngine, typeManager).parse(); });

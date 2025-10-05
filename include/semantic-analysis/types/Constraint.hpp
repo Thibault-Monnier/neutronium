@@ -19,6 +19,7 @@ class Constraint {
     virtual ~Constraint() = default;
 
     [[nodiscard]] virtual Kind kind() const = 0;
+    [[nodiscard]] const AST::Node& sourceNode() const { return sourceNode_; }
 
    protected:
     explicit Constraint(const AST::Node& sourceNode) : sourceNode_(sourceNode) {}
