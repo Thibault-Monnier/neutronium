@@ -70,8 +70,8 @@ void TypeSolver::solveEqualityConstraints() {
 
         if (!unify(rootA, rootB)) {
             // Types are not compatible
-            const Type& aType = typeManager_.getType(a);
-            const Type& bType = typeManager_.getType(b);
+            const Type& aType = typeManager_.getType(rootA);
+            const Type& bType = typeManager_.getType(rootB);
 
             diagnosticsEngine_.report_error(
                 std::format("Type mismatch: cannot unify types '{}' and '{}'", aType.to_string(),
