@@ -3,12 +3,12 @@
 #include "magic_enum.hpp"
 
 const Type& Type::integerFamilyType() {
-    static const Type instance(PrimitiveKind::INT, true);
+    static const Type instance(Primitive::Kind::INT, true);
     return instance;
 }
 
 const Type& Type::anyFamilyType() {
-    static const Type instance(PrimitiveKind::VOID, &AnyTypeFamily::getInstance(),
+    static const Type instance(Primitive::Kind::VOID, &AnyTypeFamily::getInstance(),
                                TypeKind::UNKNOWN);
     return instance;
 }
@@ -17,17 +17,17 @@ int Type::sizeBytes() const {
     switch (kind_) {
         case TypeKind::PRIMITIVE: {
             switch (primitive_) {
-                case PrimitiveKind::INT8:
-                case PrimitiveKind::BOOL:
+                case Primitive::Kind::INT8:
+                case Primitive::Kind::BOOL:
                     return 1;
-                case PrimitiveKind::INT16:
+                case Primitive::Kind::INT16:
                     return 2;
-                case PrimitiveKind::INT32:
+                case Primitive::Kind::INT32:
                     return 4;
-                case PrimitiveKind::INT:
-                case PrimitiveKind::INT64:
+                case Primitive::Kind::INT:
+                case Primitive::Kind::INT64:
                     return 8;
-                case PrimitiveKind::VOID:
+                case Primitive::Kind::VOID:
                     return 0;
             }
             break;
@@ -47,25 +47,25 @@ std::string Type::to_string() const {
     switch (kind_) {
         case TypeKind::PRIMITIVE: {
             switch (primitive_) {
-                case PrimitiveKind::INT:
+                case Primitive::Kind::INT:
                     result += "int";
                     break;
-                case PrimitiveKind::INT8:
+                case Primitive::Kind::INT8:
                     result += "int8";
                     break;
-                case PrimitiveKind::INT16:
+                case Primitive::Kind::INT16:
                     result += "int16";
                     break;
-                case PrimitiveKind::INT32:
+                case Primitive::Kind::INT32:
                     result += "int32";
                     break;
-                case PrimitiveKind::INT64:
+                case Primitive::Kind::INT64:
                     result += "int64";
                     break;
-                case PrimitiveKind::BOOL:
+                case Primitive::Kind::BOOL:
                     result += "bool";
                     break;
-                case PrimitiveKind::VOID:
+                case Primitive::Kind::VOID:
                     result += "void";
                     break;
             }
@@ -128,6 +128,7 @@ bool Type::matches(const Type& other) const {
     }
 
     if (kind_ != other.kind_) return false;
+    if (traits_ != other.traits_) return false;
 
     switch (kind_) {
         case TypeKind::PRIMITIVE:

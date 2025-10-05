@@ -1,12 +1,12 @@
 #include "semantic-analysis/types/PrimitiveTypeFamily.hpp"
 
-const PrimitiveTypeFamily* PrimitiveTypeFamily::familyForType(const PrimitiveKind t) {
+const PrimitiveTypeFamily* PrimitiveTypeFamily::familyForType(const Primitive::Kind t) {
     switch (t) {
-        case PrimitiveKind::INT:
-        case PrimitiveKind::INT8:
-        case PrimitiveKind::INT16:
-        case PrimitiveKind::INT32:
-        case PrimitiveKind::INT64: {
+        case Primitive::Kind::INT:
+        case Primitive::Kind::INT8:
+        case Primitive::Kind::INT16:
+        case Primitive::Kind::INT32:
+        case Primitive::Kind::INT64: {
             static const IntegerTypeFamily family{};
             return &family;
         }

@@ -98,9 +98,18 @@ void TypeSolver::solveHasTraitConstraints() const {
         }
 
         const auto& hasTraitConstraint = static_cast<const HasTraitConstraint&>(*constraint);
-        Type& type = typeManager_.getType(hasTraitConstraint.type());
+        const Type& type = typeManager_.getType(hasTraitConstraint.type());
         const Trait& trait = hasTraitConstraint.trait();
-        type.addTrait(trait);
+
+        if (!type.hasTrait(trait)) {
+            diagnosticsEngine_.report_error(
+                std::format("Type '{}' does not implement trait '{}'",
+                            type.to_string(), trait_to_string(trait)),
+                hasTraitConstraint.sourceNode().source_start_index(),
+                hasTraitConstraint.sourceNode().source_end_index());
+            diagnosticsEngine_.emit_errors();
+            exit(EXIT_FAILURE);
+        }
     }
 }
 

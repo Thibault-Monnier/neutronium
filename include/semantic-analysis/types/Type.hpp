@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "PrimitiveKind.hpp"
+#include "Primitive.hpp"
 #include "PrimitiveTypeFamily.hpp"
 #include "Trait.hpp"
 
@@ -32,32 +32,38 @@ enum class TypeKind : uint8_t {
 class Type {
    public:
     // Voluntary implicit constructor
-    Type(const PrimitiveKind t, const bool inFamily = false)
+    Type(const Primitive::Kind t, const bool inFamily = false)
         : kind_(TypeKind::PRIMITIVE), primitive_(t) {
         if (inFamily) {
             family_ = PrimitiveTypeFamily::familyForType(t);
             assert(family_->isInFamily(t) && "Type must be in its own family");
         }
+        initializeTraits();
     }
 
-    Type(const PrimitiveKind t, const PrimitiveTypeFamily* family, const TypeKind kind)
+    Type(const Primitive::Kind t, const PrimitiveTypeFamily* family, const TypeKind kind)
         : kind_(kind), family_(family), primitive_(t) {
         assert(family_->isInFamily(t) && "Type must be in its own family");
+        initializeTraits();
     }
 
     Type(const Type& elementType, const TypeID elementTypeID, const std::size_t arrayLength)
         : kind_(TypeKind::ARRAY),
-          primitive_(PrimitiveKind::VOID),
+          primitive_(Primitive::Kind::VOID),
           arrayElement_(std::make_unique<Type>(elementType)),
           arrayElementTypeID_(elementTypeID),
-          arrayLength_(arrayLength) {}
+          arrayLength_(arrayLength) {
+        initializeTraits();
+    }
 
     Type(const Type& elementType, const TypeID elementTypeID, const PrimitiveTypeFamily* family)
         : kind_(TypeKind::ARRAY),
           family_(family),
-          primitive_(PrimitiveKind::VOID),
+          primitive_(Primitive::Kind::VOID),
           arrayElement_(std::make_unique<Type>(elementType)),
-          arrayElementTypeID_(elementTypeID) {}
+          arrayElementTypeID_(elementTypeID) {
+        initializeTraits();
+    }
 
     Type(const Type& other) { copy_from(other); }
 
@@ -102,7 +108,7 @@ class Type {
      * @return True if the type is a primitive type of kind `VOID`, false otherwise.
      */
     [[nodiscard]] bool isVoid() const {
-        return kind_ == TypeKind::PRIMITIVE && primitive_ == PrimitiveKind::VOID;
+        return kind_ == TypeKind::PRIMITIVE && primitive_ == Primitive::Kind::VOID;
     }
 
     /**
@@ -174,29 +180,54 @@ class Type {
     [[nodiscard]] bool matches(const Type& other) const;
 
     /**
-     * @brief Adds a trait to the list of traits associated with the type.
+     * @brief Checks if a specific trait is present in the list of traits.
      *
-     * @param trait The trait to be added.
-     */
-    void addTrait(const Trait trait) { traits_.push_back(trait); }
-
-    /**
-     * @brief Retrieves the list of traits associated with the type.
+     * This method iterates over the internal collection of traits and determines
+     * whether the specified trait exists within the collection.
      *
-     * @return A constant reference to a vector containing the traits associated with the type.
+     * @param trait The trait to be checked for existence in the list of traits.
+     * @return True if the specified trait is present, false otherwise.
      */
-    [[nodiscard]] const std::vector<Trait>& traits() const { return traits_; }
+    [[nodiscard]] bool hasTrait(const Trait trait) const {
+        for (const auto& t : traits_) {
+            if (t == trait) return true;
+        }
+        return false;
+    }
 
    private:
     TypeKind kind_;
     const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
-    PrimitiveKind primitive_;
+    Primitive::Kind primitive_;
 
     std::unique_ptr<Type> arrayElement_;
     TypeID arrayElementTypeID_{0};
     std::size_t arrayLength_{0};
 
     std::vector<Trait> traits_;
+
+    /**
+     * @brief Initializes the traits of the type based on its kind and primitive kind.
+     *
+     * This method sets the `traits_` member variable according to the `kind_` and the `primitive_`
+     * of the type. It assigns appropriate default traits for primitive types and array types, while
+     * clearing traits for unknown types.
+     */
+    void initializeTraits() {
+        switch (kind_) {
+            case TypeKind::PRIMITIVE:
+                traits_ = Primitive::defaultTraits(primitive_);
+                break;
+            case TypeKind::ARRAY:
+                traits_ = {Trait::EQ, Trait::SUBSCRIPT};
+                break;
+            case TypeKind::UNKNOWN:
+                traits_.clear();
+                break;
+            default:
+                std::unreachable();
+        }
+    }
 
     // IMPORTANT NOTE:
     // All members must be copied here when adding new ones.
