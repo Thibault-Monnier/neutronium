@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 
 #include "parsing/operator.hpp"
 
@@ -26,3 +27,5 @@ enum class Trait : uint8_t {
 };
 
 [[nodiscard]] std::optional<Trait> trait_from_operator(AST::Operator op);
+
+[[nodiscard]] std::string_view trait_to_string(Trait trait);

@@ -36,7 +36,7 @@ void SemanticAnalyser::analyse() {
             abort("`main` function must not take any parameters", *mainDef);
         }
 
-        const TypeID voidTypeID = typeManager_.createType(PrimitiveKind::VOID);
+        const TypeID voidTypeID = typeManager_.createType(Primitive::Kind::VOID);
         typeManager_.getTypeSolver().addConstraint(
             std::make_unique<EqualityConstraint>(mainIt->second.typeID_, voidTypeID, *mainDef));
     } else {
@@ -166,7 +166,7 @@ TypeID SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& u
     if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) {
         typeManager_.getTypeSolver().addConstraint(
             std::make_unique<HasTraitConstraint>(operandType, Trait::NOT, unaryExpr));
-        return typeManager_.createType(PrimitiveKind::BOOL);
+        return typeManager_.createType(Primitive::Kind::BOOL);
     }
 
     std::unreachable();
@@ -190,14 +190,14 @@ TypeID SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression&
         typeManager_.getTypeSolver().addConstraint(
             std::make_unique<HasTraitConstraint>(leftType, Trait::EQ, binaryExpr));
 
-        return typeManager_.createType(PrimitiveKind::BOOL);
+        return typeManager_.createType(Primitive::Kind::BOOL);
     }
 
     if (AST::is_relational_operator(op)) {
         typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
             leftType, trait_from_operator(op).value(), binaryExpr));
 
-        return typeManager_.createType(PrimitiveKind::BOOL);
+        return typeManager_.createType(Primitive::Kind::BOOL);
     }
 
     std::unreachable();
@@ -208,7 +208,7 @@ TypeID SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
         case AST::NodeKind::NUMBER_LITERAL:
             return typeManager_.createType(Type::integerFamilyType());
         case AST::NodeKind::BOOLEAN_LITERAL:
-            return typeManager_.createType(PrimitiveKind::BOOL);
+            return typeManager_.createType(Primitive::Kind::BOOL);
         case AST::NodeKind::ARRAY_LITERAL: {
             const auto& arrayLiteral = static_cast<const AST::ArrayLiteral&>(expr);
             if (arrayLiteral.elements_.empty()) {
@@ -334,7 +334,7 @@ void SemanticAnalyser::analyse_expression_statement(const AST::ExpressionStateme
 }
 
 void SemanticAnalyser::analyse_if_statement(const AST::IfStatement& ifStmt) {
-    analyse_expression(*ifStmt.condition_, typeManager_.createType(PrimitiveKind::BOOL));
+    analyse_expression(*ifStmt.condition_, typeManager_.createType(Primitive::Kind::BOOL));
     analyse_statement(*ifStmt.body_);
     if (ifStmt.elseClause_) {
         analyse_statement(*ifStmt.elseClause_);
@@ -342,7 +342,7 @@ void SemanticAnalyser::analyse_if_statement(const AST::IfStatement& ifStmt) {
 }
 
 void SemanticAnalyser::analyse_while_statement(const AST::WhileStatement& whileStmt) {
-    analyse_expression(*whileStmt.condition_, typeManager_.createType(PrimitiveKind::BOOL));
+    analyse_expression(*whileStmt.condition_, typeManager_.createType(Primitive::Kind::BOOL));
     loopDepth_++;
     analyse_statement(*whileStmt.body_);
     loopDepth_--;

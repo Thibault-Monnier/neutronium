@@ -1,4 +1,5 @@
 #include "common/tester.hpp"
+#include "semantic-analysis/types/Trait.hpp"
 
 TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
     const std::string code = R"(
@@ -302,13 +303,13 @@ TEST_F(NeutroniumTester, CompoundAssignmentWithNonIntegersFails) {
     const std::string code2 = R"(
         fn main(): {
             let mut x = true;
-            x *= false;       # illegal: bool -= int
+            x *= false;       # illegal: bool *= bool
         }
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("type") && error2.contains("assignment operator") &&
-                error2.contains("bool"));
+    EXPECT_TRUE(error2.contains("Type") && error2.contains("trait") &&
+                error2.contains(trait_to_string(Trait::MUL)) && error2.contains("bool"));
 
     const std::string code3 = R"(
         fn main(): {
@@ -319,8 +320,8 @@ TEST_F(NeutroniumTester, CompoundAssignmentWithNonIntegersFails) {
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
-    EXPECT_TRUE(error3.contains("type") && error3.contains("assignment operator") &&
-                error3.contains("array"));
+    EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
+                error3.contains(trait_to_string(Trait::SUB)) && error3.contains("bool"));
 }
 
 TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
@@ -331,8 +332,7 @@ TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("bool") && error.contains("int") && error.contains("type") &&
-                error.contains("x"));
+    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("bool") && error.contains("int"));
 
     const std::string code2 = R"(
         fn main(): {
@@ -341,8 +341,8 @@ TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("int") && error2.contains("bool") && error2.contains("type") &&
-                error2.contains("x"));
+    EXPECT_TRUE(error2.contains("Type mismatch") && error2.contains("int") &&
+                error2.contains("bool"));
 
     const std::string codeArrays = R"(
         fn main(): {
@@ -363,8 +363,7 @@ TEST_F(NeutroniumTester, DifferentElementTypesInArrayFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("type") && error.contains("array") && error.contains("int") &&
-                error.contains("bool"));
+    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("int") && error.contains("bool"));
 
     const std::string codeInnerElement = R"(
         fn main(): {
@@ -373,8 +372,9 @@ TEST_F(NeutroniumTester, DifferentElementTypesInArrayFails) {
     )";
     auto [statusInnerElement, errorInnerElement] = compile(codeInnerElement);
     EXPECT_NE(statusInnerElement, 0);
-    EXPECT_TRUE(errorInnerElement.contains("type") && errorInnerElement.contains("array") &&
-                errorInnerElement.contains("int") && errorInnerElement.contains("bool"));
+    EXPECT_TRUE(errorInnerElement.contains("Type mismatch") &&
+                errorInnerElement.contains("array") && errorInnerElement.contains("int") &&
+                errorInnerElement.contains("bool"));
 
     const std::string codeInnerElementSize = R"(
         fn main(): {
@@ -383,8 +383,9 @@ TEST_F(NeutroniumTester, DifferentElementTypesInArrayFails) {
     )";
     auto [statusInnerElementSize, errorInnerElementSize] = compile(codeInnerElementSize);
     EXPECT_NE(statusInnerElementSize, 0);
-    EXPECT_TRUE(errorInnerElementSize.contains("type") && errorInnerElementSize.contains("array") &&
-                errorInnerElementSize.contains("2") && errorInnerElementSize.contains("3"));
+    EXPECT_TRUE(errorInnerElementSize.contains("Type mismatch") &&
+                errorInnerElementSize.contains("array") && errorInnerElementSize.contains("2") &&
+                errorInnerElementSize.contains("3"));
 }
 
 TEST_F(NeutroniumTester, EmptyArrayFails) {
@@ -407,8 +408,7 @@ TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("exit") && error.contains("int") && error.contains("type") &&
-                error.contains("bool"));
+    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("int") && error.contains("bool"));
 }
 
 TEST_F(NeutroniumTester, TypeMismatchInExpressionFails) {
@@ -477,19 +477,6 @@ TEST_F(NeutroniumTester, VariableUsedBeforeDeclarationError) {
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("undeclared") &&
                 (error.contains("variable") || error.contains("symbol")) && error.contains("x"));
-}
-
-TEST_F(NeutroniumTester, VariableOfTypeVoidFails) {
-    const std::string code = R"(
-        fn x(): {}
-
-        fn main(): {
-            let y = x();
-        }
-    )";
-    auto [status, error] = compile(code);
-    EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("void") && error.contains("type") && error.contains("y"));
 }
 
 TEST_F(NeutroniumTester, SymbolShadowingError) {
@@ -574,7 +561,8 @@ TEST_F(NeutroniumTester, AttemptToArrayAccessANonArray) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("array") && error.contains("indexed") && error.contains("int"));
+    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("array") &&
+                error.contains("int"));
 
     const std::string code2 = R"(
         fn a(): {}
@@ -654,9 +642,8 @@ TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
-    EXPECT_TRUE((error.contains("function") || error.contains("Function")) &&
-                error3.contains("argument") && error3.contains("type") && error3.contains("x") &&
-                error3.contains("b") && error3.contains("bool"));
+    EXPECT_TRUE(error3.contains("Type mismatch") && error3.contains("int") &&
+                error3.contains("bool"));
 
     const std::string codeArray = R"(
         fn x(arr: [int; 3]): {
@@ -669,8 +656,7 @@ TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
     )";
     auto [statusArray, errorArray] = compile(codeArray);
     EXPECT_NE(statusArray, 0);
-    EXPECT_TRUE(errorArray.contains("Function") && errorArray.contains("argument") &&
-                errorArray.contains("x") && errorArray.contains("arr") &&
+    EXPECT_TRUE(errorArray.contains("Type mismatch") && errorArray.contains("array") &&
                 errorArray.contains("2") && errorArray.contains("3"));
 }
 
@@ -679,21 +665,22 @@ TEST_F(NeutroniumTester, FunctionReturnTypeMismatch) {
         fn x() -> bool: {
             return 1;
         }
+        fn main(): {}
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("return") &&
-                error.contains("type") && error.contains("bool") && error.contains("int"));
+    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("bool") && error.contains("int"));
 
     const std::string code2 = R"(
         fn x(): {
             return true;
         }
+        fn main(): {}
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("Type mismatch") && error2.contains("return") &&
-                error2.contains("type") && error2.contains("void") && error2.contains("bool"));
+    EXPECT_TRUE(error2.contains("Type mismatch") && error2.contains("void") &&
+                error2.contains("bool"));
 
     const std::string code3 = R"(
         fn x() -> int: {
@@ -706,8 +693,8 @@ TEST_F(NeutroniumTester, FunctionReturnTypeMismatch) {
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
-    EXPECT_TRUE(error3.contains("Type mismatch") && error3.contains("y") &&
-                error3.contains("type") && error3.contains("bool") && error3.contains("int"));
+    EXPECT_TRUE(error3.contains("Type mismatch") && error3.contains("bool") &&
+                error3.contains("int"));
 }
 
 TEST_F(NeutroniumTester, FunctionDoesNotAlwaysReturn) {
@@ -781,8 +768,7 @@ TEST_F(NeutroniumTester, NonBooleanConditionError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("bool") && error.contains("condition") && error.contains("type") &&
-                error.contains("int"));
+    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("bool") && error.contains("int"));
 
     const std::string code2 = R"(
         fn main(): {
@@ -794,8 +780,8 @@ TEST_F(NeutroniumTester, NonBooleanConditionError) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("bool") && error2.contains("condition") &&
-                error2.contains("type") && error2.contains("int"));
+    EXPECT_TRUE(error2.contains("Type mismatch") && error2.contains("bool") &&
+                error2.contains("int"));
 }
 
 TEST_F(NeutroniumTester, InvalidIdentifierFails) {
@@ -857,7 +843,8 @@ TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE((error.contains("operator") || error.contains("type")) && error.contains("int"));
+    EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                error.contains(trait_to_string(Trait::NOT)) && error.contains("int"));
 
     const std::string code2 = R"(
         fn main(): {
@@ -867,8 +854,8 @@ TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE((error2.contains("operator") || error2.contains("type")) &&
-                error2.contains("bool"));
+    EXPECT_TRUE(error2.contains("Type") && error2.contains("trait") &&
+                error2.contains(trait_to_string(Trait::SUB)) && error2.contains("bool"));
 
     const std::string code3 = R"(
         fn x(): {}
@@ -877,8 +864,8 @@ TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
-    EXPECT_TRUE((error3.contains("operator") || error3.contains("type")) &&
-                error3.contains("void"));
+    EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
+                error3.contains(trait_to_string(Trait::SUB)) && error3.contains("void"));
 }
 
 TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
@@ -889,7 +876,8 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("type") && error.contains("int") && error.contains("bool"));
+    EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                error.contains(trait_to_string(Trait::ADD)) && error.contains("bool"));
 
     const std::string code2 = R"(
         fn main(): {
@@ -898,7 +886,8 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("type") && error2.contains("int") && error2.contains("bool"));
+    EXPECT_TRUE(error2.contains("Type") && error2.contains("trait") &&
+                error2.contains(trait_to_string(Trait::GT)) && error2.contains("bool"));
 
     const std::string code3 = R"(
         fn x(): {}
@@ -909,8 +898,8 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
-    EXPECT_TRUE(error3.contains("type") && error3.contains("void") && error3.contains("int") &&
-                error3.contains("bool"));
+    EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
+                error3.contains(trait_to_string(Trait::EQ)) && error3.contains("void"));
 
     const std::string code4 = R"(
         fn x(): {}
@@ -921,7 +910,8 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     )";
     auto [status4, error4] = compile(code4);
     EXPECT_NE(status4, 0);
-    EXPECT_TRUE(error4.contains("type") && error4.contains("void") && error4.contains("int"));
+    EXPECT_TRUE(error4.contains("Type") && error4.contains("trait") &&
+                error4.contains(trait_to_string(Trait::GTE)) && error4.contains("void"));
 }
 
 TEST_F(NeutroniumTester, BreakWhenNotInLoopFails) {

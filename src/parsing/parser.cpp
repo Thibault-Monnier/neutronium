@@ -45,22 +45,22 @@ Type Parser::parse_type_specifier() {
     switch (tokenKind) {
         case TokenKind::INT:
             expect(tokenKind);
-            return PrimitiveKind::INT;
+            return Primitive::Kind::INT;
         case TokenKind::INT8:
             expect(tokenKind);
-            return PrimitiveKind::INT8;
+            return Primitive::Kind::INT8;
         case TokenKind::INT16:
             expect(tokenKind);
-            return PrimitiveKind::INT16;
+            return Primitive::Kind::INT16;
         case TokenKind::INT32:
             expect(tokenKind);
-            return PrimitiveKind::INT32;
+            return Primitive::Kind::INT32;
         case TokenKind::INT64:
             expect(tokenKind);
-            return PrimitiveKind::INT64;
+            return Primitive::Kind::INT64;
         case TokenKind::BOOL:
             expect(tokenKind);
-            return PrimitiveKind::BOOL;
+            return Primitive::Kind::BOOL;
         case TokenKind::LEFT_BRACKET: {
             expect(tokenKind);
             const TypeID elementTypeID = typeManager_.createType(parse_type_specifier());
@@ -467,7 +467,7 @@ ParsedFunctionSignature Parser::parse_function_signature() {
     }
     expect(TokenKind::RIGHT_PAREN);
 
-    Type returnType = PrimitiveKind::VOID;
+    Type returnType = Primitive::Kind::VOID;
     if (peek().kind() == TokenKind::RIGHT_ARROW) {
         expect(TokenKind::RIGHT_ARROW);
         returnType = parse_type_specifier();

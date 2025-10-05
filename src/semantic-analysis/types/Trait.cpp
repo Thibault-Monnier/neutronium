@@ -1,5 +1,7 @@
 #include "semantic-analysis/types/Trait.hpp"
 
+#include <magic_enum.hpp>
+
 [[nodiscard]] std::optional<Trait> trait_from_operator(const AST::Operator op) {
     switch (op) {
         case AST::Operator::ADD:
@@ -31,3 +33,5 @@
             return std::nullopt;
     }
 }
+
+std::string_view trait_to_string(const Trait trait) { return magic_enum::enum_name(trait); }
