@@ -3,15 +3,13 @@
 <details><summary>Formal EBNF Grammar</summary>
 
 ```
-program ::= { const-definition } { external-function-declaration } { function-definition } EOF
+program ::= { external-function-declaration } { function-definition } EOF
 
 function-signature ::= identifier '(' parameter-list ')' [ '->' type-specifier ]
 
 external-function-declaration ::= 'extern' 'fn' function-signature ';'
 
 function-definition ::= [ 'export' ] 'fn' function-signature ':' block-statement
-
-const-definition ::= 'const' identifier [ ':' type-specifier ] '=' expression ';'
 
 statement ::= block-statement
             | variable-definition
