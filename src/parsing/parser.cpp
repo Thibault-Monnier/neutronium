@@ -132,13 +132,12 @@ std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
 
 std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access(
     std::unique_ptr<AST::Expression>& base) {
-    const Token& lBracket = expect(TokenKind::LEFT_BRACKET);
+    expect(TokenKind::LEFT_BRACKET);
     auto index = parse_expression();
     const Token& rBracket = expect(TokenKind::RIGHT_BRACKET);
 
-    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index),
-                                              lBracket.byte_offset_start(),
-                                              rBracket.byte_offset_end());
+    return std::make_unique<AST::ArrayAccess>(
+        std::move(base), std::move(index), base->source_start_index(), rBracket.byte_offset_end());
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {
