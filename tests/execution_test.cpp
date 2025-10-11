@@ -690,4 +690,45 @@ TEST_F(NeutroniumTester, Arrays) {
         }
     )";
     EXPECT_EQ(run(codeArrayLiteralAccess), 3);
+
+    const std::string codeTestTypeInference = R"(
+        fn takesInt8(a: int8): { }
+
+        fn main(): {
+            let n = 13;
+            takesInt8(n);
+
+            let a: [[int8; 1]; 2] = [[n], [n + 1]];
+            let b = a[0][0];
+
+            exit a[1][0];
+        }
+    )";
+    EXPECT_EQ(run(codeTestTypeInference), 14);
+}
+
+TEST_F(NeutroniumTester, ArrayIndexWithInt16) {
+    const std::string code = R"(
+        fn main(): {
+            let arr = [10, 20, 30, 40];
+            let idx: int16 = 2;
+            exit arr[idx];  # should be 30
+        }
+    )";
+    EXPECT_EQ(run(code), 30);
+}
+
+TEST_F(NeutroniumTester, ArrayElementTypeBubblesUp) {
+    const std::string code = R"(
+        fn forceInt16(unused: bool, x: int16) -> int16: { return x; }
+
+        fn main(): {
+            let k: int16 = 10;
+            let arr = [[1, 2], [k, 4]];
+            let control = forceInt16(true, 2);
+            exit (arr[0][1] / control)  # asserts that arr is inferred as [[int16; 2]; 2]
+                 + arr[1][0];           # 2/2 + 10 = 11
+        }
+    )";
+    EXPECT_EQ(run(code), 11);
 }

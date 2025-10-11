@@ -299,6 +299,35 @@ TEST_F(NeutroniumTester, ReassignmentDifferentInferredTypeFails) {
                 error4.contains("int"));
 }
 
+TEST_F(NeutroniumTester, ConflictingIntegerInferenceFails) {
+    const std::string codeFunctionParam = R"(
+        fn use8(a: int8): {}
+        fn use16(a: int16): {}
+
+        fn main(): {
+            let n = 1;
+            use8(n);     # n inferred as int8
+            use16(n);    # conflicting: n also required to be int16
+        }
+    )";
+    auto [statusFunctionParam, errorFunctionParam] = compile(codeFunctionParam);
+    EXPECT_NE(statusFunctionParam, 0);
+    EXPECT_TRUE(errorFunctionParam.contains("Type mismatch") &&
+                errorFunctionParam.contains("int8") && errorFunctionParam.contains("int16"));
+
+    const std::string codeBinaryOp = R"(
+        fn main(): {
+            let a: int8 = 1;
+            let b: int16 = 2;
+            let c = a + b;   # illegal: int8 + int16
+        }
+    )";
+    auto [statusBinaryOp, errorBinaryOp] = compile(codeBinaryOp);
+    EXPECT_NE(statusBinaryOp, 0);
+    EXPECT_TRUE(errorBinaryOp.contains("Type mismatch") && errorBinaryOp.contains("int8") &&
+                errorBinaryOp.contains("int16"));
+}
+
 TEST_F(NeutroniumTester, CompoundAssignmentWithNonIntegersFails) {
     const std::string code2 = R"(
         fn main(): {
@@ -574,6 +603,24 @@ TEST_F(NeutroniumTester, AttemptToArrayAccessANonArray) {
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
     EXPECT_TRUE(error2.contains("not") && error2.contains("variable") && error2.contains("`a`"));
+
+    const std::string code3dArray = R"(
+        fn getArray(a: int8, b: int8, c: int8, d: int8) -> [[int8; 2]; 2]: {
+            return [[a, b], [c, d]];
+        }
+
+        fn main(): {
+            let arr = getArray(1, 2, 3, 4);
+            let int8Bits: int8 = 2;
+            let val = arr[1][1] / int8Bits;
+            arr[0][1][2];      # arr is 2D, but accessed as 3D
+        }
+    )";
+    auto [status3dArray, error3dArray] = compile(code3dArray);
+    EXPECT_NE(status3dArray, 0);
+    EXPECT_TRUE(error3dArray.contains("Type") && error3dArray.contains("trait") &&
+                error3dArray.contains(trait_to_string(Trait::SUBSCRIPT)) &&
+                error3dArray.contains("int8"));
 }
 
 TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {
