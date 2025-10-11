@@ -3,6 +3,7 @@
 #include <cassert>
 #include <format>
 #include <functional>
+#include <ranges>
 #include <string>
 #include <utility>
 
@@ -216,7 +217,7 @@ TypeID SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
             }
 
             const TypeID elementTypeID = get_expression_type(*arrayLiteral.elements_[0]);
-            for (const auto& element : arrayLiteral.elements_) {
+            for (const auto& element : arrayLiteral.elements_ | std::views::drop(1)) {
                 analyse_expression(*element, elementTypeID);
             }
             return typeManager_.createType(Type{typeManager_.getType(elementTypeID), elementTypeID,
@@ -238,17 +239,14 @@ TypeID SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
             const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
             const TypeID arrayType = get_expression_type(*arrayAccess.base_);
 
-            typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
-                arrayType, Trait::SUBSCRIPT, *arrayAccess.base_));
+            typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(arrayType, Trait::SUBSCRIPT, arrayAccess));
 
             const TypeID integerTypeID = typeManager_.createType(Type::integerFamilyType());
             analyse_expression(*arrayAccess.index_, integerTypeID);
 
             const TypeID elementTypeID = typeManager_.createType(Type::anyFamilyType());
-            const TypeID arrayFromElementType = typeManager_.createType(Type{
-                typeManager_.getType(elementTypeID), elementTypeID, &AnyTypeFamily::getInstance()});
             typeManager_.getTypeSolver().addConstraint(
-                std::make_unique<EqualityConstraint>(arrayType, arrayFromElementType, arrayAccess));
+                std::make_unique<SubscriptConstraint>(arrayType, elementTypeID, arrayAccess));
 
             return elementTypeID;
         }

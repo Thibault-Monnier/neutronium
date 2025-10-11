@@ -561,8 +561,8 @@ TEST_F(NeutroniumTester, AttemptToArrayAccessANonArray) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("array") &&
-                error.contains("int"));
+    EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                error.contains(trait_to_string(Trait::SUBSCRIPT)) && error.contains("int"));
 
     const std::string code2 = R"(
         fn a(): {}

@@ -43,76 +43,125 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src) {
     std::unreachable();
 }
 
-void TypeSolver::solveEqualityConstraints() {
-    // Uses a union-find algorithm to solve equality constraints
-
+void TypeSolver::prepareUnionFind() {
+    nodes_.clear();
     nodes_.resize(typeManager_.getTypeCount());
-
     for (TypeID i = 0; i < nodes_.size(); ++i) {
         nodes_[i] = {.parent_ = i, .setSize_ = 1};
     }
+}
 
-    for (const auto& constraint : constraints_) {
-        if (constraint->kind() != Constraint::Kind::EQUALITY) {
-            continue;
-        }
+bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConstraint) {
+    // Uses a union-find algorithm to solve equality constraints
+    assert(equalityConstraint.kind() == Constraint::Kind::EQUALITY);
 
-        const auto& equalityConstraint = static_cast<const EqualityConstraint&>(*constraint);
-        const TypeID a = equalityConstraint.a();
-        const TypeID b = equalityConstraint.b();
+    const TypeID a = equalityConstraint.a();
+    const TypeID b = equalityConstraint.b();
 
-        TypeID rootA = findRoot(a);
-        TypeID rootB = findRoot(b);
+    TypeID rootA = findRoot(a);
+    TypeID rootB = findRoot(b);
 
-        if (rootA == rootB) continue;
+    if (rootA == rootB) return true;
 
-        if (nodes_[rootA].setSize_ < nodes_[rootB].setSize_) std::swap(rootA, rootB);
+    if (nodes_[rootA].setSize_ < nodes_[rootB].setSize_) std::swap(rootA, rootB);
 
-        if (!unify(rootA, rootB)) {
-            // Types are not compatible
-            const Type& aType = typeManager_.getType(rootA);
-            const Type& bType = typeManager_.getType(rootB);
+    if (!unify(rootA, rootB)) {
+        // Types are not compatible
+        const Type& aType = typeManager_.getType(rootA);
+        const Type& bType = typeManager_.getType(rootB);
 
-            diagnosticsEngine_.report_error(
-                std::format("Type mismatch: cannot unify types '{}' and '{}'", aType.to_string(),
-                            bType.to_string()),
-                equalityConstraint.sourceNode().source_start_index(),
-                equalityConstraint.sourceNode().source_end_index());
-            diagnosticsEngine_.emit_errors();
-            exit(EXIT_FAILURE);
-        }
+        diagnosticsEngine_.report_error(
+            std::format("Type mismatch: cannot unify types '{}' and '{}'", aType.to_string(),
+                        bType.to_string()),
+            equalityConstraint.sourceNode().source_start_index(),
+            equalityConstraint.sourceNode().source_end_index());
+        diagnosticsEngine_.emit_errors();
+        exit(EXIT_FAILURE);
     }
 
+    // FIXME: This is slow because it iterates over all nodes for each constraint. It should
+    //  probably be done less often.
     for (TypeID node = 0; node < nodes_.size(); ++node) {
         const TypeID root = findRoot(node);
         if (root == node) continue;
 
         typeManager_.linkTypes(root, node);
     }
+
+    return true;
 }
 
-void TypeSolver::solveHasTraitConstraints() const {
-    for (const auto& constraint : constraints_) {
-        if (constraint->kind() != Constraint::Kind::HAS_TRAIT) {
-            continue;
-        }
+bool TypeSolver::solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint) const {
+    assert(subscriptConstraint.kind() == Constraint::Kind::SUBSCRIPT);
 
-        const auto& hasTraitConstraint = static_cast<const HasTraitConstraint&>(*constraint);
-        const Type& type = typeManager_.getType(hasTraitConstraint.type());
-        const Trait& trait = hasTraitConstraint.trait();
+    const Type& type = typeManager_.getType(subscriptConstraint.container());
 
-        if (!type.hasTrait(trait)) {
-            diagnosticsEngine_.report_error(std::format("Type '{}' does not implement trait '{}'",
-                                                        type.to_string(), trait_to_string(trait)),
-                                            hasTraitConstraint.sourceNode().source_start_index(),
-                                            hasTraitConstraint.sourceNode().source_end_index());
-            diagnosticsEngine_.emit_errors();
-            exit(EXIT_FAILURE);
-        }
+    if (type.kind() == TypeKind::ARRAY) {
+        const TypeID expectedElementTypeID = type.array_element_type_id();
+        const TypeID actualElementTypeID = subscriptConstraint.element();
+
+        typeManager_.getTypeSolver().addConstraint(std::make_unique<EqualityConstraint>(
+            expectedElementTypeID, actualElementTypeID, subscriptConstraint.sourceNode()));
+
+        return true;
     }
+
+    return false;
+}
+
+bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint) const {
+    assert(hasTraitConstraint.kind() == Constraint::Kind::HAS_TRAIT);
+
+    const Type& type = typeManager_.getType(hasTraitConstraint.type());
+    const Trait& trait = hasTraitConstraint.trait();
+
+    if (type.isUnknownKind()) return false;
+
+    if (!type.hasTrait(trait)) {
+        diagnosticsEngine_.report_error(std::format("Type '{}' does not implement trait '{}'",
+                                                    type.to_string(), trait_to_string(trait)),
+                                        hasTraitConstraint.sourceNode().source_start_index(),
+                                        hasTraitConstraint.sourceNode().source_end_index());
+        diagnosticsEngine_.emit_errors();
+        exit(EXIT_FAILURE);
+    }
+
+    return true;
 }
 
 void TypeSolver::solve() {
-    solveEqualityConstraints();
-    solveHasTraitConstraints();
+    prepareUnionFind();
+
+    while (!pendingConstraints_.empty()) {
+        for (auto it = pendingConstraints_.begin(); it != pendingConstraints_.end();) {
+            const Constraint* constraint = it->get();
+
+            bool solved = false;
+            switch (constraint->kind()) {
+                case Constraint::Kind::EQUALITY: {
+                    auto& equalityConstraint = static_cast<const EqualityConstraint&>(*constraint);
+                    solved = solveEqualityConstraint(equalityConstraint);
+                    break;
+                }
+                case Constraint::Kind::SUBSCRIPT: {
+                    const auto& subscriptConstraint =
+                        static_cast<const SubscriptConstraint&>(*constraint);
+                    solved = solveSubscriptConstraint(subscriptConstraint);
+                    break;
+                }
+                case Constraint::Kind::HAS_TRAIT: {
+                    const auto& hasTraitConstraint =
+                        static_cast<const HasTraitConstraint&>(*constraint);
+                    solved = solveHasTraitConstraint(hasTraitConstraint);
+                    break;
+                }
+            }
+
+            if (solved) {
+                it = pendingConstraints_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 }

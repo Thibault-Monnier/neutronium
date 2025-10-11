@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include <vector>
 
 #include "Constraint.hpp"
@@ -30,7 +31,7 @@ class TypeSolver {
      * @param constraint A unique pointer to the Constraint object to be added.
      */
     void addConstraint(std::unique_ptr<Constraint> constraint) {
-        constraints_.push_back(std::move(constraint));
+        pendingConstraints_.push_back(std::move(constraint));
     }
 
     /**
@@ -44,10 +45,9 @@ class TypeSolver {
     void solve();
 
    private:
-    std::vector<std::unique_ptr<Constraint>> constraints_;
+    std::list<std::unique_ptr<Constraint>> pendingConstraints_;
 
     TypeManager& typeManager_;
-
     DiagnosticsEngine& diagnosticsEngine_;
 
     struct Node {
@@ -59,7 +59,10 @@ class TypeSolver {
 
     [[nodiscard]] TypeID findRoot(TypeID x);
     [[nodiscard]] bool unify(TypeID dst, TypeID src);
-    void solveEqualityConstraints();
+    void prepareUnionFind();
+    bool solveEqualityConstraint(const EqualityConstraint& equalityConstraint);
 
-    void solveHasTraitConstraints() const;
+    bool solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint) const;
+
+    bool solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint) const;
 };

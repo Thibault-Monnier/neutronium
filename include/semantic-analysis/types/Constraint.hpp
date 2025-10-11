@@ -14,7 +14,7 @@
  */
 class Constraint {
    public:
-    enum class Kind : uint8_t { EQUALITY, HAS_TRAIT };
+    enum class Kind : uint8_t { EQUALITY, SUBSCRIPT, HAS_TRAIT };
 
     virtual ~Constraint() = default;
 
@@ -47,6 +47,27 @@ class EqualityConstraint final : public Constraint {
    private:
     const TypeID a_;
     const TypeID b_;
+};
+
+/**
+ * @brief Represents a subscript constraint for a container type.
+ *
+ * The SubscriptConstraint class defines a constraint that asserts a specific type
+ * must have the provided element type.
+ */
+class SubscriptConstraint final : public Constraint {
+   public:
+    SubscriptConstraint(const TypeID container, const TypeID element, const AST::Node& sourceNode)
+        : Constraint(sourceNode), container_(container), element_(element) {}
+
+    [[nodiscard]] Kind kind() const override { return Kind::SUBSCRIPT; }
+
+    [[nodiscard]] TypeID container() const { return container_; }
+    [[nodiscard]] TypeID element() const { return element_; }
+
+   private:
+    const TypeID container_;
+    const TypeID element_;
 };
 
 /**
