@@ -143,16 +143,6 @@ class Type {
     [[nodiscard]] TypeID array_element_type_id() const;
 
     /**
-     * @brief Retrieves the length of the array type.
-     *
-     * This method returns the length of the array if the type is of kind `ARRAY`.
-     * If the type is not an array, the behavior is undefined.
-     *
-     * @return The length of the array.
-     */
-    [[nodiscard]] size_t arrayLength() const;
-
-    /**
      * @brief Attempts to merge the current type with another type.
      *
      * This method combines the current type instance with the provided `other` type. It expects

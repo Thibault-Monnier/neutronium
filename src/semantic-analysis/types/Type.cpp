@@ -97,13 +97,6 @@ TypeID Type::array_element_type_id() const {
     std::unreachable();
 }
 
-size_t Type::arrayLength() const {
-    if (kind_ == TypeKind::ARRAY) {
-        return arrayLength_;
-    }
-    std::unreachable();
-}
-
 bool Type::mergeWith(const Type& other) {
     if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) std::unreachable();
 
@@ -133,21 +126,14 @@ bool Type::matches(const Type& other) const {
     switch (kind_) {
         case TypeKind::PRIMITIVE:
             // If one of the types has no family, it is fully determined, so we just need to make
-            // sure the other type is compatible
+            // sure the other type is compatible.
             if (family_->kind() == PrimitiveTypeFamily::Kind::NONE &&
                 other.family_->kind() == PrimitiveTypeFamily::Kind::NONE) {
                 return primitive_ == other.primitive_;
             }
-            if (family_->kind() == PrimitiveTypeFamily::Kind::NONE) {
-                return other.family_->isInFamily(primitive_);
-            }
-            if (other.family_->kind() == PrimitiveTypeFamily::Kind::NONE) {
-                return family_->isInFamily(other.primitive_);
-            }
 
-            // Both types have families, we must make sure one of the families includes the
-            // other type's primitive.
-            return family_->isInFamily(other.primitive_) || other.family_->isInFamily(primitive_);
+            // Otherwise, we checked that the families are not compatible above.
+            return false;
 
         case TypeKind::ARRAY:
             return arrayLength_ == other.arrayLength_ &&
