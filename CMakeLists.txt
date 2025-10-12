@@ -7,12 +7,27 @@ if (DEFINED COMPILER)
     elseif (COMPILER STREQUAL "clang")
         set(CMAKE_C_COMPILER clang)
         set(CMAKE_CXX_COMPILER clang++)
+    else ()
+        message(FATAL_ERROR "Unsupported compiler: ${COMPILER}. Supported compilers are 'gcc' and 'clang'.")
     endif ()
 endif ()
 
 project(neutronium)
 
 include(FetchContent)
+
+# --- Compiler mismatch warning (after project) ---
+if (DEFINED COMPILER)
+    if (COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        message(WARNING
+                "You previously compiled with ${CMAKE_CXX_COMPILER_ID}, but set COMPILER=gcc. "
+                "Not changing compiler. Delete CMakeCache.txt to switch.")
+    elseif (COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        message(WARNING
+                "You previously compiled with ${CMAKE_CXX_COMPILER_ID}, but set COMPILER=clang. "
+                "Not changing compiler. Delete CMakeCache.txt to switch.")
+    endif ()
+endif ()
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
