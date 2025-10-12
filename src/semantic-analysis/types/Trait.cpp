@@ -29,9 +29,11 @@
             return Trait::GT;
         case AST::Operator::GREATER_THAN_OR_EQUAL:
             return Trait::GTE;
-        default:
+        case AST::Operator::ASSIGN:
+        case AST::Operator::UNDEFINED_OPERATOR:
             return std::nullopt;
     }
+    std::unreachable();
 }
 
 std::string_view trait_to_string(const Trait trait) { return magic_enum::enum_name(trait); }

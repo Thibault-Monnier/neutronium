@@ -224,8 +224,6 @@ class Type {
             case TypeKind::UNKNOWN:
                 traits_.clear();
                 break;
-            default:
-                std::unreachable();
         }
     }
 

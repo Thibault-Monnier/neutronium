@@ -157,20 +157,22 @@ TypeID SemanticAnalyser::get_function_call_type(const AST::FunctionCall& funcCal
 TypeID SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& unaryExpr) {
     const TypeID operandType = get_expression_type(*unaryExpr.operand_);
 
-    if (unaryExpr.operator_ == AST::Operator::ADD ||
-        unaryExpr.operator_ == AST::Operator::SUBTRACT) {
-        typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
-            operandType, trait_from_operator(unaryExpr.operator_).value(), unaryExpr));
-        return operandType;
-    }
+    const std::optional<Trait> requiredTrait = trait_from_operator(unaryExpr.operator_);
 
-    if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) {
+    if (requiredTrait.has_value()) {
         typeManager_.getTypeSolver().addConstraint(
-            std::make_unique<HasTraitConstraint>(operandType, Trait::NOT, unaryExpr));
-        return typeManager_.createType(Primitive::Kind::BOOL);
+            std::make_unique<HasTraitConstraint>(operandType, requiredTrait.value(), unaryExpr));
     }
 
-    std::unreachable();
+    switch (unaryExpr.operator_) {
+        case AST::Operator::ADD:
+        case AST::Operator::SUBTRACT:
+            return operandType;
+        case AST::Operator::LOGICAL_NOT:
+            return typeManager_.createType(Primitive::Kind::BOOL);
+        default:
+            std::unreachable();
+    }
 }
 
 TypeID SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression& binaryExpr) {
@@ -180,27 +182,15 @@ TypeID SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression&
         std::make_unique<EqualityConstraint>(leftType, rightType, binaryExpr));
 
     const AST::Operator op = binaryExpr.operator_;
-    if (AST::is_arithmetic_operator(op)) {
+    const std::optional<Trait> trait = trait_from_operator(op);
+    if (trait.has_value()) {
         typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
             leftType, trait_from_operator(op).value(), binaryExpr));
-
-        return leftType;
     }
 
-    if (AST::is_equality_operator(op)) {
-        typeManager_.getTypeSolver().addConstraint(
-            std::make_unique<HasTraitConstraint>(leftType, Trait::EQ, binaryExpr));
-
+    if (AST::is_arithmetic_operator(op)) return leftType;
+    if (AST::is_equality_operator(op) || AST::is_relational_operator(op))
         return typeManager_.createType(Primitive::Kind::BOOL);
-    }
-
-    if (AST::is_relational_operator(op)) {
-        typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(
-            leftType, trait_from_operator(op).value(), binaryExpr));
-
-        return typeManager_.createType(Primitive::Kind::BOOL);
-    }
-
     std::unreachable();
 }
 
@@ -239,7 +229,8 @@ TypeID SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
             const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
             const TypeID arrayType = get_expression_type(*arrayAccess.base_);
 
-            typeManager_.getTypeSolver().addConstraint(std::make_unique<HasTraitConstraint>(arrayType, Trait::SUBSCRIPT, arrayAccess));
+            typeManager_.getTypeSolver().addConstraint(
+                std::make_unique<HasTraitConstraint>(arrayType, Trait::SUBSCRIPT, arrayAccess));
 
             const TypeID integerTypeID = typeManager_.createType(Type::integerFamilyType());
             analyse_expression(*arrayAccess.index_, integerTypeID);
