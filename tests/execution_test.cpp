@@ -732,3 +732,26 @@ TEST_F(NeutroniumTester, ArrayElementTypeBubblesUp) {
     )";
     EXPECT_EQ(run(code), 11);
 }
+
+TEST_F(NeutroniumTester, TypeInferenceFromFunctionParameterSucceeds) {
+    // Type inference from function parameter: literal inferred as int8
+    const std::string code = R"(
+        fn takesInt8(x: int8) -> int8: { return x + 1; }
+        fn main(): {
+            let n = 41;
+            exit takesInt8(n);  # n inferred as int8
+        }
+    )";
+    EXPECT_EQ(run(code), 42);
+}
+
+TEST_F(NeutroniumTester, TypeInferenceFromArrayLiteralSucceeds) {
+    // Type inference from array literal: all elements inferred as int16
+    const std::string code = R"(
+        fn main(): {
+            let arr: [int16; 3] = [10, 20, 30];
+            exit arr[1];  # Should be 20
+        }
+    )";
+    EXPECT_EQ(run(code), 20);
+}
