@@ -97,7 +97,7 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
     });
 
     const auto assembly = timed("Code generation", verbose, [&] {
-        return Generator(*ast, typeManager, opts.targetType_).generate();
+        return CodeGen::Generator(*ast, typeManager, opts.targetType_).generate();
     });
     if (opts.logAssembly_) std::cout << assembly.str();
 

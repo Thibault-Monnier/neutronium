@@ -1,13 +1,15 @@
 #include "generation/generator.hpp"
 
 #include <cassert>
-#include <iostream>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
 #include "parsing/ast.hpp"
+
+using namespace CodeGen;
 
 std::stringstream Generator::generate() {
     // Declare external functions
@@ -37,57 +39,114 @@ std::stringstream Generator::generate() {
     return std::move(output_);
 }
 
-int Generator::get_current_scope_frame_size(const AST::BlockStatement& blockStmt) {
+void Generator::insert_symbol(const std::string& name, const TypeID typeID) {
+    symbolTable_.erase(name);
+
+    const Type& type = typeManager_.getType(typeID);
+    assert(!type.isVoid() && "Void type cannot be stored in a variable");
+
+    // Arrays are stored as 8-byte pointers
+    const int stackSizeBits = type.isArray() ? 64 : type.sizeBits();
+
+    const SymbolInfo info = {
+        .name_ = name, .stackOffset_ = currentStackOffset_, .stackSizeBits_ = stackSizeBits};
+    symbolTable_.emplace(name, info);
+
+    currentStackOffset_ += stackSizeBits / 8;
+}
+
+int Generator::get_scope_frame_size(const AST::BlockStatement& blockStmt) const {
     int frameSize = 0;
     for (const auto& stmt : blockStmt.body_) {
         if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
-            frameSize += 8;
+            const auto& varDef = static_cast<const AST::VariableDefinition&>(*stmt);
+            frameSize += get_variable_size_bits(varDef.identifier_->name_) / 8;
         }
     }
     return frameSize;
 }
 
-void Generator::stack_allocate_scope_variables(const AST::BlockStatement& blockStmt) {
-    const int frameSize = get_current_scope_frame_size(blockStmt);
+void Generator::enter_scope(const AST::BlockStatement& blockStmt) {
+    for (const auto& stmt : blockStmt.body_) {
+        if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
+            const auto& varDef = static_cast<const AST::VariableDefinition&>(*stmt);
+            insert_symbol(varDef.identifier_->name_, varDef.typeID_);
+        }
+    }
+
+    const int frameSize = get_scope_frame_size(blockStmt);
     if (frameSize > 0) {
         output_ << "    sub rsp, " << frameSize << "\n";
     }
 }
 
-void Generator::stack_deallocate_scope_variables(const AST::BlockStatement& blockStmt) {
-    const int frameSize = get_current_scope_frame_size(blockStmt);
-    if (frameSize != 0) {
+void Generator::exit_scope(const AST::BlockStatement& blockStmt) {
+    const int frameSize = get_scope_frame_size(blockStmt);
+    if (frameSize > 0) {
         output_ << "    add rsp, " << frameSize << "\n";
     }
 }
 
+int Generator::get_variable_size_bits(const std::string& name) const {
+    return symbolTable_.at(name).stackSizeBits_;
+}
+
 int Generator::get_variable_stack_offset(const std::string& name) const {
-    assert(variablesStackOffset_.contains(name) && "Variable not found in stack offset map");
+    assert(symbolTable_.contains(name) && "Variable not found in stack offset map");
 
-    return variablesStackOffset_.at(name);
+    return symbolTable_.at(name).stackOffset_;
 }
 
-void Generator::insert_variable_stack_offset(const std::string& name) {
-    variablesStackOffset_.erase(name);
-    variablesStackOffset_.emplace(name, currentStackOffset_);
-    currentStackOffset_ += 8;
+std::string_view Generator::size_directive(const int bitSize) {
+    switch (bitSize) {
+        case 8:
+            return "byte";
+        case 16:
+            return "word";
+        case 32:
+            return "dword";
+        case 64:
+            return "qword";
+        default:
+            std::unreachable();
+    }
 }
 
-void Generator::write_to_variable(const std::string& name, const std::string& source) {
-    output_ << "    mov qword [rbp - " << get_variable_stack_offset(name) << "], " << source
+std::string_view Generator::register_a_for_size(const int bitSize) {
+    switch (bitSize) {
+        case 8:
+            return "al";
+        case 16:
+            return "ax";
+        case 32:
+            return "eax";
+        case 64:
+            return "rax";
+        default:
+            std::unreachable();
+    }
+}
+
+void Generator::write_to_variable(const std::string& name, const std::string_view source) {
+    const int size = get_variable_size_bits(name);
+    const int stackOffset = get_variable_stack_offset(name);
+    output_ << "    mov " << size_directive(size) << " [rbp - " << stackOffset << "], " << source
             << "\n";
 }
 
 void Generator::move_variable_to_rax(const std::string& name) {
-    output_ << "    mov rax, [rbp - " << get_variable_stack_offset(name) << "]\n";
+    const int sizeBits = get_variable_size_bits(name);
+    const int stackOffset = get_variable_stack_offset(name);
+    output_ << "    mov " << register_a_for_size(sizeBits) << ", [rbp - " << stackOffset << "]\n";
 }
 
 void Generator::move_number_lit_to_rax(const AST::NumberLiteral& numberLit) {
-    output_ << "    mov rax, " << numberLit.value_ << "\n";
+    output_ << "    mov " << register_a_for_size(64) << ", " << numberLit.value_ << "\n";
 }
 
 void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
-    output_ << "    mov rax, " << (booleanLit.value_ ? "1" : "0") << "\n";
+    output_ << "    mov " << register_a_for_size(8) << ", " << (booleanLit.value_ ? "1" : "0")
+            << "\n";
 }
 
 void Generator::evaluate_array_access_address_to_rax(const AST::ArrayAccess& arrayAccess) {
@@ -265,35 +324,19 @@ void Generator::evaluate_expression_to_rax(const AST::Expression& expr) {
 
 void Generator::generate_variable_definition(const AST::VariableDefinition& varDecl) {
     const std::string& varName = varDecl.identifier_->name_;
-    insert_variable_stack_offset(varName);
-
+    const int sizeBits = get_variable_size_bits(varName);
     evaluate_expression_to_rax(*varDecl.value_);
-    write_to_variable(varName, "rax");
+    write_to_variable(varName, register_a_for_size(sizeBits));
 }
 
 void Generator::generate_variable_assignment(const AST::Assignment& assignment) {
     const auto& place = assignment.place_;
     const auto& value = assignment.value_;
 
-    if (assignment.operator_ == AST::Operator::ASSIGN) {
-        evaluate_expression_to_rax(*value);
-        if (place->kind_ == AST::NodeKind::IDENTIFIER) {
-            const auto& identifier = static_cast<const AST::Identifier&>(*place);
-            write_to_variable(identifier.name_, "rax");
-        } else if (place->kind_ == AST::NodeKind::ARRAY_ACCESS) {
-            const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(*place);
-            output_ << "    push rax\n";
-            evaluate_array_access_address_to_rax(arrayAccess);
-            output_ << "    pop rbx\n";
-            output_ << "    mov [rax], rbx\n";
-        } else {
-            std::unreachable();
-        }
-        return;
-    }
-
     AST::Operator op;
-    if (assignment.operator_ == AST::Operator::ADD_ASSIGN)
+    if (assignment.operator_ == AST::Operator::ASSIGN)
+        op = AST::Operator::UNDEFINED_OPERATOR;
+    else if (assignment.operator_ == AST::Operator::ADD_ASSIGN)
         op = AST::Operator::ADD;
     else if (assignment.operator_ == AST::Operator::SUBTRACT_ASSIGN)
         op = AST::Operator::SUBTRACT;
@@ -305,15 +348,21 @@ void Generator::generate_variable_assignment(const AST::Assignment& assignment) 
         std::unreachable();
 
     evaluate_place_expression_address_to_rax(*place);
-
     output_ << "    push rax\n";
-    evaluate_expression_to_rax(*value);
-    output_ << "    mov rbx, rax\n";
-    output_ << "    pop rcx\n";
-    output_ << "    mov rax, [rcx]\n";
 
-    apply_arithmetic_operator_to_rax(op, "rbx");
-    output_ << "    mov [rcx], rax\n";  // Write the result back to the place
+    evaluate_expression_to_rax(*value);
+
+    if (op == AST::Operator::UNDEFINED_OPERATOR) {
+        output_ << "    pop rbx\n";
+        output_ << "    mov [rbx], rax\n";  // Write the result back to the place
+    } else {
+        output_ << "    mov rbx, rax\n";
+        output_ << "    pop rcx\n";
+        output_ << "    mov rax, [rcx]\n";
+
+        apply_arithmetic_operator_to_rax(op, "rbx");
+        output_ << "    mov [rcx], rax\n";  // Write the result back to the place
+    }
 }
 
 void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStmt) {
@@ -418,11 +467,11 @@ void Generator::generate_stmt(const AST::Statement& stmt) {
         }
         case AST::NodeKind::BLOCK_STATEMENT: {
             const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
-            stack_allocate_scope_variables(blockStmt);
+            enter_scope(blockStmt);
             for (const auto& innerStmt : blockStmt.body_) {
                 generate_stmt(*innerStmt);
             }
-            stack_deallocate_scope_variables(blockStmt);
+            exit_scope(blockStmt);
             break;
         }
         default:
@@ -438,26 +487,34 @@ void Generator::generate_function_definition(const AST::FunctionDefinition& func
     }
 
     output_ << function_name_with_prefix(funcDef.identifier_->name_)
-            << ":\n";  // Prefix with "__" to avoid conflicts with NASM keywords
+            << ":\n";  // Prefix the name to avoid conflicts with NASM keywords
 
     currentStackOffset_ = INITIAL_STACK_OFFSET;
 
     output_ << "    push rbp\n";        // Save the old base pointer
     output_ << "    mov rbp, rsp\n\n";  // Set the new base pointer
 
-    const std::size_t parametersFrameSize = funcDef.parameters_.size() * 8;
+    int parametersFrameSize = 0;
+    for (const auto& param : funcDef.parameters_) {
+        insert_symbol(param->identifier_->name_, param->typeID_);
+        parametersFrameSize += get_variable_size_bits(param->identifier_->name_) / 8;
+    }
+
     if (parametersFrameSize > 0) {
         output_ << "    sub rsp, " << parametersFrameSize << "\n";
+    }
 
-        for (std::size_t i = 0; i < funcDef.parameters_.size(); ++i) {
-            const auto& param = funcDef.parameters_[i];
-            const std::size_t paramOffset = parametersFrameSize + 8 - i * 8;
-            output_ << "    mov rax, [rbp + " << paramOffset << "]\n";
+    int currentParamOffset = 16;  // [rbp] is the saved rbp, [rbp + 8] is the return address
+    for (const auto& param : std::views::reverse(funcDef.parameters_)) {
+        const int paramSizeBits = get_variable_size_bits(param->identifier_->name_);
+        output_ << "    mov " << register_a_for_size(paramSizeBits) << ", [rbp + "
+                << currentParamOffset << "]\n";
+        write_to_variable(param->identifier_->name_, register_a_for_size(paramSizeBits));
 
-            insert_variable_stack_offset(param->identifier_->name_);
-            write_to_variable(param->identifier_->name_, "rax");
-        }
+        currentParamOffset += paramSizeBits / 8;
+    }
 
+    if (parametersFrameSize > 0) {
         output_ << "\n";
     }
 

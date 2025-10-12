@@ -9,8 +9,7 @@
 #include "Primitive.hpp"
 #include "PrimitiveTypeFamily.hpp"
 #include "Trait.hpp"
-
-using TypeID = uint32_t;
+#include "TypeID.hpp"
 
 enum class TypeKind : uint8_t {
     PRIMITIVE,
@@ -118,7 +117,11 @@ class Type {
      */
     [[nodiscard]] bool isUnknownKind() const { return kind_ == TypeKind::UNKNOWN; }
 
-    [[nodiscard]] int sizeBytes() const;
+    [[nodiscard]] bool isArray() const { return kind_ == TypeKind::ARRAY; }
+
+    [[nodiscard]] bool isPrimitive() const { return kind_ == TypeKind::PRIMITIVE; }
+
+    [[nodiscard]] int sizeBits() const;
 
     /**
      * @brief Converts the type information into a string representation.

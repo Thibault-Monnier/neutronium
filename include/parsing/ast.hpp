@@ -6,7 +6,7 @@
 
 #include "lexing/token_kind.hpp"
 #include "operator.hpp"
-#include "semantic-analysis/types/Type.hpp"
+#include "semantic-analysis/types/TypeID.hpp"
 
 namespace AST {
 

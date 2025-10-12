@@ -1,6 +1,6 @@
 #pragma once
 
-#include <semantic-analysis/types/Type.hpp>
+#include <semantic-analysis/types/TypeID.hpp>
 
 #include "Trait.hpp"
 #include "parsing/ast.hpp"

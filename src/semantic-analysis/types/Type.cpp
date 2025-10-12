@@ -13,20 +13,20 @@ const Type& Type::anyFamilyType() {
     return instance;
 }
 
-int Type::sizeBytes() const {
+int Type::sizeBits() const {
     switch (kind_) {
         case TypeKind::PRIMITIVE: {
             switch (primitive_) {
                 case Primitive::Kind::INT8:
                 case Primitive::Kind::BOOL:
-                    return 1;
+                    return 8;
                 case Primitive::Kind::INT16:
-                    return 2;
+                    return 16;
                 case Primitive::Kind::INT32:
-                    return 4;
+                    return 32;
                 case Primitive::Kind::INT:
                 case Primitive::Kind::INT64:
-                    return 8;
+                    return 64;
                 case Primitive::Kind::VOID:
                     return 0;
             }
@@ -34,7 +34,7 @@ int Type::sizeBytes() const {
         }
 
         case TypeKind::ARRAY:
-            return arrayElement_->sizeBytes() * static_cast<int>(arrayLength_);
+            return arrayElement_->sizeBits() * static_cast<int>(arrayLength_);
 
         case TypeKind::UNKNOWN:
             std::unreachable();

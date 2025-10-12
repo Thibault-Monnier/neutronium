@@ -2,11 +2,14 @@
 
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
+#include "SymbolTable.hpp"
 #include "cli.hpp"
 #include "parsing/ast.hpp"
-#include "semantic-analysis/symbol_table.hpp"
 #include "semantic-analysis/types/TypeManager.hpp"
+
+namespace CodeGen {
 
 class Generator {
    public:
@@ -30,16 +33,20 @@ class Generator {
 
     static constexpr int INITIAL_STACK_OFFSET = 8;
     int currentStackOffset_ = INITIAL_STACK_OFFSET;
-    std::unordered_map<std::string, int> variablesStackOffset_;
 
-    static int get_current_scope_frame_size(const AST::BlockStatement& blockStmt);
+    SymbolTable symbolTable_;
 
-    void stack_allocate_scope_variables(const AST::BlockStatement& blockStmt);
-    void stack_deallocate_scope_variables(const AST::BlockStatement& blockStmt);
+    void insert_symbol(const std::string& name, TypeID typeID);
+    int get_scope_frame_size(const AST::BlockStatement& blockStmt) const;
+    void enter_scope(const AST::BlockStatement& blockStmt);
+    void exit_scope(const AST::BlockStatement& blockStmt);
+
+    int get_variable_size_bits(const std::string& name) const;
     int get_variable_stack_offset(const std::string& name) const;
-    void insert_variable_stack_offset(const std::string& name);
+    static std::string_view size_directive(int bitSize);
+    static std::string_view register_a_for_size(int bitSize);
 
-    void write_to_variable(const std::string& name, const std::string& source);
+    void write_to_variable(const std::string& name, std::string_view source);
     void move_variable_to_rax(const std::string& name);
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
     void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit);
@@ -71,3 +78,5 @@ class Generator {
     void generate_stmt(const AST::Statement& stmt);
     void generate_function_definition(const AST::FunctionDefinition& funcDef);
 };
+
+}  // namespace CodeGen
