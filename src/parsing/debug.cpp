@@ -1,9 +1,8 @@
 #include "parsing/debug.hpp"
 
 #include <iostream>
+#include <magic_enum/magic_enum.hpp>
 #include <utility>
-
-#include "magic_enum.hpp"
 
 namespace AST {
 

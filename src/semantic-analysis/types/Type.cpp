@@ -1,6 +1,6 @@
 #include "semantic-analysis/types/Type.hpp"
 
-#include "magic_enum.hpp"
+#include <magic_enum/magic_enum.hpp>
 
 const Type& Type::integerFamilyType() {
     static const Type instance(Primitive::Kind::INT, true);

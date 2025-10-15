@@ -67,7 +67,7 @@ add_executable(neutronium src/main.cpp)
 FetchContent_Declare(
         cxxopts
         GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
-        GIT_TAG v3.3.0
+        GIT_TAG v3.3.1
 )
 FetchContent_MakeAvailable(cxxopts)
 
@@ -77,7 +77,7 @@ target_link_libraries(neutronium_lib PRIVATE cxxopts)
 FetchContent_Declare(
         magic_enum
         GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
-        GIT_TAG v0.9.5
+        GIT_TAG v0.9.7
 )
 FetchContent_MakeAvailable(magic_enum)
 
@@ -88,7 +88,8 @@ target_link_libraries(neutronium PRIVATE neutronium_lib)
 # === GoogleTest setup ===
 FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/release-1.12.1.zip
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.17.0
 )
 FetchContent_MakeAvailable(googletest)
 

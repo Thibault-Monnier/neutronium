@@ -1,6 +1,6 @@
 #include "semantic-analysis/types/Trait.hpp"
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 [[nodiscard]] std::optional<Trait> trait_from_operator(const AST::Operator op) {
     switch (op) {
