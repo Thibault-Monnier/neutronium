@@ -27,7 +27,8 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src) {
     // The following modifies dstType only, but it is fine since src will never be root
     // again, so we don't care about its type anymore
 
-    if (dstType.isUnknownKind() || srcType.isUnknownKind()) return dstType.mergeWith(srcType);
+    if (dstType.isUnknownKind() || srcType.isUnknownKind())
+        return dstType.mergeWith(srcType, typeManager_);
 
     if (dstType.kind() != srcType.kind()) return false;
 
@@ -35,9 +36,9 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src) {
         case TypeKind::UNKNOWN:
             std::unreachable();
         case TypeKind::PRIMITIVE:
-            return dstType.mergeWith(srcType);
+            return dstType.mergeWith(srcType, typeManager_);
         case TypeKind::ARRAY:
-            if (!dstType.matches(srcType)) return false;
+            if (!dstType.matches(srcType, typeManager_)) return false;
             return unify(dstType.array_element_type_id(), srcType.array_element_type_id());
     }
     std::unreachable();
@@ -71,8 +72,8 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
         const Type& bType = typeManager_.getType(rootB);
 
         diagnosticsEngine_.report_error(
-            std::format("Type mismatch: cannot unify types '{}' and '{}'", aType.to_string(),
-                        bType.to_string()),
+            std::format("Type mismatch: cannot unify types '{}' and '{}'",
+                        aType.to_string(typeManager_), bType.to_string(typeManager_)),
             equalityConstraint.sourceNode().source_start_index(),
             equalityConstraint.sourceNode().source_end_index());
         diagnosticsEngine_.emit_errors();
@@ -118,10 +119,11 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
     if (type.isUnknownKind()) return false;
 
     if (!type.hasTrait(trait)) {
-        diagnosticsEngine_.report_error(std::format("Type '{}' does not implement trait '{}'",
-                                                    type.to_string(), trait_to_string(trait)),
-                                        hasTraitConstraint.sourceNode().source_start_index(),
-                                        hasTraitConstraint.sourceNode().source_end_index());
+        diagnosticsEngine_.report_error(
+            std::format("Type '{}' does not implement trait '{}'", type.to_string(typeManager_),
+                        trait_to_string(trait)),
+            hasTraitConstraint.sourceNode().source_start_index(),
+            hasTraitConstraint.sourceNode().source_end_index());
         diagnosticsEngine_.emit_errors();
         exit(EXIT_FAILURE);
     }

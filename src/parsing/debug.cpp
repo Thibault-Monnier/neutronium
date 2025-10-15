@@ -50,7 +50,7 @@ const To& as(const From& n) {
 }
 
 void log_expression(const Expression& expr, const std::string& prefix, const bool isLast) {
-    const std::string branch = isLast ? "└── " : "├── ";
+    std::string branch = "├── ";
 
     if (expr.kind_ == NodeKind::NUMBER_LITERAL) {
         const auto& numberLit = as<NumberLiteral>(expr);
@@ -63,7 +63,7 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
         const auto& identifier = as<Identifier>(expr);
         std::cout << prefix << branch << "Identifier: " << identifier.name_ << "\n";
     } else {
-        const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
+        const std::string newPrefix = prefix + "│   ";
 
         if (expr.kind_ == NodeKind::ARRAY_LITERAL) {
             const auto& arrayLit = as<ArrayLiteral>(expr);
@@ -113,10 +113,12 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
             log_expression(*unaryExpr.operand_, newPrefix, true);
         }
     }
+
+    branch = isLast ? "└── " : "├── ";
+    std::cout << prefix << branch << "TypeID: " << expr.typeID_ << "\n";
 }
 
-void log_statement(const Statement& stmt, const TypeManager& typeManager, const std::string& prefix,
-                   const bool isLast) {
+void log_statement(const Statement& stmt, const std::string& prefix, const bool isLast) {
     const std::string newPrefix = next_prefix(prefix, isLast);
     const std::string branch = isLast ? "└── " : "├── ";
 
@@ -125,8 +127,7 @@ void log_statement(const Statement& stmt, const TypeManager& typeManager, const 
             const auto& varDecl = as<VariableDefinition>(stmt);
             std::cout << prefix << branch << "VariableDefinition\n";
             std::cout << newPrefix << "├── Identifier: " << varDecl.identifier_->name_ << "\n";
-            const Type& varType = typeManager.getType(varDecl.typeID_);
-            std::cout << newPrefix << "├── Type: " << varType.to_string() << "\n";
+            std::cout << newPrefix << "├── TypeID: " << varDecl.typeID_ << "\n";
             std::cout << newPrefix << "├── IsMutable: " << (varDecl.isMutable_ ? "true" : "false")
                       << "\n";
             std::cout << newPrefix << "└── Value\n";
@@ -157,11 +158,11 @@ void log_statement(const Statement& stmt, const TypeManager& typeManager, const 
             std::cout << newPrefix << "├── Condition\n";
             log_expression(*ifStmt.condition_, next_prefix(newPrefix, false), true);
             std::cout << newPrefix << (ifStmt.elseClause_ ? "├── " : "└── ") << "Body\n";
-            log_statement(*ifStmt.body_, typeManager, next_prefix(newPrefix, !ifStmt.elseClause_),
+            log_statement(*ifStmt.body_, next_prefix(newPrefix, !ifStmt.elseClause_),
                           !ifStmt.elseClause_);
             if (ifStmt.elseClause_) {
                 std::cout << newPrefix << "└── Else\n";
-                log_statement(*ifStmt.elseClause_, typeManager, next_prefix(newPrefix, true), true);
+                log_statement(*ifStmt.elseClause_, next_prefix(newPrefix, true), true);
             }
             break;
         }
@@ -171,7 +172,7 @@ void log_statement(const Statement& stmt, const TypeManager& typeManager, const 
             std::cout << newPrefix << "├── Condition\n";
             log_expression(*whileStmt.condition_, next_prefix(newPrefix, false), true);
             std::cout << newPrefix << "└── Body\n";
-            log_statement(*whileStmt.body_, typeManager, next_prefix(newPrefix, true), true);
+            log_statement(*whileStmt.body_, next_prefix(newPrefix, true), true);
             break;
         }
         case NodeKind::BREAK_STATEMENT:
@@ -201,7 +202,7 @@ void log_statement(const Statement& stmt, const TypeManager& typeManager, const 
             std::cout << prefix << branch << "BlockStatement\n";
             for (size_t i = 0; i < blockStmt.body_.size(); ++i) {
                 const auto& innerStmt = blockStmt.body_[i];
-                log_statement(*innerStmt, typeManager, newPrefix, i == blockStmt.body_.size() - 1);
+                log_statement(*innerStmt, newPrefix, i == blockStmt.body_.size() - 1);
             }
             break;
         }
@@ -214,7 +215,7 @@ void log_statement(const Statement& stmt, const TypeManager& typeManager, const 
     }
 }
 
-void log_ast(const Program& programNode, const TypeManager& typeManager) {
+void log_ast(const Program& programNode) {
     std::cout << "Program\n";
 
     const std::string prefix = "    ";
@@ -222,10 +223,9 @@ void log_ast(const Program& programNode, const TypeManager& typeManager) {
     const auto functionSignature =
         [&](const AST::Identifier& identifier,
             const std::vector<std::unique_ptr<AST::VariableDefinition>>& params,
-            const TypeID returnTypeID, const std::string& newPrefix, bool hasBody) {
+            const TypeID returnTypeID, const std::string& newPrefix, const bool hasBody) {
             std::cout << newPrefix << "├── Identifier: " << identifier.name_ << "\n";
-            const Type& returnType = typeManager.getType(returnTypeID);
-            std::cout << newPrefix << "├── ReturnType: " << returnType.to_string() << "\n";
+            std::cout << newPrefix << "├── ReturnTypeID: " << returnTypeID << "\n";
 
             const std::string parametersBranch = hasBody ? "├── " : "└── ";
             std::cout << newPrefix << parametersBranch << "Parameters\n";
@@ -237,9 +237,8 @@ void log_ast(const Program& programNode, const TypeManager& typeManager) {
                 std::cout << paramsPrefix << paramBranch << "Parameter" << j + 1 << "\n";
                 std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
                           << "├── Identifier: " << param->identifier_->name_ << "\n";
-                const Type& paramType = typeManager.getType(param->typeID_);
                 std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
-                          << "├── Type: " << paramType.to_string() << "\n";
+                          << "├── TypeID: " << param->typeID_ << "\n";
                 std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
                           << "└── IsMutable: " << (param->isMutable_ ? "true" : "false") << "\n";
             }
@@ -275,7 +274,7 @@ void log_ast(const Program& programNode, const TypeManager& typeManager) {
                   << "\n";
 
         std::cout << newPrefix << "└── Body\n";
-        log_statement(*funcDef.body_, typeManager, next_prefix(newPrefix, true), true);
+        log_statement(*funcDef.body_, next_prefix(newPrefix, true), true);
         if (!isLast) {
             std::cout << prefix << "│\n";
         }

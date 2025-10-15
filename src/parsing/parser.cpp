@@ -67,7 +67,7 @@ Type Parser::parse_type_specifier() {
             expect(TokenKind::SEMICOLON);
             const std::size_t arrayLength = parse_number_literal()->value_;
             expect(TokenKind::RIGHT_BRACKET);
-            return Type{typeManager_.getType(elementTypeID), elementTypeID, arrayLength};
+            return Type{elementTypeID, arrayLength};
         }
 
         default: {
@@ -82,7 +82,8 @@ Type Parser::parse_type_specifier() {
 std::unique_ptr<AST::NumberLiteral> Parser::parse_number_literal() {
     const Token& token = expect(TokenKind::NUMBER_LITERAL);
     return std::make_unique<AST::NumberLiteral>(std::stoll(token.lexeme()),
-                                                token.byte_offset_start(), token.byte_offset_end());
+                                                token.byte_offset_start(), token.byte_offset_end(),
+                                                generate_any_type());
 }
 
 std::unique_ptr<AST::ArrayLiteral> Parser::parse_array_literal() {
@@ -100,13 +101,13 @@ std::unique_ptr<AST::ArrayLiteral> Parser::parse_array_literal() {
     const Token& rBracket = expect(TokenKind::RIGHT_BRACKET);
 
     return std::make_unique<AST::ArrayLiteral>(std::move(elements), lBracket.byte_offset_start(),
-                                               rBracket.byte_offset_end());
+                                               rBracket.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::Identifier> Parser::parse_identifier() {
     const Token& ident = expect(TokenKind::IDENTIFIER);
     return std::make_unique<AST::Identifier>(ident.lexeme(), ident.byte_offset_start(),
-                                             ident.byte_offset_end());
+                                             ident.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
@@ -127,7 +128,7 @@ std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
 
     return std::make_unique<AST::FunctionCall>(std::move(callee), std::move(arguments),
                                                callee->source_start_index(),
-                                               rParen.byte_offset_end());
+                                               rParen.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access(
@@ -136,8 +137,7 @@ std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access(
     auto index = parse_expression();
     const Token& rBracket = expect(TokenKind::RIGHT_BRACKET);
 
-    return std::make_unique<AST::ArrayAccess>(
-        std::move(base), std::move(index), base->source_start_index(), rBracket.byte_offset_end());
+    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index), base->source_start_index(), rBracket.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {
@@ -152,13 +152,13 @@ std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {
 
         case TokenKind::TRUE:
             expect(TokenKind::TRUE);
-            return std::make_unique<AST::BooleanLiteral>(true, token.byte_offset_start(),
-                                                         token.byte_offset_end());
+            return std::make_unique<AST::BooleanLiteral>(
+                true, token.byte_offset_start(), token.byte_offset_end(), generate_any_type());
 
         case TokenKind::FALSE:
             expect(TokenKind::FALSE);
-            return std::make_unique<AST::BooleanLiteral>(false, token.byte_offset_start(),
-                                                         token.byte_offset_end());
+            return std::make_unique<AST::BooleanLiteral>(
+                false, token.byte_offset_start(), token.byte_offset_end(), generate_any_type());
 
         case TokenKind::IDENTIFIER:
             if (peek(1).kind() == TokenKind::LEFT_PAREN) {
@@ -205,7 +205,8 @@ std::unique_ptr<AST::Expression> Parser::parse_unary_expression() {
         expect(token.kind());
         auto operand = parse_postfix_expression();
         return std::make_unique<AST::UnaryExpression>(
-            op, std::move(operand), token.byte_offset_start(), operand->source_end_index());
+            op, std::move(operand), token.byte_offset_start(), operand->source_end_index(),
+            generate_any_type());
     }
 
     return parse_postfix_expression();
@@ -223,7 +224,7 @@ std::unique_ptr<AST::Expression> Parser::parse_binary_expression(
             auto right = parseOperand();
             left = std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right),
                                                            left->source_start_index(),
-                                                           right->source_end_index());
+                right->source_end_index(), generate_any_type());
 
             if (!allowMultiple) {
                 break;

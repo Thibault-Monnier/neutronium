@@ -50,7 +50,11 @@ struct Node {
 };
 
 struct Expression : Node {
-    using Node::Node;
+    Expression(const NodeKind kind, const uint32_t sourceStartIndex, const uint32_t sourceEndIndex,
+               const TypeID typeID)
+        : Node{kind, sourceStartIndex, sourceEndIndex}, typeID_(typeID) {}
+
+    TypeID typeID_;
 };
 
 struct PrimaryExpression : Expression {
@@ -58,38 +62,40 @@ struct PrimaryExpression : Expression {
 };
 
 struct NumberLiteral final : PrimaryExpression {
-    NumberLiteral(const std::int64_t value, const uint32_t start, const uint32_t end)
-        : PrimaryExpression{NodeKind::NUMBER_LITERAL, start, end}, value_(value) {}
+    NumberLiteral(const std::int64_t value, const uint32_t start, const uint32_t end,
+                  const TypeID typeID)
+        : PrimaryExpression{NodeKind::NUMBER_LITERAL, start, end, typeID}, value_(value) {}
 
     const std::int64_t value_;
 };
 
 struct BooleanLiteral final : PrimaryExpression {
-    BooleanLiteral(const bool value, const uint32_t start, const uint32_t end)
-        : PrimaryExpression{NodeKind::BOOLEAN_LITERAL, start, end}, value_(value) {}
+    BooleanLiteral(const bool value, const uint32_t start, const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::BOOLEAN_LITERAL, start, end, typeID}, value_(value) {}
 
     const bool value_;
 };
 
 struct ArrayLiteral final : PrimaryExpression {
     ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements, const uint32_t start,
-                 const uint32_t end)
-        : PrimaryExpression{NodeKind::ARRAY_LITERAL, start, end}, elements_(std::move(elements)) {}
+                 const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::ARRAY_LITERAL, start, end, typeID},
+          elements_(std::move(elements)) {}
 
     const std::vector<std::unique_ptr<Expression>> elements_;
 };
 
 struct Identifier final : PrimaryExpression {
-    Identifier(std::string name, const uint32_t start, const uint32_t end)
-        : PrimaryExpression{NodeKind::IDENTIFIER, start, end}, name_(std::move(name)) {}
+    Identifier(std::string name, const uint32_t start, const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::IDENTIFIER, start, end, typeID}, name_(std::move(name)) {}
 
     const std::string name_;
 };
 
 struct ArrayAccess final : PrimaryExpression {
     ArrayAccess(std::unique_ptr<Expression> base, std::unique_ptr<Expression> index,
-                const uint32_t start, const uint32_t end)
-        : PrimaryExpression{NodeKind::ARRAY_ACCESS, start, end},
+                const uint32_t start, const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::ARRAY_ACCESS, start, end, typeID},
           base_(std::move(base)),
           index_(std::move(index)) {}
 
@@ -100,8 +106,8 @@ struct ArrayAccess final : PrimaryExpression {
 struct FunctionCall final : PrimaryExpression {
     FunctionCall(std::unique_ptr<Identifier> callee,
                  std::vector<std::unique_ptr<Expression>> arguments, const uint32_t start,
-                 const uint32_t end)
-        : PrimaryExpression{NodeKind::FUNCTION_CALL, start, end},
+                 const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::FUNCTION_CALL, start, end, typeID},
           callee_(std::move(callee)),
           arguments_(std::move(arguments)) {}
 
@@ -111,8 +117,8 @@ struct FunctionCall final : PrimaryExpression {
 
 struct UnaryExpression final : Expression {
     UnaryExpression(const Operator op, std::unique_ptr<Expression> operand, const uint32_t start,
-                    const uint32_t end)
-        : Expression{NodeKind::UNARY_EXPRESSION, start, end},
+                    const uint32_t end, const TypeID typeID)
+        : Expression{NodeKind::UNARY_EXPRESSION, start, end, typeID},
           operator_(op),
           operand_(std::move(operand)) {}
 
@@ -122,8 +128,9 @@ struct UnaryExpression final : Expression {
 
 struct BinaryExpression final : Expression {
     BinaryExpression(std::unique_ptr<Expression> left, const Operator op,
-                     std::unique_ptr<Expression> right, const uint32_t start, const uint32_t end)
-        : Expression{NodeKind::BINARY_EXPRESSION, start, end},
+                     std::unique_ptr<Expression> right, const uint32_t start, const uint32_t end,
+                     const TypeID typeID)
+        : Expression{NodeKind::BINARY_EXPRESSION, start, end, typeID},
           left_(std::move(left)),
           operator_(op),
           right_(std::move(right)) {}

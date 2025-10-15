@@ -40,6 +40,13 @@ class Parser {
     [[nodiscard]] const Token& peek(int amount = 0) const;
     const Token& expect(TokenKind expected);
 
+    /** Gets an instance of Type::anyFamilyType() and registers it in the TypeManager.
+     * @return The TypeID of the newly created Type.
+     */
+    [[nodiscard]] TypeID generate_any_type() const {
+        return typeManager_.createType(Type::anyFamilyType());
+    }
+
     Type parse_type_specifier();
     std::unique_ptr<AST::NumberLiteral> parse_number_literal();
     std::unique_ptr<AST::ArrayLiteral> parse_array_literal();

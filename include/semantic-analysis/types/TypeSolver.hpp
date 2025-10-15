@@ -24,14 +24,18 @@ class TypeSolver {
     /**
      * @brief Registers a new type constraint to the collection of constraints.
      *
-     * This method appends a new type constraint to the internal list of constraints maintained
-     * by the TypeSolver. Type constraints are used for ensuring type consistency and resolving
-     * type relationships during semantic analysis.
+     * This overload constructs the constraint in place, forwarding any arguments required
+     * by the constraint's constructor.
      *
-     * @param constraint A unique pointer to the Constraint object to be added.
+     * @tparam ConstraintT The specific type of constraint to be added, which must derive from
+     * `Constraint`.
+     * @param args Arguments forwarded to the constructor of the constraint.
      */
-    void addConstraint(std::unique_ptr<Constraint> constraint) {
-        pendingConstraints_.push_back(std::move(constraint));
+    template <typename ConstraintT, typename... Args>
+    void addConstraint(Args&&... args) {
+        static_assert(std::is_base_of_v<Constraint, ConstraintT>,
+                      "ConstraintT must derive from Constraint");
+        addConstraint(std::make_unique<ConstraintT>(std::forward<Args>(args)...));
     }
 
     /**
@@ -56,6 +60,19 @@ class TypeSolver {
     };
 
     std::vector<Node> nodes_;
+
+    /**
+     * @brief Registers a new type constraint to the collection of constraints.
+     *
+     * This method appends a new type constraint to the internal list of constraints. Type
+     * constraints are used for ensuring type consistency and resolving type relationships during
+     * semantic analysis.
+     *
+     * @param constraint A unique pointer to the Constraint object to be added.
+     */
+    void addConstraint(std::unique_ptr<Constraint> constraint) {
+        pendingConstraints_.push_back(std::move(constraint));
+    }
 
     [[nodiscard]] TypeID findRoot(TypeID x);
     [[nodiscard]] bool unify(TypeID dst, TypeID src);

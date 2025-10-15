@@ -46,7 +46,7 @@ void Generator::insert_symbol(const std::string& name, const TypeID typeID) {
     assert(!type.isVoid() && "Void type cannot be stored in a variable");
 
     // Arrays are stored as 8-byte pointers
-    const int stackSizeBits = type.isArray() ? 64 : type.sizeBits();
+    const int stackSizeBits = type.isArray() ? 64 : type.sizeBits(typeManager_);
 
     const SymbolInfo info = {
         .name_ = name, .stackOffset_ = currentStackOffset_, .stackSizeBits_ = stackSizeBits};

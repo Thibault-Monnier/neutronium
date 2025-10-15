@@ -2,6 +2,8 @@
 
 #include <magic_enum/magic_enum.hpp>
 
+#include "semantic-analysis/types/TypeManager.hpp"
+
 const Type& Type::integerFamilyType() {
     static const Type instance(Primitive::Kind::INT, true);
     return instance;
@@ -13,7 +15,7 @@ const Type& Type::anyFamilyType() {
     return instance;
 }
 
-int Type::sizeBits() const {
+int Type::sizeBits(const TypeManager& typeManager) const {
     switch (kind_) {
         case TypeKind::PRIMITIVE: {
             switch (primitive_) {
@@ -33,8 +35,10 @@ int Type::sizeBits() const {
             break;
         }
 
-        case TypeKind::ARRAY:
-            return arrayElement_->sizeBits() * static_cast<int>(arrayLength_);
+        case TypeKind::ARRAY: {
+            const Type& arrayElement = typeManager.getType(arrayElementTypeID_);
+            return arrayElement.sizeBits(typeManager) * static_cast<int>(arrayLength_);
+        }
 
         case TypeKind::UNKNOWN:
             std::unreachable();
@@ -42,7 +46,7 @@ int Type::sizeBits() const {
     std::unreachable();
 }
 
-std::string Type::to_string() const {
+std::string Type::to_string(const TypeManager& typeManager) const {
     std::string result;
     switch (kind_) {
         case TypeKind::PRIMITIVE: {
@@ -72,10 +76,12 @@ std::string Type::to_string() const {
             break;
         }
 
-        case TypeKind::ARRAY:
-            result +=
-                "array[" + arrayElement_->to_string() + " * " + std::to_string(arrayLength_) + "]";
+        case TypeKind::ARRAY: {
+            const Type& arrayElement = typeManager.getType(arrayElementTypeID_);
+            result += "array[" + arrayElement.to_string(typeManager) + " * " +
+                      std::to_string(arrayLength_) + "]";
             break;
+        }
 
         case TypeKind::UNKNOWN:
             result += "unknown";
@@ -97,10 +103,10 @@ TypeID Type::array_element_type_id() const {
     std::unreachable();
 }
 
-bool Type::mergeWith(const Type& other) {
+bool Type::mergeWith(const Type& other, const TypeManager& typeManager) {
     if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) std::unreachable();
 
-    if (!matches(other)) return false;
+    if (!matches(other, typeManager)) return false;
 
     // We only need to modify `this`
     if (family_->kind() == PrimitiveTypeFamily::Kind::NONE || other.family_->isInFamily(primitive_))
@@ -115,7 +121,7 @@ bool Type::mergeWith(const Type& other) {
     std::unreachable();
 }
 
-bool Type::matches(const Type& other) const {
+bool Type::matches(const Type& other, const TypeManager& typeManager) const {
     if (family_->isInFamily(other.primitive_) || other.family_->isInFamily(primitive_)) {
         return true;
     }
@@ -135,10 +141,12 @@ bool Type::matches(const Type& other) const {
             // Otherwise, we checked that the families are not compatible above.
             return false;
 
-        case TypeKind::ARRAY:
+        case TypeKind::ARRAY: {
+            const Type& arrayElement = typeManager.getType(arrayElementTypeID_);
+            const Type& otherArrayElement = typeManager.getType(other.arrayElementTypeID_);
             return arrayLength_ == other.arrayLength_ &&
-                   arrayElement_->matches(*other.arrayElement_);
-
+                   arrayElement.matches(otherArrayElement, typeManager);
+        }
         case TypeKind::UNKNOWN:
             return true;
     }

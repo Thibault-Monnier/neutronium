@@ -90,7 +90,7 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
 
     const auto ast = timed("Parsing", verbose,
                            [&] { return Parser(tokens, diagnosticsEngine, typeManager).parse(); });
-    if (opts.logAst_) AST::log_ast(*ast, typeManager);
+    if (opts.logAst_) AST::log_ast(*ast);
 
     timed("Semantic analysis", verbose, [&] {
         SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeManager).analyse();

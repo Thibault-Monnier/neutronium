@@ -1,15 +1,15 @@
 #pragma once
 
 #include <cassert>
-#include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "Primitive.hpp"
 #include "PrimitiveTypeFamily.hpp"
 #include "Trait.hpp"
 #include "TypeID.hpp"
+
+class TypeManager;
 
 enum class TypeKind : uint8_t {
     PRIMITIVE,
@@ -46,21 +46,11 @@ class Type {
         initializeTraits();
     }
 
-    Type(const Type& elementType, const TypeID elementTypeID, const std::size_t arrayLength)
+    Type(const TypeID elementTypeID, const std::size_t arrayLength)
         : kind_(TypeKind::ARRAY),
           primitive_(Primitive::Kind::VOID),
-          arrayElement_(std::make_unique<Type>(elementType)),
           arrayElementTypeID_(elementTypeID),
           arrayLength_(arrayLength) {
-        initializeTraits();
-    }
-
-    Type(const Type& elementType, const TypeID elementTypeID, const PrimitiveTypeFamily* family)
-        : kind_(TypeKind::ARRAY),
-          family_(family),
-          primitive_(Primitive::Kind::VOID),
-          arrayElement_(std::make_unique<Type>(elementType)),
-          arrayElementTypeID_(elementTypeID) {
         initializeTraits();
     }
 
@@ -102,6 +92,15 @@ class Type {
     static const Type& anyFamilyType();
 
     /**
+     * @brief Retrieves the family of the primitive type.
+     *
+     * @return A const pointer to the `PrimitiveTypeFamily` associated with this type.
+     */
+    const PrimitiveTypeFamily* family() const { return family_; }
+
+    Primitive::Kind primitive() const { return primitive_; }
+
+    /**
      * @brief Determines if the type represents a void primitive type.
      *
      * @return True if the type is a primitive type of kind `VOID`, false otherwise.
@@ -121,7 +120,7 @@ class Type {
 
     [[nodiscard]] bool isPrimitive() const { return kind_ == TypeKind::PRIMITIVE; }
 
-    [[nodiscard]] int sizeBits() const;
+    [[nodiscard]] int sizeBits(const TypeManager& typeManager) const;
 
     /**
      * @brief Converts the type information into a string representation.
@@ -131,7 +130,7 @@ class Type {
      *
      * @return A string that represents the type.
      */
-    [[nodiscard]] std::string to_string() const;
+    [[nodiscard]] std::string to_string(const TypeManager& typeManager) const;
 
     [[nodiscard]] TypeKind kind() const { return kind_; }
 
@@ -156,9 +155,10 @@ class Type {
      * Only the current type is modified.
      *
      * @param other The type to merge with the current type.
+     * @param typeManager
      * @return True if the types were successfully merged; false otherwise.
      */
-    [[nodiscard]] bool mergeWith(const Type& other);
+    [[nodiscard]] bool mergeWith(const Type& other, const TypeManager& typeManager);
 
     /**
      * @brief Checks whether this type matches another type.
@@ -168,9 +168,10 @@ class Type {
      * (together), and all of their other properties are equal.
      *
      * @param other The type to compare with the current instance.
+     * @param typeManager
      * @return True if the types are compatible; false otherwise.
      */
-    [[nodiscard]] bool matches(const Type& other) const;
+    [[nodiscard]] bool matches(const Type& other, const TypeManager& typeManager) const;
 
     /**
      * @brief Checks if a specific trait is present in the list of traits.
@@ -193,7 +194,6 @@ class Type {
     const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
     Primitive::Kind primitive_;
 
-    std::unique_ptr<Type> arrayElement_;
     TypeID arrayElementTypeID_{0};
     std::size_t arrayLength_{0};
 
@@ -229,10 +229,6 @@ class Type {
         primitive_ = other.primitive_;
         arrayElementTypeID_ = other.arrayElementTypeID_;
         arrayLength_ = other.arrayLength_;
-        if (other.arrayElement_)
-            arrayElement_ = std::make_unique<Type>(*other.arrayElement_);
-        else
-            arrayElement_.reset();
         traits_ = other.traits_;
     }
 };

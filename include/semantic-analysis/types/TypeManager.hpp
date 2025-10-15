@@ -37,6 +37,21 @@ class TypeManager {
     }
 
     /**
+     * @brief Registers a new type in the type manager.
+     *
+     * This method constructs a new Type object in place using the provided arguments and stores it.
+     * It returns a unique TypeID that can be used to reference the type later.
+     *
+     * @param args Arguments forwarded to the Type constructor.
+     * @return The unique TypeID assigned to the newly registered type.
+     */
+    template <class... Args>
+        requires(!std::conjunction_v<std::is_same<std::remove_cvref_t<Args>, Type>...>)
+    [[nodiscard]] TypeID createType(Args&&... args) {
+        return createType(Type(std::forward<Args>(args)...));
+    }
+
+    /**
      * @brief Retrieves a reference to a previously registered type.
      *
      * This function fetches the type corresponding to the provided TypeID
@@ -87,6 +102,9 @@ class TypeManager {
      *
      * @param dst TypeID that becomes the target of the mapping.
      * @param src TypeID that will be redirected to dst.
+     *
+     * @note If dst is later linked to another TypeID, src will NOT automatically update to point to
+     * that new TypeID. It will be left invalid.
      */
     void linkTypes(const TypeID dst, const TypeID src) { linkingTable_[src] = dst; }
 
