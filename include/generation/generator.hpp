@@ -31,10 +31,32 @@ class Generator {
     int innerLoopStartLabel_ = 0;
     int innerLoopEndLabel_ = 0;
 
-    static constexpr int INITIAL_STACK_OFFSET = 8;
+    static constexpr int INITIAL_STACK_OFFSET = 0;
     int currentStackOffset_ = INITIAL_STACK_OFFSET;
 
+    static constexpr int FUNCTION_ARGUMENT_SIZE_BITS = 64;
+
     SymbolTable symbolTable_;
+
+    /**
+     * @brief Computes the real size in bits of the expression's type (stack size if they live on
+     * the stack, heap size if they live on the heap).
+     */
+    int exprRealSizeBits(const AST::Expression& expr) const;
+
+    /**
+     * @brief Computes the size in bits of the type when stored on the stack.
+     *
+     * For example, arrays are only stored as pointers on the stack.
+     */
+    int typeStackSizeBits(const Type& type) const;
+
+    /**
+     * @brief Computes the size in bits of the expression when stored on the stack.
+     *
+     * For example, arrays are only stored as pointers on the stack.
+     */
+    int exprStackSizeBits(const AST::Expression& expr) const;
 
     void insert_symbol(const std::string& name, TypeID typeID);
     int get_scope_frame_size(const AST::BlockStatement& blockStmt) const;
@@ -45,6 +67,11 @@ class Generator {
     int get_variable_stack_offset(const std::string& name) const;
     static std::string_view size_directive(int bitSize);
     static std::string_view register_a_for_size(int bitSize);
+
+    /**
+     * @brief Cleans the rax register by zero-extending if necessary.
+     */
+    void clean_rax(int raxValueSizeBits);
 
     void write_to_variable(const std::string& name, std::string_view source);
     void move_variable_to_rax(const std::string& name);

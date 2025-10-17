@@ -18,7 +18,7 @@ std::stringstream Generator::generate() {
                 << "\n";
     }
 
-    output_ << "\n";
+    if (!program_.externalFunctions_.empty()) output_ << "\n";
 
     // Write the header
     output_ << "section .text\n";
@@ -39,20 +39,34 @@ std::stringstream Generator::generate() {
     return std::move(output_);
 }
 
+int Generator::exprRealSizeBits(const AST::Expression& expr) const {
+    const Type& type = typeManager_.getType(expr.typeID_);
+    return type.sizeBits(typeManager_);
+}
+
+int Generator::typeStackSizeBits(const Type& type) const {
+    // Arrays are stored as 8-byte pointers to the heap
+    return type.isArray() ? 64 : type.sizeBits(typeManager_);
+}
+
+int Generator::exprStackSizeBits(const AST::Expression& expr) const {
+    const Type& type = typeManager_.getType(expr.typeID_);
+    return typeStackSizeBits(type);
+}
+
 void Generator::insert_symbol(const std::string& name, const TypeID typeID) {
     symbolTable_.erase(name);
 
     const Type& type = typeManager_.getType(typeID);
     assert(!type.isVoid() && "Void type cannot be stored in a variable");
 
-    // Arrays are stored as 8-byte pointers
-    const int stackSizeBits = type.isArray() ? 64 : type.sizeBits(typeManager_);
+    const int stackSizeBits = typeStackSizeBits(type);
+
+    currentStackOffset_ += stackSizeBits / 8;
 
     const SymbolInfo info = {
         .name_ = name, .stackOffset_ = currentStackOffset_, .stackSizeBits_ = stackSizeBits};
     symbolTable_.emplace(name, info);
-
-    currentStackOffset_ += stackSizeBits / 8;
 }
 
 int Generator::get_scope_frame_size(const AST::BlockStatement& blockStmt) const {
@@ -127,6 +141,20 @@ std::string_view Generator::register_a_for_size(const int bitSize) {
     }
 }
 
+void Generator::clean_rax(const int raxValueSizeBits) {
+    switch (raxValueSizeBits) {
+        case 8:
+        case 16:
+            output_ << "    movzx rax, " << register_a_for_size(raxValueSizeBits) << "\n";
+            break;
+        case 32:
+        case 64:
+            break;
+        default:
+            std::unreachable();
+    }
+}
+
 void Generator::write_to_variable(const std::string& name, const std::string_view source) {
     const int size = get_variable_size_bits(name);
     const int stackOffset = get_variable_stack_offset(name);
@@ -138,15 +166,20 @@ void Generator::move_variable_to_rax(const std::string& name) {
     const int sizeBits = get_variable_size_bits(name);
     const int stackOffset = get_variable_stack_offset(name);
     output_ << "    mov " << register_a_for_size(sizeBits) << ", [rbp - " << stackOffset << "]\n";
+    clean_rax(sizeBits);
 }
 
 void Generator::move_number_lit_to_rax(const AST::NumberLiteral& numberLit) {
-    output_ << "    mov " << register_a_for_size(64) << ", " << numberLit.value_ << "\n";
+    const int sizeBits = exprStackSizeBits(numberLit);
+    output_ << "    mov " << register_a_for_size(sizeBits) << ", " << numberLit.value_ << "\n";
+    clean_rax(sizeBits);
 }
 
 void Generator::move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit) {
-    output_ << "    mov " << register_a_for_size(8) << ", " << (booleanLit.value_ ? "1" : "0")
-            << "\n";
+    const int sizeBits = exprStackSizeBits(booleanLit);
+    output_ << "    mov " << register_a_for_size(sizeBits) << ", "
+            << (booleanLit.value_ ? "1" : "0") << "\n";
+    clean_rax(sizeBits);
 }
 
 void Generator::evaluate_array_access_address_to_rax(const AST::ArrayAccess& arrayAccess) {
@@ -154,8 +187,10 @@ void Generator::evaluate_array_access_address_to_rax(const AST::ArrayAccess& arr
     output_ << "    push rax\n";
     evaluate_expression_to_rax(*arrayAccess.index_);
     output_ << "    pop rbx\n";
-    output_ << "    shl rax, 3\n";    // Multiply index by 8 (size of qword)
-    output_ << "    add rax, rbx\n";  // Add the base
+
+    const int elementSizeBits = exprStackSizeBits(arrayAccess);
+    output_ << "    imul rax, " << (elementSizeBits / 8) << "\n";  // Multiply index by element size
+    output_ << "    add rax, rbx\n";                               // Add the base
 }
 
 void Generator::evaluate_place_expression_address_to_rax(const AST::Expression& place) {
@@ -177,27 +212,37 @@ void Generator::write_array_to_heap(const AST::ArrayLiteral& arrayLit) {
     output_ << "    xor rdi, rdi\n";
     output_ << "    syscall\n";
 
-    // Store the address of the array base
+    // Store the address of the array base (1)
     output_ << "    push rax\n";
 
     // Set the new break address
-    output_ << "    add rax, " << (arrayLit.elements_.size() * 8) << "\n";  // 8 bytes per element
+    const int arraySizeBits = exprRealSizeBits(arrayLit);
+    output_ << "    add rax, " << arraySizeBits / 8 << "\n";
     output_ << "    mov rdi, rax\n";
     output_ << "    mov rax, 12\n";
     output_ << "    syscall\n";
 
-    for (std::size_t i = 0; i < arrayLit.elements_.size(); ++i) {
-        evaluate_expression_to_rax(*arrayLit.elements_[i]);
-        output_ << "    mov rbx, [rsp]\n";  // Get the address of the allocated memory
-        output_ << "    mov [rbx + " << (i * 8) << "], rax\n";  // Write each element to the array
+    const int elementSizeBits = exprStackSizeBits(arrayLit);
+    for (int i = 0; i < static_cast<int>(arrayLit.elements_.size()); ++i) {
+        const auto& element = arrayLit.elements_[i];
+
+        evaluate_expression_to_rax(*element);
+        // Get the address of the allocated memory (1)
+        output_ << "    mov rbx, [rsp]\n";
+
+        // Write the element to the heap
+        output_ << "    mov [rbx + " << elementSizeBits / 8 * i << "], "
+                << register_a_for_size(elementSizeBits) << "\n";
     }
 
+    // Retrieve the address of the array base (1)
     output_ << "    pop rax\n";
 }
 
 void Generator::evaluate_array_access_to_rax(const AST::ArrayAccess& arrayAccess) {
     evaluate_array_access_address_to_rax(arrayAccess);
-    output_ << "    mov rax, [rax]\n";  // Dereference
+    const int elementSizeBits = exprStackSizeBits(arrayAccess);
+    output_ << "    mov " << register_a_for_size(elementSizeBits) << ", [rax]\n";  // Dereference
 }
 
 std::string Generator::function_name_with_prefix(const std::string& name) {
@@ -207,23 +252,30 @@ std::string Generator::function_name_with_prefix(const std::string& name) {
 void Generator::generate_function_call(const AST::FunctionCall& funcCall) {
     for (const auto& argument : funcCall.arguments_) {
         evaluate_expression_to_rax(*argument);
+
+        static_assert(FUNCTION_ARGUMENT_SIZE_BITS == 64,
+                      "Function argument size must be 64 bits to match the calling convention");
         output_ << "    push rax\n";
     }
 
     output_ << "    call " << function_name_with_prefix(funcCall.callee_->name_) << "\n";
 
-    // Clean up the stack after the function call
-    for (size_t i = 0; i < funcCall.arguments_.size(); ++i) {
-        output_ << "    pop rcx\n";
+    // Clean up the stack
+    if (funcCall.arguments_.size() > 0) {
+        output_ << "    add rsp, " << funcCall.arguments_.size() * (FUNCTION_ARGUMENT_SIZE_BITS / 8)
+                << "\n";
     }
 }
 
 void Generator::evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr) {
     evaluate_expression_to_rax(*unaryExpr.operand_);
+
+    const int operandSizeBits = exprStackSizeBits(*unaryExpr.operand_);
+    const std::string_view reg = register_a_for_size(operandSizeBits);
     if (unaryExpr.operator_ == AST::Operator::SUBTRACT) {
-        output_ << "    neg rax\n";
+        output_ << "    neg " << reg << "\n";
     } else if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) {
-        output_ << "    xor rax, 1\n";
+        output_ << "    xor " << reg << ", 1\n";
     }
 }
 
@@ -246,9 +298,13 @@ void Generator::evaluate_binary_expression_to_rax(const AST::BinaryExpression& b
     // First evaluate right side to prevent an additional move in case of division, because the
     // numerator has to be in rax
     evaluate_expression_to_rax(*binaryExpr.right_);
+    const int rightSizeBits = exprStackSizeBits(*binaryExpr.right_);
+    clean_rax(rightSizeBits);
     output_ << "    push rax\n";
 
     evaluate_expression_to_rax(*binaryExpr.left_);
+    const int leftSizeBits = exprStackSizeBits(*binaryExpr.left_);
+    clean_rax(leftSizeBits);
 
     output_ << "    pop rbx\n";
 
@@ -265,6 +321,8 @@ void Generator::evaluate_binary_expression_to_rax(const AST::BinaryExpression& b
         output_ << "    cmp rax, rbx\n";
         output_ << "    set" << comparisonSuffixes.at(op) << " al\n";
         output_ << "    movzx rax, al\n";
+    } else {
+        std::unreachable();
     }
 }
 
@@ -333,10 +391,9 @@ void Generator::generate_variable_assignment(const AST::Assignment& assignment) 
     const auto& place = assignment.place_;
     const auto& value = assignment.value_;
 
-    AST::Operator op;
-    if (assignment.operator_ == AST::Operator::ASSIGN)
-        op = AST::Operator::UNDEFINED_OPERATOR;
-    else if (assignment.operator_ == AST::Operator::ADD_ASSIGN)
+    AST::Operator op = {};
+    if (assignment.operator_ == AST::Operator::ASSIGN) {
+    } else if (assignment.operator_ == AST::Operator::ADD_ASSIGN)
         op = AST::Operator::ADD;
     else if (assignment.operator_ == AST::Operator::SUBTRACT_ASSIGN)
         op = AST::Operator::SUBTRACT;
@@ -351,8 +408,10 @@ void Generator::generate_variable_assignment(const AST::Assignment& assignment) 
     output_ << "    push rax\n";
 
     evaluate_expression_to_rax(*value);
+    const int valueSizeBits = exprStackSizeBits(*value);
+    clean_rax(valueSizeBits);
 
-    if (op == AST::Operator::UNDEFINED_OPERATOR) {
+    if (assignment.operator_ == AST::Operator::ASSIGN) {
         output_ << "    pop rbx\n";
         output_ << "    mov [rbx], rax\n";  // Write the result back to the place
     } else {
@@ -361,7 +420,7 @@ void Generator::generate_variable_assignment(const AST::Assignment& assignment) 
         output_ << "    mov rax, [rcx]\n";
 
         apply_arithmetic_operator_to_rax(op, "rbx");
-        output_ << "    mov [rcx], rax\n";  // Write the result back to the place
+        output_ << "    mov [rcx], " << register_a_for_size(valueSizeBits) << "\n";
     }
 }
 
@@ -486,35 +545,37 @@ void Generator::generate_function_definition(const AST::FunctionDefinition& func
         output_ << "global " << function_name_with_prefix(funcDef.identifier_->name_) << "\n";
     }
 
-    output_ << function_name_with_prefix(funcDef.identifier_->name_)
-            << ":\n";  // Prefix the name to avoid conflicts with NASM keywords
+    output_ << function_name_with_prefix(funcDef.identifier_->name_) << ":\n";
 
     currentStackOffset_ = INITIAL_STACK_OFFSET;
 
     output_ << "    push rbp\n";        // Save the old base pointer
     output_ << "    mov rbp, rsp\n\n";  // Set the new base pointer
 
-    int parametersFrameSize = 0;
     for (const auto& param : funcDef.parameters_) {
         insert_symbol(param->identifier_->name_, param->typeID_);
-        parametersFrameSize += get_variable_size_bits(param->identifier_->name_) / 8;
     }
 
-    if (parametersFrameSize > 0) {
-        output_ << "    sub rsp, " << parametersFrameSize << "\n";
+    if (funcDef.parameters_.size() > 0) {
+        static_assert(FUNCTION_ARGUMENT_SIZE_BITS == 64 &&
+                      "Function argument size must be 64 bits to match the calling convention");
+        output_ << "    sub rsp, " << funcDef.parameters_.size() * (FUNCTION_ARGUMENT_SIZE_BITS / 8)
+                << "\n";  // Allocate space for parameters
     }
 
     int currentParamOffset = 16;  // [rbp] is the saved rbp, [rbp + 8] is the return address
     for (const auto& param : std::views::reverse(funcDef.parameters_)) {
-        const int paramSizeBits = get_variable_size_bits(param->identifier_->name_);
-        output_ << "    mov " << register_a_for_size(paramSizeBits) << ", [rbp + "
-                << currentParamOffset << "]\n";
-        write_to_variable(param->identifier_->name_, register_a_for_size(paramSizeBits));
+        static_assert(FUNCTION_ARGUMENT_SIZE_BITS == 64,
+                      "Function argument size must be 64 bits to match the calling convention");
+        output_ << "    mov rax, [rbp + " << currentParamOffset << "]\n";
 
-        currentParamOffset += paramSizeBits / 8;
+        const int sizeBits = get_variable_size_bits(param->identifier_->name_);
+        write_to_variable(param->identifier_->name_, register_a_for_size(sizeBits));
+
+        currentParamOffset += FUNCTION_ARGUMENT_SIZE_BITS / 8;
     }
 
-    if (parametersFrameSize > 0) {
+    if (funcDef.parameters_.size() > 0) {
         output_ << "\n";
     }
 

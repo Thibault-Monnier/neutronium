@@ -344,13 +344,14 @@ TEST_F(NeutroniumTester, CompoundAssignmentWithNonIntegersFails) {
         fn main(): {
             let mut x = [[false], [false]];
             let y = [[true], [false]];
-            x[0] -= y[1];       # illegal: int -= bool
+            x[0] -= y[1];
         }
     )";
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
-                error3.contains(trait_to_string(Trait::SUB)) && error3.contains("bool"));
+                error3.contains(trait_to_string(Trait::SUB)) && error3.contains("bool") &&
+                error3.contains("array"));
 }
 
 TEST_F(NeutroniumTester, WrongSpecifiedTypeFails) {
