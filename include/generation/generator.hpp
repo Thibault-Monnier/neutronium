@@ -39,24 +39,17 @@ class Generator {
     SymbolTable symbolTable_;
 
     /**
-     * @brief Computes the real size in bits of the expression's type (stack size if they live on
-     * the stack, heap size if they live on the heap).
+     * @brief Computes the size in bits of the provided type.
      */
-    int exprRealSizeBits(const AST::Expression& expr) const;
+    int typeSizeBits(const Type& type) const { return type.sizeBits(typeManager_); }
 
     /**
-     * @brief Computes the size in bits of the type when stored on the stack.
-     *
-     * For example, arrays are only stored as pointers on the stack.
+     * @brief Computes the size in bits of the provided expression.
      */
-    int typeStackSizeBits(const Type& type) const;
-
-    /**
-     * @brief Computes the size in bits of the expression when stored on the stack.
-     *
-     * For example, arrays are only stored as pointers on the stack.
-     */
-    int exprStackSizeBits(const AST::Expression& expr) const;
+    int exprSizeBits(const AST::Expression& expr) const {
+        const Type& type = typeManager_.getType(expr.typeID_);
+        return typeSizeBits(type);
+    }
 
     void insert_symbol(const std::string& name, TypeID typeID);
     int get_scope_frame_size(const AST::BlockStatement& blockStmt) const;
@@ -78,17 +71,28 @@ class Generator {
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
     void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit);
 
-    void evaluate_array_access_address_to_rax(const AST::ArrayAccess& arrayAccess);
     void evaluate_place_expression_address_to_rax(const AST::Expression& place);
 
-    void write_array_to_heap(const AST::ArrayLiteral& arrayLit);
-    void evaluate_array_access_to_rax(const AST::ArrayAccess& arrayAccess);
+    void generate_array_lit(const AST::ArrayLiteral& arrayLit, std::string_view destinationAddress);
+    void allocate_and_generate_array_literal(const AST::ArrayLiteral& arrayLit);
+
+    /**
+     * @brief Emits the code to evaluate an array access expression, placing the address
+     * in \c rbx and the value in \c rax .
+     */
+    void evaluate_array_access(const AST::ArrayAccess& arrayAccess);
+
     static std::string function_name_with_prefix(const std::string& name);
     void generate_function_call(const AST::FunctionCall& funcCall);
     void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr);
     void apply_arithmetic_operator_to_rax(AST::Operator op, const std::string& other);
     void evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr);
-    void evaluate_expression_to_rax(const AST::Expression& expr);
+
+    void evaluate_expression_to_rax(const AST::Expression& expr) {
+        evaluate_expression(expr, std::nullopt);
+    }
+    void evaluate_expression(const AST::Expression& expr,
+                             const std::optional<std::string_view>& destinationAddress);
 
     int generate_condition(const AST::Expression& condition);
     void generate_variable_definition(const AST::VariableDefinition& varDecl);
