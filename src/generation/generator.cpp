@@ -210,9 +210,8 @@ void Generator::generate_array_lit(const AST::ArrayLiteral& arrayLit,
 }
 
 void Generator::allocate_and_generate_array_literal(const AST::ArrayLiteral& arrayLit) {
-    output_ << "    mov rbx, rsp\n";
     output_ << "    sub rsp, " << (exprSizeBits(arrayLit) / 8) << "\n";
-    output_ << "    push rbx\n";
+    output_ << "    push rsp\n";
     generate_array_lit(arrayLit, "[rsp]");
     output_ << "    pop rbx\n";
 }
