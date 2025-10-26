@@ -83,7 +83,8 @@ class Generator {
     void evaluate_array_access(const AST::ArrayAccess& arrayAccess);
 
     static std::string function_name_with_prefix(const std::string& name);
-    void generate_function_call(const AST::FunctionCall& funcCall);
+    void generate_function_call(const AST::FunctionCall& funcCall,
+                                const std::optional<std::string_view>& destinationAddress);
     void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr);
     void apply_arithmetic_operator_to_rax(AST::Operator op, const std::string& other);
     void evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr);
@@ -93,6 +94,8 @@ class Generator {
     }
     void evaluate_expression(const AST::Expression& expr,
                              const std::optional<std::string_view>& destinationAddress);
+    void copy_array_contents(std::string_view sourceAddress, std::string_view destinationAddress,
+                             int arraySizeBits);
 
     int generate_condition(const AST::Expression& condition);
     void generate_variable_definition(const AST::VariableDefinition& varDecl);
