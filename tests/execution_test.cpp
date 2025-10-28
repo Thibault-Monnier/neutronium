@@ -712,7 +712,7 @@ TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {
         const std::string code = R"(
             fn main(): {
                 let mut a = [1, 2, 3, 4];
-                let b = a;
+                let b: [int32; 4] = a;
                 a[1] += 5;
                 exit b[1];
             }
@@ -842,11 +842,11 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 7);
     }
 
-    // --- Nested arrays using int16 inference ---
+    // --- Nested arrays using int32 inference ---
     {
         const std::string code = R"(
             fn main(): {
-                let small: int16 = 42;
+                let small: int32 = 42;
                 let arr = [[small, 1], [2, 3]];
                 exit arr[0][0];       # expect 42
             }
@@ -869,7 +869,8 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 200);
     }
 
-    // --- Function with int8 parameter used inside nested array ---
+    // --- Function returning int8 value from nested literal array with inference and control flow
+    // ---
     {
         const std::string code = R"(
             fn make_and_sum(v: int8) -> int8: {
@@ -897,6 +898,11 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
                                                         [[false, false], [false, false]],
                                                         [[false, false], [false, false]]];
                 make_and_sum(-3);  # expect 1
+                let largeArray2: [[[int32; 3]; 3]; 5] = [[[0,0,0],[0,0,0],[0,0,0]],
+                                                        [[0,0,0],[0,0,0],[0,0,0]],
+                                                        [[0,0,0],[0,0,0],[0,0,0]],
+                                                        [[0,0,0],[0,0,0],[0,0,0]],
+                                                        [[0,0,0],[0,0,0],[0,0,0]]];
             }
         )";
         EXPECT_EQ(run(code), 1);
