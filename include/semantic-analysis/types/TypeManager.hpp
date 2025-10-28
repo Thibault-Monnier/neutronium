@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdexcept>
 #include <vector>
 
 #include "Type.hpp"
@@ -57,23 +56,28 @@ class TypeManager {
      *
      * This function fetches the type corresponding to the provided TypeID
      * from the managed collection of types. It follows the linking chain
-     * transitively until it reaches the final target type.
+     * transitively until it reaches the final target type, applying path
+     * compression to optimize future lookups.
      *
      * @param id The unique TypeID of the type to retrieve.
      * @return A constant reference to the Type object associated with the provided TypeID.
      */
     [[nodiscard]] const Type& getType(const TypeID id) const {
-        // Follow the linking chain transitively to find the final target
-        TypeID current = id;
-        TypeID visited = 0;
-        while (linkingTable_.at(current) != current) {
-            current = linkingTable_.at(current);
-            // Safeguard against cycles (should not occur in correct union-find usage)
-            if (++visited > linkingTable_.size()) {
-                throw std::runtime_error("Cycle detected in type linking table");
-            }
+        // Find the root using path compression (union-find optimization)
+        TypeID root = id;
+        while (linkingTable_.at(root) != root) {
+            root = linkingTable_.at(root);
         }
-        return *types_.at(current);
+
+        // Path compression: make all nodes on the path point directly to the root
+        TypeID current = id;
+        while (current != root) {
+            const TypeID next = linkingTable_.at(current);
+            linkingTable_[current] = root;
+            current = next;
+        }
+
+        return *types_.at(root);
     }
 
     /**
@@ -129,6 +133,8 @@ class TypeManager {
      * This vector adds a layer of indirection for TypeIDs, allowing one TypeID to reference
      * another. This is used to allow type equivalence, where modifying one type affects all linked
      * types. Initially, every TypeID maps to itself.
+     *
+     * Marked as mutable to allow path compression optimization in getType() const method.
      */
-    std::vector<TypeID> linkingTable_;
+    mutable std::vector<TypeID> linkingTable_;
 };
