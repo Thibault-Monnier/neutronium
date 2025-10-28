@@ -286,7 +286,8 @@ void Generator::generate_function_call(const AST::FunctionCall& funcCall,
         case TypeKind::PRIMITIVE:
             clean_rax(sizeBits);
             output_ << "    mov rbx, " << destinationAddress.value() << "\n";
-            output_ << "    mov [rbx], rax" << "\n";
+            output_ << "    mov " << size_directive(sizeBits) << " [rbx], "
+                    << register_a_for_size(sizeBits) << "\n";
             break;
         case TypeKind::ARRAY:
             copy_array_contents("rax", destinationAddress.value(), sizeBits);
