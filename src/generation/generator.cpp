@@ -408,9 +408,10 @@ void Generator::generate_primitive_expression(
     }
 
     if (destinationAddress.has_value()) {
+        const int sizeBits = exprSizeBits(expr);
         output_ << "    mov rbx, " << destinationAddress.value() << "\n";
-        output_ << "    mov " << size_directive(exprSizeBits(expr)) << " [rbx], "
-                << register_a_for_size(exprSizeBits(expr)) << "\n";
+        output_ << "    mov " << size_directive(sizeBits) << " [rbx], "
+                << register_a_for_size(sizeBits) << "\n";
     }
 }
 
