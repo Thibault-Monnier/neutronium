@@ -55,14 +55,19 @@ class TypeManager {
      * @brief Retrieves a reference to a previously registered type.
      *
      * This function fetches the type corresponding to the provided TypeID
-     * from the managed collection of types.
+     * from the managed collection of types. It follows the linking chain
+     * transitively until it reaches the final target type.
      *
      * @param id The unique TypeID of the type to retrieve.
      * @return A constant reference to the Type object associated with the provided TypeID.
      */
     [[nodiscard]] const Type& getType(const TypeID id) const {
-        const TypeID resolvedID = linkingTable_.at(id);
-        return *types_.at(resolvedID);
+        // Follow the linking chain transitively to find the final target
+        TypeID current = id;
+        while (linkingTable_.at(current) != current) {
+            current = linkingTable_.at(current);
+        }
+        return *types_.at(current);
     }
 
     /**
@@ -103,8 +108,8 @@ class TypeManager {
      * @param dst TypeID that becomes the target of the mapping.
      * @param src TypeID that will be redirected to dst.
      *
-     * @note If dst is later linked to another TypeID, src will NOT automatically update to point to
-     * that new TypeID. It will be left invalid.
+     * @note If dst is later linked to another TypeID, getType() will automatically follow the
+     * chain transitively to resolve to the final target type.
      */
     void linkTypes(const TypeID dst, const TypeID src) { linkingTable_[src] = dst; }
 
