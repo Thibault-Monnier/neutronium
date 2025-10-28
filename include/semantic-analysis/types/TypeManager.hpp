@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <vector>
 
 #include "Type.hpp"
@@ -64,8 +65,13 @@ class TypeManager {
     [[nodiscard]] const Type& getType(const TypeID id) const {
         // Follow the linking chain transitively to find the final target
         TypeID current = id;
+        TypeID visited = 0;
         while (linkingTable_.at(current) != current) {
             current = linkingTable_.at(current);
+            // Safeguard against cycles (should not occur in correct union-find usage)
+            if (++visited > linkingTable_.size()) {
+                throw std::runtime_error("Cycle detected in type linking table");
+            }
         }
         return *types_.at(current);
     }
@@ -74,7 +80,8 @@ class TypeManager {
      * @brief Retrieves a reference to a previously registered type.
      *
      * This function fetches the type corresponding to the provided TypeID
-     * from the managed collection of types.
+     * from the managed collection of types. It follows the linking chain
+     * transitively until it reaches the final target type.
      *
      * @param id The unique TypeID of the type to retrieve.
      * @return A mutable reference to the Type object associated with the provided TypeID.
