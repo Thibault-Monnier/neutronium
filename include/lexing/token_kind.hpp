@@ -41,9 +41,12 @@ enum class TokenKind : uint8_t {
     // Keywords
     TRUE,
     FALSE,
-    CONST,
     LET,
     INT,
+    INT8,
+    INT16,
+    INT32,
+    INT64,
     BOOL,
     MUT,
     IF,

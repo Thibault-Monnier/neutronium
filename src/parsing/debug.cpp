@@ -1,11 +1,44 @@
-#include <iostream>
-#include <utility>
+#include "parsing/debug.hpp"
 
-#include "parsing/ast.hpp"
+#include <iostream>
+#include <magic_enum/magic_enum.hpp>
+#include <utility>
 
 namespace AST {
 
-namespace {
+std::string operator_to_string(const Operator op) {
+    static const std::unordered_map<Operator, std::string> table = {
+        {Operator::ADD, "+"},
+        {Operator::SUBTRACT, "-"},
+        {Operator::MULTIPLY, "*"},
+        {Operator::DIVIDE, "/"},
+        {Operator::LOGICAL_NOT, "!"},
+        {Operator::ASSIGN, "="},
+        {Operator::ADD_ASSIGN, "+="},
+        {Operator::SUBTRACT_ASSIGN, "-="},
+        {Operator::MULTIPLY_ASSIGN, "*="},
+        {Operator::DIVIDE_ASSIGN, "/="},
+        {Operator::EQUALS, "=="},
+        {Operator::NOT_EQUALS, "!="},
+        {Operator::LESS_THAN, "<"},
+        {Operator::LESS_THAN_OR_EQUAL, "<="},
+        {Operator::GREATER_THAN, ">"},
+        {Operator::GREATER_THAN_OR_EQUAL, ">="},
+    };
+
+    const auto it = table.find(op);
+    assert(it != table.end() && "Invalid operator");
+    return it->second;
+}
+
+std::string node_kind_to_string(const NodeKind kind) {
+    const auto enumName = magic_enum::enum_name(kind);
+    return std::string{enumName};
+}
+
+// =========================================== //
+// ============= Log AST helpers ============= //
+// =========================================== //
 
 std::string next_prefix(const std::string& p, const bool isLast) {
     return p + (isLast ? "    " : "│   ");
@@ -17,7 +50,7 @@ const To& as(const From& n) {
 }
 
 void log_expression(const Expression& expr, const std::string& prefix, const bool isLast) {
-    const std::string branch = isLast ? "└── " : "├── ";
+    std::string branch = "├── ";
 
     if (expr.kind_ == NodeKind::NUMBER_LITERAL) {
         const auto& numberLit = as<NumberLiteral>(expr);
@@ -30,7 +63,7 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
         const auto& identifier = as<Identifier>(expr);
         std::cout << prefix << branch << "Identifier: " << identifier.name_ << "\n";
     } else {
-        const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
+        const std::string newPrefix = prefix + "│   ";
 
         if (expr.kind_ == NodeKind::ARRAY_LITERAL) {
             const auto& arrayLit = as<ArrayLiteral>(expr);
@@ -80,6 +113,9 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
             log_expression(*unaryExpr.operand_, newPrefix, true);
         }
     }
+
+    branch = isLast ? "└── " : "├── ";
+    std::cout << prefix << branch << "TypeID: " << expr.typeID_ << "\n";
 }
 
 void log_statement(const Statement& stmt, const std::string& prefix, const bool isLast) {
@@ -91,7 +127,7 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             const auto& varDecl = as<VariableDefinition>(stmt);
             std::cout << prefix << branch << "VariableDefinition\n";
             std::cout << newPrefix << "├── Identifier: " << varDecl.identifier_->name_ << "\n";
-            std::cout << newPrefix << "├── Type: " << varDecl.type_.to_string() << "\n";
+            std::cout << newPrefix << "├── TypeID: " << varDecl.typeID_ << "\n";
             std::cout << newPrefix << "├── IsMutable: " << (varDecl.isMutable_ ? "true" : "false")
                       << "\n";
             std::cout << newPrefix << "└── Value\n";
@@ -179,19 +215,17 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
     }
 }
 
-}  // namespace
-
 void log_ast(const Program& programNode) {
     std::cout << "Program\n";
 
     const std::string prefix = "    ";
 
     const auto functionSignature =
-        [](const AST::Identifier& identifier,
-           const std::vector<std::unique_ptr<AST::VariableDefinition>>& params,
-           const Type& returnType, const std::string& newPrefix, bool hasBody) {
+        [&](const AST::Identifier& identifier,
+            const std::vector<std::unique_ptr<AST::VariableDefinition>>& params,
+            const TypeID returnTypeID, const std::string& newPrefix, const bool hasBody) {
             std::cout << newPrefix << "├── Identifier: " << identifier.name_ << "\n";
-            std::cout << newPrefix << "├── ReturnType: " << returnType.to_string() << "\n";
+            std::cout << newPrefix << "├── ReturnTypeID: " << returnTypeID << "\n";
 
             const std::string parametersBranch = hasBody ? "├── " : "└── ";
             std::cout << newPrefix << parametersBranch << "Parameters\n";
@@ -204,42 +238,24 @@ void log_ast(const Program& programNode) {
                 std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
                           << "├── Identifier: " << param->identifier_->name_ << "\n";
                 std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
-                          << "├── Type: " << param->type_.to_string() << "\n";
+                          << "├── TypeID: " << param->typeID_ << "\n";
                 std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
                           << "└── IsMutable: " << (param->isMutable_ ? "true" : "false") << "\n";
             }
         };
 
     for (size_t i = 0; i < programNode.externalFunctions_.size(); ++i) {
-        const bool isLast = i == programNode.externalFunctions_.size() - 1 &&
-                            programNode.constants_.empty() && programNode.functions_.empty();
+        const bool isLast =
+            i == programNode.externalFunctions_.size() - 1 && programNode.functions_.empty();
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
         const auto& externFunc =
             as<ExternalFunctionDeclaration>(*programNode.externalFunctions_[i]);
 
         std::cout << prefix << branch << "ExternalFunctionDeclaration\n";
-        functionSignature(*externFunc.identifier_, externFunc.parameters_, externFunc.returnType_,
+        functionSignature(*externFunc.identifier_, externFunc.parameters_, externFunc.returnTypeID_,
                           newPrefix, false);
 
-        if (!isLast) {
-            std::cout << prefix << "│\n";
-        }
-    }
-
-    for (size_t i = 0; i < programNode.constants_.size(); ++i) {
-        const bool isLast =
-            i == programNode.constants_.size() - 1 && programNode.functions_.empty();
-        const std::string branch = isLast ? "└── " : "├── ";
-        const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
-
-        const auto& constant = as<ConstantDefinition>(*programNode.constants_[i]);
-
-        std::cout << prefix << branch << "ConstantDefinition\n";
-        std::cout << newPrefix << "├── Identifier: " << constant.identifier_->name_ << "\n";
-        std::cout << newPrefix << "├── Type: " << constant.type_.to_string() << "\n";
-        std::cout << newPrefix << "└── Value\n";
-        log_expression(*constant.value_, next_prefix(newPrefix, true), true);
         if (!isLast) {
             std::cout << prefix << "│\n";
         }
@@ -252,8 +268,8 @@ void log_ast(const Program& programNode) {
         const auto& funcDef = as<FunctionDefinition>(*programNode.functions_[i]);
 
         std::cout << prefix << branch << "FunctionDefinition\n";
-        functionSignature(*funcDef.identifier_, funcDef.parameters_, funcDef.returnType_, newPrefix,
-                          true);
+        functionSignature(*funcDef.identifier_, funcDef.parameters_, funcDef.returnTypeID_,
+                          newPrefix, true);
         std::cout << newPrefix << "├── IsExported: " << (funcDef.isExported_ ? "true" : "false")
                   << "\n";
 

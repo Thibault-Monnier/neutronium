@@ -5,29 +5,10 @@
 #include <vector>
 
 #include "lexing/token_kind.hpp"
-#include "semantic-analysis/type.hpp"
+#include "operator.hpp"
+#include "semantic-analysis/types/TypeID.hpp"
 
 namespace AST {
-
-enum class Operator : uint8_t {
-    ADD,
-    SUBTRACT,
-    MULTIPLY,
-    DIVIDE,
-    LOGICAL_NOT,
-    ASSIGN,
-    ADD_ASSIGN,
-    SUBTRACT_ASSIGN,
-    MULTIPLY_ASSIGN,
-    DIVIDE_ASSIGN,
-    EQUALS,
-    NOT_EQUALS,
-    LESS_THAN,
-    LESS_THAN_OR_EQUAL,
-    GREATER_THAN,
-    GREATER_THAN_OR_EQUAL,
-    UNDEFINED_OPERATOR,
-};
 
 enum class NodeKind : uint8_t {
     NUMBER_LITERAL,
@@ -48,7 +29,6 @@ enum class NodeKind : uint8_t {
     RETURN_STATEMENT,
     EXIT_STATEMENT,
     BLOCK_STATEMENT,
-    CONSTANT_DEFINITION,
     EXTERNAL_FUNCTION_DECLARATION,
     FUNCTION_DEFINITION,
     PROGRAM,
@@ -70,7 +50,11 @@ struct Node {
 };
 
 struct Expression : Node {
-    using Node::Node;
+    Expression(const NodeKind kind, const uint32_t sourceStartIndex, const uint32_t sourceEndIndex,
+               const TypeID typeID)
+        : Node{kind, sourceStartIndex, sourceEndIndex}, typeID_(typeID) {}
+
+    TypeID typeID_;
 };
 
 struct PrimaryExpression : Expression {
@@ -78,38 +62,40 @@ struct PrimaryExpression : Expression {
 };
 
 struct NumberLiteral final : PrimaryExpression {
-    NumberLiteral(const std::int64_t value, const uint32_t start, const uint32_t end)
-        : PrimaryExpression{NodeKind::NUMBER_LITERAL, start, end}, value_(value) {}
+    NumberLiteral(const std::int64_t value, const uint32_t start, const uint32_t end,
+                  const TypeID typeID)
+        : PrimaryExpression{NodeKind::NUMBER_LITERAL, start, end, typeID}, value_(value) {}
 
     const std::int64_t value_;
 };
 
 struct BooleanLiteral final : PrimaryExpression {
-    BooleanLiteral(const bool value, const uint32_t start, const uint32_t end)
-        : PrimaryExpression{NodeKind::BOOLEAN_LITERAL, start, end}, value_(value) {}
+    BooleanLiteral(const bool value, const uint32_t start, const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::BOOLEAN_LITERAL, start, end, typeID}, value_(value) {}
 
     const bool value_;
 };
 
 struct ArrayLiteral final : PrimaryExpression {
     ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements, const uint32_t start,
-                 const uint32_t end)
-        : PrimaryExpression{NodeKind::ARRAY_LITERAL, start, end}, elements_(std::move(elements)) {}
+                 const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::ARRAY_LITERAL, start, end, typeID},
+          elements_(std::move(elements)) {}
 
     const std::vector<std::unique_ptr<Expression>> elements_;
 };
 
 struct Identifier final : PrimaryExpression {
-    Identifier(std::string name, const uint32_t start, const uint32_t end)
-        : PrimaryExpression{NodeKind::IDENTIFIER, start, end}, name_(std::move(name)) {}
+    Identifier(std::string name, const uint32_t start, const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::IDENTIFIER, start, end, typeID}, name_(std::move(name)) {}
 
     const std::string name_;
 };
 
 struct ArrayAccess final : PrimaryExpression {
     ArrayAccess(std::unique_ptr<Expression> base, std::unique_ptr<Expression> index,
-                const uint32_t start, const uint32_t end)
-        : PrimaryExpression{NodeKind::ARRAY_ACCESS, start, end},
+                const uint32_t start, const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::ARRAY_ACCESS, start, end, typeID},
           base_(std::move(base)),
           index_(std::move(index)) {}
 
@@ -120,8 +106,8 @@ struct ArrayAccess final : PrimaryExpression {
 struct FunctionCall final : PrimaryExpression {
     FunctionCall(std::unique_ptr<Identifier> callee,
                  std::vector<std::unique_ptr<Expression>> arguments, const uint32_t start,
-                 const uint32_t end)
-        : PrimaryExpression{NodeKind::FUNCTION_CALL, start, end},
+                 const uint32_t end, const TypeID typeID)
+        : PrimaryExpression{NodeKind::FUNCTION_CALL, start, end, typeID},
           callee_(std::move(callee)),
           arguments_(std::move(arguments)) {}
 
@@ -131,8 +117,8 @@ struct FunctionCall final : PrimaryExpression {
 
 struct UnaryExpression final : Expression {
     UnaryExpression(const Operator op, std::unique_ptr<Expression> operand, const uint32_t start,
-                    const uint32_t end)
-        : Expression{NodeKind::UNARY_EXPRESSION, start, end},
+                    const uint32_t end, const TypeID typeID)
+        : Expression{NodeKind::UNARY_EXPRESSION, start, end, typeID},
           operator_(op),
           operand_(std::move(operand)) {}
 
@@ -142,8 +128,9 @@ struct UnaryExpression final : Expression {
 
 struct BinaryExpression final : Expression {
     BinaryExpression(std::unique_ptr<Expression> left, const Operator op,
-                     std::unique_ptr<Expression> right, const uint32_t start, const uint32_t end)
-        : Expression{NodeKind::BINARY_EXPRESSION, start, end},
+                     std::unique_ptr<Expression> right, const uint32_t start, const uint32_t end,
+                     const TypeID typeID)
+        : Expression{NodeKind::BINARY_EXPRESSION, start, end, typeID},
           left_(std::move(left)),
           operator_(op),
           right_(std::move(right)) {}
@@ -166,24 +153,24 @@ struct BlockStatement final : Statement {
 };
 
 struct VariableDefinition final : Statement {
-    VariableDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
+    VariableDefinition(std::unique_ptr<Identifier> identifier, const TypeID typeID,
                        const bool isMutable, const uint32_t start, const uint32_t end)
         : Statement{NodeKind::VARIABLE_DEFINITION, start, end},
           identifier_(std::move(identifier)),
-          type_(type),
+          typeID_(typeID),
           isMutable_(isMutable) {}
 
-    VariableDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
+    VariableDefinition(std::unique_ptr<Identifier> identifier, const TypeID typeID,
                        const bool isMutable, std::unique_ptr<Expression> value,
                        const uint32_t start, const uint32_t end)
         : Statement{NodeKind::VARIABLE_DEFINITION, start, end},
           identifier_(std::move(identifier)),
-          type_(type),
+          typeID_(typeID),
           isMutable_(isMutable),
           value_(std::move(value)) {}
 
     std::unique_ptr<Identifier> identifier_;
-    const Type type_;
+    const TypeID typeID_;
     const bool isMutable_;
     std::unique_ptr<Expression> value_;
 };
@@ -266,60 +253,42 @@ struct ReturnStatement final : Statement {
     std::unique_ptr<Expression> returnValue_;
 };
 
-struct ConstantDefinition final : Node {
-    ConstantDefinition(std::unique_ptr<Identifier> identifier, const Type& type,
-                       std::unique_ptr<Expression> value, const uint32_t start, const uint32_t end)
-        : Node{NodeKind::CONSTANT_DEFINITION, start, end},
-          identifier_(std::move(identifier)),
-          type_(type),
-          value_(std::move(value)) {}
-
-    std::unique_ptr<Identifier> identifier_;
-    const Type type_;
-    std::unique_ptr<Expression> value_;
-};
-
 struct ExternalFunctionDeclaration final : Node {
     ExternalFunctionDeclaration(std::unique_ptr<Identifier> identifier,
                                 std::vector<std::unique_ptr<VariableDefinition>> parameters,
-                                const Type& returnType, const uint32_t start, const uint32_t end)
+                                const TypeID returnTypeID, const uint32_t start, const uint32_t end)
         : Node{NodeKind::EXTERNAL_FUNCTION_DECLARATION, start, end},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
-          returnType_(returnType) {}
+          returnTypeID_(returnTypeID) {}
 
     std::unique_ptr<Identifier> identifier_;
     const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
-    const Type returnType_;
+    const TypeID returnTypeID_;
 };
 
 struct FunctionDefinition final : Node {
     FunctionDefinition(std::unique_ptr<Identifier> identifier,
                        std::vector<std::unique_ptr<VariableDefinition>> parameters,
-                       const Type& returnType, const bool isExported,
+                       const TypeID returnTypeID, const bool isExported,
                        std::unique_ptr<BlockStatement> body, const uint32_t start,
                        const uint32_t end)
         : Node{NodeKind::FUNCTION_DEFINITION, start, end},
           identifier_(std::move(identifier)),
           parameters_(std::move(parameters)),
-          returnType_(returnType),
+          returnTypeID_(returnTypeID),
           isExported_(isExported),
           body_(std::move(body)) {}
 
     std::unique_ptr<Identifier> identifier_;
     const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
-    const Type returnType_;
+    const TypeID returnTypeID_;
     const bool isExported_;
     std::unique_ptr<BlockStatement> body_;
 };
 
 struct Program final : Node {
     explicit Program() : Node{NodeKind::PROGRAM, 0, 0} {}
-
-    void append_constant(std::unique_ptr<ConstantDefinition> constant) {
-        constants_.emplace_back(std::move(constant));
-        sourceEndIndex_ = constants_.back()->source_end_index();
-    }
 
     void append_function(std::unique_ptr<FunctionDefinition> function) {
         functions_.emplace_back(std::move(function));
@@ -331,22 +300,16 @@ struct Program final : Node {
         sourceEndIndex_ = externalFunctions_.back()->source_end_index();
     }
 
-    std::vector<std::unique_ptr<ConstantDefinition>> constants_;
     std::vector<std::unique_ptr<ExternalFunctionDeclaration>> externalFunctions_;
     std::vector<std::unique_ptr<FunctionDefinition>> functions_;
 };
 
 Operator token_kind_to_operator(TokenKind tokenKind);
-std::string operator_to_string(Operator op);
 
 bool is_arithmetic_operator(Operator op);
 bool is_equality_operator(Operator op);
 bool is_relational_operator(Operator op);
 bool is_comparison_operator(Operator op);
 bool is_assignment_operator(Operator op);
-
-std::string node_kind_to_string(NodeKind kind);
-
-void log_ast(const Program& programNode);
 
 }  // namespace AST

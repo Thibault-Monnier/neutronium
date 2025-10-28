@@ -45,17 +45,29 @@ Type Parser::parse_type_specifier() {
     switch (tokenKind) {
         case TokenKind::INT:
             expect(tokenKind);
-            return PrimitiveType::INTEGER;
+            return Primitive::Kind::INT;
+        case TokenKind::INT8:
+            expect(tokenKind);
+            return Primitive::Kind::INT8;
+        case TokenKind::INT16:
+            expect(tokenKind);
+            return Primitive::Kind::INT16;
+        case TokenKind::INT32:
+            expect(tokenKind);
+            return Primitive::Kind::INT32;
+        case TokenKind::INT64:
+            expect(tokenKind);
+            return Primitive::Kind::INT64;
         case TokenKind::BOOL:
             expect(tokenKind);
-            return PrimitiveType::BOOLEAN;
+            return Primitive::Kind::BOOL;
         case TokenKind::LEFT_BRACKET: {
             expect(tokenKind);
-            const Type elementType = parse_type_specifier();
+            const TypeID elementTypeID = typeManager_.createType(parse_type_specifier());
             expect(TokenKind::SEMICOLON);
             const std::size_t arrayLength = parse_number_literal()->value_;
             expect(TokenKind::RIGHT_BRACKET);
-            return Type{elementType, arrayLength};
+            return Type{elementTypeID, arrayLength};
         }
 
         default: {
@@ -70,7 +82,8 @@ Type Parser::parse_type_specifier() {
 std::unique_ptr<AST::NumberLiteral> Parser::parse_number_literal() {
     const Token& token = expect(TokenKind::NUMBER_LITERAL);
     return std::make_unique<AST::NumberLiteral>(std::stoll(token.lexeme()),
-                                                token.byte_offset_start(), token.byte_offset_end());
+                                                token.byte_offset_start(), token.byte_offset_end(),
+                                                generate_any_type());
 }
 
 std::unique_ptr<AST::ArrayLiteral> Parser::parse_array_literal() {
@@ -88,13 +101,13 @@ std::unique_ptr<AST::ArrayLiteral> Parser::parse_array_literal() {
     const Token& rBracket = expect(TokenKind::RIGHT_BRACKET);
 
     return std::make_unique<AST::ArrayLiteral>(std::move(elements), lBracket.byte_offset_start(),
-                                               rBracket.byte_offset_end());
+                                               rBracket.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::Identifier> Parser::parse_identifier() {
     const Token& ident = expect(TokenKind::IDENTIFIER);
     return std::make_unique<AST::Identifier>(ident.lexeme(), ident.byte_offset_start(),
-                                             ident.byte_offset_end());
+                                             ident.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
@@ -115,18 +128,16 @@ std::unique_ptr<AST::FunctionCall> Parser::parse_function_call() {
 
     return std::make_unique<AST::FunctionCall>(std::move(callee), std::move(arguments),
                                                callee->source_start_index(),
-                                               rParen.byte_offset_end());
+                                               rParen.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access(
     std::unique_ptr<AST::Expression>& base) {
-    const Token& lBracket = expect(TokenKind::LEFT_BRACKET);
+    expect(TokenKind::LEFT_BRACKET);
     auto index = parse_expression();
     const Token& rBracket = expect(TokenKind::RIGHT_BRACKET);
 
-    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index),
-                                              lBracket.byte_offset_start(),
-                                              rBracket.byte_offset_end());
+    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index), base->source_start_index(), rBracket.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {
@@ -141,13 +152,13 @@ std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {
 
         case TokenKind::TRUE:
             expect(TokenKind::TRUE);
-            return std::make_unique<AST::BooleanLiteral>(true, token.byte_offset_start(),
-                                                         token.byte_offset_end());
+            return std::make_unique<AST::BooleanLiteral>(
+                true, token.byte_offset_start(), token.byte_offset_end(), generate_any_type());
 
         case TokenKind::FALSE:
             expect(TokenKind::FALSE);
-            return std::make_unique<AST::BooleanLiteral>(false, token.byte_offset_start(),
-                                                         token.byte_offset_end());
+            return std::make_unique<AST::BooleanLiteral>(
+                false, token.byte_offset_start(), token.byte_offset_end(), generate_any_type());
 
         case TokenKind::IDENTIFIER:
             if (peek(1).kind() == TokenKind::LEFT_PAREN) {
@@ -194,7 +205,8 @@ std::unique_ptr<AST::Expression> Parser::parse_unary_expression() {
         expect(token.kind());
         auto operand = parse_postfix_expression();
         return std::make_unique<AST::UnaryExpression>(
-            op, std::move(operand), token.byte_offset_start(), operand->source_end_index());
+            op, std::move(operand), token.byte_offset_start(), operand->source_end_index(),
+            generate_any_type());
     }
 
     return parse_postfix_expression();
@@ -212,7 +224,7 @@ std::unique_ptr<AST::Expression> Parser::parse_binary_expression(
             auto right = parseOperand();
             left = std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right),
                                                            left->source_start_index(),
-                                                           right->source_end_index());
+                right->source_end_index(), generate_any_type());
 
             if (!allowMultiple) {
                 break;
@@ -266,17 +278,18 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_variable_definition() {
 
     auto identifier = parse_identifier();
 
-    Type type = PrimitiveType::ANY;
+    Type type = Type::anyFamilyType();
     if (peek().kind() == TokenKind::COLON) {
         expect(TokenKind::COLON);
         type = parse_type_specifier();
     }
+    const TypeID typeID = typeManager_.createType(type);
 
     expect(TokenKind::EQUAL);
     auto value = parse_expression();
     const Token& semi = expect(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::VariableDefinition>(std::move(identifier), type, isMutable,
+    return std::make_unique<AST::VariableDefinition>(std::move(identifier), typeID, isMutable,
                                                      std::move(value), let.byte_offset_start(),
                                                      semi.byte_offset_end());
 }
@@ -435,9 +448,10 @@ std::unique_ptr<AST::VariableDefinition> Parser::parse_function_parameter() {
 
     expect(TokenKind::COLON);
     const Type type = parse_type_specifier();
+    const TypeID typeID = typeManager_.createType(type);
 
     return std::make_unique<AST::VariableDefinition>(
-        std::move(identifier), type, isMutable, sourceStartIndex, identifier->source_end_index());
+        std::move(identifier), typeID, isMutable, sourceStartIndex, identifier->source_end_index());
 }
 
 ParsedFunctionSignature Parser::parse_function_signature() {
@@ -453,7 +467,7 @@ ParsedFunctionSignature Parser::parse_function_signature() {
     }
     expect(TokenKind::RIGHT_PAREN);
 
-    Type returnType = PrimitiveType::VOID;
+    Type returnType = Primitive::Kind::VOID;
     if (peek().kind() == TokenKind::RIGHT_ARROW) {
         expect(TokenKind::RIGHT_ARROW);
         returnType = parse_type_specifier();
@@ -461,7 +475,7 @@ ParsedFunctionSignature Parser::parse_function_signature() {
 
     return {.identifier_ = std::move(identifier),
             .parameters_ = std::move(parameters),
-            .returnType_ = returnType};
+            .returnTypeID_ = typeManager_.createType(returnType)};
 }
 
 std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_function_declaration() {
@@ -473,7 +487,7 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parse_external_functio
     const Token& semi = expect(TokenKind::SEMICOLON);
 
     return std::make_unique<AST::ExternalFunctionDeclaration>(
-        std::move(signature.identifier_), std::move(signature.parameters_), signature.returnType_,
+        std::move(signature.identifier_), std::move(signature.parameters_), signature.returnTypeID_,
         externTok.byte_offset_start(), semi.byte_offset_end());
 }
 
@@ -493,37 +507,13 @@ std::unique_ptr<AST::FunctionDefinition> Parser::parse_function_definition() {
     expect(TokenKind::COLON);
     auto body = parse_block_statement();
     return std::make_unique<AST::FunctionDefinition>(
-        std::move(signature.identifier_), std::move(signature.parameters_), signature.returnType_,
+        std::move(signature.identifier_), std::move(signature.parameters_), signature.returnTypeID_,
         isExported, std::move(body), sourceStartIndex, body->source_end_index());
-}
-
-std::unique_ptr<AST::ConstantDefinition> Parser::parse_constant_definition() {
-    const Token& constTok = expect(TokenKind::CONST);
-
-    auto identifier = parse_identifier();
-
-    Type type = PrimitiveType::ANY;
-    if (peek().kind() == TokenKind::COLON) {
-        expect(TokenKind::COLON);
-        type = parse_type_specifier();
-    }
-
-    expect(TokenKind::EQUAL);
-    auto value = parse_expression();
-    const Token& semi = expect(TokenKind::SEMICOLON);
-
-    return std::make_unique<AST::ConstantDefinition>(std::move(identifier), type, std::move(value),
-                                                     constTok.byte_offset_start(),
-                                                     semi.byte_offset_end());
 }
 
 std::unique_ptr<AST::Program> Parser::parse_program() {
     auto program = std::make_unique<AST::Program>();
 
-    while (peek().kind() == TokenKind::CONST) {
-        auto constant = parse_constant_definition();
-        program->append_constant(std::move(constant));
-    }
     while (peek().kind() == TokenKind::EXTERN) {
         auto externFunction = parse_external_function_declaration();
         program->append_extern_function(std::move(externFunction));

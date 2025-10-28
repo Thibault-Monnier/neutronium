@@ -153,11 +153,15 @@ TEST_F(NeutroniumTester, TypeSpecifiers) {
             let x: int = 42;
             let mut y: int = 0;
 
+            let mut a: int8 = 100;
+            let b: int8 = 27 + -1;
+
             let z: bool = true;
             let mut w: bool = false;
 
             if z: {
                 y = x + 1; # y = 43
+                a += +b;  # a = 127
                 w = !w;
             }
             if w: {
@@ -686,4 +690,236 @@ TEST_F(NeutroniumTester, Arrays) {
         }
     )";
     EXPECT_EQ(run(codeArrayLiteralAccess), 3);
+
+    const std::string codeTestTypeInference = R"(
+        fn takesInt8(a: int8): { }
+
+        fn main(): {
+            let n = 13;
+            takesInt8(n);
+
+            let a: [[int8; 1]; 2] = [[n], [n + 1]];
+            let b = a[0][0];
+
+            exit a[1][0];
+        }
+    )";
+    EXPECT_EQ(run(codeTestTypeInference), 14);
+}
+
+TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {
+    {
+        const std::string code = R"(
+            fn main(): {
+                let mut a = [1, 2, 3, 4];
+                let b: [int32; 4] = a;
+                a[1] += 5;
+                exit b[1];
+            }
+        )";
+        EXPECT_EQ(run(code), 2);
+    }
+
+    {
+        const std::string code = R"(
+            fn a(mut arr: [int; 2]): {
+                arr[0] += 10;
+            }
+
+            fn main(): {
+                let mut myArr = [1, 2];
+                let val1 = myArr[0];
+                a(myArr);
+                let val2 = myArr[0];
+                exit -val1*2 + val2;  # should be -2 + 1 = -1
+            }
+        )";
+        EXPECT_EQ(run(code), 255);  // -1 in 8-bit unsigned (linux exit code)
+    }
+}
+
+TEST_F(NeutroniumTester, ArrayIndexFunctionCall) {
+    const std::string code = R"(
+        fn getArray() -> [[int; 3]; 2]: {
+            return [[14, 42, 7], [21, 28, 39]];
+        }
+
+        fn main(): {
+            let mut arr1 = getArray()[0];
+            let arr2 = getArray()[1];
+            let elem = getArray()[1][2];
+            arr1[1] += elem; # 42 + 39 = 81
+            exit arr1[1] - arr2[0];  # 81 - 21 = 60
+        }
+    )";
+    EXPECT_EQ(run(code), 60);
+}
+
+TEST_F(NeutroniumTester, ArrayIndexWithInt16) {
+    const std::string code = R"(
+        fn main(): {
+            let arr = [10, 20, 30, 40];
+            let idx: int16 = 2;
+            exit arr[idx];  # should be 30
+        }
+    )";
+    EXPECT_EQ(run(code), 30);
+}
+
+TEST_F(NeutroniumTester, ArrayElementTypeBubblesUp) {
+    const std::string code = R"(
+        fn forceInt16(unused: bool, x: int16) -> int16: { return x; }
+
+        fn main(): {
+            let k: int16 = 10;
+            let arr = [[1, 2], [k, 4]];
+            let control = forceInt16(true, 2);
+            exit (arr[0][1] / control)  # asserts that arr is inferred as [[int16; 2]; 2]
+                 + arr[1][0];           # 2/2 + 10 = 11
+        }
+    )";
+    EXPECT_EQ(run(code), 11);
+}
+
+TEST_F(NeutroniumTester, TypeInferenceFromFunctionParameterSucceeds) {
+    // Type inference from function parameter: literal inferred as int8
+    const std::string code = R"(
+        fn takesInt8(x: int8) -> int8: { return x + 1; }
+        fn main(): {
+            let n = 41;
+            exit takesInt8(n);  # n inferred as int8
+        }
+    )";
+    EXPECT_EQ(run(code), 42);
+}
+
+TEST_F(NeutroniumTester, TypeInferenceFromArrayLiteralSucceeds) {
+    // Type inference from array literal: all elements inferred as int16
+    const std::string code = R"(
+        fn main(): {
+            let arr: [int16; 3] = [10, 20, 30];
+            exit arr[1];  # Should be 20
+        }
+    )";
+    EXPECT_EQ(run(code), 20);
+}
+
+TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
+    // --- Array inference with int16 + literal ---
+    {
+        const std::string code = R"(
+            fn main(): {
+                let x: int16 = 10;
+                let arr = [x, 200];
+                exit arr[1];    # expect 200
+            }
+        )";
+        EXPECT_EQ(run(code), 200);
+    }
+
+    // --- Array with int8 variables and literal elements ---
+    {
+        const std::string code = R"(
+            fn main(): {
+                let a: int8 = 10;
+                let arr = [[1, 2, 3], [a, 4, 2]];
+                exit arr[1][0] + arr[0][2]; # expect 13
+            }
+        )";
+        EXPECT_EQ(run(code), 13);
+    }
+
+    // --- Array mutation (int8) ---
+    {
+        const std::string code = R"(
+            fn main(): {
+                let x: int8 = 7;
+                let mut arr = [0, 0];
+                arr[1] = x;
+                exit arr[1];    # expect 7
+            }
+        )";
+        EXPECT_EQ(run(code), 7);
+    }
+
+    // --- Nested arrays using int32 inference ---
+    {
+        const std::string code = R"(
+            fn main(): {
+                let small: int32 = 42;
+                let arr = [[small, 1], [2, 3]];
+                exit arr[0][0];       # expect 42
+            }
+        )";
+        EXPECT_EQ(run(code), 42);
+    }
+
+    // --- Function returns int16 array element ---
+    {
+        const std::string code = R"(
+            fn get_second(a: [int16; 2]) -> int16: {
+                exit a[1];
+            }
+
+            fn main(): {
+                let arr = [100, 200];
+                exit get_second(arr);   # expect 200
+            }
+        )";
+        EXPECT_EQ(run(code), 200);
+    }
+
+    // --- Function returning int8 value from nested literal array with inference and control flow
+    // ---
+    {
+        const std::string code = R"(
+            fn make_and_sum(v: int8) -> int8: {
+                let arr = [[v, 2], [3, 4]];
+                let inferred = 71;
+                if (false): {
+                    return 128;
+                } elif (true): {
+                    exit arr[0][0] + arr[1][1] + inferred - 71;  # expect v + 4 + 71 - 71 = v + 4
+                } else: {
+                    return inferred; # make sure type inference works below usage
+                }
+            }
+
+            fn main(): {
+                let unused = 4242; # to ensure no interference
+                let largeArray: [[[bool; 2]; 2]; 10] = [[[false, false], [false, false]],
+                                                        [[false, false], [false, false]],
+                                                        [[false, false], [false, false]],
+                                                        [[false, false], [false, false]],
+                                                        [[false, false], [false, false]],
+                                                        [[false, false], [false, false]],
+                                                        [[false, false], [false, false]],
+                                                        [[false, false], [false, false]],
+                                                        [[false, false], [false, false]],
+                                                        [[false, false], [false, false]]];
+                make_and_sum(-3);  # expect 1
+                let largeArray2: [[[int32; 3]; 3]; 5] = [[[0,0,0],[0,0,0],[0,0,0]],
+                                                        [[0,0,0],[0,0,0],[0,0,0]],
+                                                        [[0,0,0],[0,0,0],[0,0,0]],
+                                                        [[0,0,0],[0,0,0],[0,0,0]],
+                                                        [[0,0,0],[0,0,0],[0,0,0]]];
+            }
+        )";
+        EXPECT_EQ(run(code), 1);
+    }
+
+    // --- Function returning int16 value from nested literal array ---
+    {
+        const std::string code = R"(
+            fn pick() -> int16: {
+                let arr = [[1, 2], [10, 20]];
+                return arr[1][0];
+            }
+
+            fn main(): {
+                exit pick();  # expect 10
+            }
+        )";
+        EXPECT_EQ(run(code), 10);
+    }
 }

@@ -9,22 +9,28 @@
 #include "diagnostics_engine.hpp"
 #include "lexing/token.hpp"
 #include "parsing/ast.hpp"
+#include "semantic-analysis/types/TypeManager.hpp"
 
 struct ParsedFunctionSignature {
     std::unique_ptr<AST::Identifier> identifier_;
     std::vector<std::unique_ptr<AST::VariableDefinition>> parameters_;
-    Type returnType_;
+    TypeID returnTypeID_;
 };
 
 class Parser {
    public:
-    explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine)
-        : diagnosticsEngine_(diagnosticsEngine), tokens_(std::move(tokens)) {}
+    explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine,
+                    TypeManager& typeManager)
+        : diagnosticsEngine_(diagnosticsEngine),
+          typeManager_(typeManager),
+          tokens_(std::move(tokens)) {}
 
     [[nodiscard]] std::unique_ptr<AST::Program> parse();
 
    private:
     DiagnosticsEngine& diagnosticsEngine_;
+
+    TypeManager& typeManager_;
 
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
@@ -33,6 +39,13 @@ class Parser {
 
     [[nodiscard]] const Token& peek(int amount = 0) const;
     const Token& expect(TokenKind expected);
+
+    /** Gets an instance of Type::anyFamilyType() and registers it in the TypeManager.
+     * @return The TypeID of the newly created Type.
+     */
+    [[nodiscard]] TypeID generate_any_type() const {
+        return typeManager_.createType(Type::anyFamilyType());
+    }
 
     Type parse_type_specifier();
     std::unique_ptr<AST::NumberLiteral> parse_number_literal();
@@ -69,6 +82,5 @@ class Parser {
     std::unique_ptr<AST::ExternalFunctionDeclaration> parse_external_function_declaration();
 
     std::unique_ptr<AST::FunctionDefinition> parse_function_definition();
-    std::unique_ptr<AST::ConstantDefinition> parse_constant_definition();
     std::unique_ptr<AST::Program> parse_program();
 };

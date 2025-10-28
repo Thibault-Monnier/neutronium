@@ -3,14 +3,14 @@
 #include <cassert>
 #include <format>
 #include <functional>
+#include <ranges>
 #include <string>
 #include <utility>
 
-void SemanticAnalyser::analyse() {
-    for (const auto& constDef : ast_->constants_) {
-        analyse_constant_definition(*constDef);
-    }
+#include "parsing/debug.hpp"
+#include "semantic-analysis/types/TypeSolver.hpp"
 
+void SemanticAnalyser::analyse() {
     for (const auto& externalFuncDecl : ast_->externalFunctions_) {
         analyse_external_function_declaration(*externalFuncDecl);
     }
@@ -33,16 +33,20 @@ void SemanticAnalyser::analyse() {
             abort("No `main` function found in executable target", *ast_);
         }
 
-        if (mainIt->second.type_.mismatches(PrimitiveType::VOID)) {
-            abort("`main` function must return `void`", *mainDef);
-        } else if (mainIt->second.parameters_.size() != 0) {
+        if (mainIt->second.parameters_.size() != 0) {
             abort("`main` function must not take any parameters", *mainDef);
         }
+
+        const TypeID voidTypeID = typeManager_.createType(Primitive::Kind::VOID);
+        typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(mainIt->second.typeID_,
+                                                                       voidTypeID, *mainDef);
     } else {
         if (mainIt != functionsTable_.end()) {
             abort("`main` function is not allowed in a library target", *mainDef);
         }
     }
+
+    typeManager_.getTypeSolver().solve();
 }
 
 void SemanticAnalyser::abort(const std::string& errorMessage, const AST::Node& node) const {
@@ -73,7 +77,7 @@ std::optional<const SymbolInfo*> SemanticAnalyser::get_symbol_info(const std::st
 
 SymbolInfo& SemanticAnalyser::declare_symbol(const AST::Node* declarationNode,
                                              const std::string& name, const SymbolKind kind,
-                                             const bool isMutable, const Type& type,
+                                             const bool isMutable, const TypeID typeID,
                                              const bool isScoped,
                                              std::vector<SymbolInfo> parameters) {
     if (get_symbol_info(name).has_value()) {
@@ -83,7 +87,7 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const AST::Node* declarationNode,
     SymbolInfo info{.name_ = name,
                     .kind_ = kind,
                     .isMutable_ = isMutable,
-                    .type_ = type,
+                    .typeID_ = typeID,
                     .parameters_ = std::move(parameters)};
 
     if (isScoped) {
@@ -97,32 +101,28 @@ SymbolInfo& SemanticAnalyser::declare_symbol(const AST::Node* declarationNode,
     std::unreachable();
 }
 
-SymbolInfo& SemanticAnalyser::handle_constant_definition(const AST::ConstantDefinition* declNode,
-                                                         const std::string& name,
-                                                         const Type& type) {
-    return declare_symbol(declNode, name, SymbolKind::CONSTANT, false, type, false, {});
-}
-
 SymbolInfo& SemanticAnalyser::handle_function_declaration(
-    const AST::Node* declNode, const std::string& name, const Type& returnType,
+    const AST::Node* declNode, const std::string& name, const TypeID returnTypeID,
     const std::vector<std::unique_ptr<AST::VariableDefinition>>& params) {
     std::vector<SymbolInfo> parameterSymbols;
     for (const auto& param : params) {
+        const TypeID paramType = param->typeID_;
         parameterSymbols.emplace_back(handle_variable_declaration(
-            param.get(), param->identifier_->name_, param->isMutable_, param->type_));
+            param.get(), param->identifier_->name_, param->isMutable_, paramType));
     }
 
-    return declare_symbol(declNode, name, SymbolKind::FUNCTION, false, returnType, false,
+    return declare_symbol(declNode, name, SymbolKind::FUNCTION, false, returnTypeID, false,
                           parameterSymbols);
 }
 
 SymbolInfo& SemanticAnalyser::handle_variable_declaration(const AST::VariableDefinition* declNode,
                                                           const std::string& name,
-                                                          const bool isMutable, const Type& type) {
-    return declare_symbol(declNode, name, SymbolKind::VARIABLE, isMutable, type, true, {});
+                                                          const bool isMutable,
+                                                          const TypeID typeID) {
+    return declare_symbol(declNode, name, SymbolKind::VARIABLE, isMutable, typeID, true, {});
 }
 
-Type SemanticAnalyser::get_function_call_type(const AST::FunctionCall& funcCall) {
+TypeID SemanticAnalyser::get_function_call_type(const AST::FunctionCall& funcCall) {
     const std::string& name = funcCall.callee_->name_;
 
     const auto info = get_symbol_info(name);
@@ -144,100 +144,80 @@ Type SemanticAnalyser::get_function_call_type(const AST::FunctionCall& funcCall)
     }
 
     for (std::size_t i = 0; i < funcCall.arguments_.size(); i++) {
-        const Type argType = get_expression_type(*funcCall.arguments_[i]);
-        const Type& paramType = params[i].type_;
-        if (argType.mismatches(paramType)) {
-            abort(
-                std::format("Function `{}` called with incorrect argument type for parameter `{}`: "
-                            "expected {}, got {}",
-                            name, params[i].name_, paramType.to_string(), argType.to_string()),
-                *funcCall.arguments_[i]);
-        }
+        const TypeID argType = get_expression_type(*funcCall.arguments_[i]);
+        const TypeID paramType = params[i].typeID_;
+
+        typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(argType, paramType,
+                                                                       *funcCall.arguments_[i]);
     }
 
-    return info.value()->type_;
+    return info.value()->typeID_;
 }
 
-Type SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& unaryExpr) {
-    const Type operandType = get_expression_type(*unaryExpr.operand_);
-    if (operandType.matches(PrimitiveType::INTEGER)) {
-        if (AST::is_arithmetic_operator(unaryExpr.operator_)) return PrimitiveType::INTEGER;
+TypeID SemanticAnalyser::get_unary_expression_type(const AST::UnaryExpression& unaryExpr) {
+    const TypeID operandType = get_expression_type(*unaryExpr.operand_);
 
-        abort("Invalid unary operator for integer operand: got " +
-                  AST::operator_to_string(unaryExpr.operator_),
-              unaryExpr);
-    }
-    if (operandType.matches(PrimitiveType::BOOLEAN)) {
-        if (unaryExpr.operator_ == AST::Operator::LOGICAL_NOT) return PrimitiveType::BOOLEAN;
+    const std::optional<Trait> requiredTrait = trait_from_operator(unaryExpr.operator_);
 
-        abort("Invalid unary operator for boolean operand: got " +
-                  AST::operator_to_string(unaryExpr.operator_),
-              unaryExpr);
+    if (requiredTrait.has_value()) {
+        typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
+            operandType, requiredTrait.value(), unaryExpr);
     }
 
-    abort("Invalid type for unary operation: expected integer or boolean, got " +
-              operandType.to_string(),
-          unaryExpr);
+    switch (unaryExpr.operator_) {
+        case AST::Operator::ADD:
+        case AST::Operator::SUBTRACT:
+            return operandType;
+        case AST::Operator::LOGICAL_NOT:
+            return typeManager_.createType(Primitive::Kind::BOOL);
+        default:
+            std::unreachable();
+    }
 }
 
-Type SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression& binaryExpr) {
-    const Type leftType = get_expression_type(*binaryExpr.left_);
-    const Type rightType = get_expression_type(*binaryExpr.right_);
-    if (leftType.mismatches(rightType)) {
-        abort(std::format("Type mismatch in binary expression: left is {}, right is {}",
-                          leftType.to_string(), rightType.to_string()),
-              binaryExpr);
-    }
+TypeID SemanticAnalyser::get_binary_expression_type(const AST::BinaryExpression& binaryExpr) {
+    const TypeID leftType = get_expression_type(*binaryExpr.left_);
+    const TypeID rightType = get_expression_type(*binaryExpr.right_);
+    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(leftType, rightType, binaryExpr);
 
     const AST::Operator op = binaryExpr.operator_;
-    if (AST::is_arithmetic_operator(op)) {
-        if (leftType.mismatches(PrimitiveType::INTEGER)) {
-            abort("Invalid type for arithmetic operation: expected integer, got " +
-                      leftType.to_string(),
-                  binaryExpr);
-        }
-        return PrimitiveType::INTEGER;
+    const std::optional<Trait> trait = trait_from_operator(op);
+    if (trait.has_value()) {
+        typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
+            leftType, trait_from_operator(op).value(), binaryExpr);
     }
 
-    if (AST::is_equality_operator(op)) {
-        if (leftType.mismatches(PrimitiveType::INTEGER) &&
-            leftType.mismatches(PrimitiveType::BOOLEAN)) {
-            abort("Invalid type for equality operation: expected integer or boolean, got " +
-                      leftType.to_string(),
-                  binaryExpr);
-        }
-        return PrimitiveType::BOOLEAN;
-    }
-
-    if (AST::is_relational_operator(op)) {
-        if (leftType.mismatches(PrimitiveType::INTEGER)) {
-            abort("Invalid type for relational operation: expected integer, got " +
-                      leftType.to_string(),
-                  binaryExpr);
-        }
-        return PrimitiveType::BOOLEAN;
-    }
-
+    if (AST::is_arithmetic_operator(op)) return leftType;
+    if (AST::is_equality_operator(op) || AST::is_relational_operator(op))
+        return typeManager_.createType(Primitive::Kind::BOOL);
     std::unreachable();
 }
 
-Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
+TypeID SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
+    TypeID verifier;
+
     switch (expr.kind_) {
-        case AST::NodeKind::NUMBER_LITERAL:
-            return PrimitiveType::INTEGER;
-        case AST::NodeKind::BOOLEAN_LITERAL:
-            return PrimitiveType::BOOLEAN;
+        case AST::NodeKind::NUMBER_LITERAL: {
+            verifier = typeManager_.createType(Type::integerFamilyType());
+            break;
+        }
+        case AST::NodeKind::BOOLEAN_LITERAL: {
+            verifier = typeManager_.createType(Primitive::Kind::BOOL);
+            break;
+        }
         case AST::NodeKind::ARRAY_LITERAL: {
             const auto& arrayLiteral = static_cast<const AST::ArrayLiteral&>(expr);
             if (arrayLiteral.elements_.empty()) {
                 abort("Array literal cannot be empty", arrayLiteral);
             }
 
-            const Type elementType = get_expression_type(*arrayLiteral.elements_[0]);
-            for (const auto& element : arrayLiteral.elements_) {
-                analyse_expression(*element, elementType, "array literal element");
+            const TypeID elementTypeID = get_expression_type(*arrayLiteral.elements_[0]);
+            for (const auto& element : arrayLiteral.elements_ | std::views::drop(1)) {
+                analyse_expression(*element, elementTypeID);
             }
-            return Type{elementType, arrayLiteral.elements_.size()};
+
+            verifier = typeManager_.createType(elementTypeID, arrayLiteral.elements_.size());
+            break;
         }
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
@@ -245,65 +225,67 @@ Type SemanticAnalyser::get_expression_type(const AST::Expression& expr) {
             if (!info.has_value()) {
                 abort(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_),
                       identifier);
-            } else if (info.value()->kind_ != SymbolKind::VARIABLE &&
-                       info.value()->kind_ != SymbolKind::CONSTANT) {
-                abort(std::format("`{}` is not a variable or constant", identifier.name_),
-                      identifier);
+            } else if (info.value()->kind_ != SymbolKind::VARIABLE) {
+                abort(std::format("`{}` is not a variable", identifier.name_), identifier);
             }
-            return info.value()->type_;
+
+            verifier = info.value()->typeID_;
+            break;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
             const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
-            const Type arrayType = get_expression_type(*arrayAccess.base_);
-            if (arrayType.kind() != TypeKind::ARRAY) {
-                abort(std::format("{} is indexed as an array", arrayType.to_string()), arrayAccess);
-            }
-            analyse_expression(*arrayAccess.index_, PrimitiveType::INTEGER, "array access index");
-            return arrayType.array_element_type();
+            const TypeID arrayType = get_expression_type(*arrayAccess.base_);
+
+            typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
+                arrayType, Trait::SUBSCRIPT, arrayAccess);
+
+            const TypeID integerTypeID = typeManager_.createType(Type::integerFamilyType());
+            analyse_expression(*arrayAccess.index_, integerTypeID);
+
+            const TypeID elementTypeID = typeManager_.createType(Type::anyFamilyType());
+            typeManager_.getTypeSolver().addConstraint<SubscriptConstraint>(
+                arrayType, elementTypeID, arrayAccess);
+
+            verifier = elementTypeID;
+            break;
         }
         case AST::NodeKind::FUNCTION_CALL: {
             const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
-            return get_function_call_type(funcCall);
+            verifier = get_function_call_type(funcCall);
+            break;
         }
         case AST::NodeKind::UNARY_EXPRESSION: {
             const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
-            return get_unary_expression_type(unaryExpr);
+            verifier = get_unary_expression_type(unaryExpr);
+            break;
         }
         case AST::NodeKind::BINARY_EXPRESSION: {
             const auto& binaryExpr = static_cast<const AST::BinaryExpression&>(expr);
-            return get_binary_expression_type(binaryExpr);
+            verifier = get_binary_expression_type(binaryExpr);
+            break;
         }
         default:
             std::unreachable();
     }
+
+    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(expr.typeID_, verifier, expr);
+    return expr.typeID_;
 }
 
-void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const Type& expected,
-                                          const std::string& location) {
-    const Type exprType = get_expression_type(expr);
-    if (exprType.mismatches(expected)) {
-        abort(std::format("Invalid expression type for {}: expected {}, got {}", location,
-                          expected.to_string(), exprType.to_string()),
-              expr);
-    }
+void SemanticAnalyser::analyse_expression(const AST::Expression& expr, const TypeID expected) {
+    const TypeID exprType = get_expression_type(expr);
+    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(exprType, expected, expr);
 }
 
-void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition& declaration) {
-    const std::string& name = declaration.identifier_->name_;
-    const Type variableType = get_expression_type(*declaration.value_);
+void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition& definition) {
+    const std::string& name = definition.identifier_->name_;
+    const TypeID assignedType = get_expression_type(*definition.value_);
 
-    if (variableType.matches(PrimitiveType::ANY) || variableType.matches(PrimitiveType::VOID)) {
-        abort(std::format("Invalid variable type: `{}` is declared as {}", name,
-                          variableType.to_string()),
-              declaration);
-    }
-    if (variableType.mismatches(declaration.type_, true)) {
-        abort(std::format("Type mismatch: variable `{}` has {} type specifier, but has {} value",
-                          name, declaration.type_.to_string(), variableType.to_string()),
-              declaration);
-    }
+    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(definition.typeID_, assignedType,
+                                                                   definition);
+    typeManager_.getTypeSolver().addConstraint<StorableConstraint>(definition.typeID_, definition);
 
-    handle_variable_declaration(&declaration, name, declaration.isMutable_, variableType);
+    handle_variable_declaration(&definition, name, definition.isMutable_, definition.typeID_);
 }
 
 void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
@@ -339,20 +321,14 @@ void SemanticAnalyser::analyse_assignment(const AST::Assignment& assignment) {
 
     verifyIsAssignable(*place);
 
-    const Type placeType = get_expression_type(*place);
-    const Type valueType = get_expression_type(*assignment.value_);
-    if (placeType.mismatches(valueType)) {
-        abort(std::format("Type mismatch in assignment: {} is assigned to {}",
-                          placeType.to_string(), valueType.to_string()),
-              assignment);
-    }
+    const TypeID placeType = get_expression_type(*place);
+    const TypeID valueType = get_expression_type(*assignment.value_);
+    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(placeType, valueType,
+                                                                   assignment);
 
     if (assignment.operator_ != AST::Operator::ASSIGN) {
-        if (placeType.mismatches(PrimitiveType::INTEGER)) {
-            abort(std::format("Invalid assignment operator: `{}` used for type {}",
-                              AST::operator_to_string(assignment.operator_), placeType.to_string()),
-                  assignment);
-        }
+        typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
+            placeType, trait_from_operator(assignment.operator_).value(), assignment);
     }
 }
 
@@ -361,7 +337,7 @@ void SemanticAnalyser::analyse_expression_statement(const AST::ExpressionStateme
 }
 
 void SemanticAnalyser::analyse_if_statement(const AST::IfStatement& ifStmt) {
-    analyse_expression(*ifStmt.condition_, PrimitiveType::BOOLEAN, "condition");
+    analyse_expression(*ifStmt.condition_, typeManager_.createType(Primitive::Kind::BOOL));
     analyse_statement(*ifStmt.body_);
     if (ifStmt.elseClause_) {
         analyse_statement(*ifStmt.elseClause_);
@@ -369,7 +345,7 @@ void SemanticAnalyser::analyse_if_statement(const AST::IfStatement& ifStmt) {
 }
 
 void SemanticAnalyser::analyse_while_statement(const AST::WhileStatement& whileStmt) {
-    analyse_expression(*whileStmt.condition_, PrimitiveType::BOOLEAN, "condition");
+    analyse_expression(*whileStmt.condition_, typeManager_.createType(Primitive::Kind::BOOL));
     loopDepth_++;
     analyse_statement(*whileStmt.body_);
     loopDepth_--;
@@ -389,7 +365,7 @@ void SemanticAnalyser::analyse_continue_statement(
 }
 
 void SemanticAnalyser::analyse_exit(const AST::ExitStatement& exitStmt) {
-    analyse_expression(*exitStmt.exitCode_, PrimitiveType::INTEGER, "exit code");
+    analyse_expression(*exitStmt.exitCode_, typeManager_.createType(Type::integerFamilyType()));
 }
 
 void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {
@@ -427,15 +403,9 @@ void SemanticAnalyser::analyse_statement(const AST::Statement& stmt) {
             break;
         case AST::NodeKind::RETURN_STATEMENT: {
             const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
-            const Type returnType = get_expression_type(*returnStmt.returnValue_);
-            if (returnType.mismatches(currentFunctionReturnType_)) {
-                abort(
-                    std::format("Type mismatch in return statement: function `{}` expects a return "
-                                "value of type {}, but got {} instead",
-                                currentFunctionName_, currentFunctionReturnType_.to_string(),
-                                returnType.to_string()),
-                    returnStmt);
-            }
+            const TypeID returnTypeID = get_expression_type(*returnStmt.returnValue_);
+            typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(
+                returnTypeID, currentFunctionReturnTypeID_, returnStmt);
             break;
         }
         case AST::NodeKind::EXIT_STATEMENT: {
@@ -485,7 +455,7 @@ bool SemanticAnalyser::verify_statement_returns(const AST::Statement& stmt) {
 void SemanticAnalyser::analyse_external_function_declaration(
     const AST::ExternalFunctionDeclaration& funcDecl) {
     enter_scope();
-    handle_function_declaration(&funcDecl, funcDecl.identifier_->name_, funcDecl.returnType_,
+    handle_function_declaration(&funcDecl, funcDecl.identifier_->name_, funcDecl.returnTypeID_,
                                 funcDecl.parameters_);
     exit_scope();
 }
@@ -493,41 +463,23 @@ void SemanticAnalyser::analyse_external_function_declaration(
 void SemanticAnalyser::analyse_function_definition(const AST::FunctionDefinition& funcDef) {
     enter_scope();
     currentFunctionName_ = funcDef.identifier_->name_;
-    currentFunctionReturnType_ = funcDef.returnType_;
+    currentFunctionReturnTypeID_ = funcDef.returnTypeID_;
 
-    handle_function_declaration(&funcDef, funcDef.identifier_->name_, funcDef.returnType_,
+    const TypeID returnTypeID = currentFunctionReturnTypeID_;
+    const Type& returnType = typeManager_.getType(returnTypeID);
+    handle_function_declaration(&funcDef, funcDef.identifier_->name_, returnTypeID,
                                 funcDef.parameters_);
 
     analyse_statement(*funcDef.body_);
 
     const bool allPathsReturn = verify_statement_returns(*funcDef.body_);
-    if (!allPathsReturn && funcDef.returnType_.mismatches(PrimitiveType::VOID)) {
+    if (!allPathsReturn && !returnType.isVoid()) {
         abort(
             std::format("Function `{}` must return a value of type {}, but does not always return",
-                        currentFunctionName_, funcDef.returnType_.to_string()),
+                        currentFunctionName_, returnType.to_string(typeManager_)),
             funcDef);
     }
 
     currentFunctionName_.clear();
     exit_scope();
-}
-
-void SemanticAnalyser::analyse_constant_definition(const AST::ConstantDefinition& declaration) {
-    abort("Constants are not supported yet", declaration);
-    const std::string& name = declaration.identifier_->name_;
-
-    const Type constantType = get_expression_type(*declaration.value_);
-    if (constantType.mismatches(PrimitiveType::INTEGER) &&
-        constantType.mismatches(PrimitiveType::BOOLEAN)) {
-        abort(std::format("Invalid constant type: `{}` is declared as {}", name,
-                          constantType.to_string()),
-              declaration);
-    }
-    if (constantType.mismatches(declaration.type_)) {
-        abort(std::format("Type mismatch: constant `{}` has {} type specifier, but has {} value",
-                          name, declaration.type_.to_string(), constantType.to_string()),
-              declaration);
-    }
-
-    handle_constant_definition(&declaration, name, constantType);
 }

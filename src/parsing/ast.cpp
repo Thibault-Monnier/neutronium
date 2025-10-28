@@ -1,9 +1,5 @@
 #include "parsing/ast.hpp"
 
-#include <cassert>
-#include <iostream>
-#include <magic_enum.hpp>
-#include <string>
 #include <unordered_map>
 
 #include "lexing/token_kind.hpp"
@@ -34,31 +30,6 @@ Operator token_kind_to_operator(const TokenKind tokenKind) {
     return it != tokenToOperatorMap.end() ? it->second : Operator::UNDEFINED_OPERATOR;
 }
 
-std::string operator_to_string(const Operator op) {
-    static const std::unordered_map<Operator, std::string> table = {
-        {Operator::ADD, "+"},
-        {Operator::SUBTRACT, "-"},
-        {Operator::MULTIPLY, "*"},
-        {Operator::DIVIDE, "/"},
-        {Operator::LOGICAL_NOT, "!"},
-        {Operator::ASSIGN, "="},
-        {Operator::ADD_ASSIGN, "+="},
-        {Operator::SUBTRACT_ASSIGN, "-="},
-        {Operator::MULTIPLY_ASSIGN, "*="},
-        {Operator::DIVIDE_ASSIGN, "/="},
-        {Operator::EQUALS, "=="},
-        {Operator::NOT_EQUALS, "!="},
-        {Operator::LESS_THAN, "<"},
-        {Operator::LESS_THAN_OR_EQUAL, "<="},
-        {Operator::GREATER_THAN, ">"},
-        {Operator::GREATER_THAN_OR_EQUAL, ">="},
-    };
-
-    auto it = table.find(op);
-    assert(it != table.end() && "Invalid operator");
-    return it->second;
-}
-
 bool is_arithmetic_operator(const Operator op) {
     return op == Operator::ADD || op == Operator::SUBTRACT || op == Operator::MULTIPLY ||
            op == Operator::DIVIDE;
@@ -81,11 +52,6 @@ bool is_assignment_operator(const Operator op) {
     return op == Operator::ASSIGN || op == Operator::ADD_ASSIGN ||
            op == Operator::SUBTRACT_ASSIGN || op == Operator::MULTIPLY_ASSIGN ||
            op == Operator::DIVIDE_ASSIGN;
-}
-
-std::string node_kind_to_string(const NodeKind kind) {
-    const auto enumName = magic_enum::enum_name(kind);
-    return std::string{enumName};
 }
 
 }  // namespace AST

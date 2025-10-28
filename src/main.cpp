@@ -14,6 +14,7 @@
 #include "lexing/lexer.hpp"
 #include "lexing/token.hpp"
 #include "lexing/token_kind.hpp"
+#include "parsing/debug.hpp"
 #include "parsing/parser.hpp"
 #include "semantic-analysis/semantic_analyser.hpp"
 #include "source_manager.hpp"
@@ -85,15 +86,19 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
         }
     }
 
-    const auto ast =
-        timed("Parsing", verbose, [&] { return Parser(tokens, diagnosticsEngine).parse(); });
+    TypeManager typeManager{diagnosticsEngine};
+
+    const auto ast = timed("Parsing", verbose,
+                           [&] { return Parser(tokens, diagnosticsEngine, typeManager).parse(); });
     if (opts.logAst_) AST::log_ast(*ast);
 
-    timed("Semantic analysis", verbose,
-          [&] { SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine).analyse(); });
+    timed("Semantic analysis", verbose, [&] {
+        SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeManager).analyse();
+    });
 
-    const auto assembly = timed("Code generation", verbose,
-                                [&] { return Generator(*ast, opts.targetType_).generate(); });
+    const auto assembly = timed("Code generation", verbose, [&] {
+        return CodeGen::Generator(*ast, typeManager, opts.targetType_).generate();
+    });
     if (opts.logAssembly_) std::cout << assembly.str();
 
     std::string outFilename;
