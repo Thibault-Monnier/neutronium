@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/CMakeFiles/magic_enum-populate"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/CMakeFiles/magic_enum-populate.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/CMakeFiles/magic_enum-populate-complete.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/magic_enum-populate-prefix/src/magic_enum-populate-stamp/magic_enum-populate-build.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/magic_enum-populate-prefix/src/magic_enum-populate-stamp/magic_enum-populate-configure.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/magic_enum-populate-prefix/src/magic_enum-populate-stamp/magic_enum-populate-download.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/magic_enum-populate-prefix/src/magic_enum-populate-stamp/magic_enum-populate-install.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/magic_enum-populate-prefix/src/magic_enum-populate-stamp/magic_enum-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/magic_enum-populate-prefix/src/magic_enum-populate-stamp/magic_enum-populate-patch.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/magic_enum-populate-prefix/src/magic_enum-populate-stamp/magic_enum-populate-test.rule"
+		},
+		{
+			"file" : "/home/runner/work/neutronium/neutronium/_codeql_build_dir/_deps/magic_enum-subbuild/magic_enum-populate-prefix/src/magic_enum-populate-stamp/magic_enum-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"magic_enum-populate"
+		],
+		"name" : "magic_enum-populate"
+	}
+}

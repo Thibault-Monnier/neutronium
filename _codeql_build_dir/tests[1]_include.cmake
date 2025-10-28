@@ -1,0 +1,5 @@
+if(EXISTS "/home/runner/work/neutronium/neutronium/_codeql_build_dir/tests[1]_tests.cmake")
+  include("/home/runner/work/neutronium/neutronium/_codeql_build_dir/tests[1]_tests.cmake")
+else()
+  add_test(tests_NOT_BUILT tests_NOT_BUILT)
+endif()
