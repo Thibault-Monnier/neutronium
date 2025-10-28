@@ -65,8 +65,14 @@ class TypeManager {
     [[nodiscard]] const Type& getType(const TypeID id) const {
         // Find the root using path compression (union-find optimization)
         TypeID root = id;
+        TypeID steps = 0;
         while (linkingTable_.at(root) != root) {
             root = linkingTable_.at(root);
+            // Safeguard against cycles (should not occur in correct union-find usage)
+            if (++steps > linkingTable_.size()) {
+                // Cycle detected - prevent infinite loop
+                return *types_.at(id);
+            }
         }
 
         // Path compression: make all nodes on the path point directly to the root
@@ -85,7 +91,8 @@ class TypeManager {
      *
      * This function fetches the type corresponding to the provided TypeID
      * from the managed collection of types. It follows the linking chain
-     * transitively until it reaches the final target type.
+     * transitively until it reaches the final target type, applying path
+     * compression to optimize future lookups.
      *
      * @param id The unique TypeID of the type to retrieve.
      * @return A mutable reference to the Type object associated with the provided TypeID.
