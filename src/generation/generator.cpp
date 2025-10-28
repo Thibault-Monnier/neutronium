@@ -263,9 +263,6 @@ void Generator::generate_function_call(const AST::FunctionCall& funcCall,
                                        const std::optional<std::string_view>& destinationAddress) {
     for (const auto& argument : funcCall.arguments_) {
         evaluate_expression_to_rax(*argument);
-
-        static_assert(FUNCTION_ARGUMENT_SIZE_BITS == 64,
-                      "Function argument size must be 64 bits to match the calling convention");
         push("rax", FUNCTION_ARGUMENT_SIZE_BITS);
     }
 
@@ -664,12 +661,8 @@ void Generator::generate_function_definition(const AST::FunctionDefinition& func
 
     int currentParamOffset = 16;  // [rbp] is the saved rbp, [rbp + 8] is the return address
     for (const auto& param : std::views::reverse(funcDef.parameters_)) {
-        static_assert(FUNCTION_ARGUMENT_SIZE_BITS == 64,
-                      "Function argument size must be 64 bits to match the calling convention");
         output_ << "    mov rax, [rbp + " << currentParamOffset << "]\n";
-
         write_to_variable_from_rax(param->identifier_->name_);
-
         currentParamOffset += FUNCTION_ARGUMENT_SIZE_BITS / 8;
     }
 
