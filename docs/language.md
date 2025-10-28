@@ -25,7 +25,7 @@ statement ::= block-statement
 
 block-statement ::= '{' { statement } '}'
 
-type-specifier ::= 'int'
+type-specifier ::= 'int' | 'int8' | 'int16' | 'int32' | 'int64'
                  | 'bool'
                  | array-type
                  
