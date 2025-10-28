@@ -134,6 +134,32 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
     return true;
 }
 
+bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConstraint) const {
+    assert(storableConstraint.kind() == Constraint::Kind::STORABLE);
+
+    const Type& type = typeManager_.getType(storableConstraint.type());
+
+    if (type.kind() == TypeKind::PRIMITIVE) {
+        if (type.primitive() == Primitive::Kind::VOID) {
+            diagnosticsEngine_.report_error("Type 'void' is not storable",
+                                            storableConstraint.sourceNode().source_start_index(),
+                                            storableConstraint.sourceNode().source_end_index());
+            diagnosticsEngine_.emit_errors();
+            exit(EXIT_FAILURE);
+        }
+        return true;
+    }
+
+    if (type.kind() == TypeKind::ARRAY) {
+        const TypeID elementTypeID = type.array_element_type_id();
+        typeManager_.getTypeSolver().addConstraint(
+            std::make_unique<StorableConstraint>(elementTypeID, storableConstraint.sourceNode()));
+        return true;
+    }
+
+    return false;
+}
+
 void TypeSolver::solve() {
     prepareUnionFind();
 
@@ -158,6 +184,12 @@ void TypeSolver::solve() {
                     const auto& hasTraitConstraint =
                         static_cast<const HasTraitConstraint&>(*constraint);
                     solved = solveHasTraitConstraint(hasTraitConstraint);
+                    break;
+                }
+                case Constraint::Kind::STORABLE: {
+                    const auto& storableConstraint =
+                        static_cast<const StorableConstraint&>(*constraint);
+                    solved = solveStorableConstraint(storableConstraint);
                     break;
                 }
             }

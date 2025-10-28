@@ -582,7 +582,20 @@ TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
     EXPECT_TRUE(error.contains("call") && error.contains("function") && error.contains("x"));
 }
 
-TEST_F(NeutroniumTester, AttemptToArrayAccessANonArray) {
+TEST_F(NeutroniumTester, VoidVariableType) {
+    const std::string code = R"(
+        fn foo(): {}
+
+        fn main(): {
+            let x = foo();
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("Type") && error.contains("void") && error.contains("storable"));
+}
+
+TEST_F(NeutroniumTester, AttemptToSubscriptANonArray) {
     const std::string code = R"(
         fn main(): {
             let x = 1;

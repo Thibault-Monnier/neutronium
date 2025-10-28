@@ -283,6 +283,7 @@ void SemanticAnalyser::analyse_variable_definition(const AST::VariableDefinition
 
     typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(definition.typeID_, assignedType,
                                                                    definition);
+    typeManager_.getTypeSolver().addConstraint<StorableConstraint>(definition.typeID_, definition);
 
     handle_variable_declaration(&definition, name, definition.isMutable_, definition.typeID_);
 }

@@ -14,7 +14,7 @@
  */
 class Constraint {
    public:
-    enum class Kind : uint8_t { EQUALITY, SUBSCRIPT, HAS_TRAIT };
+    enum class Kind : uint8_t { EQUALITY, SUBSCRIPT, HAS_TRAIT, STORABLE };
 
     virtual ~Constraint() = default;
 
@@ -89,4 +89,23 @@ class HasTraitConstraint final : public Constraint {
    private:
     const TypeID type_;
     const Trait trait_;
+};
+
+/**
+ * @brief Represents a storable constraint for a type.
+ *
+ * The StorableConstraint class defines a constraint that asserts a specific type
+ * is storable (i.e., can be stored in variables or data structures).
+ */
+class StorableConstraint final : public Constraint {
+   public:
+    StorableConstraint(const TypeID type, const AST::Node& sourceNode)
+        : Constraint(sourceNode), type_(type) {}
+
+    [[nodiscard]] Kind kind() const override { return Kind::STORABLE; }
+
+    [[nodiscard]] TypeID type() const { return type_; }
+
+   private:
+    const TypeID type_;
 };

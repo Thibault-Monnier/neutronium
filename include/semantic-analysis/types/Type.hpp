@@ -93,9 +93,9 @@ class Type {
      *
      * @return A const pointer to the `PrimitiveTypeFamily` associated with this type.
      */
-    const PrimitiveTypeFamily* family() const { return family_; }
+    [[nodiscard]] const PrimitiveTypeFamily* family() const { return family_; }
 
-    Primitive::Kind primitive() const { return primitive_; }
+    [[nodiscard]] Primitive::Kind primitive() const { return primitive_; }
 
     /**
      * @brief Determines if the type represents a void primitive type.

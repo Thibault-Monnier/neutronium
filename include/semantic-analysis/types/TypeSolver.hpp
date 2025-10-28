@@ -82,4 +82,5 @@ class TypeSolver {
     bool solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint) const;
 
     bool solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint) const;
+    bool solveStorableConstraint(const StorableConstraint& storableConstraint) const;
 };
