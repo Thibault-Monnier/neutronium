@@ -75,7 +75,7 @@ class TypeSolver {
     }
 
     [[nodiscard]] TypeID findRoot(TypeID x);
-    [[nodiscard]] bool unify(TypeID dst, TypeID src);
+    [[nodiscard]] bool unify(TypeID dst, TypeID src, const AST::Node& sourceNode);
     void prepareUnionFind();
     bool solveEqualityConstraint(const EqualityConstraint& equalityConstraint);
 

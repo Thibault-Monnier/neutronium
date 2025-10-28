@@ -17,7 +17,7 @@ TypeID TypeSolver::findRoot(TypeID x) {
     return root;
 }
 
-bool TypeSolver::unify(const TypeID dst, const TypeID src) {
+bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sourceNode) {
     nodes_[src].parent_ = dst;
     nodes_[dst].setSize_ += nodes_[src].setSize_;
 
@@ -37,9 +37,12 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src) {
             std::unreachable();
         case TypeKind::PRIMITIVE:
             return dstType.mergeWith(srcType, typeManager_);
-        case TypeKind::ARRAY:
+        case TypeKind::ARRAY: {
             if (!dstType.matches(srcType, typeManager_)) return false;
-            return unify(dstType.array_element_type_id(), srcType.array_element_type_id());
+            typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(
+                dstType.array_element_type_id(), srcType.array_element_type_id(), sourceNode);
+            return true;
+        }
     }
     std::unreachable();
 }
@@ -66,7 +69,7 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
 
     if (nodes_[rootA].setSize_ < nodes_[rootB].setSize_) std::swap(rootA, rootB);
 
-    if (!unify(rootA, rootB)) {
+    if (!unify(rootA, rootB, equalityConstraint.sourceNode())) {
         // Types are not compatible
         const Type& aType = typeManager_.getType(rootA);
         const Type& bType = typeManager_.getType(rootB);
