@@ -77,6 +77,8 @@ void Generator::enter_scope(const AST::BlockStatement& blockStmt) {
 
     const int frameSize = get_scope_frame_size(blockStmt);
     if (frameSize > 0) {
+        // No need to update currentStackOffset_ here, as it has already been updated in
+        // insert_symbol
         output_ << "    sub rsp, " << frameSize << "\n";
     }
 }
@@ -84,7 +86,7 @@ void Generator::enter_scope(const AST::BlockStatement& blockStmt) {
 void Generator::exit_scope(const AST::BlockStatement& blockStmt) {
     const int frameSize = get_scope_frame_size(blockStmt);
     if (frameSize > 0) {
-        output_ << "    add rsp, " << frameSize << "\n";
+        free_stack_space(frameSize * 8);
     }
 }
 
@@ -106,9 +108,10 @@ std::string_view Generator::size_directive(const int bitSize) {
             return "word";
         case 32:
             return "dword";
-        default:  // > 64 bits is interpreted as a 64-bit pointer
-            // TODO: no, arrays can be < 64 bits but still need qword for addressing
+        case 64:
             return "qword";
+        default:
+            std::unreachable();
     }
 }
 
@@ -120,9 +123,10 @@ std::string_view Generator::register_a_for_size(const int bitSize) {
             return "ax";
         case 32:
             return "eax";
-        default:  // > 64 bits is interpreted as a 64-bit pointer
-            // TODO: no, arrays can be < 64 bits but still need rax for addressing
+        case 64:
             return "rax";
+        default:
+            std::unreachable();
     }
 }
 
@@ -137,7 +141,36 @@ void Generator::clean_rax(const int raxValueSizeBits) {
     }
 }
 
-void Generator::write_to_variable(const std::string& name, const std::string_view source) {
+void Generator::load_value_from_rax(const int bitSize) {
+    output_ << "    mov " << register_a_for_size(bitSize) << ", [rax]\n";
+    clean_rax(bitSize);
+}
+
+void Generator::push(const std::string_view reg, const int sizeBits) {
+    output_ << "    push " << reg << "\n";
+    currentStackOffset_ += sizeBits / 8;
+}
+
+void Generator::pop(const std::string_view reg, const int sizeBits) {
+    output_ << "    pop " << reg << "\n";
+    currentStackOffset_ -= sizeBits / 8;
+}
+
+void Generator::allocate_stack_space(const int sizeBits) {
+    output_ << "    sub rsp, " << (sizeBits / 8) << "\n";
+    currentStackOffset_ += sizeBits / 8;
+}
+
+void Generator::free_stack_space(const int sizeBits) {
+    output_ << "    add rsp, " << (sizeBits / 8) << "\n";
+    currentStackOffset_ -= sizeBits / 8;
+}
+
+std::string Generator::stack_top_memory_operand() const {
+    return "[rbp - " + std::to_string(currentStackOffset_) + "]";
+}
+
+void Generator::write_to_variable_from_rax(const std::string& name) {
     const Type& type = typeManager_.getType(symbolTable_.at(name).typeID_);
     const int size = get_variable_size_bits(name);
     const int stackOffset = get_variable_stack_offset(name);
@@ -145,12 +178,12 @@ void Generator::write_to_variable(const std::string& name, const std::string_vie
     switch (type.kind()) {
         case TypeKind::PRIMITIVE:
             output_ << "    mov " << size_directive(size) << " [rbp - " << stackOffset << "], "
-                    << source << "\n";
+                    << register_a_for_size(size) << "\n";
             break;
         case TypeKind::ARRAY:
             output_ << "    mov rbx, rbp\n";
             output_ << "    sub rbx, " << stackOffset << "\n";
-            copy_array_contents(source, "rbx", size);
+            copy_array_contents("rax", "rbx", size);
             break;
         default:
             std::unreachable();
@@ -182,13 +215,19 @@ void Generator::evaluate_place_expression_address_to_rax(const AST::Expression& 
         const auto& identifier = static_cast<const AST::Identifier&>(place);
         output_ << "    mov rax, rbp\n";
         output_ << "    sub rax, " << get_variable_stack_offset(identifier.name_) << "\n";
+
     } else if (place.kind_ == AST::NodeKind::ARRAY_ACCESS) {
-        assert(static_cast<const AST::ArrayAccess&>(place).base_->kind_ !=
-                   AST::NodeKind::ARRAY_LITERAL &&
-               "Array access from array literal is not a place expression");
         const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(place);
-        evaluate_array_access(arrayAccess);
-        output_ << "    mov rax, rbx\n";  // Address is in rbx
+
+        evaluate_expression_to_rax(*arrayAccess.base_);
+        push("rax");
+        evaluate_expression_to_rax(*arrayAccess.index_);
+        pop("rbx");
+
+        const int sizeBits = exprSizeBits(arrayAccess);
+        output_ << "    imul rax, " << (sizeBits / 8) << "\n";  // Multiply index by element size
+        output_ << "    add rax, rbx\n";                        // Add the base address
+
     } else {
         std::unreachable();
     }
@@ -201,42 +240,19 @@ void Generator::generate_array_lit(const AST::ArrayLiteral& arrayLit,
     const size_t elementSizeBits = exprSizeBits(arrayLit) / arrayLit.elements_.size();
     for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
         if (i != 0) output_ << "    add rbx, " << elementSizeBits / 8 << "\n";
-        output_ << "    push rbx\n";
-        evaluate_expression(*arrayLit.elements_[i], "[rsp]");
-        output_ << "    pop rbx\n";
+        push("rbx");
+        generate_expression(*arrayLit.elements_[i], stack_top_memory_operand());
+        pop("rbx");
     }
 
     output_ << "    mov rax, " << destinationAddress << "\n";
 }
 
 void Generator::allocate_and_generate_array_literal(const AST::ArrayLiteral& arrayLit) {
-    output_ << "    sub rsp, " << (exprSizeBits(arrayLit) / 8) << "\n";
-    output_ << "    push rsp\n";
-    generate_array_lit(arrayLit, "[rsp]");
-    output_ << "    pop rbx\n";
-}
-
-void Generator::evaluate_array_access(const AST::ArrayAccess& arrayAccess) {
-    const bool isArrayLiteralBase = arrayAccess.base_->kind_ == AST::NodeKind::ARRAY_LITERAL;
-    if (isArrayLiteralBase) {
-        const auto& arrayLit = static_cast<const AST::ArrayLiteral&>(*arrayAccess.base_);
-        allocate_and_generate_array_literal(arrayLit);
-    } else {
-        evaluate_place_expression_address_to_rax(*arrayAccess.base_);  // Pointer to the array
-    }
-    output_ << "    push rax\n";
-    evaluate_expression_to_rax(*arrayAccess.index_);
-    output_ << "    pop rbx\n";
-
-    const int elementSizeBits = exprSizeBits(arrayAccess);
-    output_ << "    imul rax, " << (elementSizeBits / 8) << "\n";  // Multiply index by element size
-    output_ << "    add rbx, rax\n";                               // Add the base
-    output_ << "    mov " << register_a_for_size(elementSizeBits) << ", [rbx]\n";  // Dereference
-    clean_rax(elementSizeBits);
-
-    if (isArrayLiteralBase) {
-        output_ << "    add rsp, " << (exprSizeBits(*arrayAccess.base_) / 8) << "\n";
-    }
+    allocate_stack_space(exprSizeBits(arrayLit));
+    push("rsp");
+    generate_array_lit(arrayLit, stack_top_memory_operand());
+    pop("rbx");
 }
 
 std::string Generator::function_name_with_prefix(const std::string& name) {
@@ -246,29 +262,18 @@ std::string Generator::function_name_with_prefix(const std::string& name) {
 void Generator::generate_function_call(const AST::FunctionCall& funcCall,
                                        const std::optional<std::string_view>& destinationAddress) {
     for (const auto& argument : funcCall.arguments_) {
-        const Type& argType = typeManager_.getType(argument->typeID_);
-        switch (argType.kind()) {
-            case TypeKind::PRIMITIVE:
-                evaluate_expression_to_rax(*argument);
-                break;
-            case TypeKind::ARRAY:
-                evaluate_place_expression_address_to_rax(*argument);
-                break;
-            default:
-                std::unreachable();
-        }
+        evaluate_expression_to_rax(*argument);
 
         static_assert(FUNCTION_ARGUMENT_SIZE_BITS == 64,
                       "Function argument size must be 64 bits to match the calling convention");
-        output_ << "    push rax\n";
+        push("rax", FUNCTION_ARGUMENT_SIZE_BITS);
     }
 
     output_ << "    call " << function_name_with_prefix(funcCall.callee_->name_) << "\n";
 
     // Clean up the stack
     if (funcCall.arguments_.size() > 0) {
-        output_ << "    add rsp, " << funcCall.arguments_.size() * (FUNCTION_ARGUMENT_SIZE_BITS / 8)
-                << "\n";
+        free_stack_space(funcCall.arguments_.size() * FUNCTION_ARGUMENT_SIZE_BITS);
     }
 
     if (!destinationAddress.has_value()) {
@@ -289,6 +294,15 @@ void Generator::generate_function_call(const AST::FunctionCall& funcCall,
         default:
             std::unreachable();
     }
+}
+
+void Generator::allocate_and_generate_function_call(const AST::FunctionCall& funcCall) {
+    assert(typeManager_.getType(funcCall.typeID_).kind() == TypeKind::ARRAY &&
+           "Only function calls returning arrays require allocation");
+    allocate_stack_space(exprSizeBits(funcCall));
+    push("rsp");
+    generate_function_call(funcCall, stack_top_memory_operand());
+    pop("rbx");
 }
 
 void Generator::evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr) {
@@ -324,13 +338,13 @@ void Generator::evaluate_binary_expression_to_rax(const AST::BinaryExpression& b
     evaluate_expression_to_rax(*binaryExpr.right_);
     const int rightSizeBits = exprSizeBits(*binaryExpr.right_);
     clean_rax(rightSizeBits);
-    output_ << "    push rax\n";
+    push("rax");
 
     evaluate_expression_to_rax(*binaryExpr.left_);
     const int leftSizeBits = exprSizeBits(*binaryExpr.left_);
     clean_rax(leftSizeBits);
 
-    output_ << "    pop rbx\n";
+    pop("rbx");
 
     const AST::Operator op = binaryExpr.operator_;
 
@@ -350,8 +364,8 @@ void Generator::evaluate_binary_expression_to_rax(const AST::BinaryExpression& b
     }
 }
 
-void Generator::evaluate_expression(const AST::Expression& expr,
-                                    const std::optional<std::string_view>& destinationAddress) {
+void Generator::generate_primitive_expression(
+    const AST::Expression& expr, const std::optional<std::string_view>& destinationAddress) {
     switch (expr.kind_) {
         case AST::NodeKind::NUMBER_LITERAL: {
             const auto& numberLit = static_cast<const AST::NumberLiteral&>(expr);
@@ -363,13 +377,6 @@ void Generator::evaluate_expression(const AST::Expression& expr,
             move_boolean_lit_to_rax(booleanLit);
             break;
         }
-        case AST::NodeKind::ARRAY_LITERAL: {
-            const auto& arrayLit = static_cast<const AST::ArrayLiteral&>(expr);
-            assert(destinationAddress.has_value() &&
-                   "Array literals must have a destination address for generation");
-            generate_array_lit(arrayLit, destinationAddress.value());
-            return;
-        }
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
             move_variable_to_rax(identifier.name_);
@@ -377,7 +384,8 @@ void Generator::evaluate_expression(const AST::Expression& expr,
         }
         case AST::NodeKind::ARRAY_ACCESS: {
             const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
-            evaluate_array_access(arrayAccess);
+            evaluate_place_expression_address_to_rax(arrayAccess);
+            load_value_from_rax(exprSizeBits(expr));
             break;
         }
         case AST::NodeKind::FUNCTION_CALL: {
@@ -406,6 +414,51 @@ void Generator::evaluate_expression(const AST::Expression& expr,
     }
 }
 
+void Generator::generate_array_expression(
+    const AST::Expression& expr, const std::optional<std::string_view>& destinationAddress) {
+    if (expr.kind_ == AST::NodeKind::ARRAY_LITERAL) {
+        const auto& arrayLit = static_cast<const AST::ArrayLiteral&>(expr);
+        if (destinationAddress.has_value()) {
+            generate_array_lit(arrayLit, destinationAddress.value());
+        } else {
+            allocate_and_generate_array_literal(arrayLit);
+        }
+
+    } else if (expr.kind_ == AST::NodeKind::FUNCTION_CALL) {
+        const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
+        if (destinationAddress.has_value()) {
+            generate_function_call(funcCall, destinationAddress);
+        } else {
+            allocate_and_generate_function_call(funcCall);
+        }
+
+    } else {
+        evaluate_place_expression_address_to_rax(expr);
+        if (destinationAddress.has_value()) {
+            copy_array_contents("rax", destinationAddress.value(), exprSizeBits(expr));
+        } else {
+            // Do nothing: the result is already in rax
+        }
+    }
+}
+
+void Generator::generate_expression(const AST::Expression& expr,
+                                    const std::optional<std::string_view>& destinationAddress) {
+    const Type& exprType = typeManager_.getType(expr.typeID_);
+    switch (exprType.kind()) {
+        case TypeKind::PRIMITIVE:
+            generate_primitive_expression(expr, destinationAddress);
+            break;
+
+        case TypeKind::ARRAY:
+            generate_array_expression(expr, destinationAddress);
+            break;
+
+        default:
+            std::unreachable();
+    }
+}
+
 void Generator::copy_array_contents(const std::string_view sourceAddress,
                                     const std::string_view destinationAddress,
                                     const int arraySizeBits) {
@@ -424,9 +477,9 @@ void Generator::copy_array_contents(const std::string_view sourceAddress,
 
 void Generator::generate_variable_definition(const AST::VariableDefinition& varDecl) {
     evaluate_place_expression_address_to_rax(*varDecl.identifier_);
-    output_ << "    push rax\n";
-    evaluate_expression(*varDecl.value_, "[rsp]");
-    output_ << "    pop rax\n";
+    push("rax");
+    generate_expression(*varDecl.value_, stack_top_memory_operand());
+    pop("rbx");
 }
 
 void Generator::generate_variable_assignment(const AST::Assignment& assignment) {
@@ -447,19 +500,19 @@ void Generator::generate_variable_assignment(const AST::Assignment& assignment) 
         std::unreachable();
 
     evaluate_place_expression_address_to_rax(*place);
-    output_ << "    push rax\n";
+    push("rax");
 
     if (assignment.operator_ == AST::Operator::ASSIGN) {
-        evaluate_expression(*value, "[rsp]");
-        output_ << "    pop rcx\n";
+        generate_expression(*value, stack_top_memory_operand());
+        pop("rcx");
     } else {
         const int sizeBits = exprSizeBits(*place);
-        assert(sizeBits <= 64 && "Only up to 64-bit assignments are supported");
+        assert(sizeBits <= 64 && "Compound assignment must have <= 64-bit size");
 
         evaluate_expression_to_rax(*value);
 
         output_ << "    mov rbx, rax\n";
-        output_ << "    pop rcx\n";
+        pop("rcx");
         output_ << "    mov rax, [rcx]\n";
 
         apply_arithmetic_operator_to_rax(op, "rbx");
@@ -469,10 +522,7 @@ void Generator::generate_variable_assignment(const AST::Assignment& assignment) 
 
 void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStmt) {
     const auto& expr = *exprStmt.expression_;
-    // const int sizeBits = exprSizeBits(expr);
-    // output_ << "    sub rsp, " << (sizeBits / 8) << "\n";
     evaluate_expression_to_rax(expr);
-    // output_ << "    add rsp, " << (sizeBits / 8) << "\n";
 }
 
 void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {
@@ -511,17 +561,7 @@ void Generator::generate_continue_statement() {
 }
 
 void Generator::generate_return_statement(const AST::ReturnStatement& returnStmt) {
-    const Type& returnType = typeManager_.getType(returnStmt.returnValue_->typeID_);
-    switch (returnType.kind()) {
-        case TypeKind::PRIMITIVE:
-            evaluate_expression_to_rax(*returnStmt.returnValue_);
-            break;
-        case TypeKind::ARRAY:
-            evaluate_place_expression_address_to_rax(*returnStmt.returnValue_);
-            break;
-        default:
-            std::unreachable();
-    }
+    evaluate_expression_to_rax(*returnStmt.returnValue_);
     output_ << "    leave\n";
     output_ << "    ret\n";
 }
@@ -626,8 +666,7 @@ void Generator::generate_function_definition(const AST::FunctionDefinition& func
                       "Function argument size must be 64 bits to match the calling convention");
         output_ << "    mov rax, [rbp + " << currentParamOffset << "]\n";
 
-        const int sizeBits = get_variable_size_bits(param->identifier_->name_);
-        write_to_variable(param->identifier_->name_, register_a_for_size(sizeBits));
+        write_to_variable_from_rax(param->identifier_->name_);
 
         currentParamOffset += FUNCTION_ARGUMENT_SIZE_BITS / 8;
     }

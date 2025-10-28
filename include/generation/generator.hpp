@@ -65,8 +65,21 @@ class Generator {
      * @brief Cleans the rax register by zero-extending if necessary.
      */
     void clean_rax(int raxValueSizeBits);
+    void load_value_from_rax(int bitSize);
 
-    void write_to_variable(const std::string& name, std::string_view source);
+    void push(std::string_view reg, int sizeBits = 64);
+    void pop(std::string_view reg, int sizeBits = 64);
+    void allocate_stack_space(int sizeBits);
+    void free_stack_space(int sizeBits);
+    /** @brief Gets a persistent memory operand string representing the current top of the stack.
+     *
+     * Returns a string providing persistent access to the current
+     * top of the stack, in the form of "[rbp - offset]". This will not be affected by later rsp
+     * changes, so it is safe to use across multiple pushes/allocations.
+     */
+    std::string stack_top_memory_operand() const;
+
+    void write_to_variable_from_rax(const std::string& name);
     void move_variable_to_rax(const std::string& name);
     void move_number_lit_to_rax(const AST::NumberLiteral& numberLit);
     void move_boolean_lit_to_rax(const AST::BooleanLiteral& booleanLit);
@@ -76,23 +89,22 @@ class Generator {
     void generate_array_lit(const AST::ArrayLiteral& arrayLit, std::string_view destinationAddress);
     void allocate_and_generate_array_literal(const AST::ArrayLiteral& arrayLit);
 
-    /**
-     * @brief Emits the code to evaluate an array access expression, placing the address
-     * in \c rbx and the value in \c rax .
-     */
-    void evaluate_array_access(const AST::ArrayAccess& arrayAccess);
-
     static std::string function_name_with_prefix(const std::string& name);
     void generate_function_call(const AST::FunctionCall& funcCall,
                                 const std::optional<std::string_view>& destinationAddress);
+    void allocate_and_generate_function_call(const AST::FunctionCall& funcCall);
     void evaluate_unary_expression_to_rax(const AST::UnaryExpression& unaryExpr);
     void apply_arithmetic_operator_to_rax(AST::Operator op, const std::string& other);
     void evaluate_binary_expression_to_rax(const AST::BinaryExpression& binaryExpr);
+    void generate_primitive_expression(const AST::Expression& expr,
+                                       const std::optional<std::string_view>& destinationAddress);
+    void generate_array_expression(const AST::Expression& expr,
+                                   const std::optional<std::string_view>& destinationAddress);
 
     void evaluate_expression_to_rax(const AST::Expression& expr) {
-        evaluate_expression(expr, std::nullopt);
+        generate_expression(expr, std::nullopt);
     }
-    void evaluate_expression(const AST::Expression& expr,
+    void generate_expression(const AST::Expression& expr,
                              const std::optional<std::string_view>& destinationAddress);
     void copy_array_contents(std::string_view sourceAddress, std::string_view destinationAddress,
                              int arraySizeBits);

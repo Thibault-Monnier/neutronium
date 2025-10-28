@@ -707,6 +707,35 @@ TEST_F(NeutroniumTester, Arrays) {
     EXPECT_EQ(run(codeTestTypeInference), 14);
 }
 
+TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {
+    const std::string code = R"(
+        fn main(): {
+            let mut a = [1, 2, 3, 4];
+            let b = a;
+            a[1] += 5;
+            exit b[1];
+        }
+    )";
+    EXPECT_EQ(run(code), 2);
+}
+
+TEST_F(NeutroniumTester, ArrayIndexFunctionCall) {
+    const std::string code = R"(
+        fn getArray() -> [[int; 3]; 2]: {
+            return [[14, 42, 7], [21, 28, 39]];
+        }
+
+        fn main(): {
+            let mut arr1 = getArray()[0];
+            let arr2 = getArray()[1];
+            let elem = getArray()[1][2];
+            arr1[1] += elem; # 42 + 39 = 81
+            exit arr1[1] - arr2[0];  # 81 - 21 = 60
+        }
+    )";
+    EXPECT_EQ(run(code), 60);
+}
+
 TEST_F(NeutroniumTester, ArrayIndexWithInt16) {
     const std::string code = R"(
         fn main(): {
