@@ -93,7 +93,7 @@
       "patterns": [
         {
           "name": "storage.type.primitive.neutronium",
-          "match": "\\b(bool|int)\\b"
+          "match": "\\b(bool|int|int8|int16|int32|int64)\\b"
         }
       ]
     },
