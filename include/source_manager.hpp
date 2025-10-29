@@ -47,7 +47,7 @@ class SourceManager {
      * @return A string view representing the file system path of the specified source file.
      */
     [[nodiscard]] std::string_view get_source_file_path(const int fileID) const {
-        return sourceFiles_[fileID].path();
+        return sourceFiles_.at(fileID).path();
     }
 
     /**

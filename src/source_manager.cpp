@@ -35,7 +35,7 @@ std::pair<int, std::string_view> SourceManager::load_new_source_file(std::string
 std::pair<uint32_t, uint32_t> SourceManager::get_line_column(const int fileID,
                                                              const uint32_t offset) const {
     assert(fileID >= 0 && fileID < static_cast<int>(sourceFiles_.size()));
-    assert(offset <= sourceFiles_[fileID].contents().size());
+    assert(offset <= sourceFiles_.at(fileID).contents().size());
 
     const SourceFile& file = sourceFiles_[fileID];
     const auto it = std::ranges::upper_bound(file.lines_starts(), offset) - 1;
@@ -47,9 +47,9 @@ std::pair<uint32_t, uint32_t> SourceManager::get_line_column(const int fileID,
 
 std::string_view SourceManager::get_line_contents(const int fileID,
                                                   const uint32_t lineNumber) const {
-    const std::string& contents = sourceFiles_[fileID].contents();
+    const std::string& contents = sourceFiles_.at(fileID).contents();
 
-    const auto lineStarts = sourceFiles_[fileID].lines_starts();
+    const auto lineStarts = sourceFiles_.at(fileID).lines_starts();
     const uint32_t lineStart = lineStarts[lineNumber - 1];
     const uint32_t nextLineStart = lineStarts[lineNumber];
 

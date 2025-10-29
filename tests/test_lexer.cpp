@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <lexing/lexer.hpp>
 #include <lexing/token_kind.hpp>
 
@@ -155,14 +157,22 @@ INSTANTIATE_TEST_SUITE_P(EverythingOnce, LexerTokenKindTest,
 // Unexpected token (invalid input causes exit)
 // ─────────────────────────────────────────────────────────────
 TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
+    namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {"@", "$", "~", "let x = 1 + @`", "x$", "let _invalid_identifier = 42;"};
 
     for (const auto& input : badInputs) {
-        EXPECT_EXIT({
-            const SourceManager sm;
-            DiagnosticsEngine de(sm, 0);
-            Lexer lexer(input, de);
-            auto _ = lexer.tokenize();
+        fs::path tmp = fs::temp_directory_path() / "test_input.nt";
+        std::ofstream(tmp) << input;
+
+        EXPECT_EXIT(
+            {
+                SourceManager sm;
+                const auto fileData = sm.load_new_source_file(tmp.string());
+                const auto fileID = fileData.first;
+                const auto fileContents = fileData.second;
+                DiagnosticsEngine de(sm, fileID);
+                Lexer lexer(fileContents, de);
+                auto _ = lexer.tokenize();
         },
         ::testing::ExitedWithCode(EXIT_FAILURE),
         "Invalid character");
