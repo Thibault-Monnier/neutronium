@@ -40,15 +40,13 @@ Make sure your `cmake` version is at least 3.28.
 
 ## Compile and Run
 
-You can use the following shell scripts to compile and run the Neutronium compiler:
+You can use the following scripts to compile and run the Neutronium compiler:
 
 ```bash
-./cmake-build.sh # Reconfigure cmake + build the compiler
-./compile.sh <path-to-source-file> [OPTIONS] # Compile a Neutronium source file
-./run.sh <path-to-source-file> [OPTIONS] # Run the generated machine code
+./configure_cmake.sh # Reconfigure cmake build files
+./compile.sh <path-to-source-file> [OPTIONS] # Build the compiler, then compile a Neutronium source file
+./run.sh <path-to-source-file> [OPTIONS] # Build the compiler, then compile and run a Neutronium source file
 ```
-
-Each script calls the previous one, so you never need to run several of them.
 
 As of October 2025, the compiler always writes the generated executable to `neutro/out`.
 
@@ -64,7 +62,8 @@ To build and run the test suite, run:
 
 ## Contributing
 
-Contributions are welcome! If you find an issue, please report it to the [Neutronium bug tracker](https://github.com/Thibault-Monnier/neutronium/issues).
+Contributions are welcome! If you find an issue, please report it to
+the [Neutronium bug tracker](https://github.com/Thibault-Monnier/neutronium/issues).
 
 ## Language
 

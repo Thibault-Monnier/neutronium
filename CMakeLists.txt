@@ -31,6 +31,7 @@ endif ()
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+    message(STATUS "No build type specified. Defaulting to Debug.")
 endif ()
 
 set(CMAKE_CXX_STANDARD 23)
