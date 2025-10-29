@@ -18,19 +18,19 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build build-essential nasm
+          sudo apt install -y cmake ninja-build build-essential llvm
 
       - name: Setup GCC 14
         uses: egor-tensin/setup-gcc@v1
         with:
           version: 14
 
-      - name: Make build script executable
-        run: chmod +x ./cmake-build.sh
+      - name: Make config script executable
+        run: chmod +x ./configure-cmake.sh
 
       - name: Run build
         id: build_run
-        run: ./cmake-build.sh
+        run: ./configure-cmake.sh && cmake --build build
         shell: bash
         env:
           CXX: g++-14
