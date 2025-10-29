@@ -8,17 +8,17 @@
 #include <string>
 #include <vector>
 
+#include "../include/CodeGen/Generator.hpp"
+#include "../include/Lexer/Lexer.hpp"
+#include "../include/Lexer/Token.hpp"
+#include "../include/Lexer/TokenKind.hpp"
+#include "../include/Parser/Debug.hpp"
+#include "../include/Parser/Parser.hpp"
+#include "../include/Utils/Log.hpp"
+#include "Cli.hpp"
 #include "DiagnosticsEngine.hpp"
+#include "Sema/SemanticAnalyser.hpp"
 #include "SourceManager.hpp"
-#include "cli.hpp"
-#include "generation/Generator.hpp"
-#include "lexing/Lexer.hpp"
-#include "lexing/Token.hpp"
-#include "lexing/TokenKind.hpp"
-#include "parsing/Parser.hpp"
-#include "parsing/debug.hpp"
-#include "semantic-analysis/semantic_analyser.hpp"
-#include "utils/log.hpp"
 
 using Clock = std::chrono::high_resolution_clock;
 
@@ -96,7 +96,7 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
         SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeManager).analyse();
     });
 
-    const auto assembly = timed("Code generation", verbose, [&] {
+    const auto assembly = timed("Code CodeGen", verbose, [&] {
         return CodeGen::Generator(*ast, typeManager, opts.targetType_).generate();
     });
     if (opts.logAssembly_) std::cout << assembly.str();
