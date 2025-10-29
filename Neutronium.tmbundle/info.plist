@@ -5,7 +5,6 @@
 <dict>
   <key>name</key>            <string>Neutronium</string>
   <key>uuid</key>            <string>5F9BAF36-2DD6-4FA4-9B2B-NEUTRONIUM</string>
-  <key>contactName</key>     <string>Your Name</string>
   <key>description</key>     <string>Syntax highlighting for the Neutronium language.</string>
 </dict>
 </plist>
