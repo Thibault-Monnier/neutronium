@@ -1,4 +1,6 @@
 name: Build all targets
+permissions:
+  contents: read
 
 on:
   push:
