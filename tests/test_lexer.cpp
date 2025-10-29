@@ -166,6 +166,8 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
 
         EXPECT_EXIT(
             {
+                freopen("/dev/null", "w", stdout);
+
                 SourceManager sm;
                 const auto fileData = sm.load_new_source_file(tmp.string());
                 const auto fileID = fileData.first;
