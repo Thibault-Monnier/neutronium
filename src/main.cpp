@@ -122,8 +122,7 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
     const auto objFilename = outFilename.replace_extension(".o");
 
     timed("Assembling", verbose, [&] {
-        run_or_die(std::format("llvm-mc -triple=x86_64 -filetype=obj {} -o {}",
-                               asmFilename.string(), objFilename.string()));
+        run_or_die(std::format("as --64 {} -o {}", asmFilename.string(), objFilename.string()));
     });
 }
 
@@ -164,7 +163,7 @@ int main(const int argc, char* argv[]) {
                     exit(EXIT_FAILURE);
                 }
 
-                run_or_die(std::format("llvm-mc -triple=x86_64 -filetype=obj {} -o {}", src, obj));
+                run_or_die(std::format("as --64 {} -o {}", src, obj));
             }
         }
     });

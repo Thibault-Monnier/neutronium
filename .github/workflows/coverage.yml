@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build build-essential llvm lcov
+          sudo apt install -y cmake ninja-build build-essential lcov
 
       - name: Setup GCC 14
         uses: egor-tensin/setup-gcc@v1
