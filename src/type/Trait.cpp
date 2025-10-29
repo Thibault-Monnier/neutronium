@@ -2,9 +2,9 @@
 
 #include <magic_enum/magic_enum.hpp>
 
-#include "../ast/Operator.hpp"
+#include "ast/Operator.hpp"
 
-[[nodiscard]] std::optional<Trait> trait_from_operator(const AST::Operator op) {
+[[nodiscard]] std::optional<Trait> traitFromOperator(const AST::Operator op) {
     switch (op) {
         case AST::Operator::ADD:
         case AST::Operator::ADD_ASSIGN:
@@ -38,4 +38,4 @@
     std::unreachable();
 }
 
-std::string_view trait_to_string(const Trait trait) { return magic_enum::enum_name(trait); }
+std::string_view traitToString(const Trait trait) { return magic_enum::enum_name(trait); }

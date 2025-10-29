@@ -10,7 +10,7 @@ const std::string neutroniumPath = projectRoot + "/build/neutronium";
 
 namespace {
 
-int run_and_capture(const std::string& cmd, std::string& out) {
+int runAndCapture(const std::string& cmd, std::string& out) {
     FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
     if (!pipe) return -1;
 
@@ -29,21 +29,21 @@ int run_and_capture(const std::string& cmd, std::string& out) {
 
 TEST(CliErrorTest, MissingSourceFilepath) {
     std::string output;
-    const int status = run_and_capture(neutroniumPath, output);
+    const int status = runAndCapture(neutroniumPath, output);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(output.contains("Missing input file")) << output;
 }
 
 TEST(CliErrorTest, InvalidSourceFilepath) {
     std::string output;
-    const int status = run_and_capture(neutroniumPath + " nonexistent_file.nt", output);
+    const int status = runAndCapture(neutroniumPath + " nonexistent_file.nt", output);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(output.contains("error:")) << output;
 }
 
 TEST(CLIErrorTest, InvalidTargetType) {
     std::string output;
-    const int status = run_and_capture(neutroniumPath + " --target-type=invalid", output);
+    const int status = runAndCapture(neutroniumPath + " --target-type=invalid", output);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(output.contains("Unknown target type")) << output;
 }
@@ -56,7 +56,7 @@ TEST(CLITargetTest, LibraryTarget) {
     }
 
     std::string output;
-    int status = run_and_capture(neutroniumPath + " --target-type=library " + tempFile, output);
+    int status = runAndCapture(neutroniumPath + " --target-type=library " + tempFile, output);
     EXPECT_TRUE(status == 0 || output.contains("Assembling"))
         << output;  // Ensure it compiles successfully
 
@@ -65,7 +65,7 @@ TEST(CLITargetTest, LibraryTarget) {
         out << "fn main(): { exit 0; }\n";  // Adding main function should fail
     }
 
-    status = run_and_capture(neutroniumPath + " --target-type=library " + tempFile, output);
+    status = runAndCapture(neutroniumPath + " --target-type=library " + tempFile, output);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(output.contains("main") && output.contains("library target")) << output;
 }
@@ -78,7 +78,7 @@ TEST(CLITargetTest, ExecutableTarget) {
     }
 
     std::string output;
-    int status = run_and_capture(neutroniumPath + " --target-type=executable " + tempFile, output);
+    int status = runAndCapture(neutroniumPath + " --target-type=executable " + tempFile, output);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(output.contains("main") && output.contains("executable target")) << output;
 
@@ -87,25 +87,25 @@ TEST(CLITargetTest, ExecutableTarget) {
         out << "fn main(): { exit 0; }\n";  // Adding main function should succeed
     }
 
-    status = run_and_capture(neutroniumPath + " --target-type=executable " + tempFile, output);
+    status = runAndCapture(neutroniumPath + " --target-type=executable " + tempFile, output);
     EXPECT_TRUE(status == 0 || output.contains("Assembling"))
         << output;  // Ensure it compiles successfully
 }
 
 TEST(CliErrorTest, InvalidLogType) {
     std::string output;
-    const int status = run_and_capture(neutroniumPath + " --log=invalid", output);
+    const int status = runAndCapture(neutroniumPath + " --log=invalid", output);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(output.contains("Unknown log type")) << output;
 }
 
 TEST(CliNonErrorTest, HelpOption) {
     std::string output;
- const int status = run_and_capture(neutroniumPath + " --help", output);
+    const int status = runAndCapture(neutroniumPath + " --help", output);
     EXPECT_EQ(status, 0);
     EXPECT_TRUE(output.contains("Usage:")) << output;
 
-    const int status2 = run_and_capture(neutroniumPath + " -h", output);
+    const int status2 = runAndCapture(neutroniumPath + " -h", output);
     EXPECT_EQ(status2, 0);
     EXPECT_TRUE(output.contains("Usage:")) << output;
 }
@@ -113,11 +113,11 @@ TEST(CliNonErrorTest, HelpOption) {
 TEST(CliNonErrorTest, VersionOption) {
     std::string output;
 
-    const int status = run_and_capture(neutroniumPath + " --version", output);
+    const int status = runAndCapture(neutroniumPath + " --version", output);
     EXPECT_EQ(status, 0);
     EXPECT_TRUE(output.contains("Neutronium Compiler")) << output;
 
-    const int status2 = run_and_capture(neutroniumPath + " -v", output);
+    const int status2 = runAndCapture(neutroniumPath + " -v", output);
     EXPECT_EQ(status2, 0);
     EXPECT_TRUE(output.contains("Neutronium Compiler")) << output;
 }
@@ -130,7 +130,7 @@ TEST(CliNonErrorTest, ValidMinimalSourceFile) {
     }
 
     std::string output;
-    const int status = run_and_capture(neutroniumPath + " " + tempFile, output);
+    const int status = runAndCapture(neutroniumPath + " " + tempFile, output);
     EXPECT_EQ(status, 0) << output;
 
     std::remove(tempFile.c_str());
@@ -138,7 +138,7 @@ TEST(CliNonErrorTest, ValidMinimalSourceFile) {
 
 TEST(CliErrorTest, InvalidOption) {
     std::string output;
-    const int status = run_and_capture(neutroniumPath + " --invalid-option", output);
+    const int status = runAndCapture(neutroniumPath + " --invalid-option", output);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(output.contains("error") && output.contains("does not exist")) << output;
 }
@@ -154,33 +154,33 @@ TEST(CliNonErrorTest, LogArguments) {
 
     const std::string baseCompileCommand = neutroniumPath + " " + tempFile;
 
-    int status = run_and_capture(baseCompileCommand + " --log-code", output);
+    int status = runAndCapture(baseCompileCommand + " --log-code", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("fn main():")) << output;
 
-    status = run_and_capture(baseCompileCommand + " --log-tokens", output);
+    status = runAndCapture(baseCompileCommand + " --log-tokens", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("EOF_:")) << output;
 
-    status = run_and_capture(baseCompileCommand + " --log-ast", output);
+    status = runAndCapture(baseCompileCommand + " --log-ast", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("Program")) << output;
 
-    status = run_and_capture(baseCompileCommand + " --log-assembly", output);
+    status = runAndCapture(baseCompileCommand + " --log-assembly", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("_start:")) << output;
 
-    status = run_and_capture(baseCompileCommand + " -d", output);
+    status = runAndCapture(baseCompileCommand + " -d", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("fn main():") && output.contains("EOF_:") &&
                 output.contains("Program") && output.contains("_start:"))
         << output;
 
-    status = run_and_capture(baseCompileCommand + " --log=code,ast", output);
+    status = runAndCapture(baseCompileCommand + " --log=code,ast", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("fn main():") && output.contains("Program")) << output;
 
-    status = run_and_capture(baseCompileCommand + " --log=tokens,assembly", output);
+    status = runAndCapture(baseCompileCommand + " --log=tokens,assembly", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("EOF_:") && output.contains("_start:")) << output;
 

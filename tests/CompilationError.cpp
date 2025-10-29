@@ -338,7 +338,7 @@ TEST_F(NeutroniumTester, CompoundAssignmentWithNonIntegersFails) {
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
     EXPECT_TRUE(error2.contains("Type") && error2.contains("trait") &&
-                error2.contains(trait_to_string(Trait::MUL)) && error2.contains("bool"));
+                error2.contains(traitToString(Trait::MUL)) && error2.contains("bool"));
 
     const std::string code3 = R"(
         fn main(): {
@@ -350,7 +350,7 @@ TEST_F(NeutroniumTester, CompoundAssignmentWithNonIntegersFails) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
-                error3.contains(trait_to_string(Trait::SUB)) && error3.contains("bool") &&
+                error3.contains(traitToString(Trait::SUB)) && error3.contains("bool") &&
                 error3.contains("array"));
 }
 
@@ -605,7 +605,7 @@ TEST_F(NeutroniumTester, AttemptToSubscriptANonArray) {
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
-                error.contains(trait_to_string(Trait::SUBSCRIPT)) && error.contains("int"));
+                error.contains(traitToString(Trait::SUBSCRIPT)) && error.contains("int"));
 
     const std::string code2 = R"(
         fn a(): {}
@@ -633,7 +633,7 @@ TEST_F(NeutroniumTester, AttemptToSubscriptANonArray) {
     auto [status3dArray, error3dArray] = compile(code3dArray);
     EXPECT_NE(status3dArray, 0);
     EXPECT_TRUE(error3dArray.contains("Type") && error3dArray.contains("trait") &&
-                error3dArray.contains(trait_to_string(Trait::SUBSCRIPT)) &&
+                error3dArray.contains(traitToString(Trait::SUBSCRIPT)) &&
                 error3dArray.contains("int8"));
 }
 
@@ -905,7 +905,7 @@ TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
-                error.contains(trait_to_string(Trait::NOT)) && error.contains("int"));
+                error.contains(traitToString(Trait::NOT)) && error.contains("int"));
 
     const std::string code2 = R"(
         fn main(): {
@@ -916,7 +916,7 @@ TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
     EXPECT_TRUE(error2.contains("Type") && error2.contains("trait") &&
-                error2.contains(trait_to_string(Trait::SUB)) && error2.contains("bool"));
+                error2.contains(traitToString(Trait::SUB)) && error2.contains("bool"));
 
     const std::string code3 = R"(
         fn x(): {}
@@ -926,7 +926,7 @@ TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
-                error3.contains(trait_to_string(Trait::SUB)) && error3.contains("void"));
+                error3.contains(traitToString(Trait::SUB)) && error3.contains("void"));
 }
 
 TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
@@ -938,7 +938,7 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
-                error.contains(trait_to_string(Trait::ADD)) && error.contains("bool"));
+                error.contains(traitToString(Trait::ADD)) && error.contains("bool"));
 
     const std::string code2 = R"(
         fn main(): {
@@ -948,7 +948,7 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
     EXPECT_TRUE(error2.contains("Type") && error2.contains("trait") &&
-                error2.contains(trait_to_string(Trait::GT)) && error2.contains("bool"));
+                error2.contains(traitToString(Trait::GT)) && error2.contains("bool"));
 
     const std::string code3 = R"(
         fn x(): {}
@@ -960,7 +960,7 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     auto [status3, error3] = compile(code3);
     EXPECT_NE(status3, 0);
     EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
-                error3.contains(trait_to_string(Trait::EQ)) && error3.contains("void"));
+                error3.contains(traitToString(Trait::EQ)) && error3.contains("void"));
 
     const std::string code4 = R"(
         fn x(): {}
@@ -972,7 +972,7 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     auto [status4, error4] = compile(code4);
     EXPECT_NE(status4, 0);
     EXPECT_TRUE(error4.contains("Type") && error4.contains("trait") &&
-                error4.contains(trait_to_string(Trait::GTE)) && error4.contains("void"));
+                error4.contains(traitToString(Trait::GTE)) && error4.contains("void"));
 }
 
 TEST_F(NeutroniumTester, BreakWhenNotInLoopFails) {

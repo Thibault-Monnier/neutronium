@@ -211,7 +211,7 @@ TEST_F(NeutroniumTester, StandardLibrary) {
             print_mod(654, 10);  # should print 4
         }
     )";
-    const auto result = run_with_output(code);
+    const auto result = runWithOutput(code);
     EXPECT_EQ(result.exit, 0);
     EXPECT_EQ(result.output, "Hello, World!\n42\n\n4\n");
 }

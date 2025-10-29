@@ -12,8 +12,8 @@ class Token {
     [[nodiscard]] TokenKind kind() const { return kind_; }
     [[nodiscard]] const std::string& lexeme() const { return lexeme_; }
 
-    [[nodiscard]] uint32_t byte_offset_start() const { return byteOffset_; }
-    [[nodiscard]] uint32_t byte_offset_end() const {
+    [[nodiscard]] uint32_t byteOffsetStart() const { return byteOffset_; }
+    [[nodiscard]] uint32_t byteOffsetEnd() const {
         return byteOffset_ + static_cast<uint32_t>(lexeme_.size()) - 1;
     }
 

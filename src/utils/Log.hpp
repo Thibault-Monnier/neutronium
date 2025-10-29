@@ -2,4 +2,4 @@
 
 #include <string>
 
-void print_error(const std::string& message);
+void printError(const std::string& message);

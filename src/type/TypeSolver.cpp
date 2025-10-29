@@ -1,7 +1,7 @@
 #include "TypeSolver.hpp"
 
-#include "../ast/AST.hpp"
 #include "TypeManager.hpp"
+#include "ast/AST.hpp"
 
 TypeID TypeSolver::findRoot(TypeID x) {
     // Find the root of the set containing x
@@ -41,7 +41,7 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sour
         case TypeKind::ARRAY: {
             if (!dstType.matches(srcType, typeManager_)) return false;
             typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(
-                dstType.array_element_type_id(), srcType.array_element_type_id(), sourceNode);
+                dstType.arrayElementTypeId(), srcType.arrayElementTypeId(), sourceNode);
             return true;
         }
     }
@@ -75,12 +75,12 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
         const Type& aType = typeManager_.getType(rootA);
         const Type& bType = typeManager_.getType(rootB);
 
-        diagnosticsEngine_.report_error(
+        diagnosticsEngine_.reportError(
             std::format("Type mismatch: cannot unify Type '{}' and '{}'",
-                        aType.to_string(typeManager_), bType.to_string(typeManager_)),
-            equalityConstraint.sourceNode().source_start_index(),
-            equalityConstraint.sourceNode().source_end_index());
-        diagnosticsEngine_.emit_errors();
+                        aType.toString(typeManager_), bType.toString(typeManager_)),
+            equalityConstraint.sourceNode().sourceStartIndex(),
+            equalityConstraint.sourceNode().sourceEndIndex());
+        diagnosticsEngine_.emitErrors();
         exit(EXIT_FAILURE);
     }
 
@@ -93,7 +93,7 @@ bool TypeSolver::solveSubscriptConstraint(const SubscriptConstraint& subscriptCo
     const Type& type = typeManager_.getType(subscriptConstraint.container());
 
     if (type.kind() == TypeKind::ARRAY) {
-        const TypeID expectedElementTypeID = type.array_element_type_id();
+        const TypeID expectedElementTypeID = type.arrayElementTypeId();
         const TypeID actualElementTypeID = subscriptConstraint.element();
 
         typeManager_.getTypeSolver().addConstraint(std::make_unique<EqualityConstraint>(
@@ -114,12 +114,12 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
     if (type.isUnknownKind()) return false;
 
     if (!type.hasTrait(trait)) {
-        diagnosticsEngine_.report_error(
-            std::format("Type '{}' does not implement trait '{}'", type.to_string(typeManager_),
-                        trait_to_string(trait)),
-            hasTraitConstraint.sourceNode().source_start_index(),
-            hasTraitConstraint.sourceNode().source_end_index());
-        diagnosticsEngine_.emit_errors();
+        diagnosticsEngine_.reportError(
+            std::format("Type '{}' does not implement trait '{}'", type.toString(typeManager_),
+                        traitToString(trait)),
+            hasTraitConstraint.sourceNode().sourceStartIndex(),
+            hasTraitConstraint.sourceNode().sourceEndIndex());
+        diagnosticsEngine_.emitErrors();
         exit(EXIT_FAILURE);
     }
 
@@ -133,17 +133,17 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
 
     if (type.kind() == TypeKind::PRIMITIVE) {
         if (type.primitive() == Primitive::Kind::VOID) {
-            diagnosticsEngine_.report_error("Type 'void' is not storable",
-                                            storableConstraint.sourceNode().source_start_index(),
-                                            storableConstraint.sourceNode().source_end_index());
-            diagnosticsEngine_.emit_errors();
+            diagnosticsEngine_.reportError("Type 'void' is not storable",
+                                           storableConstraint.sourceNode().sourceStartIndex(),
+                                           storableConstraint.sourceNode().sourceEndIndex());
+            diagnosticsEngine_.emitErrors();
             exit(EXIT_FAILURE);
         }
         return true;
     }
 
     if (type.kind() == TypeKind::ARRAY) {
-        const TypeID elementTypeID = type.array_element_type_id();
+        const TypeID elementTypeID = type.arrayElementTypeId();
         typeManager_.getTypeSolver().addConstraint(
             std::make_unique<StorableConstraint>(elementTypeID, storableConstraint.sourceNode()));
         return true;

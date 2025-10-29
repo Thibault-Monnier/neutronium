@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../ast/AST.hpp"
 #include "Trait.hpp"
 #include "TypeID.hpp"
+#include "ast/AST.hpp"
 
 /**
  * @brief Represents a type constraint for the TypeSolver.

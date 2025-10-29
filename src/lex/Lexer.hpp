@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "../diagnostics/DiagnosticsEngine.hpp"
 #include "Token.hpp"
 #include "TokenKind.hpp"
+#include "diagnostics/DiagnosticsEngine.hpp"
 
 class Lexer {
    public:
@@ -25,22 +25,22 @@ class Lexer {
 
     std::vector<Token> tokens_;
 
-    [[nodiscard]] bool is_at_end() const;
+    [[nodiscard]] bool isAtEnd() const;
     [[nodiscard]] char peek() const;
     char advance();
 
-    void create_token(TokenKind kind);
+    void createToken(TokenKind kind);
 
-    void advance_while(auto predicate);
+    void advanceWhile(auto predicate);
 
-    [[nodiscard]] std::optional<TokenKind> get_keyword_kind() const;
-    void lex_plus();
-    void lex_minus();
-    void lex_star();
-    void lex_slash();
+    [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;
+    void lexPlus();
+    void lexMinus();
+    void lexStar();
+    void lexSlash();
 
-    void lex_equal();
-    void lex_less_than();
-    void lex_greater_than();
-    void lex_bang();
+    void lexEqual();
+    void lexLessThan();
+    void lexGreaterThan();
+    void lexBang();
 };

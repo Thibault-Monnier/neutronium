@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "../source/SourceManager.hpp"
+#include "source/SourceManager.hpp"
 
 struct Diagnostic {
     enum class Level : uint8_t { ERROR };
@@ -18,15 +18,15 @@ class DiagnosticsEngine {
     DiagnosticsEngine(const SourceManager& sourceManager, const int fileID)
         : sourceManager_(sourceManager), fileID_(fileID) {}
 
-    void report_error(std::string message, const uint32_t byteOffsetStart,
-                      const uint32_t byteOffsetEnd) {
+    void reportError(std::string message, const uint32_t byteOffsetStart,
+                     const uint32_t byteOffsetEnd) {
         diagnostics_.emplace_back(std::move(message), byteOffsetStart, byteOffsetEnd,
                                   Diagnostic::Level::ERROR);
     }
 
-    void emit_errors() const;
+    void emitErrors() const;
 
-    [[nodiscard]] bool has_errors() const {
+    [[nodiscard]] bool hasErrors() const {
         return std::ranges::any_of(diagnostics_, [](const Diagnostic& diagnostic) {
             return diagnostic.level_ == Diagnostic::Level::ERROR;
         });
@@ -38,5 +38,5 @@ class DiagnosticsEngine {
 
     std::vector<Diagnostic> diagnostics_;
 
-    void emit_error_context(uint32_t byteOffsetStart, uint32_t byteOffsetEnd) const;
+    void emitErrorContext(uint32_t byteOffsetStart, uint32_t byteOffsetEnd) const;
 };

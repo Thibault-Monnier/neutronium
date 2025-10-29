@@ -1,7 +1,6 @@
 #pragma once
 
-#include <bits/stdint-uintn.h>
-
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -21,7 +20,7 @@ class SourceManager {
      * @return A pair where the first element is the unique identifier of the newly loaded source
      *         file, and the second element is a string view of its contents.
      */
-    std::pair<int, std::string_view> load_new_source_file(std::string path);
+    std::pair<int, std::string_view> loadNewSourceFile(std::string path);
 
     /**
      * Calculates the line and column number for a given offset in a specific source file.
@@ -35,7 +34,7 @@ class SourceManager {
      * @return A pair of integers where the first element is the line number and
      *         the second element is the column number, 1-based.
      */
-    [[nodiscard]] std::pair<uint32_t, uint32_t> get_line_column(int fileID, uint32_t offset) const;
+    [[nodiscard]] std::pair<uint32_t, uint32_t> getLineColumn(int fileID, uint32_t offset) const;
 
     /**
      * Returns the file system path of the source file identified by the given file ID.
@@ -46,7 +45,7 @@ class SourceManager {
      * @param fileID The unique identifier of the source file whose path is to be retrieved.
      * @return A string view representing the file system path of the specified source file.
      */
-    [[nodiscard]] std::string_view get_source_file_path(const int fileID) const {
+    [[nodiscard]] std::string_view getSourceFilePath(const int fileID) const {
         return sourceFiles_.at(fileID).path();
     }
 
@@ -62,7 +61,7 @@ class SourceManager {
      * @return A string view containing the contents of the specified line, excluding the newline
      *         character at the end of the line.
      */
-    [[nodiscard]] std::string_view get_line_contents(int fileID, uint32_t lineNumber) const;
+    [[nodiscard]] std::string_view getLineContents(int fileID, uint32_t lineNumber) const;
 
    private:
     class SourceFile {
@@ -74,7 +73,7 @@ class SourceManager {
 
         [[nodiscard]] const std::string& path() const { return path_; }
         [[nodiscard]] const std::string& contents() const { return contents_; }
-        [[nodiscard]] const std::vector<uint32_t>& lines_starts() const { return linesStarts_; }
+        [[nodiscard]] const std::vector<uint32_t>& linesStarts() const { return linesStarts_; }
 
        private:
         std::string path_, contents_;

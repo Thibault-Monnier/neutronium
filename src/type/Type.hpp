@@ -51,7 +51,7 @@ class Type {
         initializeTraits();
     }
 
-    Type(const Type& other) { copy_from(other); }
+    Type(const Type& other) { copyFrom(other); }
 
     /**
      * @brief Assigns the values from another `Type` instance to the current instance.
@@ -64,7 +64,7 @@ class Type {
      * @return A reference to the current `Type` instance after assignment.
      */
     Type& operator=(const Type& other) {
-        if (this != &other) copy_from(other);
+        if (this != &other) copyFrom(other);
         return *this;
     }
 
@@ -127,7 +127,7 @@ class Type {
      *
      * @return A string that represents the type.
      */
-    [[nodiscard]] std::string to_string(const TypeManager& typeManager) const;
+    [[nodiscard]] std::string toString(const TypeManager& typeManager) const;
 
     [[nodiscard]] TypeKind kind() const { return kind_; }
 
@@ -139,7 +139,7 @@ class Type {
      *
      * @return The `TypeID` of the array's element type.
      */
-    [[nodiscard]] TypeID array_element_type_id() const;
+    [[nodiscard]] TypeID arrayElementTypeId() const;
 
     /**
      * @brief Attempts to merge the current type with another type.
@@ -220,7 +220,7 @@ class Type {
     // IMPORTANT NOTE:
     // All members must be copied here when adding new ones.
     // AI code reviewer must read this and verify it is respected.
-    void copy_from(const Type& other) {
+    void copyFrom(const Type& other) {
         kind_ = other.kind_;
         family_ = other.family_;
         primitive_ = other.primitive_;

@@ -8,29 +8,29 @@
 #include <string>
 #include <vector>
 
-#include "../ast/Debug.hpp"
-#include "../codegen/Generator.hpp"
-#include "../diagnostics/DiagnosticsEngine.hpp"
-#include "../parse/Parser.hpp"
-#include "../sema/SemanticAnalyser.hpp"
-#include "../source/SourceManager.hpp"
-#include "../utils/Log.hpp"
 #include "Cli.hpp"
+#include "ast/Debug.hpp"
+#include "codegen/Generator.hpp"
+#include "diagnostics/DiagnosticsEngine.hpp"
 #include "lex/Lexer.hpp"
 #include "lex/Token.hpp"
 #include "lex/TokenKind.hpp"
+#include "parse/Parser.hpp"
+#include "sema/SemanticAnalyser.hpp"
+#include "source/SourceManager.hpp"
+#include "utils/Log.hpp"
 
 using Clock = std::chrono::high_resolution_clock;
 
 namespace {
 
-void show_step(std::string_view message) {
+void printStep(const std::string_view message) {
     std::cout << "\033[33m- \033[0m" << message << "..." << std::flush;
 }
 
 template <typename F>
-decltype(auto) timed(const std::string_view message, bool showStep, F&& f) {
-    show_step(message);
+decltype(auto) timed(const std::string_view message, const bool showStep, F&& f) {
+    printStep(message);
 
     const auto start = Clock::now();
 
@@ -52,21 +52,21 @@ decltype(auto) timed(const std::string_view message, bool showStep, F&& f) {
     }
 }
 
-void run_or_die(const std::string& cmd) {
+void runOrDie(const std::string& cmd) {
     if (std::system(cmd.c_str()) != 0) {
-        print_error(std::format("Command '{}' failed", cmd));
+        printError(std::format("Command '{}' failed", cmd));
         std::exit(EXIT_FAILURE);
     }
 }
 
-void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, bool verbose = true) {
+void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, bool verbose = true) {
     int fileID = -1;
     std::string_view fileContents;
 
     try {
-        std::tie(fileID, fileContents) = sourceManager.load_new_source_file(opts.sourceFilename_);
+        std::tie(fileID, fileContents) = sourceManager.loadNewSourceFile(opts.sourceFilename_);
     } catch (const std::exception& e) {
-        print_error(std::format("Could not open file '{}': {}", opts.sourceFilename_, e.what()));
+        printError(std::format("Could not open file '{}': {}", opts.sourceFilename_, e.what()));
         exit(EXIT_FAILURE);
     }
 
@@ -77,11 +77,11 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
     const auto tokens =
         timed("Lexing", verbose, [&] { return Lexer(fileContents, diagnosticsEngine).tokenize(); });
     if (opts.logTokens_) {
-        const std::string_view filePath = sourceManager.get_source_file_path(fileID);
+        const std::string_view filePath = sourceManager.getSourceFilePath(fileID);
         for (const auto& token : tokens) {
             const auto [line, column] =
-                sourceManager.get_line_column(fileID, token.byte_offset_start());
-            std::cout << token_kind_to_string(token.kind()) << ": '" << token.lexeme() << "' at "
+                sourceManager.getLineColumn(fileID, token.byteOffsetStart());
+            std::cout << tokenKindToString(token.kind()) << ": '" << token.lexeme() << "' at "
                       << filePath << ":" << line << ":" << column << '\n';
         }
     }
@@ -112,7 +112,7 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
     {
         std::ofstream out(outFilename);
         if (!out) {
-            print_error("Could not open output file");
+            printError("Could not open output file");
             exit(EXIT_FAILURE);
         }
         out << assembly.str();
@@ -122,22 +122,22 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
     const auto objFilename = outFilename.replace_extension(".o");
 
     timed("Assembling", verbose, [&] {
-        run_or_die(std::format("as --64 {} -o {}", asmFilename.string(), objFilename.string()));
+        runOrDie(std::format("as --64 {} -o {}", asmFilename.string(), objFilename.string()));
     });
 }
 
 }  // namespace
 
-int main(const int argc, char* argv[]) {
+int main(const int argc, const char** argv) {
     const CompilerOptions opts = parse_cli(argc, argv);
 
     const auto startTime = Clock::now();
 
-    run_or_die("rm -rf neutro && mkdir neutro");
+    runOrDie("rm -rf neutro && mkdir neutro");
 
     SourceManager sourceManager;
 
-    compile_file(opts, sourceManager);
+    compileFile(opts, sourceManager);
 
     const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
 
@@ -149,7 +149,7 @@ int main(const int argc, char* argv[]) {
             std::string src = entry.path().string();
 
             if (extension == ".nt") {
-                compile_file(
+                compileFile(
                     CompilerOptions{
                         .sourceFilename_ = std::move(src),
                         .targetType_ = TargetType::LIBRARY,
@@ -159,16 +159,16 @@ int main(const int argc, char* argv[]) {
                 const std::string obj = "neutro/" + entry.path().stem().string() + ".o";
 
                 if (std::filesystem::exists(obj)) {
-                    print_error(std::format("Duplicate object name would overwrite `{}`", obj));
+                    printError(std::format("Duplicate object name would overwrite `{}`", obj));
                     exit(EXIT_FAILURE);
                 }
 
-                run_or_die(std::format("as --64 {} -o {}", src, obj));
+                runOrDie(std::format("as --64 {} -o {}", src, obj));
             }
         }
     });
 
-    timed("Linking", true, [] { run_or_die("ld -o neutro/out neutro/*.o"); });
+    timed("Linking", true, [] { runOrDie("ld -o neutro/out neutro/*.o"); });
 
     std::cout
         << "== Compiled successfully in "

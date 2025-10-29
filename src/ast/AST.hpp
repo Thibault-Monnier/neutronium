@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "../lex/TokenKind.hpp"
-#include "../type/TypeID.hpp"
 #include "Operator.hpp"
+#include "lex/TokenKind.hpp"
+#include "type/TypeID.hpp"
 
 namespace AST {
 
@@ -41,8 +41,8 @@ struct Node {
 
     const NodeKind kind_;
 
-    [[nodiscard]] uint32_t source_start_index() const { return sourceStartIndex_; }
-    [[nodiscard]] uint32_t source_end_index() const { return sourceEndIndex_; }
+    [[nodiscard]] uint32_t sourceStartIndex() const { return sourceStartIndex_; }
+    [[nodiscard]] uint32_t sourceEndIndex() const { return sourceEndIndex_; }
 
    protected:
     uint32_t sourceStartIndex_;
@@ -290,26 +290,26 @@ struct FunctionDefinition final : Node {
 struct Program final : Node {
     explicit Program() : Node{NodeKind::PROGRAM, 0, 0} {}
 
-    void append_function(std::unique_ptr<FunctionDefinition> function) {
+    void appendFunction(std::unique_ptr<FunctionDefinition> function) {
         functions_.emplace_back(std::move(function));
-        sourceEndIndex_ = functions_.back()->source_end_index();
+        sourceEndIndex_ = functions_.back()->sourceEndIndex();
     }
 
-    void append_extern_function(std::unique_ptr<ExternalFunctionDeclaration> externFunction) {
+    void appendExternFunction(std::unique_ptr<ExternalFunctionDeclaration> externFunction) {
         externalFunctions_.emplace_back(std::move(externFunction));
-        sourceEndIndex_ = externalFunctions_.back()->source_end_index();
+        sourceEndIndex_ = externalFunctions_.back()->sourceEndIndex();
     }
 
     std::vector<std::unique_ptr<ExternalFunctionDeclaration>> externalFunctions_;
     std::vector<std::unique_ptr<FunctionDefinition>> functions_;
 };
 
-Operator token_kind_to_operator(TokenKind tokenKind);
+Operator tokenKindToOperator(TokenKind tokenKind);
 
-bool is_arithmetic_operator(Operator op);
-bool is_equality_operator(Operator op);
-bool is_relational_operator(Operator op);
-bool is_comparison_operator(Operator op);
-bool is_assignment_operator(Operator op);
+bool isArithmeticOperator(Operator op);
+bool isEqualityOperator(Operator op);
+bool isRelationalOperator(Operator op);
+bool isComparisonOperator(Operator op);
+bool isAssignmentOperator(Operator op);
 
 }  // namespace AST

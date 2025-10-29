@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include "../ast/Operator.hpp"
+#include "ast/Operator.hpp"
 
 enum class Trait : uint8_t {
     // Arithmetic traits
@@ -26,6 +26,6 @@ enum class Trait : uint8_t {
     SUBSCRIPT,
 };
 
-[[nodiscard]] std::optional<Trait> trait_from_operator(AST::Operator op);
+[[nodiscard]] std::optional<Trait> traitFromOperator(AST::Operator op);
 
-[[nodiscard]] std::string_view trait_to_string(Trait trait);
+[[nodiscard]] std::string_view traitToString(Trait trait);

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <deque>
-#include <list>
 #include <vector>
 
-#include "../diagnostics/DiagnosticsEngine.hpp"
 #include "Constraint.hpp"
+#include "diagnostics/DiagnosticsEngine.hpp"
 
 class TypeManager;
 
@@ -80,8 +78,8 @@ class TypeSolver {
     void prepareUnionFind();
     bool solveEqualityConstraint(const EqualityConstraint& equalityConstraint);
 
-    bool solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint) const;
-
-    bool solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint) const;
-    bool solveStorableConstraint(const StorableConstraint& storableConstraint) const;
+    [[nodiscard]] bool solveSubscriptConstraint(
+        const SubscriptConstraint& subscriptConstraint) const;
+    [[nodiscard]] bool solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint) const;
+    [[nodiscard]] bool solveStorableConstraint(const StorableConstraint& storableConstraint) const;
 };

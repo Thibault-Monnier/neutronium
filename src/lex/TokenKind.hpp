@@ -65,4 +65,4 @@ enum class TokenKind : uint8_t {
     EOF_,
 };
 
-std::string token_kind_to_string(TokenKind kind);
+std::string tokenKindToString(TokenKind kind);

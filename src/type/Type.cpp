@@ -46,7 +46,7 @@ int Type::sizeBits(const TypeManager& typeManager) const {
     std::unreachable();
 }
 
-std::string Type::to_string(const TypeManager& typeManager) const {
+std::string Type::toString(const TypeManager& typeManager) const {
     std::string result;
     switch (kind_) {
         case TypeKind::PRIMITIVE: {
@@ -78,7 +78,7 @@ std::string Type::to_string(const TypeManager& typeManager) const {
 
         case TypeKind::ARRAY: {
             const Type& arrayElement = typeManager.getType(arrayElementTypeID_);
-            result += "array[" + arrayElement.to_string(typeManager) + " * " +
+            result += "array[" + arrayElement.toString(typeManager) + " * " +
                       std::to_string(arrayLength_) + "]";
             break;
         }
@@ -96,7 +96,7 @@ std::string Type::to_string(const TypeManager& typeManager) const {
     return result;
 }
 
-TypeID Type::array_element_type_id() const {
+TypeID Type::arrayElementTypeId() const {
     if (kind_ == TypeKind::ARRAY) {
         return arrayElementTypeID_;
     }

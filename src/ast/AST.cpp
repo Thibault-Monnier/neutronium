@@ -2,11 +2,11 @@
 
 #include <unordered_map>
 
-#include "../lex/TokenKind.hpp"
+#include "lex/TokenKind.hpp"
 
 namespace AST {
 
-Operator token_kind_to_operator(const TokenKind tokenKind) {
+Operator tokenKindToOperator(const TokenKind tokenKind) {
     const std::unordered_map<TokenKind, Operator> tokenToOperatorMap = {
         {TokenKind::PLUS, Operator::ADD},
         {TokenKind::MINUS, Operator::SUBTRACT},
@@ -30,25 +30,25 @@ Operator token_kind_to_operator(const TokenKind tokenKind) {
     return it != tokenToOperatorMap.end() ? it->second : Operator::UNDEFINED_OPERATOR;
 }
 
-bool is_arithmetic_operator(const Operator op) {
+bool isArithmeticOperator(const Operator op) {
     return op == Operator::ADD || op == Operator::SUBTRACT || op == Operator::MULTIPLY ||
            op == Operator::DIVIDE;
 }
 
-bool is_equality_operator(const Operator op) {
+bool isEqualityOperator(const Operator op) {
     return op == Operator::EQUALS || op == Operator::NOT_EQUALS;
 }
 
-bool is_relational_operator(const Operator op) {
+bool isRelationalOperator(const Operator op) {
     return op == Operator::LESS_THAN || op == Operator::LESS_THAN_OR_EQUAL ||
            op == Operator::GREATER_THAN || op == Operator::GREATER_THAN_OR_EQUAL;
 }
 
-bool is_comparison_operator(const Operator op) {
-    return is_equality_operator(op) || is_relational_operator(op);
+bool isComparisonOperator(const Operator op) {
+    return isEqualityOperator(op) || isRelationalOperator(op);
 }
 
-bool is_assignment_operator(const Operator op) {
+bool isAssignmentOperator(const Operator op) {
     return op == Operator::ASSIGN || op == Operator::ADD_ASSIGN ||
            op == Operator::SUBTRACT_ASSIGN || op == Operator::MULTIPLY_ASSIGN ||
            op == Operator::DIVIDE_ASSIGN;

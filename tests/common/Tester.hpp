@@ -13,7 +13,7 @@ class NeutroniumTester : public ::testing::Test {
     NeutroniumTester() = default;
 
     [[nodiscard]] std::pair<int, std::string> compile(const std::string& code) const {
-        // Write source file
+        // Write the source file
         {
             std::ofstream out(sourceFile_);
             out << code;
@@ -52,7 +52,7 @@ class NeutroniumTester : public ::testing::Test {
         std::string output;
     };
 
-    [[nodiscard]] Output run_with_output(const std::string& code) const {
+    [[nodiscard]] Output runWithOutput(const std::string& code) const {
         auto [compileStatus, compileErr] = compile(code);
         EXPECT_EQ(compileStatus, 0) << "Compilation failed unexpectedly:\n" << compileErr;
 

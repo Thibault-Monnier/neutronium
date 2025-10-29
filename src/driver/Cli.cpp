@@ -4,9 +4,9 @@
 #include <format>
 #include <iostream>
 
-#include "../utils/Log.hpp"
+#include "utils/Log.hpp"
 
-CompilerOptions parse_cli(int argc, char** argv) {
+CompilerOptions parse_cli(const int argc, const char** argv) {
     cxxopts::Options options(argv[0], "Neutronium language compiler");
     options.positional_help("<input-file>").show_positional_help();
 
@@ -25,7 +25,7 @@ CompilerOptions parse_cli(int argc, char** argv) {
     try {
         result = options.parse(argc, argv);
     } catch (const std::exception& e) {
-        print_error(e.what());
+        printError(e.what());
         std::cout << '\n' << options.help() << '\n';
         std::exit(EXIT_FAILURE);
     }
@@ -52,7 +52,7 @@ CompilerOptions parse_cli(int argc, char** argv) {
     } else if (targetType == "lib" || targetType == "library") {
         opts.targetType_ = TargetType::LIBRARY;
     } else {
-        print_error(std::format("Unknown target type: '{}'", targetType));
+        printError(std::format("Unknown target type: '{}'", targetType));
         std::cout << '\n' << options.help() << '\n';
         std::exit(EXIT_FAILURE);
     }
@@ -74,7 +74,7 @@ CompilerOptions parse_cli(int argc, char** argv) {
             else if (item == "assembly")
                 opts.logAssembly_ = true;
             else {
-                print_error(std::format("Unknown log type: '{}'", item));
+                printError(std::format("Unknown log type: '{}'", item));
                 std::cout << '\n' << options.help() << '\n';
                 std::exit(EXIT_FAILURE);
             }
@@ -82,7 +82,7 @@ CompilerOptions parse_cli(int argc, char** argv) {
     }
 
     if (!result.count("input")) {
-        print_error("Missing input file");
+        printError("Missing input file");
         std::cout << '\n' << options.help() << '\n';
         std::exit(EXIT_FAILURE);
     }

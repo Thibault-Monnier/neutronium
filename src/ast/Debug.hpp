@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../type/TypeManager.hpp"
 #include "AST.hpp"
+#include "type/TypeManager.hpp"
 
 namespace AST {
 

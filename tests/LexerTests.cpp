@@ -216,7 +216,7 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
                 freopen("/dev/null", "w", stdout);
 
                 SourceManager sm;
-                const auto fileData = sm.load_new_source_file(tmp.string());
+                const auto fileData = sm.loadNewSourceFile(tmp.string());
                 const auto fileID = fileData.first;
                 const auto fileContents = fileData.second;
                 DiagnosticsEngine de(sm, fileID);

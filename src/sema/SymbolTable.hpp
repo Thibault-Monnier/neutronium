@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../type/Type.hpp"
+#include "type/TypeID.hpp"
 
 enum class SymbolKind : uint8_t { FUNCTION, VARIABLE };
 

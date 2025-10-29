@@ -4,11 +4,11 @@
 #include <string>
 #include <vector>
 
-#include "../ast/AST.hpp"
-#include "../diagnostics/DiagnosticsEngine.hpp"
-#include "../driver/Cli.hpp"
-#include "../type/Type.hpp"
 #include "SymbolTable.hpp"
+#include "ast/AST.hpp"
+#include "diagnostics/DiagnosticsEngine.hpp"
+#include "driver/Cli.hpp"
+#include "type/Type.hpp"
 
 class SemanticAnalyser {
    public:
@@ -38,44 +38,39 @@ class SemanticAnalyser {
 
     [[noreturn]] void abort(const std::string& errorMessage, const AST::Node& node) const;
 
-    void enter_scope();
-    void exit_scope();
+    void enterScope();
+    void exitScope();
 
-    // ── Symbol utilities ────────────────────────────────────────────────────────
-    [[nodiscard]] std::optional<const SymbolInfo*> get_symbol_info(const std::string& name) const;
+    [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(const std::string& name) const;
 
-    // ── Symbol declaration helpers ──────────────────────────────────────────────
-    SymbolInfo& declare_symbol(const AST::Node* declarationNode, const std::string& name,
-                               SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,
-                               std::vector<SymbolInfo> parameters);
+    SymbolInfo& declareSymbol(const AST::Node* declarationNode, const std::string& name,
+                              SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,
+                              std::vector<SymbolInfo> parameters);
 
-    SymbolInfo& handle_function_declaration(
+    SymbolInfo& handleFunctionDeclaration(
         const AST::Node* declNode, const std::string& name, TypeID returnTypeID,
         const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
-    SymbolInfo& handle_variable_declaration(const AST::VariableDefinition* declNode,
-                                            const std::string& name, bool isMutable, TypeID typeID);
+    SymbolInfo& handleVariableDeclaration(const AST::VariableDefinition* declNode,
+                                          const std::string& name, bool isMutable, TypeID typeID);
 
-    // ── Expression utilities ───────────────────────────────────────────────────
-    TypeID get_function_call_type(const AST::FunctionCall& funcCall);
-    TypeID get_unary_expression_type(const AST::UnaryExpression& unaryExpr);
-    TypeID get_binary_expression_type(const AST::BinaryExpression& binaryExpr);
-    TypeID get_expression_type(const AST::Expression& expr);
+    TypeID getFunctionCallType(const AST::FunctionCall& funcCall);
+    TypeID getUnaryExpressionType(const AST::UnaryExpression& unaryExpr);
+    TypeID getBinaryExpressionType(const AST::BinaryExpression& binaryExpr);
+    TypeID getExpressionType(const AST::Expression& expr);
 
-    void analyse_expression(const AST::Expression& expr, TypeID expected);
+    void analyseExpression(const AST::Expression& expr, TypeID expected);
 
-    // ── Statement analysis ─────────────────────────────────────────────────────
-    void analyse_variable_definition(const AST::VariableDefinition& definition);
-    void analyse_assignment(const AST::Assignment& assignment);
-    void analyse_expression_statement(const AST::ExpressionStatement& exprStmt);
-    void analyse_if_statement(const AST::IfStatement& ifStmt);
-    void analyse_while_statement(const AST::WhileStatement& whileStmt);
-    void analyse_break_statement(const AST::BreakStatement& breakStmt) const;
-    void analyse_continue_statement(const AST::ContinueStatement& continueStmt) const;
-    void analyse_exit(const AST::ExitStatement& exitStmt);
-    void analyse_statement(const AST::Statement& stmt);
+    void analyseVariableDefinition(const AST::VariableDefinition& definition);
+    void analyseAssignment(const AST::Assignment& assignment);
+    void analyseExpressionStatement(const AST::ExpressionStatement& exprStmt);
+    void analyseIfStatement(const AST::IfStatement& ifStmt);
+    void analyseWhileStatement(const AST::WhileStatement& whileStmt);
+    void analyseBreakStatement(const AST::BreakStatement& breakStmt) const;
+    void analyseContinueStatement(const AST::ContinueStatement& continueStmt) const;
+    void analyseExit(const AST::ExitStatement& exitStmt);
+    void analyseStatement(const AST::Statement& stmt);
 
-    // ── Function analysis ──────────────────────────────────────────────────────
-    static bool verify_statement_returns(const AST::Statement& stmt);
-    void analyse_external_function_declaration(const AST::ExternalFunctionDeclaration& funcDecl);
-    void analyse_function_definition(const AST::FunctionDefinition& funcDef);
+    static bool verifyStatementReturns(const AST::Statement& stmt);
+    void analyseExternalFunctionDeclaration(const AST::ExternalFunctionDeclaration& funcDecl);
+    void analyseFunctionDefinition(const AST::FunctionDefinition& funcDef);
 };

@@ -2,12 +2,12 @@
 
 #include <print>
 
-void DiagnosticsEngine::emit_error_context(const uint32_t byteOffsetStart,
-                                           const uint32_t byteOffsetEnd) const {
-    const std::string_view filePath = sourceManager_.get_source_file_path(fileID_);
+void DiagnosticsEngine::emitErrorContext(const uint32_t byteOffsetStart,
+                                         const uint32_t byteOffsetEnd) const {
+    const std::string_view filePath = sourceManager_.getSourceFilePath(fileID_);
 
-    const auto [lineStart, columnStart] = sourceManager_.get_line_column(fileID_, byteOffsetStart);
-    const auto [lineEnd, columnEnd] = sourceManager_.get_line_column(fileID_, byteOffsetEnd);
+    const auto [lineStart, columnStart] = sourceManager_.getLineColumn(fileID_, byteOffsetStart);
+    const auto [lineEnd, columnEnd] = sourceManager_.getLineColumn(fileID_, byteOffsetEnd);
 
     const size_t maxLineNumberWidth = std::to_string(lineEnd).size();
     constexpr std::string_view BLUE = "\x1b[1;94m";
@@ -21,7 +21,7 @@ void DiagnosticsEngine::emit_error_context(const uint32_t byteOffsetStart,
     std::println("{}{}", padding, separator);
 
     for (uint32_t line = lineStart; line <= lineEnd; ++line) {
-        const std::string_view lineContents = sourceManager_.get_line_contents(fileID_, line);
+        const std::string_view lineContents = sourceManager_.getLineContents(fileID_, line);
         std::println("{}{:>{}}{}{}{}", BLUE, line, maxLineNumberWidth, RESET, separator,
                      lineContents);
 
@@ -34,7 +34,7 @@ void DiagnosticsEngine::emit_error_context(const uint32_t byteOffsetStart,
     std::println("");
 }
 
-void DiagnosticsEngine::emit_errors() const {
+void DiagnosticsEngine::emitErrors() const {
     std::println();
     for (const Diagnostic& diagnostic : diagnostics_) {
         if (diagnostic.level_ != Diagnostic::Level::ERROR) continue;
@@ -44,6 +44,6 @@ void DiagnosticsEngine::emit_errors() const {
         constexpr std::string_view RESET = "\x1b[0m";
         std::println(std::cerr, "{}{}error:{} {}{}{}", BOLD, RED, RESET, BOLD, diagnostic.message_,
                      RESET);
-        emit_error_context(diagnostic.byteOffsetStart_, diagnostic.byteOffsetEnd_);
+        emitErrorContext(diagnostic.byteOffsetStart_, diagnostic.byteOffsetEnd_);
     }
 }

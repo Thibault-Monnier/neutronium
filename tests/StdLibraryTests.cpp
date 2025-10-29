@@ -10,7 +10,7 @@ TEST_F(NeutroniumTester, PrintCharacter) {
             print_c(10);  # Newline
         }
     )";
-    const auto result = run_with_output(code);
+    const auto result = runWithOutput(code);
     EXPECT_EQ(result.exit, 0);
     EXPECT_EQ(result.output, "A\n");
 }
@@ -32,7 +32,7 @@ TEST_F(NeutroniumTester, PrintNumber) {
             print_num_with_newline(-0);
         }
     )";
-    const auto result = run_with_output(code);
+    const auto result = runWithOutput(code);
     EXPECT_EQ(result.exit, 0);
     EXPECT_EQ(result.output, "12345\n-12345\n0\n");
 }
@@ -52,7 +52,7 @@ TEST_F(NeutroniumTester, ModFunction) {
             print_num(mod(-a, b));
         }
     )";
-    const auto result = run_with_output(code);
+    const auto result = runWithOutput(code);
     EXPECT_EQ(result.exit, 0);
     EXPECT_EQ(result.output, "1\n-1");
 }
@@ -72,7 +72,7 @@ TEST_F(NeutroniumTester, AbsFunction) {
             print_num(abs(-0));
         }
     )";
-    const auto result = run_with_output(code);
+    const auto result = runWithOutput(code);
     EXPECT_EQ(result.exit, 0);
     EXPECT_EQ(result.output, "42\n42\n0");
 }
@@ -98,7 +98,7 @@ TEST_F(NeutroniumTester, MinFunction) {
             print_num_and_newline(min(-10, -20)); # -20
         }
     )";
-    const auto result = run_with_output(code);
+    const auto result = runWithOutput(code);
     EXPECT_EQ(result.exit, 0);
     EXPECT_EQ(result.output, "10\n10\n10\n-10\n-10\n-20\n");
 }
@@ -124,7 +124,7 @@ TEST_F(NeutroniumTester, MaxFunction) {
             print_num_and_newline(max(-10, -20)); # -10
         }
     )";
-    const auto result = run_with_output(code);
+    const auto result = runWithOutput(code);
     EXPECT_EQ(result.exit, 0);
     EXPECT_EQ(result.output, "20\n20\n10\n20\n20\n-10\n");
 }
@@ -148,7 +148,7 @@ TEST_F(NeutroniumTester, PowFunction) {
             print_num_and_newline(pow(-2, 0)); # 1
         }
     )";
-    const auto result = run_with_output(code);
+    const auto result = runWithOutput(code);
     EXPECT_EQ(result.exit, 0);
     EXPECT_EQ(result.output, "8\n1\n-8\n1\n");
 }
