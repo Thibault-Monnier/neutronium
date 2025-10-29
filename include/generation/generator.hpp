@@ -28,8 +28,8 @@ class Generator {
     const TargetType targetType_;
 
     int labelsCount_ = 0;
-    int innerLoopStartLabel_ = 0;
-    int innerLoopEndLabel_ = 0;
+    std::string innerLoopStartLabel_;
+    std::string innerLoopEndLabel_;
 
     static constexpr int INITIAL_STACK_OFFSET = 0;
     int currentStackOffset_ = INITIAL_STACK_OFFSET;
@@ -60,6 +60,8 @@ class Generator {
     int get_variable_stack_offset(const std::string& name) const;
     static std::string_view size_directive(int bitSize);
     static std::string_view register_a_for_size(int bitSize);
+
+    static std::string label(int labelID);
 
     /**
      * @brief Cleans the rax register by zero-extending if necessary.

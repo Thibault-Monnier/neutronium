@@ -12,19 +12,22 @@
 using namespace CodeGen;
 
 std::stringstream Generator::generate() {
+    output_ << ".intel_syntax noprefix\n\n";
+
     // Declare external functions
     for (const auto& externalFuncDecl : program_.externalFunctions_) {
-        output_ << "extern " << function_name_with_prefix(externalFuncDecl->identifier_->name_)
+        output_ << ".extern " << function_name_with_prefix(externalFuncDecl->identifier_->name_)
                 << "\n";
     }
 
     if (!program_.externalFunctions_.empty()) output_ << "\n";
 
     // Write the header
-    output_ << "section .text\n";
+    output_ << ".text\n";
 
     if (targetType_ == TargetType::EXECUTABLE) {
-        output_ << "global _start\n";
+        output_ << ".globl _start\n";
+        output_ << ".type _start, @function\n";
         output_ << "_start:\n";
         output_ << "    push rbp\n";
         output_ << "    mov rbp, rsp\n\n";
@@ -130,6 +133,8 @@ std::string_view Generator::register_a_for_size(const int bitSize) {
     }
 }
 
+std::string Generator::label(const int labelID) { return std::format(".L{}", labelID); }
+
 void Generator::clean_rax(const int raxValueSizeBits) {
     switch (raxValueSizeBits) {
         case 8:
@@ -177,8 +182,8 @@ void Generator::write_to_variable_from_rax(const std::string& name) {
 
     switch (type.kind()) {
         case TypeKind::PRIMITIVE:
-            output_ << "    mov " << size_directive(size) << " [rbp - " << stackOffset << "], "
-                    << register_a_for_size(size) << "\n";
+            output_ << "    mov [rbp - " << stackOffset << "], " << register_a_for_size(size)
+                    << "\n";
             break;
         case TypeKind::ARRAY:
             output_ << "    mov rbx, rbp\n";
@@ -283,8 +288,7 @@ void Generator::generate_function_call(const AST::FunctionCall& funcCall,
         case TypeKind::PRIMITIVE:
             clean_rax(sizeBits);
             output_ << "    mov rbx, " << destinationAddress.value() << "\n";
-            output_ << "    mov " << size_directive(sizeBits) << " [rbx], "
-                    << register_a_for_size(sizeBits) << "\n";
+            output_ << "    mov [rbx], " << register_a_for_size(sizeBits) << "\n";
             break;
         case TypeKind::ARRAY:
             copy_array_contents("rax", destinationAddress.value(), sizeBits);
@@ -408,8 +412,7 @@ void Generator::generate_primitive_expression(
     if (destinationAddress.has_value()) {
         const int sizeBits = exprSizeBits(expr);
         output_ << "    mov rbx, " << destinationAddress.value() << "\n";
-        output_ << "    mov " << size_directive(sizeBits) << " [rbx], "
-                << register_a_for_size(sizeBits) << "\n";
+        output_ << "    mov [rbx], " << register_a_for_size(sizeBits) << "\n";
     }
 }
 
@@ -470,8 +473,8 @@ void Generator::copy_array_contents(const std::string_view sourceAddress,
 [[nodiscard]] int Generator::generate_condition(const AST::Expression& condition) {
     evaluate_expression_to_rax(condition);
     output_ << "    cmp rax, 0\n";
-    output_ << "    je ." << labelsCount_++ << "\n";
-    return labelsCount_ - 1;
+    output_ << "    je " << label(labelsCount_) << "\n";
+    return labelsCount_++;
 }
 
 void Generator::generate_variable_definition(const AST::VariableDefinition& varDecl) {
@@ -525,38 +528,38 @@ void Generator::generate_expression_stmt(const AST::ExpressionStatement& exprStm
 }
 
 void Generator::generate_if_stmt(const AST::IfStatement& ifStmt) {
-    const int elseLabel = generate_condition(*ifStmt.condition_);
-    const int endifLabel = ifStmt.elseClause_ ? labelsCount_++ : elseLabel;
+    const std::string elseLabel = label(generate_condition(*ifStmt.condition_));
+    const std::string endifLabel = ifStmt.elseClause_ ? label(labelsCount_++) : elseLabel;
 
     generate_stmt(*ifStmt.body_);
 
     if (ifStmt.elseClause_) {
-        output_ << "    jmp ." << endifLabel << "\n";
+        output_ << "    jmp " << endifLabel << "\n";
 
-        output_ << "." << elseLabel << ":\t; else\n";
+        output_ << elseLabel << ":\n";
         generate_stmt(*ifStmt.elseClause_);
     }
 
-    output_ << "." << endifLabel << ":\t; endif\n";
+    output_ << endifLabel << ":\n";
 }
 
 void Generator::generate_while_stmt(const AST::WhileStatement& whileStmt) {
-    const int whileLabel = labelsCount_++;
+    const std::string whileLabel = label(labelsCount_++);
     innerLoopStartLabel_ = whileLabel;
-    output_ << "." << whileLabel << ":\n";
+    output_ << whileLabel << ":\n";
 
-    const int endwhileLabel = generate_condition(*whileStmt.condition_);
+    const std::string endwhileLabel = label(generate_condition(*whileStmt.condition_));
     innerLoopEndLabel_ = endwhileLabel;
 
     generate_stmt(*whileStmt.body_);
-    output_ << "    jmp ." << whileLabel << "\n";
-    output_ << "." << endwhileLabel << ":\n";
+    output_ << "    jmp " << whileLabel << "\n";
+    output_ << endwhileLabel << ":\n";
 }
 
-void Generator::generate_break_statement() { output_ << "    jmp ." << innerLoopEndLabel_ << "\n"; }
+void Generator::generate_break_statement() { output_ << "    jmp " << innerLoopEndLabel_ << "\n"; }
 
 void Generator::generate_continue_statement() {
-    output_ << "    jmp ." << innerLoopStartLabel_ << "\n";
+    output_ << "    jmp " << innerLoopStartLabel_ << "\n";
 }
 
 void Generator::generate_return_statement(const AST::ReturnStatement& returnStmt) {
@@ -636,11 +639,13 @@ void Generator::generate_stmt(const AST::Statement& stmt) {
 void Generator::generate_function_definition(const AST::FunctionDefinition& funcDef) {
     output_ << "\n";
 
+    const std::string& funcName = function_name_with_prefix(funcDef.identifier_->name_);
     if (funcDef.isExported_) {
-        output_ << "global " << function_name_with_prefix(funcDef.identifier_->name_) << "\n";
+        output_ << ".globl " << funcName << "\n";
+        output_ << ".type " << funcName << ", @function\n";
     }
 
-    output_ << function_name_with_prefix(funcDef.identifier_->name_) << ":\n";
+    output_ << funcName << ":\n";
 
     currentStackOffset_ = INITIAL_STACK_OFFSET;
 
