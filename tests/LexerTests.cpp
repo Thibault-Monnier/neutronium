@@ -227,6 +227,31 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
     }
 }
 
+TEST(LexerErrorTest, NonASCIICharactersCauseExit) {
+    namespace fs = std::filesystem;
+    const std::vector<std::string> badInputs = {"let x = 42π;", "こんにちは", "let привет = 1;",
+                                                "x = y + λ;"};
+
+    for (const auto& input : badInputs) {
+        fs::path tmp = fs::temp_directory_path() / "test_input.nt";
+        std::ofstream(tmp) << input;
+
+        EXPECT_EXIT(
+            {
+                freopen("/dev/null", "w", stdout);
+
+                SourceManager sm;
+                const auto fileData = sm.loadNewSourceFile(tmp.string());
+                const auto fileID = fileData.first;
+                const auto fileContents = fileData.second;
+                DiagnosticsEngine de(sm, fileID);
+                Lexer lexer(fileContents, de);
+                auto _ = lexer.tokenize();
+            },
+            ::testing::ExitedWithCode(EXIT_FAILURE), "Non-ASCII character");
+    }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Extra Lexer cases
 // ─────────────────────────────────────────────────────────────
