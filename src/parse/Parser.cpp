@@ -7,7 +7,7 @@
 #include <set>
 #include <string>
 
-#include "../lexer/Token.hpp"
+#include "../lex/Token.hpp"
 
 std::unique_ptr<AST::Program> Parser::parse() {
     auto program = parse_program();

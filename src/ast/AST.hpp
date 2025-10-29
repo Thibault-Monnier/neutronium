@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "../lexer/TokenKind.hpp"
+#include "../lex/TokenKind.hpp"
 #include "../type/TypeID.hpp"
 #include "Operator.hpp"
 

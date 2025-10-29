@@ -55,14 +55,14 @@ endif ()
 include_directories("src")
 
 file(GLOB_RECURSE LIB_SOURCES "src/*.cpp")
-list(REMOVE_ITEM LIB_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
+list(REMOVE_ITEM LIB_SOURCES "${CMAKE_SOURCE_DIR}/src/driver/main.cpp")
 file(GLOB_RECURSE HEADER_FILES "src/*.hpp" "src/*.h")
 
 add_compile_definitions(PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}")
 
 add_library(neutronium_lib ${LIB_SOURCES} ${HEADER_FILES})
 
-add_executable(neutronium src/main.cpp)
+add_executable(neutronium src/driver/main.cpp)
 
 # === cxxopts setup ===
 FetchContent_Declare(

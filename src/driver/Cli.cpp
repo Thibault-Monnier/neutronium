@@ -4,7 +4,7 @@
 #include <format>
 #include <iostream>
 
-#include "utils/Log.hpp"
+#include "../utils/Log.hpp"
 
 CompilerOptions parse_cli(int argc, char** argv) {
     cxxopts::Options options(argv[0], "Neutronium language compiler");

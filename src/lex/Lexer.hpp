@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "../DiagnosticsEngine.hpp"
+#include "../diagnostics/DiagnosticsEngine.hpp"
 #include "Token.hpp"
 #include "TokenKind.hpp"
 

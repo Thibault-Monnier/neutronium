@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "SourceManager.hpp"
+#include "../source/SourceManager.hpp"
 
 struct Diagnostic {
     enum class Level : uint8_t { ERROR };

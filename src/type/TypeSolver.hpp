@@ -4,7 +4,7 @@
 #include <list>
 #include <vector>
 
-#include "../DiagnosticsEngine.hpp"
+#include "../diagnostics/DiagnosticsEngine.hpp"
 #include "Constraint.hpp"
 
 class TypeManager;

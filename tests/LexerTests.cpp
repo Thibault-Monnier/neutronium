@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <lexer/Lexer.hpp>
-#include <lexer/TokenKind.hpp>
 
-#include "DiagnosticsEngine.hpp"
-#include "SourceManager.hpp"
+#include "diagnostics/DiagnosticsEngine.hpp"
+#include "lex/Lexer.hpp"
+#include "lex/TokenKind.hpp"
+#include "source/SourceManager.hpp"
 
 struct LexCase {
     std::string src;

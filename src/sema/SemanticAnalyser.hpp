@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "../Cli.hpp"
-#include "../DiagnosticsEngine.hpp"
 #include "../ast/AST.hpp"
+#include "../diagnostics/DiagnosticsEngine.hpp"
+#include "../driver/Cli.hpp"
 #include "../type/Type.hpp"
 #include "SymbolTable.hpp"
 

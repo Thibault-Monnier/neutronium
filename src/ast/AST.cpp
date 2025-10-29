@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "../lexer/TokenKind.hpp"
+#include "../lex/TokenKind.hpp"
 
 namespace AST {
 
