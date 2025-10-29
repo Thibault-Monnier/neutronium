@@ -135,6 +135,17 @@ std::vector<Token> Lexer::tokenize() {
         buffer_.clear();
         char c = advance();
 
+        if (static_cast<unsigned char>(c) >= 128) {
+            diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
+                                           currentIndex_ - 1);
+
+            // Skip remaining UTF-8 continuation bytes (10xxxxxx)
+            while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
+                advance();
+
+            continue;
+        }
+
         if (std::isspace(c)) continue;
 
         if (c == '#') {
