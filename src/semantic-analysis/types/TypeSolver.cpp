@@ -83,15 +83,6 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
         exit(EXIT_FAILURE);
     }
 
-    // FIXME: This is slow because it iterates over all nodes for each constraint. It should
-    //  probably be done less often.
-    for (TypeID node = 0; node < nodes_.size(); ++node) {
-        const TypeID root = findRoot(node);
-        if (root == node) continue;
-
-        typeManager_.linkTypes(root, node);
-    }
-
     return true;
 }
 
@@ -163,42 +154,52 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
 void TypeSolver::solve() {
     prepareUnionFind();
 
+    std::vector<std::unique_ptr<Constraint>> nextConstraints;
+
     while (!pendingConstraints_.empty()) {
-        for (auto it = pendingConstraints_.begin(); it != pendingConstraints_.end();) {
-            const Constraint* constraint = it->get();
+        for (size_t i = 0; i < pendingConstraints_.size(); ++i) {
+            const Constraint& constraint = *pendingConstraints_[i];
 
             bool solved = false;
-            switch (constraint->kind()) {
+            switch (constraint.kind()) {
                 case Constraint::Kind::EQUALITY: {
-                    auto& equalityConstraint = static_cast<const EqualityConstraint&>(*constraint);
+                    auto& equalityConstraint = static_cast<const EqualityConstraint&>(constraint);
                     solved = solveEqualityConstraint(equalityConstraint);
                     break;
                 }
                 case Constraint::Kind::SUBSCRIPT: {
                     const auto& subscriptConstraint =
-                        static_cast<const SubscriptConstraint&>(*constraint);
+                        static_cast<const SubscriptConstraint&>(constraint);
                     solved = solveSubscriptConstraint(subscriptConstraint);
                     break;
                 }
                 case Constraint::Kind::HAS_TRAIT: {
                     const auto& hasTraitConstraint =
-                        static_cast<const HasTraitConstraint&>(*constraint);
+                        static_cast<const HasTraitConstraint&>(constraint);
                     solved = solveHasTraitConstraint(hasTraitConstraint);
                     break;
                 }
                 case Constraint::Kind::STORABLE: {
                     const auto& storableConstraint =
-                        static_cast<const StorableConstraint&>(*constraint);
+                        static_cast<const StorableConstraint&>(constraint);
                     solved = solveStorableConstraint(storableConstraint);
                     break;
                 }
             }
 
-            if (solved) {
-                it = pendingConstraints_.erase(it);
-            } else {
-                ++it;
+            if (!solved) {
+                nextConstraints.push_back(std::move(pendingConstraints_[i]));
             }
         }
+
+        for (TypeID node = 0; node < nodes_.size(); ++node) {
+            const TypeID root = findRoot(node);
+            if (root == node) continue;
+
+            typeManager_.linkTypes(root, node);
+        }
+
+        pendingConstraints_.swap(nextConstraints);
+        nextConstraints.clear();
     }
 }

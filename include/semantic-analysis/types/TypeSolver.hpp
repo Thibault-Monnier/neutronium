@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <list>
 #include <vector>
 
@@ -49,7 +50,7 @@ class TypeSolver {
     void solve();
 
    private:
-    std::list<std::unique_ptr<Constraint>> pendingConstraints_;
+    std::vector<std::unique_ptr<Constraint>> pendingConstraints_;
 
     TypeManager& typeManager_;
     DiagnosticsEngine& diagnosticsEngine_;
