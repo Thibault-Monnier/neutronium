@@ -33,7 +33,7 @@ To install the required dependencies, run:
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake ninja-build nasm
+sudo apt install build-essential cmake ninja-build llvm
 ```
 
 Make sure your `cmake` version is at least 3.28.
