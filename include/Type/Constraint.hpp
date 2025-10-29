@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Sema/Type/TypeID.hpp>
+#include <Type/TypeID.hpp>
 
-#include "Parser/AST.hpp"
+#include "AST/AST.hpp"
 #include "Trait.hpp"
 
 /**

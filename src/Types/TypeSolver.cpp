@@ -1,6 +1,7 @@
-#include "Sema/Type/TypeSolver.hpp"
+#include "Type/TypeSolver.hpp"
 
-#include "Sema/Type/TypeManager.hpp"
+#include "AST/AST.hpp"
+#include "Type/TypeManager.hpp"
 
 TypeID TypeSolver::findRoot(TypeID x) {
     // Find the root of the set containing x

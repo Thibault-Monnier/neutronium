@@ -1,5 +1,5 @@
 #include "Common/Tester.hpp"
-#include "Sema/Type/Trait.hpp"
+#include "Type/Trait.hpp"
 
 TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
     const std::string code = R"(

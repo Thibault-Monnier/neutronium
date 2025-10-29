@@ -1,4 +1,4 @@
-#include "Sema/Type/PrimitiveTypeFamily.hpp"
+#include "Type/PrimitiveTypeFamily.hpp"
 
 const PrimitiveTypeFamily* PrimitiveTypeFamily::familyForType(const Primitive::Kind t) {
     switch (t) {

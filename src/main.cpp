@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
+#include "../include/AST/Debug.hpp"
 #include "../include/CodeGen/Generator.hpp"
 #include "../include/Lexer/Lexer.hpp"
 #include "../include/Lexer/Token.hpp"
 #include "../include/Lexer/TokenKind.hpp"
-#include "../include/Parser/Debug.hpp"
 #include "../include/Parser/Parser.hpp"
 #include "../include/Utils/Log.hpp"
 #include "Cli.hpp"
@@ -96,7 +96,7 @@ void compile_file(const CompilerOptions& opts, SourceManager& sourceManager, boo
         SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeManager).analyse();
     });
 
-    const auto assembly = timed("Code CodeGen", verbose, [&] {
+    const auto assembly = timed("Code Generator", verbose, [&] {
         return CodeGen::Generator(*ast, typeManager, opts.targetType_).generate();
     });
     if (opts.logAssembly_) std::cout << assembly.str();

@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "Sema/Type/TypeID.hpp"
+#include "Type/TypeID.hpp"
 
 namespace CodeGen {
 

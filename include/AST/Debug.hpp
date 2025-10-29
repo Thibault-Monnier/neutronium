@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Parser/AST.hpp"
-#include "Sema/Type/TypeManager.hpp"
+#include "AST.hpp"
+#include "Type/TypeManager.hpp"
 
 namespace AST {
 

@@ -1,7 +1,8 @@
-#include "Parser/Debug.hpp"
+#include "AST/Debug.hpp"
 
 #include <iostream>
 #include <magic_enum/magic_enum.hpp>
+#include <unordered_map>
 #include <utility>
 
 namespace AST {

@@ -6,10 +6,10 @@
 #include <string>
 #include <vector>
 
+#include "../AST/AST.hpp"
 #include "DiagnosticsEngine.hpp"
 #include "Lexer/Token.hpp"
-#include "Parser/AST.hpp"
-#include "Sema/Type/TypeManager.hpp"
+#include "Type/TypeManager.hpp"
 
 struct ParsedFunctionSignature {
     std::unique_ptr<AST::Identifier> identifier_;

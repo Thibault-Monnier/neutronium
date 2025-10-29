@@ -1,6 +1,8 @@
-#include "Sema/Type/Trait.hpp"
+#include "Type/Trait.hpp"
 
 #include <magic_enum/magic_enum.hpp>
+
+#include "AST/Operator.hpp"
 
 [[nodiscard]] std::optional<Trait> trait_from_operator(const AST::Operator op) {
     switch (op) {

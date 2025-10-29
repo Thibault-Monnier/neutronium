@@ -6,7 +6,7 @@
 
 #include "Lexer/TokenKind.hpp"
 #include "Operator.hpp"
-#include "Sema/Type/TypeID.hpp"
+#include "Type/TypeID.hpp"
 
 namespace AST {
 

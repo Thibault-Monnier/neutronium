@@ -1,8 +1,8 @@
-#include "Sema/Type/Type.hpp"
+#include "Type/Type.hpp"
 
 #include <magic_enum/magic_enum.hpp>
 
-#include "Sema/Type/TypeManager.hpp"
+#include "Type/TypeManager.hpp"
 
 const Type& Type::integerFamilyType() {
     static const Type instance(Primitive::Kind::INT, true);

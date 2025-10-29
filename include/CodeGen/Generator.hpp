@@ -4,10 +4,10 @@
 #include <string>
 #include <unordered_map>
 
+#include "AST/AST.hpp"
 #include "Cli.hpp"
-#include "Parser/AST.hpp"
-#include "Sema/Type/TypeManager.hpp"
 #include "SymbolTable.hpp"
+#include "Type/TypeManager.hpp"
 
 namespace CodeGen {
 

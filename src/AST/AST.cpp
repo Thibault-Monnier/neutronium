@@ -1,4 +1,4 @@
-#include "Parser/AST.hpp"
+#include "AST/AST.hpp"
 
 #include <unordered_map>
 

@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
+#include "../AST/AST.hpp"
 #include "Cli.hpp"
 #include "DiagnosticsEngine.hpp"
-#include "Parser/AST.hpp"
 #include "SymbolTable.hpp"
 #include "Type/Type.hpp"
 

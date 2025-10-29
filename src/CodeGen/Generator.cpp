@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "Parser/AST.hpp"
+#include "AST/AST.hpp"
 
 using namespace CodeGen;
 

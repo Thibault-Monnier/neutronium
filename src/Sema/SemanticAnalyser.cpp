@@ -7,8 +7,9 @@
 #include <string>
 #include <utility>
 
-#include "Parser/Debug.hpp"
-#include "Sema/Type/TypeSolver.hpp"
+#include "AST/Debug.hpp"
+#include "Type/TypeManager.hpp"
+#include "Type/TypeSolver.hpp"
 
 void SemanticAnalyser::analyse() {
     for (const auto& externalFuncDecl : ast_->externalFunctions_) {
