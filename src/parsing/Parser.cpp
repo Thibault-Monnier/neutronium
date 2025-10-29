@@ -1,4 +1,4 @@
-#include "parsing/parser.hpp"
+#include "parsing/Parser.hpp"
 
 #include <format>
 #include <functional>
@@ -7,7 +7,7 @@
 #include <set>
 #include <string>
 
-#include "lexing/token.hpp"
+#include "lexing/Token.hpp"
 
 std::unique_ptr<AST::Program> Parser::parse() {
     auto program = parse_program();
@@ -137,7 +137,9 @@ std::unique_ptr<AST::ArrayAccess> Parser::parse_array_access(
     auto index = parse_expression();
     const Token& rBracket = expect(TokenKind::RIGHT_BRACKET);
 
-    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index), base->source_start_index(), rBracket.byte_offset_end(), generate_any_type());
+    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index),
+                                              base->source_start_index(),
+                                              rBracket.byte_offset_end(), generate_any_type());
 }
 
 std::unique_ptr<AST::Expression> Parser::parse_primary_expression() {
@@ -222,8 +224,8 @@ std::unique_ptr<AST::Expression> Parser::parse_binary_expression(
         if (allowedOps.contains(op)) {
             expect(token.kind());
             auto right = parseOperand();
-            left = std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right),
-                                                           left->source_start_index(),
+            left = std::make_unique<AST::BinaryExpression>(
+                std::move(left), op, std::move(right), left->source_start_index(),
                 right->source_end_index(), generate_any_type());
 
             if (!allowMultiple) {

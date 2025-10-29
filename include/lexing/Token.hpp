@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "token_kind.hpp"
+#include "TokenKind.hpp"
 
 class Token {
    public:

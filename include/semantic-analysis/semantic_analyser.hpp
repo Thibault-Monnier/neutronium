@@ -4,10 +4,10 @@
 #include <string>
 #include <vector>
 
+#include "DiagnosticsEngine.hpp"
 #include "cli.hpp"
-#include "diagnostics_engine.hpp"
-#include "parsing/ast.hpp"
-#include "semantic-analysis/symbol_table.hpp"
+#include "parsing/AST.hpp"
+#include "semantic-analysis/SymbolTable.hpp"
 #include "types/Type.hpp"
 #include "types/TypeManager.hpp"
 

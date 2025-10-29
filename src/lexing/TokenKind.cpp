@@ -1,4 +1,4 @@
-#include "lexing/token_kind.hpp"
+#include "lexing/TokenKind.hpp"
 
 #include <magic_enum/magic_enum.hpp>
 #include <string>

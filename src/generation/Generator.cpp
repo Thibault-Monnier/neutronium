@@ -1,4 +1,4 @@
-#include "generation/generator.hpp"
+#include "generation/Generator.hpp"
 
 #include <cassert>
 #include <ranges>
@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "parsing/ast.hpp"
+#include "parsing/AST.hpp"
 
 using namespace CodeGen;
 

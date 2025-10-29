@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "diagnostics_engine.hpp"
-#include "lexing/token.hpp"
-#include "parsing/ast.hpp"
+#include "DiagnosticsEngine.hpp"
+#include "lexing/Token.hpp"
+#include "parsing/AST.hpp"
 #include "semantic-analysis/types/TypeManager.hpp"
 
 struct ParsedFunctionSignature {

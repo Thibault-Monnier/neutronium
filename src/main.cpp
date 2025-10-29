@@ -8,16 +8,16 @@
 #include <string>
 #include <vector>
 
+#include "DiagnosticsEngine.hpp"
+#include "SourceManager.hpp"
 #include "cli.hpp"
-#include "diagnostics_engine.hpp"
-#include "generation/generator.hpp"
-#include "lexing/lexer.hpp"
-#include "lexing/token.hpp"
-#include "lexing/token_kind.hpp"
+#include "generation/Generator.hpp"
+#include "lexing/Lexer.hpp"
+#include "lexing/Token.hpp"
+#include "lexing/TokenKind.hpp"
+#include "parsing/Parser.hpp"
 #include "parsing/debug.hpp"
-#include "parsing/parser.hpp"
 #include "semantic-analysis/semantic_analyser.hpp"
-#include "source_manager.hpp"
 #include "utils/log.hpp"
 
 using Clock = std::chrono::high_resolution_clock;

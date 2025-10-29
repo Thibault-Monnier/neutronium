@@ -6,7 +6,7 @@
 
 #include "SymbolTable.hpp"
 #include "cli.hpp"
-#include "parsing/ast.hpp"
+#include "parsing/AST.hpp"
 #include "semantic-analysis/types/TypeManager.hpp"
 
 namespace CodeGen {

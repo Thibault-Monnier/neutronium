@@ -1,4 +1,4 @@
-#include "diagnostics_engine.hpp"
+#include "DiagnosticsEngine.hpp"
 
 #include <print>
 

@@ -3,7 +3,7 @@
 #include <semantic-analysis/types/TypeID.hpp>
 
 #include "Trait.hpp"
-#include "parsing/ast.hpp"
+#include "parsing/AST.hpp"
 
 /**
  * @brief Represents a type constraint for the TypeSolver.

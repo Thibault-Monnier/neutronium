@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "diagnostics_engine.hpp"
-#include "lexing/token.hpp"
+#include "DiagnosticsEngine.hpp"
+#include "lexing/Token.hpp"
 
 class Lexer {
    public:

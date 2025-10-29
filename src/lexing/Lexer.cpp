@@ -1,11 +1,11 @@
-#include "lexing/lexer.hpp"
+#include "lexing/Lexer.hpp"
 
 #include <format>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include "lexing/token.hpp"
+#include "lexing/Token.hpp"
 
 bool Lexer::is_at_end() const { return currentIndex_ >= sourceCode_.length(); }
 

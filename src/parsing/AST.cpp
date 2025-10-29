@@ -1,8 +1,8 @@
-#include "parsing/ast.hpp"
+#include "parsing/AST.hpp"
 
 #include <unordered_map>
 
-#include "lexing/token_kind.hpp"
+#include "lexing/TokenKind.hpp"
 
 namespace AST {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "parsing/ast.hpp"
+#include "parsing/AST.hpp"
 #include "semantic-analysis/types/TypeManager.hpp"
 
 namespace AST {

@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include "parsing/operator.hpp"
+#include "parsing/Operator.hpp"
 
 enum class Trait : uint8_t {
     // Arithmetic traits

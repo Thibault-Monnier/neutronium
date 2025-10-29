@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <lexing/lexer.hpp>
-#include <lexing/token_kind.hpp>
+#include <lexing/Lexer.hpp>
+#include <lexing/TokenKind.hpp>
 
 struct LexCase {
     std::string src;

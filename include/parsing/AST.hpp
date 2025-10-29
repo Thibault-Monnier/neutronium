@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "lexing/token_kind.hpp"
-#include "operator.hpp"
+#include "Operator.hpp"
+#include "lexing/TokenKind.hpp"
 #include "semantic-analysis/types/TypeID.hpp"
 
 namespace AST {
