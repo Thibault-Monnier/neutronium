@@ -1,10 +1,10 @@
-#include "../include/Cli.hpp"
+#include "Cli.hpp"
 
 #include <cxxopts.hpp>
 #include <format>
 #include <iostream>
 
-#include "../include/Utils/Log.hpp"
+#include "utils/Log.hpp"
 
 CompilerOptions parse_cli(int argc, char** argv) {
     cxxopts::Options options(argv[0], "Neutronium language compiler");

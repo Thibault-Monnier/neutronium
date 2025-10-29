@@ -1,4 +1,4 @@
-#include "Common/Tester.hpp"
+#include "common/Tester.hpp"
 
 TEST_F(NeutroniumTester, PrimeNumberCheck) {
     const std::string codeTemplate = R"(

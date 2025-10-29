@@ -52,11 +52,11 @@ if (COVERAGE)
     add_link_options(--coverage)
 endif ()
 
-include_directories(include)
+include_directories("src")
 
 file(GLOB_RECURSE LIB_SOURCES "src/*.cpp")
 list(REMOVE_ITEM LIB_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
-file(GLOB_RECURSE HEADER_FILES "include/*.hpp" "include/*.h")
+file(GLOB_RECURSE HEADER_FILES "src/*.hpp" "src/*.h")
 
 add_compile_definitions(PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}")
 
