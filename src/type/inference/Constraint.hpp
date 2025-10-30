@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Trait.hpp"
-#include "TypeID.hpp"
+#include "../Trait.hpp"
+#include "../TypeID.hpp"
 #include "ast/AST.hpp"
 
 /**

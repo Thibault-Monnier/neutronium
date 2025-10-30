@@ -10,7 +10,7 @@
 #include "SymbolTable.hpp"
 #include "ast/Debug.hpp"
 #include "type/TypeManager.hpp"
-#include "type/TypeSolver.hpp"
+#include "type/inference/TypeSolver.hpp"
 
 void SemanticAnalyser::equalityConstraint(TypeID a, TypeID b, const AST::Node& node) const {
     typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(a, b, node);
