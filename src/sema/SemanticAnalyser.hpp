@@ -36,7 +36,8 @@ class SemanticAnalyser {
     std::string currentFunctionName_;
     TypeID currentFunctionReturnTypeID_ = 0;
 
-    [[noreturn]] void abort(const std::string& errorMessage, const AST::Node& node) const;
+    void error(const std::string& errorMessage, const AST::Node& node) const;
+    void fatalError(const std::string& errorMessage, const AST::Node& node) const;
 
     void enterScope();
     void exitScope();

@@ -32,30 +32,39 @@ void SemanticAnalyser::analyse() {
     const auto mainIt = functionsTable_.find("main");
     if (targetType_ == TargetType::EXECUTABLE) {
         if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
-            abort("No `main` function found in executable target", *ast_);
-        }
-        assert(mainDef && "mainDef should not be null here");
+            error("No `main` function found in executable target", *ast_);
+        } else {
+            assert(mainDef && "mainDef should not be null here");
 
-        if (mainIt->second.parameters_.size() != 0) {
-            abort("`main` function must not take any parameters", *mainDef);
-        }
+            if (mainIt->second.parameters_.size() != 0) {
+                error("`main` function must not take any parameters", *mainDef);
+            }
 
-        const TypeID voidTypeID = typeManager_.createType(Primitive::Kind::VOID);
-        typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(mainIt->second.typeID_,
-                                                                       voidTypeID, *mainDef);
+            const TypeID voidTypeID = typeManager_.createType(Primitive::Kind::VOID);
+            typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(mainIt->second.typeID_,
+                                                                           voidTypeID, *mainDef);
+        }
     } else {
         if (mainIt != functionsTable_.end()) {
             assert(mainDef && "mainDef should not be null here");
-            abort("`main` function is not allowed in a library target", *mainDef);
+            error("`main` function is not allowed in a library target", *mainDef);
         }
+    }
+
+    if (diagnosticsEngine_.hasErrors()) {
+        diagnosticsEngine_.emitErrors();
+        exit(EXIT_FAILURE);
     }
 
     typeManager_.getTypeSolver().solve();
 }
 
-void SemanticAnalyser::abort(const std::string& errorMessage, const AST::Node& node) const {
+void SemanticAnalyser::error(const std::string& errorMessage, const AST::Node& node) const {
     diagnosticsEngine_.reportError(errorMessage, node.sourceStartIndex(), node.sourceEndIndex());
+}
 
+void SemanticAnalyser::fatalError(const std::string& errorMessage, const AST::Node& node) const {
+    diagnosticsEngine_.reportError(errorMessage, node.sourceStartIndex(), node.sourceEndIndex());
     diagnosticsEngine_.emitErrors();
     exit(EXIT_FAILURE);
 }
@@ -84,7 +93,7 @@ SymbolInfo& SemanticAnalyser::declareSymbol(const AST::Node* declarationNode,
                                             const bool isScoped,
                                             std::vector<SymbolInfo> parameters) {
     if (getSymbolInfo(name).has_value()) {
-        abort(std::format("Redeclaration of symbol: `{}`", name), *declarationNode);
+        fatalError(std::format("Redeclaration of symbol: `{}`", name), *declarationNode);
     }
 
     SymbolInfo info{.name_ = name,
@@ -129,23 +138,23 @@ TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) 
 
     const auto info = getSymbolInfo(name);
     if (!info.has_value()) {
-        abort(std::format("Attempted to call undeclared function: `{}`", name), funcCall);
+        fatalError(std::format("Attempted to call undeclared function: `{}`", name), funcCall);
     }
 
     if (info.value()->kind_ != SymbolKind::FUNCTION) {
-        abort(std::format("Attempted to call a non-function: `{}`", name), funcCall);
+        fatalError(std::format("Attempted to call a non-function: `{}`", name), funcCall);
     }
 
     const auto& params = info.value()->parameters_;
 
     if (funcCall.arguments_.size() != params.size()) {
-        abort(std::format("Function `{}` called with incorrect number of arguments: expected {}, "
+        error(std::format("Function `{}` called with incorrect number of arguments: expected {}, "
                           "got {}",
                           name, params.size(), funcCall.arguments_.size()),
               funcCall);
     }
 
-    for (std::size_t i = 0; i < funcCall.arguments_.size(); i++) {
+    for (std::size_t i = 0; i < funcCall.arguments_.size() && i < params.size(); i++) {
         const TypeID argType = getExpressionType(*funcCall.arguments_[i]);
         const TypeID paramType = params[i].typeID_;
 
@@ -210,7 +219,9 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
         case AST::NodeKind::ARRAY_LITERAL: {
             const auto& arrayLiteral = static_cast<const AST::ArrayLiteral&>(expr);
             if (arrayLiteral.elements_.empty()) {
-                abort("Array literal cannot be empty", arrayLiteral);
+                error("Array literal cannot be empty", arrayLiteral);
+                verifier = typeManager_.createType(Type::anyFamilyType());
+                break;
             }
 
             const TypeID elementTypeID = getExpressionType(*arrayLiteral.elements_[0]);
@@ -225,10 +236,14 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
             const auto& identifier = static_cast<const AST::Identifier&>(expr);
             const auto info = getSymbolInfo(identifier.name_);
             if (!info.has_value()) {
-                abort(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_),
+                error(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_),
                       identifier);
+                verifier = typeManager_.createType(Type::anyFamilyType());
+                break;
             } else if (info.value()->kind_ != SymbolKind::VARIABLE) {
-                abort(std::format("`{}` is not a variable", identifier.name_), identifier);
+                error(std::format("`{}` is not a variable", identifier.name_), identifier);
+                verifier = typeManager_.createType(Type::anyFamilyType());
+                break;
             }
 
             verifier = info.value()->typeID_;
@@ -300,12 +315,12 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
                     const std::string& varName = static_cast<const AST::Identifier&>(expr).name_;
                     const auto& declarationInfo = getSymbolInfo(varName);
                     if (!declarationInfo.has_value()) {
-                        abort(std::format("Assignment to undeclared variable: `{}`", varName),
+                        error(std::format("Assignment to undeclared variable: `{}`", varName),
                               expr);
                     } else if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
-                        abort(std::format("Assignment to non-variable: `{}`", varName), expr);
+                        error(std::format("Assignment to non-variable: `{}`", varName), expr);
                     } else if (!declarationInfo.value()->isMutable_) {
-                        abort(std::format("Assignment to immutable: `{}`", varName), expr);
+                        error(std::format("Assignment to immutable: `{}`", varName), expr);
                     }
                     break;
                 }
@@ -315,9 +330,7 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
                     break;
                 }
                 default:
-                    abort("Left-hand side of assignment must be a place expression, got " +
-                              AST::node_kind_to_string(expr.kind_),
-                          expr);
+                    error("Left-hand side of assignment must be a place expression ", expr);
             }
         };
 
@@ -355,13 +368,13 @@ void SemanticAnalyser::analyseWhileStatement(const AST::WhileStatement& whileStm
 
 void SemanticAnalyser::analyseBreakStatement(const AST::BreakStatement& breakStmt) const {
     if (loopDepth_ == 0) {
-        abort("`break` statement is not allowed outside of a loop", breakStmt);
+        error("`break` statement is not allowed outside of a loop", breakStmt);
     }
 }
 
 void SemanticAnalyser::analyseContinueStatement(const AST::ContinueStatement& continueStmt) const {
     if (loopDepth_ == 0) {
-        abort("`continue` statement is not allowed outside of a loop", continueStmt);
+        error("`continue` statement is not allowed outside of a loop", continueStmt);
     }
 }
 
@@ -475,7 +488,7 @@ void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& 
 
     const bool allPathsReturn = verifyStatementReturns(*funcDef.body_);
     if (!allPathsReturn && !returnType.isVoid()) {
-        abort(
+        error(
             std::format("Function `{}` must return a value of type {}, but does not always return",
                         currentFunctionName_, returnType.toString(typeManager_)),
             funcDef);
