@@ -75,7 +75,7 @@ class Generator {
     void freeStackSpace(int sizeBits);
     /** @brief Gets a persistent memory operand string representing the current top of the stack.
      *
-     * @returns A string providing persistent access to the current
+     * @return A string providing persistent access to the current
      * top of the stack, in the form of "[rbp - offset]". This will not be affected by later rsp
      * changes, so it is safe to use across multiple pushes/allocations.
      */
