@@ -1,18 +1,15 @@
 #include "Parser.hpp"
 
+#include <algorithm>
 #include <format>
 #include <functional>
 #include <memory>
 #include <print>
-#include <set>
 #include <string>
 
 #include "lex/Token.hpp"
 
-std::unique_ptr<AST::Program> Parser::parse() {
-    auto program = parseProgram();
-    return program;
-}
+std::unique_ptr<AST::Program> Parser::parse() { return parseProgram(); }
 
 void Parser::abort(const std::string& errorMessage) const {
     const Token& token = peek();
@@ -58,8 +55,7 @@ std::vector<std::unique_ptr<T>> Parser::parseCommaSeparatedList(
     std::vector<std::unique_ptr<T>> elements;
     while (peek().kind() != endDelimiter) {
         elements.push_back(parseElement());
-        const bool isComma = advanceIf(TokenKind::COMMA);
-        if (!isComma) break;
+        if (!advanceIf(TokenKind::COMMA)) break;
     }
     return elements;
 }
@@ -143,7 +139,7 @@ std::unique_ptr<AST::FunctionCall> Parser::parseFunctionCall() {
                                                generateAnyType());
 }
 
-std::unique_ptr<AST::ArrayAccess> Parser::parseArrayAccess(std::unique_ptr<AST::Expression>& base) {
+std::unique_ptr<AST::ArrayAccess> Parser::parseArrayAccess(std::unique_ptr<AST::Expression> base) {
     expect(TokenKind::LEFT_BRACKET);
     auto index = parseExpression();
     const Token& rBracket = expect(TokenKind::RIGHT_BRACKET);
@@ -165,7 +161,8 @@ std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
 
         case TokenKind::TRUE:
         case TokenKind::FALSE: {
-            const bool value = advance().kind() == TokenKind::TRUE;
+            const bool value = token.kind() == TokenKind::TRUE;
+            advance();
             return std::make_unique<AST::BooleanLiteral>(value, token.byteOffsetStart(),
                                                          token.byteOffsetEnd(), generateAnyType());
         }
@@ -183,11 +180,12 @@ std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
             return inner;
         }
 
-        default:
+        default: {
             const std::string errorMessage =
                 std::format("Invalid token at beginning of primary expression -> got {}",
                             tokenKindToString(token.kind()));
             abort(errorMessage);
+        }
     }
 }
 
@@ -197,7 +195,7 @@ std::unique_ptr<AST::Expression> Parser::parsePostfixExpression() {
     while (true) {
         const Token& token = peek();
         if (token.kind() == TokenKind::LEFT_BRACKET) {
-            postfixExpr = parseArrayAccess(postfixExpr);
+            postfixExpr = parseArrayAccess(std::move(postfixExpr));
         } else {
             break;
         }
@@ -224,11 +222,11 @@ std::unique_ptr<AST::Expression> Parser::parseUnaryExpression() {
 
 std::unique_ptr<AST::Expression> Parser::parseBinaryExpression(
     const std::function<std::unique_ptr<AST::Expression>()>& parseOperand,
-    const std::set<AST::Operator>& allowedOps, const bool allowMultiple) {
+    const std::initializer_list<AST::Operator> allowedOps, const bool allowMultiple) {
     auto left = parseOperand();
     while (true) {
         const AST::Operator op = AST::tokenKindToOperator(peek().kind());
-        if (!allowedOps.contains(op)) break;
+        if (std::ranges::find(allowedOps, op) == allowedOps.end()) break;
 
         advance();
         auto right = parseOperand();
@@ -243,20 +241,20 @@ std::unique_ptr<AST::Expression> Parser::parseBinaryExpression(
 
 std::unique_ptr<AST::Expression> Parser::parseMultiplicativeExpression() {
     return parseBinaryExpression([this]() { return parseUnaryExpression(); },
-                                 std::set{AST::Operator::MULTIPLY, AST::Operator::DIVIDE}, true);
+                                 {AST::Operator::MULTIPLY, AST::Operator::DIVIDE}, true);
 }
 
 std::unique_ptr<AST::Expression> Parser::parseAdditiveExpression() {
     return parseBinaryExpression([this]() { return parseMultiplicativeExpression(); },
-                                 std::set{AST::Operator::ADD, AST::Operator::SUBTRACT}, true);
+                                 {AST::Operator::ADD, AST::Operator::SUBTRACT}, true);
 }
 
 std::unique_ptr<AST::Expression> Parser::parseComparisonExpression() {
     return parseBinaryExpression(
         [this]() { return parseAdditiveExpression(); },
-        std::set{AST::Operator::EQUALS, AST::Operator::NOT_EQUALS, AST::Operator::LESS_THAN,
-                 AST::Operator::GREATER_THAN, AST::Operator::LESS_THAN_OR_EQUAL,
-                 AST::Operator::GREATER_THAN_OR_EQUAL},
+        {AST::Operator::EQUALS, AST::Operator::NOT_EQUALS, AST::Operator::LESS_THAN,
+         AST::Operator::GREATER_THAN, AST::Operator::LESS_THAN_OR_EQUAL,
+         AST::Operator::GREATER_THAN_OR_EQUAL},
         false);
 }
 

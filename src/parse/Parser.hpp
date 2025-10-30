@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -62,13 +61,13 @@ class Parser {
 
     std::unique_ptr<AST::Identifier> parseIdentifier();
     std::unique_ptr<AST::FunctionCall> parseFunctionCall();
-    std::unique_ptr<AST::ArrayAccess> parseArrayAccess(std::unique_ptr<AST::Expression>& base);
+    std::unique_ptr<AST::ArrayAccess> parseArrayAccess(std::unique_ptr<AST::Expression> base);
     std::unique_ptr<AST::Expression> parsePrimaryExpression();
     std::unique_ptr<AST::Expression> parsePostfixExpression();
     std::unique_ptr<AST::Expression> parseUnaryExpression();
     std::unique_ptr<AST::Expression> parseBinaryExpression(
         const std::function<std::unique_ptr<AST::Expression>()>& parseOperand,
-        const std::set<AST::Operator>& allowedOps, bool allowMultiple);
+        std::initializer_list<AST::Operator> allowedOps, bool allowMultiple);
     std::unique_ptr<AST::Expression> parseMultiplicativeExpression();
     std::unique_ptr<AST::Expression> parseAdditiveExpression();
     std::unique_ptr<AST::Expression> parseComparisonExpression();
