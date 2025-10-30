@@ -44,6 +44,8 @@ class SemanticAnalyser {
     void exitScope();
 
     [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(const std::string& name) const;
+    std::pair<bool, const SymbolInfo*> getSymbolInfoOrError(const std::string& name,
+                                                            const AST::Node& node) const;
 
     SymbolInfo& declareSymbol(const AST::Node* declarationNode, const std::string& name,
                               SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,

@@ -90,6 +90,16 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(const std::stri
     return std::nullopt;
 }
 
+std::pair<bool, const SymbolInfo*> SemanticAnalyser::getSymbolInfoOrError(
+    const std::string& name, const AST::Node& node) const {
+    const auto info = getSymbolInfo(name);
+    if (!info.has_value()) {
+        error(std::format("Undeclared symbol: `{}`", name), node);
+        return {false, nullptr};
+    }
+    return {true, info.value()};
+}
+
 SymbolInfo& SemanticAnalyser::declareSymbol(const AST::Node* declarationNode,
                                             const std::string& name, const SymbolKind kind,
                                             const bool isMutable, const TypeID typeID,
@@ -139,18 +149,17 @@ SymbolInfo& SemanticAnalyser::handleVariableDeclaration(const AST::VariableDefin
 TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) {
     const std::string& name = funcCall.callee_->name_;
 
-    const auto info = getSymbolInfo(name);
-    if (!info.has_value()) {
-        error(std::format("Attempted to call undeclared function: `{}`", name), funcCall);
+    const auto info = getSymbolInfoOrError(name, *funcCall.callee_);
+    if (!info.first) {
         return typeManager_.createType(Type::anyFamilyType());
     }
 
-    if (info.value()->kind_ != SymbolKind::FUNCTION) {
+    if (info.second->kind_ != SymbolKind::FUNCTION) {
         error(std::format("Attempted to call a non-function: `{}`", name), funcCall);
         return typeManager_.createType(Type::anyFamilyType());
     }
 
-    const auto& params = info.value()->parameters_;
+    const auto& params = info.second->parameters_;
 
     if (funcCall.arguments_.size() != params.size()) {
         error(std::format("Function `{}` called with incorrect number of arguments: expected {}, "
@@ -167,7 +176,7 @@ TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) 
                                                                        *funcCall.arguments_[i]);
     }
 
-    return info.value()->typeID_;
+    return info.second->typeID_;
 }
 
 TypeID SemanticAnalyser::getUnaryExpressionType(const AST::UnaryExpression& unaryExpr) {
@@ -239,19 +248,17 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
         }
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = *expr.as<AST::Identifier>();
-            const auto info = getSymbolInfo(identifier.name_);
-            if (!info.has_value()) {
-                error(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_),
-                      identifier);
+            const auto info = getSymbolInfoOrError(identifier.name_, identifier);
+            if (!info.first) {
                 verifier = typeManager_.createType(Type::anyFamilyType());
                 break;
-            } else if (info.value()->kind_ != SymbolKind::VARIABLE) {
+            } else if (info.second->kind_ != SymbolKind::VARIABLE) {
                 error(std::format("`{}` is not a variable", identifier.name_), identifier);
                 verifier = typeManager_.createType(Type::anyFamilyType());
                 break;
             }
 
-            verifier = info.value()->typeID_;
+            verifier = info.second->typeID_;
             break;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
@@ -318,15 +325,13 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
             switch (expr.kind_) {
                 case AST::NodeKind::IDENTIFIER: {
                     const std::string& varName = expr.as<const AST::Identifier>()->name_;
-                    const auto& declarationInfo = getSymbolInfo(varName);
-                    if (!declarationInfo.has_value()) {
-                        error(std::format("Assignment to undeclared variable: `{}`", varName),
-                              expr);
+                    const auto& declarationInfo = getSymbolInfoOrError(varName, expr);
+                    if (!declarationInfo.first) {
                         return false;
-                    } else if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
+                    } else if (declarationInfo.second->kind_ != SymbolKind::VARIABLE) {
                         error(std::format("Assignment to non-variable: `{}`", varName), expr);
                         return false;
-                    } else if (!declarationInfo.value()->isMutable_) {
+                    } else if (!declarationInfo.second->isMutable_) {
                         error(std::format("Assignment to immutable: `{}`", varName), expr);
                         return false;
                     }
