@@ -40,30 +40,32 @@ void SemanticAnalyser::analyse() {
 
     const AST::FunctionDefinition* mainDef = nullptr;
     for (const auto& funcDef : ast_->functions_) {
-        if (funcDef->identifier_->name_ == "main") {
+        if (funcDef->identifier_->name_ == ENTRY_POINT_NAME) {
             mainDef = funcDef.get();
             break;
         }
     }
 
-    const auto mainIt = functionsTable_.find("main");
+    const auto mainIt = functionsTable_.find(std::string(ENTRY_POINT_NAME));
     if (targetType_ == TargetType::EXECUTABLE) {
         if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
-            error("No `main` function found in executable target", *ast_);
+            error(std::format("No `{}` function found in executable target", ENTRY_POINT_NAME),
+                  *ast_);
         } else {
             assert(mainDef && "mainDef should not be null here");
 
             if (mainIt->second.parameters_.size() != 0) {
-                error("`main` function must not take any parameters", *mainDef);
+                error(std::format("`{}` function must not take any parameters", ENTRY_POINT_NAME),
+                      *mainDef);
             }
 
-            const TypeID voidTypeID = typeManager_.createType(Primitive::Kind::VOID);
-            equalityConstraint(mainIt->second.typeID_, voidTypeID, *mainDef);
+            equalityConstraint(mainIt->second.typeID_, registerVoidType(), *mainDef);
         }
     } else {
         if (mainIt != functionsTable_.end()) {
             assert(mainDef && "mainDef should not be null here");
-            error("`main` function is not allowed in a library target", *mainDef);
+            error(std::format("`{}` function is not allowed in a library target", ENTRY_POINT_NAME),
+                  *mainDef);
         }
     }
 
@@ -338,18 +340,16 @@ bool SemanticAnalyser::verifyIsAssignable(const AST::Expression& expr) {
                 error(std::format("Assignment to immutable: `{}`", varName), expr);
                 return false;
             }
-            break;
+            return true;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
             const auto& arrayAccess = *expr.as<const AST::ArrayAccess>();
-            if (!verifyIsAssignable(*arrayAccess.base_)) return false;
-            break;
+            return verifyIsAssignable(*arrayAccess.base_);
         }
         default:
             error("Left-hand side of assignment is not a place expression", expr);
             return false;
     }
-    return true;
 }
 
 void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {

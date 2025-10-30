@@ -37,6 +37,8 @@ class SemanticAnalyser {
     std::string currentFunctionName_;
     TypeID currentFunctionReturnTypeID_ = 0;
 
+    static constexpr std::string_view ENTRY_POINT_NAME = "main";
+
     // Constraint helpers to centralize addConstraint calls
     void equalityConstraint(TypeID a, TypeID b, const AST::Node& node) const;
     void traitConstraint(TypeID type, Trait trait, const AST::Node& node) const;
@@ -48,7 +50,8 @@ class SemanticAnalyser {
     TypeID registerIntegerType() const {
         return typeManager_.createType(Type::integerFamilyType());
     }
-    TypeID registerBoolType() const { return typeManager_.createType(Primitive::Kind::BOOL); }
+    TypeID registerBoolType() const { return typeManager_.createType(Type::boolType()); }
+    TypeID registerVoidType() const { return typeManager_.createType(Type::voidType()); }
 
     void error(const std::string& errorMessage, const AST::Node& node) const;
     void fatalError(const std::string& errorMessage, const AST::Node& node) const;

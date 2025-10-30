@@ -69,17 +69,17 @@ std::vector<std::unique_ptr<AST::Expression>> Parser::parseExpressionList(
 std::optional<Type> Parser::tryParsePrimitiveType(const TokenKind tokenKind) {
     switch (tokenKind) {
         case TokenKind::INT:
-            return Primitive::Kind::INT;
+            return Type::intType();
         case TokenKind::INT8:
-            return Primitive::Kind::INT8;
+            return Type::int8Type();
         case TokenKind::INT16:
-            return Primitive::Kind::INT16;
+            return Type::int16Type();
         case TokenKind::INT32:
-            return Primitive::Kind::INT32;
+            return Type::int32Type();
         case TokenKind::INT64:
-            return Primitive::Kind::INT64;
+            return Type::int64Type();
         case TokenKind::BOOL:
-            return Primitive::Kind::BOOL;
+            return Type::boolType();
         default:
             return std::nullopt;
     }
@@ -452,7 +452,7 @@ ParsedFunctionSignature Parser::parseFunctionSignature() {
     expect(TokenKind::RIGHT_PAREN);
 
     const Type returnType =
-        advanceIf(TokenKind::RIGHT_ARROW) ? parseTypeSpecifier() : Primitive::Kind::VOID;
+        advanceIf(TokenKind::RIGHT_ARROW) ? parseTypeSpecifier() : Type::voidType();
 
     return {.identifier_ = std::move(identifier),
             .parameters_ = std::move(parameters),
