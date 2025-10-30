@@ -186,7 +186,7 @@ TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) 
     }
 
     for (std::size_t i = 0; i < funcCall.arguments_.size() && i < params.size(); i++) {
-        const TypeID argType = getExpressionType(*funcCall.arguments_[i]);
+        const TypeID argType = checkExpression(*funcCall.arguments_[i]);
         const TypeID paramType = params[i].typeID_;
 
         equalityConstraint(argType, paramType, *funcCall.arguments_[i]);
@@ -196,7 +196,7 @@ TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) 
 }
 
 TypeID SemanticAnalyser::getUnaryExpressionType(const AST::UnaryExpression& unaryExpr) {
-    const TypeID operandType = getExpressionType(*unaryExpr.operand_);
+    const TypeID operandType = checkExpression(*unaryExpr.operand_);
 
     const std::optional<Trait> requiredTrait = traitFromOperator(unaryExpr.operator_);
     if (requiredTrait.has_value()) {
@@ -215,8 +215,8 @@ TypeID SemanticAnalyser::getUnaryExpressionType(const AST::UnaryExpression& unar
 }
 
 TypeID SemanticAnalyser::getBinaryExpressionType(const AST::BinaryExpression& binaryExpr) {
-    const TypeID leftType = getExpressionType(*binaryExpr.left_);
-    const TypeID rightType = getExpressionType(*binaryExpr.right_);
+    const TypeID leftType = checkExpression(*binaryExpr.left_);
+    const TypeID rightType = checkExpression(*binaryExpr.right_);
     equalityConstraint(leftType, rightType, binaryExpr);
 
     const AST::Operator op = binaryExpr.operator_;
@@ -230,7 +230,7 @@ TypeID SemanticAnalyser::getBinaryExpressionType(const AST::BinaryExpression& bi
     std::unreachable();
 }
 
-TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
+TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
     TypeID verifier;
 
     switch (expr.kind_) {
@@ -250,9 +250,9 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
                 break;
             }
 
-            const TypeID elementTypeID = getExpressionType(*arrayLiteral.elements_[0]);
+            const TypeID elementTypeID = checkExpression(*arrayLiteral.elements_[0]);
             for (const auto& element : arrayLiteral.elements_ | std::views::drop(1)) {
-                analyseExpression(*element, elementTypeID);
+                checkExpression(*element, elementTypeID);
             }
 
             verifier = typeManager_.createType(elementTypeID, arrayLiteral.elements_.size());
@@ -275,12 +275,12 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
         }
         case AST::NodeKind::ARRAY_ACCESS: {
             const auto& arrayAccess = *expr.as<AST::ArrayAccess>();
-            const TypeID arrayType = getExpressionType(*arrayAccess.base_);
+            const TypeID arrayType = checkExpression(*arrayAccess.base_);
 
             traitConstraint(arrayType, Trait::SUBSCRIPT, arrayAccess);
 
             const TypeID integerTypeID = registerIntegerType();
-            analyseExpression(*arrayAccess.index_, integerTypeID);
+            checkExpression(*arrayAccess.index_, integerTypeID);
 
             const TypeID elementTypeID = registerAnyType();
             subscriptConstraint(arrayType, elementTypeID, arrayAccess);
@@ -311,14 +311,14 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
     return expr.typeID_;
 }
 
-void SemanticAnalyser::analyseExpression(const AST::Expression& expr, const TypeID expected) {
-    const TypeID exprType = getExpressionType(expr);
+void SemanticAnalyser::checkExpression(const AST::Expression& expr, const TypeID expected) {
+    const TypeID exprType = checkExpression(expr);
     equalityConstraint(exprType, expected, expr);
 }
 
 void SemanticAnalyser::analyseVariableDefinition(const AST::VariableDefinition& definition) {
     const std::string& name = definition.identifier_->name_;
-    const TypeID assignedType = getExpressionType(*definition.value_);
+    const TypeID assignedType = checkExpression(*definition.value_);
 
     equalityConstraint(definition.typeID_, assignedType, definition);
     storableConstraint(definition.typeID_, definition);
@@ -358,12 +358,12 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
     if (!verifyIsAssignable(*place)) {
         // If the place is not assignable, we cannot proceed further.
         // Just verify that the value expression is valid then return.
-        getExpressionType(*assignment.value_);
+        checkExpression(*assignment.value_);
         return;
     }
 
-    const TypeID placeType = getExpressionType(*place);
-    const TypeID valueType = getExpressionType(*assignment.value_);
+    const TypeID placeType = checkExpression(*place);
+    const TypeID valueType = checkExpression(*assignment.value_);
     equalityConstraint(placeType, valueType, assignment);
 
     if (assignment.operator_ != AST::Operator::ASSIGN) {
@@ -372,11 +372,11 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
 }
 
 void SemanticAnalyser::analyseExpressionStatement(const AST::ExpressionStatement& exprStmt) {
-    getExpressionType(*exprStmt.expression_);
+    checkExpression(*exprStmt.expression_);
 }
 
 void SemanticAnalyser::analyseIfStatement(const AST::IfStatement& ifStmt) {
-    analyseExpression(*ifStmt.condition_, registerBoolType());
+    checkExpression(*ifStmt.condition_, registerBoolType());
     analyseStatement(*ifStmt.body_);
     if (ifStmt.elseClause_) {
         analyseStatement(*ifStmt.elseClause_);
@@ -384,7 +384,7 @@ void SemanticAnalyser::analyseIfStatement(const AST::IfStatement& ifStmt) {
 }
 
 void SemanticAnalyser::analyseWhileStatement(const AST::WhileStatement& whileStmt) {
-    analyseExpression(*whileStmt.condition_, registerBoolType());
+    checkExpression(*whileStmt.condition_, registerBoolType());
     loopDepth_++;
     analyseStatement(*whileStmt.body_);
     loopDepth_--;
@@ -403,7 +403,7 @@ void SemanticAnalyser::analyseContinueStatement(const AST::ContinueStatement& co
 }
 
 void SemanticAnalyser::analyseExit(const AST::ExitStatement& exitStmt) {
-    analyseExpression(*exitStmt.exitCode_, registerIntegerType());
+    checkExpression(*exitStmt.exitCode_, registerIntegerType());
 }
 
 void SemanticAnalyser::analyseStatement(const AST::Statement& stmt) {
@@ -441,7 +441,7 @@ void SemanticAnalyser::analyseStatement(const AST::Statement& stmt) {
             break;
         case AST::NodeKind::RETURN_STATEMENT: {
             const auto& returnStmt = *stmt.as<AST::ReturnStatement>();
-            const TypeID returnTypeID = getExpressionType(*returnStmt.returnValue_);
+            const TypeID returnTypeID = checkExpression(*returnStmt.returnValue_);
             equalityConstraint(returnTypeID, currentFunctionReturnTypeID_, returnStmt);
             break;
         }

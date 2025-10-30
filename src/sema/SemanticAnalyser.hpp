@@ -104,9 +104,9 @@ class SemanticAnalyser {
     TypeID getFunctionCallType(const AST::FunctionCall& funcCall);
     TypeID getUnaryExpressionType(const AST::UnaryExpression& unaryExpr);
     TypeID getBinaryExpressionType(const AST::BinaryExpression& binaryExpr);
-    TypeID getExpressionType(const AST::Expression& expr);
 
-    void analyseExpression(const AST::Expression& expr, TypeID expected);
+    TypeID checkExpression(const AST::Expression& expr);
+    void checkExpression(const AST::Expression& expr, TypeID expected);
 
     void analyseVariableDefinition(const AST::VariableDefinition& definition);
     bool verifyIsAssignable(const AST::Expression& expr);
