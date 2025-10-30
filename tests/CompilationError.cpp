@@ -818,6 +818,20 @@ TEST_F(NeutroniumTester, FunctionCallWithoutCommasFails) {
     EXPECT_TRUE(error.contains("token") && error.contains("expected") && error.contains("TRUE"));
 }
 
+TEST_F(NeutroniumTester, FunctionParametersWithoutCommasFails) {
+    const std::string code = R"(
+        fn x(a: int b: bool): {   # missing comma
+            exit 0;
+        }
+
+        fn main(): {}
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("expected") &&
+                error.contains("IDENTIFIER"));
+}
+
 TEST_F(NeutroniumTester, NonBooleanConditionError) {
     const std::string code = R"(
         fn main(): {
