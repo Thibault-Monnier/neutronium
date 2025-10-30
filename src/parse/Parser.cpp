@@ -457,6 +457,8 @@ ParsedFunctionSignature Parser::parseFunctionSignature() {
         parameters.push_back(parseFunctionParameter());
         if (peek().kind() == TokenKind::COMMA) {
             expect(TokenKind::COMMA);
+        } else {
+            break;
         }
     }
     expect(TokenKind::RIGHT_PAREN);

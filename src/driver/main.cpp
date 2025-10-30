@@ -129,8 +129,8 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, bool
 }  // namespace
 
 int main(const int argc, const char** argv) {
-    const CompilerOptions opts = parse_cli(argc, argv);
 
+    const CompilerOptions opts = parse_cli(argc, argv);
     const auto startTime = Clock::now();
 
     runOrDie("rm -rf neutro && mkdir neutro");
