@@ -141,11 +141,13 @@ TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) 
 
     const auto info = getSymbolInfo(name);
     if (!info.has_value()) {
-        fatalError(std::format("Attempted to call undeclared function: `{}`", name), funcCall);
+        error(std::format("Attempted to call undeclared function: `{}`", name), funcCall);
+        return typeManager_.createType(Type::anyFamilyType());
     }
 
     if (info.value()->kind_ != SymbolKind::FUNCTION) {
-        fatalError(std::format("Attempted to call a non-function: `{}`", name), funcCall);
+        error(std::format("Attempted to call a non-function: `{}`", name), funcCall);
+        return typeManager_.createType(Type::anyFamilyType());
     }
 
     const auto& params = info.value()->parameters_;
@@ -311,7 +313,7 @@ void SemanticAnalyser::analyseVariableDefinition(const AST::VariableDefinition& 
 void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
     const auto& place = assignment.place_;
 
-    std::function<void(const AST::Expression&)> verifyIsAssignable =
+    std::function<bool(const AST::Expression&)> verifyIsAssignable =
         [&](const AST::Expression& expr) {
             switch (expr.kind_) {
                 case AST::NodeKind::IDENTIFIER: {
@@ -320,24 +322,34 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
                     if (!declarationInfo.has_value()) {
                         error(std::format("Assignment to undeclared variable: `{}`", varName),
                               expr);
+                        return false;
                     } else if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
                         error(std::format("Assignment to non-variable: `{}`", varName), expr);
+                        return false;
                     } else if (!declarationInfo.value()->isMutable_) {
                         error(std::format("Assignment to immutable: `{}`", varName), expr);
+                        return false;
                     }
                     break;
                 }
                 case AST::NodeKind::ARRAY_ACCESS: {
                     const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
-                    verifyIsAssignable(*arrayAccess.base_);
+                    if (!verifyIsAssignable(*arrayAccess.base_)) return false;
                     break;
                 }
                 default:
-                    error("Left-hand side of assignment must be a place expression ", expr);
+                    error("Left-hand side of assignment is not a place expression", expr);
+                    return false;
             }
+            return true;
         };
 
-    verifyIsAssignable(*place);
+    if (!verifyIsAssignable(*place)) {
+        // If the place is not assignable, we cannot proceed further.
+        // Just verify that the value expression is valid then return.
+        getExpressionType(*assignment.value_);
+        return;
+    }
 
     const TypeID placeType = getExpressionType(*place);
     const TypeID valueType = getExpressionType(*assignment.value_);
