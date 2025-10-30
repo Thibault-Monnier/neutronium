@@ -60,6 +60,33 @@ class SemanticAnalyser {
     void enterScope();
     void exitScope();
 
+    /**
+     * @class ScopeGuard
+     *
+     * @brief A helper class for managing the scope lifecycle within the SemanticAnalyser.
+     *
+     * ScopeGuard is responsible for ensuring that an entered scope in the associated
+     * SemanticAnalyser is properly exited when the ScopeGuard goes out of scope.
+     * It automatically calls `enterScope()` on construction and `exitScope()` on destruction
+     * for the provided SemanticAnalyser instance.
+     *
+     * This class prevents copying and moving to ensure the integrity of scope management.
+     */
+    class ScopeGuard {
+       public:
+        explicit ScopeGuard(SemanticAnalyser& analyser) : analyser_(analyser) {
+            analyser_.enterScope();
+        }
+        ~ScopeGuard() { analyser_.exitScope(); }
+        ScopeGuard(const ScopeGuard&) = delete;
+        ScopeGuard& operator=(const ScopeGuard&) = delete;
+        ScopeGuard(ScopeGuard&&) = delete;
+        ScopeGuard& operator=(ScopeGuard&&) = delete;
+
+       private:
+        SemanticAnalyser& analyser_;
+    };
+
     [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(const std::string& name) const;
     std::optional<const SymbolInfo*> getSymbolInfoOrError(const std::string& name,
                                                           const AST::Node& node) const;

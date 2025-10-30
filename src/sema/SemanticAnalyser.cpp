@@ -452,11 +452,10 @@ void SemanticAnalyser::analyseStatement(const AST::Statement& stmt) {
         }
         case AST::NodeKind::BLOCK_STATEMENT: {
             const auto& blockStmt = *stmt.as<AST::BlockStatement>();
-            enterScope();
+            const ScopeGuard guard(*this);
             for (const auto& innerStmt : blockStmt.body_) {
                 analyseStatement(*innerStmt);
             }
-            exitScope();
             break;
         }
         default:
@@ -491,14 +490,13 @@ bool SemanticAnalyser::verifyStatementReturns(const AST::Statement& stmt) {
 
 void SemanticAnalyser::analyseExternalFunctionDeclaration(
     const AST::ExternalFunctionDeclaration& funcDecl) {
-    enterScope();
+    const ScopeGuard guard(*this);
     handleFunctionDeclaration(&funcDecl, funcDecl.identifier_->name_, funcDecl.returnTypeID_,
                               funcDecl.parameters_);
-    exitScope();
 }
 
 void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& funcDef) {
-    enterScope();
+    const ScopeGuard guard(*this);
     currentFunctionName_ = funcDef.identifier_->name_;
     currentFunctionReturnTypeID_ = funcDef.returnTypeID_;
 
@@ -518,5 +516,4 @@ void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& 
     }
 
     currentFunctionName_.clear();
-    exitScope();
 }
