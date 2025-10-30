@@ -38,6 +38,8 @@ class Parser {
     [[noreturn]] void abort(const std::string& errorMessage) const;
 
     [[nodiscard]] const Token& peek(int amount = 0) const;
+    const Token& advance();
+    bool advanceIf(TokenKind expected);
     const Token& expect(TokenKind expected);
 
     /** Gets an instance of Type::anyFamilyType() and registers it in the TypeManager.
@@ -47,7 +49,14 @@ class Parser {
         return typeManager_.createType(Type::anyFamilyType());
     }
 
+    template <class T>
+    std::vector<std::unique_ptr<T>> parseCommaSeparatedList(
+        TokenKind endDelimiter, const std::function<std::unique_ptr<T>()>& parseElement);
+    std::vector<std::unique_ptr<AST::Expression>> parseExpressionList(TokenKind endDelimiter);
+
+    static std::optional<Type> tryParsePrimitiveType(TokenKind tokenKind);
     Type parseTypeSpecifier();
+
     std::unique_ptr<AST::NumberLiteral> parseNumberLiteral();
     std::unique_ptr<AST::ArrayLiteral> parseArrayLiteral();
 
@@ -68,16 +77,24 @@ class Parser {
     std::unique_ptr<AST::ExpressionStatement> parseExpressionStatement();
     std::unique_ptr<AST::VariableDefinition> parseVariableDefinition();
     std::unique_ptr<AST::Assignment> parseAssignment();
+
+    static std::unique_ptr<AST::IfStatement> constructIfStatement(
+        std::unique_ptr<AST::Expression> condition, std::unique_ptr<AST::BlockStatement> body,
+        std::unique_ptr<AST::BlockStatement> elseClause, uint32_t startIndex);
     std::unique_ptr<AST::BlockStatement> parseElseClause();
     std::unique_ptr<AST::IfStatement> parseIfStatement();
     std::unique_ptr<AST::WhileStatement> parseWhileStatement();
+
     std::unique_ptr<AST::VariableDefinition> parseFunctionParameter();
     std::unique_ptr<AST::BreakStatement> parseBreakStatement();
     std::unique_ptr<AST::ContinueStatement> parseContinueStatement();
     std::unique_ptr<AST::ReturnStatement> parseReturnStatement();
     std::unique_ptr<AST::ExitStatement> parseExitStatement();
     std::unique_ptr<AST::BlockStatement> parseBlockStatement();
+
+    bool assignmentOperatorAhead() const;
     std::unique_ptr<AST::Statement> parseStatement();
+
     ParsedFunctionSignature parseFunctionSignature();
     std::unique_ptr<AST::ExternalFunctionDeclaration> parseExternalFunctionDeclaration();
 

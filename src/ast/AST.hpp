@@ -199,12 +199,6 @@ struct ExpressionStatement final : Statement {
 
 struct IfStatement final : Statement {
     IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
-                const uint32_t start, const uint32_t end)
-        : Statement{NodeKind::IF_STATEMENT, start, end},
-          condition_(std::move(condition)),
-          body_(std::move(body)) {}
-
-    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
                 std::unique_ptr<BlockStatement> elseClause, const uint32_t start,
                 const uint32_t end)
         : Statement{NodeKind::IF_STATEMENT, start, end},
