@@ -9,6 +9,7 @@
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "driver/Cli.hpp"
 #include "type/Type.hpp"
+#include "type/TypeManager.hpp"
 
 class SemanticAnalyser {
    public:
@@ -20,7 +21,6 @@ class SemanticAnalyser {
           typeManager_(typeManager) {}
 
     void analyse();
-    void emitErrorsAndQuit() const;
 
    private:
     const AST::Program* ast_;
@@ -37,15 +37,29 @@ class SemanticAnalyser {
     std::string currentFunctionName_;
     TypeID currentFunctionReturnTypeID_ = 0;
 
+    // Constraint helpers to centralize addConstraint calls
+    void equalityConstraint(TypeID a, TypeID b, const AST::Node& node) const;
+    void traitConstraint(TypeID type, Trait trait, const AST::Node& node) const;
+    void subscriptConstraint(TypeID arrayType, TypeID elementType, const AST::Node& node) const;
+    void storableConstraint(TypeID type, const AST::Node& node) const;
+
+    // Register new type helpers
+    TypeID registerAnyType() const { return typeManager_.createType(Type::anyFamilyType()); }
+    TypeID registerIntegerType() const {
+        return typeManager_.createType(Type::integerFamilyType());
+    }
+    TypeID registerBoolType() const { return typeManager_.createType(Primitive::Kind::BOOL); }
+
     void error(const std::string& errorMessage, const AST::Node& node) const;
     void fatalError(const std::string& errorMessage, const AST::Node& node) const;
+    void emitErrorsAndQuit() const;
 
     void enterScope();
     void exitScope();
 
     [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(const std::string& name) const;
-    std::pair<bool, const SymbolInfo*> getSymbolInfoOrError(const std::string& name,
-                                                            const AST::Node& node) const;
+    std::optional<const SymbolInfo*> getSymbolInfoOrError(const std::string& name,
+                                                          const AST::Node& node) const;
 
     SymbolInfo& declareSymbol(const AST::Node* declarationNode, const std::string& name,
                               SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,
@@ -65,6 +79,7 @@ class SemanticAnalyser {
     void analyseExpression(const AST::Expression& expr, TypeID expected);
 
     void analyseVariableDefinition(const AST::VariableDefinition& definition);
+    bool verifyIsAssignable(const AST::Expression& expr);
     void analyseAssignment(const AST::Assignment& assignment);
     void analyseExpressionStatement(const AST::ExpressionStatement& exprStmt);
     void analyseIfStatement(const AST::IfStatement& ifStmt);
