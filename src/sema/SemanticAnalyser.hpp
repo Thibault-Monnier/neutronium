@@ -101,10 +101,9 @@ class SemanticAnalyser {
     SymbolInfo& handleVariableDeclaration(const AST::VariableDefinition* declNode,
                                           const std::string& name, bool isMutable, TypeID typeID);
 
-    TypeID getFunctionCallType(const AST::FunctionCall& funcCall);
-    TypeID getUnaryExpressionType(const AST::UnaryExpression& unaryExpr);
-    TypeID getBinaryExpressionType(const AST::BinaryExpression& binaryExpr);
-
+    TypeID checkFunctionCall(const AST::FunctionCall& funcCall);
+    TypeID checkUnaryExpression(const AST::UnaryExpression& unaryExpr);
+    TypeID checkBinaryExpression(const AST::BinaryExpression& binaryExpr);
     TypeID checkExpression(const AST::Expression& expr);
     void checkExpression(const AST::Expression& expr, TypeID expected);
 

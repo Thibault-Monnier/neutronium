@@ -163,7 +163,7 @@ SymbolInfo& SemanticAnalyser::handleVariableDeclaration(const AST::VariableDefin
     return declareSymbol(declNode, name, SymbolKind::VARIABLE, isMutable, typeID, true, {});
 }
 
-TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) {
+TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
     const std::string& name = funcCall.callee_->name_;
 
     const auto info = getSymbolInfoOrError(name, *funcCall.callee_);
@@ -195,7 +195,7 @@ TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) 
     return info.value()->typeID_;
 }
 
-TypeID SemanticAnalyser::getUnaryExpressionType(const AST::UnaryExpression& unaryExpr) {
+TypeID SemanticAnalyser::checkUnaryExpression(const AST::UnaryExpression& unaryExpr) {
     const TypeID operandType = checkExpression(*unaryExpr.operand_);
 
     const std::optional<Trait> requiredTrait = traitFromOperator(unaryExpr.operator_);
@@ -203,18 +203,10 @@ TypeID SemanticAnalyser::getUnaryExpressionType(const AST::UnaryExpression& unar
         traitConstraint(operandType, requiredTrait.value(), unaryExpr);
     }
 
-    switch (unaryExpr.operator_) {
-        case AST::Operator::ADD:
-        case AST::Operator::SUBTRACT:
-            return operandType;
-        case AST::Operator::LOGICAL_NOT:
-            return registerBoolType();
-        default:
-            std::unreachable();
-    }
+    return operandType;
 }
 
-TypeID SemanticAnalyser::getBinaryExpressionType(const AST::BinaryExpression& binaryExpr) {
+TypeID SemanticAnalyser::checkBinaryExpression(const AST::BinaryExpression& binaryExpr) {
     const TypeID leftType = checkExpression(*binaryExpr.left_);
     const TypeID rightType = checkExpression(*binaryExpr.right_);
     equalityConstraint(leftType, rightType, binaryExpr);
@@ -290,17 +282,17 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
         }
         case AST::NodeKind::FUNCTION_CALL: {
             const auto& funcCall = *expr.as<AST::FunctionCall>();
-            verifier = getFunctionCallType(funcCall);
+            verifier = checkFunctionCall(funcCall);
             break;
         }
         case AST::NodeKind::UNARY_EXPRESSION: {
             const auto& unaryExpr = *expr.as<AST::UnaryExpression>();
-            verifier = getUnaryExpressionType(unaryExpr);
+            verifier = checkUnaryExpression(unaryExpr);
             break;
         }
         case AST::NodeKind::BINARY_EXPRESSION: {
             const auto& binaryExpr = *expr.as<AST::BinaryExpression>();
-            verifier = getBinaryExpressionType(binaryExpr);
+            verifier = checkBinaryExpression(binaryExpr);
             break;
         }
         default:

@@ -904,38 +904,60 @@ TEST_F(NeutroniumTester, UnmatchedParenthesesFails) {
 }
 
 TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
-    const std::string code = R"(
+    {
+        const std::string code = R"(
         fn main(): {
             let x = 1;
             let y = !x;
             exit 0;
         }
     )";
-    auto [status, error] = compile(code);
-    EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
-                error.contains(traitToString(Trait::NOT)) && error.contains("int"));
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::NOT)) && error.contains("int"));
+    }
 
-    const std::string code2 = R"(
+    {
+        const std::string code = R"(
         fn main(): {
             let x = true;
             let y = -x;
         }
     )";
-    auto [status2, error2] = compile(code2);
-    EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("Type") && error2.contains("trait") &&
-                error2.contains(traitToString(Trait::SUB)) && error2.contains("bool"));
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::SUB)) && error.contains("bool"));
+    }
 
-    const std::string code3 = R"(
-        fn x(): {}
+    {
+        const std::string code = R"(
+            fn x(): {}
 
-        fn main(): { let y = -x(); }
-    )";
-    auto [status3, error3] = compile(code3);
-    EXPECT_NE(status3, 0);
-    EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
-                error3.contains(traitToString(Trait::SUB)) && error3.contains("void"));
+            fn main(): { let y = -x(); }
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::SUB)) && error.contains("void"));
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let mut x = !(-5);
+                if x < 5: {
+                    exit 1;
+                }
+                exit x;
+            }
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::NOT)));
+    }
 }
 
 TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {

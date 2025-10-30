@@ -115,7 +115,7 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
 
     if (!type.hasTrait(trait)) {
         diagnosticsEngine_.reportError(
-            std::format("Type '{}' does not implement trait '{}'", type.toString(typeManager_),
+            std::format("Type '{}' does not implement the trait '{}'", type.toString(typeManager_),
                         traitToString(trait)),
             hasTraitConstraint.sourceNode().sourceStartIndex(),
             hasTraitConstraint.sourceNode().sourceEndIndex());
