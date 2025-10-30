@@ -4,17 +4,6 @@
 
 #include "TypeManager.hpp"
 
-const Type& Type::integerFamilyType() {
-    static const Type instance(Primitive::Kind::INT, true);
-    return instance;
-}
-
-const Type& Type::anyFamilyType() {
-    static const Type instance(Primitive::Kind::VOID, &AnyTypeFamily::getInstance(),
-                               TypeKind::UNKNOWN);
-    return instance;
-}
-
 int Type::sizeBits(const TypeManager& typeManager) const {
     switch (kind_) {
         case TypeKind::PRIMITIVE: {

@@ -27,16 +27,6 @@ enum class TypeKind : uint8_t {
  */
 class Type {
    public:
-    // Voluntary implicit constructor
-    Type(const Primitive::Kind t, const bool inFamily = false)
-        : kind_(TypeKind::PRIMITIVE), primitive_(t) {
-        if (inFamily) {
-            family_ = PrimitiveTypeFamily::familyForType(t);
-            assert(family_->isInFamily(t) && "Type must be in its own family");
-        }
-        initializeTraits();
-    }
-
     Type(const Primitive::Kind t, const PrimitiveTypeFamily* family, const TypeKind kind)
         : kind_(kind), family_(family), primitive_(t) {
         assert(family_->isInFamily(t) && "Type must be in its own family");
@@ -76,7 +66,10 @@ class Type {
      *
      * @return A constant reference to the singleton instance of the integer family type.
      */
-    static const Type& integerFamilyType();
+    static const Type& integerFamilyType() {
+        static const Type instance(Primitive::Kind::INT, true);
+        return instance;
+    }
 
     /**
      * @brief Retrieves the predefined type representing any family of primitive types.
@@ -86,7 +79,102 @@ class Type {
      *
      * @return A constant reference to the singleton instance of the "any" family type.
      */
-    static const Type& anyFamilyType();
+    static const Type& anyFamilyType() {
+        static const Type instance(Primitive::Kind::VOID, &AnyTypeFamily::getInstance(),
+                                   TypeKind::UNKNOWN);
+        return instance;
+    }
+
+    /**
+     * @brief Retrieves the predefined type representing the void primitive type.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the void primitive type.
+     *
+     * @return A constant reference to the singleton instance of the void type.
+     */
+    static const Type& voidType() {
+        static const Type instance(Primitive::Kind::VOID);
+        return instance;
+    }
+
+    /**
+     * @brief Retrieves the predefined type representing the boolean primitive type.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the boolean primitive type.
+     *
+     * @return A constant reference to the singleton instance of the boolean type.
+     */
+    static const Type& boolType() {
+        static const Type instance(Primitive::Kind::BOOL);
+        return instance;
+    }
+
+    /**
+     * @brief Retrieves the predefined type representing the int8 primitive type.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the int8 primitive type.
+     *
+     * @return A constant reference to the singleton instance of the int8 type.
+     */
+    static const Type& int8Type() {
+        static const Type instance(Primitive::Kind::INT8);
+        return instance;
+    }
+
+    /**
+     * @brief Retrieves the predefined type representing the int16 primitive type.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the int16 primitive type.
+     *
+     * @return A constant reference to the singleton instance of the int16 type.
+     */
+    static const Type& int16Type() {
+        static const Type instance(Primitive::Kind::INT16);
+        return instance;
+    }
+
+    /**
+     * @brief Retrieves the predefined type representing the int32 primitive type.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the int32 primitive type.
+     *
+     * @return A constant reference to the singleton instance of the int32 type.
+     */
+    static const Type& int32Type() {
+        static const Type instance(Primitive::Kind::INT32);
+        return instance;
+    }
+
+    /**
+     * @brief Retrieves the predefined type representing the int64 primitive type.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the int64 primitive type.
+     *
+     * @return A constant reference to the singleton instance of the int64 type.
+     */
+    static const Type& int64Type() {
+        static const Type instance(Primitive::Kind::INT64);
+        return instance;
+    }
+
+    /**
+     * @brief Retrieves the predefined type representing the int primitive type.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the int primitive type.
+     *
+     * @return A constant reference to the singleton instance of the int type.
+     */
+    static const Type& intType() {
+        static const Type instance(Primitive::Kind::INT);
+        return instance;
+    }
 
     /**
      * @brief Retrieves the family of the primitive type.
@@ -187,6 +275,15 @@ class Type {
     }
 
    private:
+    explicit Type(const Primitive::Kind t, const bool inFamily = false)
+        : kind_(TypeKind::PRIMITIVE), primitive_(t) {
+        if (inFamily) {
+            family_ = PrimitiveTypeFamily::familyForType(t);
+            assert(family_->isInFamily(t) && "Type must be in its own family");
+        }
+        initializeTraits();
+    }
+
     TypeKind kind_;
     const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
     Primitive::Kind primitive_;

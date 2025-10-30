@@ -484,16 +484,14 @@ TEST_F(NeutroniumTester, UndeclaredVariableError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") &&
-                (error.contains("variable") || error.contains("symbol")) && error.contains("y"));
+    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("y"));
 
     const std::string code2 = R"(
         fn main(): { x = 1; }
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("undeclared") && error2.contains("variable") &&
-                error2.contains("x"));
+    EXPECT_TRUE(error2.contains("Undeclared symbol") && error2.contains("x"));
 }
 
 TEST_F(NeutroniumTester, VariableUsedBeforeDeclarationError) {
@@ -505,8 +503,7 @@ TEST_F(NeutroniumTester, VariableUsedBeforeDeclarationError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") &&
-                (error.contains("variable") || error.contains("symbol")) && error.contains("x"));
+    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, SymbolShadowingError) {
@@ -553,7 +550,7 @@ TEST_F(NeutroniumTester, UndeclaredFunctionError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") && error.contains("function") && error.contains("x"));
+    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, FunctionCalledBeforeDeclarationError) {
@@ -566,8 +563,7 @@ TEST_F(NeutroniumTester, FunctionCalledBeforeDeclarationError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") &&
-                (error.contains("function") || error.contains("symbol")) && error.contains("x"));
+    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("x"));
 }
 
 TEST_F(NeutroniumTester, AttemptToCallAVariableError) {
@@ -882,8 +878,7 @@ TEST_F(NeutroniumTester, UseAfterScopeFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("undeclared") &&
-                (error.contains("variable") || error.contains("symbol")) && error.contains("y"));
+    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("y"));
 }
 
 TEST_F(NeutroniumTester, UnmatchedBracesFails) {
@@ -1061,13 +1056,10 @@ TEST_F(NeutroniumTester, MultipleErrorsAllReported) {
     EXPECT_TRUE(error.contains("Array") && error.contains("literal") && error.contains("empty"));
     EXPECT_TRUE(error.contains("Left-hand") && error.contains("assignment") &&
                 error.contains("expression"));
-    EXPECT_TRUE(error.contains("undeclared") && error.contains("function") &&
-                error.contains("foso"));
+    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("foso"));
     EXPECT_TRUE(error.contains("Assignment") && error.contains("immutable") && error.contains("x"));
-    EXPECT_TRUE(error.contains("Assignment") && error.contains("undeclared") &&
-                error.contains("variable"));
-    EXPECT_TRUE(error.contains("undeclared") && error.contains("symbol") &&
-                error.contains("truer"));
+    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("y"));
+    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("truer"));
     EXPECT_TRUE(error.contains("main") && error.contains("function") &&
                 error.contains("executable target"));
 }

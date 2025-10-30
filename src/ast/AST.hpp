@@ -44,6 +44,15 @@ struct Node {
     [[nodiscard]] uint32_t sourceStartIndex() const { return sourceStartIndex_; }
     [[nodiscard]] uint32_t sourceEndIndex() const { return sourceEndIndex_; }
 
+    template <typename T>
+    [[nodiscard]] T* as() {
+        return static_cast<T*>(this);
+    }
+    template <typename T>
+    [[nodiscard]] const T* as() const {
+        return static_cast<const T*>(this);
+    }
+
    protected:
     uint32_t sourceStartIndex_;
     uint32_t sourceEndIndex_;
@@ -57,45 +66,40 @@ struct Expression : Node {
     TypeID typeID_;
 };
 
-struct PrimaryExpression : Expression {
-    using Expression::Expression;
-};
-
-struct NumberLiteral final : PrimaryExpression {
+struct NumberLiteral final : Expression {
     NumberLiteral(const std::int64_t value, const uint32_t start, const uint32_t end,
                   const TypeID typeID)
-        : PrimaryExpression{NodeKind::NUMBER_LITERAL, start, end, typeID}, value_(value) {}
+        : Expression{NodeKind::NUMBER_LITERAL, start, end, typeID}, value_(value) {}
 
     const std::int64_t value_;
 };
 
-struct BooleanLiteral final : PrimaryExpression {
+struct BooleanLiteral final : Expression {
     BooleanLiteral(const bool value, const uint32_t start, const uint32_t end, const TypeID typeID)
-        : PrimaryExpression{NodeKind::BOOLEAN_LITERAL, start, end, typeID}, value_(value) {}
+        : Expression{NodeKind::BOOLEAN_LITERAL, start, end, typeID}, value_(value) {}
 
     const bool value_;
 };
 
-struct ArrayLiteral final : PrimaryExpression {
+struct ArrayLiteral final : Expression {
     ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements, const uint32_t start,
                  const uint32_t end, const TypeID typeID)
-        : PrimaryExpression{NodeKind::ARRAY_LITERAL, start, end, typeID},
-          elements_(std::move(elements)) {}
+        : Expression{NodeKind::ARRAY_LITERAL, start, end, typeID}, elements_(std::move(elements)) {}
 
     const std::vector<std::unique_ptr<Expression>> elements_;
 };
 
-struct Identifier final : PrimaryExpression {
+struct Identifier final : Expression {
     Identifier(std::string name, const uint32_t start, const uint32_t end, const TypeID typeID)
-        : PrimaryExpression{NodeKind::IDENTIFIER, start, end, typeID}, name_(std::move(name)) {}
+        : Expression{NodeKind::IDENTIFIER, start, end, typeID}, name_(std::move(name)) {}
 
     const std::string name_;
 };
 
-struct ArrayAccess final : PrimaryExpression {
+struct ArrayAccess final : Expression {
     ArrayAccess(std::unique_ptr<Expression> base, std::unique_ptr<Expression> index,
                 const uint32_t start, const uint32_t end, const TypeID typeID)
-        : PrimaryExpression{NodeKind::ARRAY_ACCESS, start, end, typeID},
+        : Expression{NodeKind::ARRAY_ACCESS, start, end, typeID},
           base_(std::move(base)),
           index_(std::move(index)) {}
 
@@ -103,11 +107,11 @@ struct ArrayAccess final : PrimaryExpression {
     std::unique_ptr<Expression> index_;
 };
 
-struct FunctionCall final : PrimaryExpression {
+struct FunctionCall final : Expression {
     FunctionCall(std::unique_ptr<Identifier> callee,
                  std::vector<std::unique_ptr<Expression>> arguments, const uint32_t start,
                  const uint32_t end, const TypeID typeID)
-        : PrimaryExpression{NodeKind::FUNCTION_CALL, start, end, typeID},
+        : Expression{NodeKind::FUNCTION_CALL, start, end, typeID},
           callee_(std::move(callee)),
           arguments_(std::move(arguments)) {}
 
@@ -198,12 +202,6 @@ struct ExpressionStatement final : Statement {
 };
 
 struct IfStatement final : Statement {
-    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
-                const uint32_t start, const uint32_t end)
-        : Statement{NodeKind::IF_STATEMENT, start, end},
-          condition_(std::move(condition)),
-          body_(std::move(body)) {}
-
     IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
                 std::unique_ptr<BlockStatement> elseClause, const uint32_t start,
                 const uint32_t end)

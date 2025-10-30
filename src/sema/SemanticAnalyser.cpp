@@ -10,7 +10,24 @@
 #include "SymbolTable.hpp"
 #include "ast/Debug.hpp"
 #include "type/TypeManager.hpp"
-#include "type/TypeSolver.hpp"
+#include "type/inference/TypeSolver.hpp"
+
+void SemanticAnalyser::equalityConstraint(TypeID a, TypeID b, const AST::Node& node) const {
+    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(a, b, node);
+}
+
+void SemanticAnalyser::traitConstraint(TypeID type, Trait trait, const AST::Node& node) const {
+    typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(type, trait, node);
+}
+
+void SemanticAnalyser::subscriptConstraint(TypeID arrayType, TypeID elementType,
+                                           const AST::Node& node) const {
+    typeManager_.getTypeSolver().addConstraint<SubscriptConstraint>(arrayType, elementType, node);
+}
+
+void SemanticAnalyser::storableConstraint(TypeID type, const AST::Node& node) const {
+    typeManager_.getTypeSolver().addConstraint<StorableConstraint>(type, node);
+}
 
 void SemanticAnalyser::analyse() {
     for (const auto& externalFuncDecl : ast_->externalFunctions_) {
@@ -23,31 +40,32 @@ void SemanticAnalyser::analyse() {
 
     const AST::FunctionDefinition* mainDef = nullptr;
     for (const auto& funcDef : ast_->functions_) {
-        if (funcDef->identifier_->name_ == "main") {
+        if (funcDef->identifier_->name_ == ENTRY_POINT_NAME) {
             mainDef = funcDef.get();
             break;
         }
     }
 
-    const auto mainIt = functionsTable_.find("main");
+    const auto mainIt = functionsTable_.find(std::string(ENTRY_POINT_NAME));
     if (targetType_ == TargetType::EXECUTABLE) {
         if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
-            error("No `main` function found in executable target", *ast_);
+            error(std::format("No `{}` function found in executable target", ENTRY_POINT_NAME),
+                  *ast_);
         } else {
             assert(mainDef && "mainDef should not be null here");
 
             if (mainIt->second.parameters_.size() != 0) {
-                error("`main` function must not take any parameters", *mainDef);
+                error(std::format("`{}` function must not take any parameters", ENTRY_POINT_NAME),
+                      *mainDef);
             }
 
-            const TypeID voidTypeID = typeManager_.createType(Primitive::Kind::VOID);
-            typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(mainIt->second.typeID_,
-                                                                           voidTypeID, *mainDef);
+            equalityConstraint(mainIt->second.typeID_, registerVoidType(), *mainDef);
         }
     } else {
         if (mainIt != functionsTable_.end()) {
             assert(mainDef && "mainDef should not be null here");
-            error("`main` function is not allowed in a library target", *mainDef);
+            error(std::format("`{}` function is not allowed in a library target", ENTRY_POINT_NAME),
+                  *mainDef);
         }
     }
 
@@ -88,6 +106,15 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(const std::stri
     }
 
     return std::nullopt;
+}
+
+std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfoOrError(
+    const std::string& name, const AST::Node& node) const {
+    const auto info = getSymbolInfo(name);
+    if (!info.has_value()) {
+        error(std::format("Undeclared symbol: `{}`", name), node);
+    }
+    return info;
 }
 
 SymbolInfo& SemanticAnalyser::declareSymbol(const AST::Node* declarationNode,
@@ -139,15 +166,14 @@ SymbolInfo& SemanticAnalyser::handleVariableDeclaration(const AST::VariableDefin
 TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) {
     const std::string& name = funcCall.callee_->name_;
 
-    const auto info = getSymbolInfo(name);
+    const auto info = getSymbolInfoOrError(name, *funcCall.callee_);
     if (!info.has_value()) {
-        error(std::format("Attempted to call undeclared function: `{}`", name), funcCall);
-        return typeManager_.createType(Type::anyFamilyType());
+        return registerAnyType();
     }
 
     if (info.value()->kind_ != SymbolKind::FUNCTION) {
         error(std::format("Attempted to call a non-function: `{}`", name), funcCall);
-        return typeManager_.createType(Type::anyFamilyType());
+        return registerAnyType();
     }
 
     const auto& params = info.value()->parameters_;
@@ -160,24 +186,21 @@ TypeID SemanticAnalyser::getFunctionCallType(const AST::FunctionCall& funcCall) 
     }
 
     for (std::size_t i = 0; i < funcCall.arguments_.size() && i < params.size(); i++) {
-        const TypeID argType = getExpressionType(*funcCall.arguments_[i]);
+        const TypeID argType = checkExpression(*funcCall.arguments_[i]);
         const TypeID paramType = params[i].typeID_;
 
-        typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(argType, paramType,
-                                                                       *funcCall.arguments_[i]);
+        equalityConstraint(argType, paramType, *funcCall.arguments_[i]);
     }
 
     return info.value()->typeID_;
 }
 
 TypeID SemanticAnalyser::getUnaryExpressionType(const AST::UnaryExpression& unaryExpr) {
-    const TypeID operandType = getExpressionType(*unaryExpr.operand_);
+    const TypeID operandType = checkExpression(*unaryExpr.operand_);
 
     const std::optional<Trait> requiredTrait = traitFromOperator(unaryExpr.operator_);
-
     if (requiredTrait.has_value()) {
-        typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
-            operandType, requiredTrait.value(), unaryExpr);
+        traitConstraint(operandType, requiredTrait.value(), unaryExpr);
     }
 
     switch (unaryExpr.operator_) {
@@ -185,69 +208,65 @@ TypeID SemanticAnalyser::getUnaryExpressionType(const AST::UnaryExpression& unar
         case AST::Operator::SUBTRACT:
             return operandType;
         case AST::Operator::LOGICAL_NOT:
-            return typeManager_.createType(Primitive::Kind::BOOL);
+            return registerBoolType();
         default:
             std::unreachable();
     }
 }
 
 TypeID SemanticAnalyser::getBinaryExpressionType(const AST::BinaryExpression& binaryExpr) {
-    const TypeID leftType = getExpressionType(*binaryExpr.left_);
-    const TypeID rightType = getExpressionType(*binaryExpr.right_);
-    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(leftType, rightType, binaryExpr);
+    const TypeID leftType = checkExpression(*binaryExpr.left_);
+    const TypeID rightType = checkExpression(*binaryExpr.right_);
+    equalityConstraint(leftType, rightType, binaryExpr);
 
     const AST::Operator op = binaryExpr.operator_;
     const std::optional<Trait> trait = traitFromOperator(op);
     if (trait.has_value()) {
-        typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
-            leftType, traitFromOperator(op).value(), binaryExpr);
+        traitConstraint(leftType, trait.value(), binaryExpr);
     }
 
     if (AST::isArithmeticOperator(op)) return leftType;
-    if (AST::isEqualityOperator(op) || AST::isRelationalOperator(op))
-        return typeManager_.createType(Primitive::Kind::BOOL);
+    if (AST::isEqualityOperator(op) || AST::isRelationalOperator(op)) return registerBoolType();
     std::unreachable();
 }
 
-TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
+TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
     TypeID verifier;
 
     switch (expr.kind_) {
         case AST::NodeKind::NUMBER_LITERAL: {
-            verifier = typeManager_.createType(Type::integerFamilyType());
+            verifier = registerIntegerType();
             break;
         }
         case AST::NodeKind::BOOLEAN_LITERAL: {
-            verifier = typeManager_.createType(Primitive::Kind::BOOL);
+            verifier = registerBoolType();
             break;
         }
         case AST::NodeKind::ARRAY_LITERAL: {
-            const auto& arrayLiteral = static_cast<const AST::ArrayLiteral&>(expr);
+            const auto& arrayLiteral = *expr.as<AST::ArrayLiteral>();
             if (arrayLiteral.elements_.empty()) {
                 error("Array literal cannot be empty", arrayLiteral);
-                verifier = typeManager_.createType(Type::anyFamilyType());
+                verifier = registerAnyType();
                 break;
             }
 
-            const TypeID elementTypeID = getExpressionType(*arrayLiteral.elements_[0]);
+            const TypeID elementTypeID = checkExpression(*arrayLiteral.elements_[0]);
             for (const auto& element : arrayLiteral.elements_ | std::views::drop(1)) {
-                analyseExpression(*element, elementTypeID);
+                checkExpression(*element, elementTypeID);
             }
 
             verifier = typeManager_.createType(elementTypeID, arrayLiteral.elements_.size());
             break;
         }
         case AST::NodeKind::IDENTIFIER: {
-            const auto& identifier = static_cast<const AST::Identifier&>(expr);
-            const auto info = getSymbolInfo(identifier.name_);
+            const auto& identifier = *expr.as<AST::Identifier>();
+            const auto info = getSymbolInfoOrError(identifier.name_, identifier);
             if (!info.has_value()) {
-                error(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_),
-                      identifier);
-                verifier = typeManager_.createType(Type::anyFamilyType());
+                verifier = registerAnyType();
                 break;
             } else if (info.value()->kind_ != SymbolKind::VARIABLE) {
                 error(std::format("`{}` is not a variable", identifier.name_), identifier);
-                verifier = typeManager_.createType(Type::anyFamilyType());
+                verifier = registerAnyType();
                 break;
             }
 
@@ -255,34 +274,32 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
             break;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
-            const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
-            const TypeID arrayType = getExpressionType(*arrayAccess.base_);
+            const auto& arrayAccess = *expr.as<AST::ArrayAccess>();
+            const TypeID arrayType = checkExpression(*arrayAccess.base_);
 
-            typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
-                arrayType, Trait::SUBSCRIPT, arrayAccess);
+            traitConstraint(arrayType, Trait::SUBSCRIPT, arrayAccess);
 
-            const TypeID integerTypeID = typeManager_.createType(Type::integerFamilyType());
-            analyseExpression(*arrayAccess.index_, integerTypeID);
+            const TypeID integerTypeID = registerIntegerType();
+            checkExpression(*arrayAccess.index_, integerTypeID);
 
-            const TypeID elementTypeID = typeManager_.createType(Type::anyFamilyType());
-            typeManager_.getTypeSolver().addConstraint<SubscriptConstraint>(
-                arrayType, elementTypeID, arrayAccess);
+            const TypeID elementTypeID = registerAnyType();
+            subscriptConstraint(arrayType, elementTypeID, arrayAccess);
 
             verifier = elementTypeID;
             break;
         }
         case AST::NodeKind::FUNCTION_CALL: {
-            const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
+            const auto& funcCall = *expr.as<AST::FunctionCall>();
             verifier = getFunctionCallType(funcCall);
             break;
         }
         case AST::NodeKind::UNARY_EXPRESSION: {
-            const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
+            const auto& unaryExpr = *expr.as<AST::UnaryExpression>();
             verifier = getUnaryExpressionType(unaryExpr);
             break;
         }
         case AST::NodeKind::BINARY_EXPRESSION: {
-            const auto& binaryExpr = static_cast<const AST::BinaryExpression&>(expr);
+            const auto& binaryExpr = *expr.as<AST::BinaryExpression>();
             verifier = getBinaryExpressionType(binaryExpr);
             break;
         }
@@ -290,84 +307,76 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
             std::unreachable();
     }
 
-    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(expr.typeID_, verifier, expr);
+    equalityConstraint(expr.typeID_, verifier, expr);
     return expr.typeID_;
 }
 
-void SemanticAnalyser::analyseExpression(const AST::Expression& expr, const TypeID expected) {
-    const TypeID exprType = getExpressionType(expr);
-    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(exprType, expected, expr);
+void SemanticAnalyser::checkExpression(const AST::Expression& expr, const TypeID expected) {
+    const TypeID exprType = checkExpression(expr);
+    equalityConstraint(exprType, expected, expr);
 }
 
 void SemanticAnalyser::analyseVariableDefinition(const AST::VariableDefinition& definition) {
     const std::string& name = definition.identifier_->name_;
-    const TypeID assignedType = getExpressionType(*definition.value_);
+    const TypeID assignedType = checkExpression(*definition.value_);
 
-    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(definition.typeID_, assignedType,
-                                                                   definition);
-    typeManager_.getTypeSolver().addConstraint<StorableConstraint>(definition.typeID_, definition);
+    equalityConstraint(definition.typeID_, assignedType, definition);
+    storableConstraint(definition.typeID_, definition);
 
     handleVariableDeclaration(&definition, name, definition.isMutable_, definition.typeID_);
+}
+
+bool SemanticAnalyser::verifyIsAssignable(const AST::Expression& expr) {
+    switch (expr.kind_) {
+        case AST::NodeKind::IDENTIFIER: {
+            const std::string& varName = expr.as<const AST::Identifier>()->name_;
+            const auto& declarationInfo = getSymbolInfoOrError(varName, expr);
+            if (!declarationInfo.has_value()) {
+                return false;
+            } else if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
+                error(std::format("Assignment to non-variable: `{}`", varName), expr);
+                return false;
+            } else if (!declarationInfo.value()->isMutable_) {
+                error(std::format("Assignment to immutable: `{}`", varName), expr);
+                return false;
+            }
+            return true;
+        }
+        case AST::NodeKind::ARRAY_ACCESS: {
+            const auto& arrayAccess = *expr.as<const AST::ArrayAccess>();
+            return verifyIsAssignable(*arrayAccess.base_);
+        }
+        default:
+            error("Left-hand side of assignment is not a place expression", expr);
+            return false;
+    }
 }
 
 void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
     const auto& place = assignment.place_;
 
-    std::function<bool(const AST::Expression&)> verifyIsAssignable =
-        [&](const AST::Expression& expr) {
-            switch (expr.kind_) {
-                case AST::NodeKind::IDENTIFIER: {
-                    const std::string& varName = static_cast<const AST::Identifier&>(expr).name_;
-                    const auto& declarationInfo = getSymbolInfo(varName);
-                    if (!declarationInfo.has_value()) {
-                        error(std::format("Assignment to undeclared variable: `{}`", varName),
-                              expr);
-                        return false;
-                    } else if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
-                        error(std::format("Assignment to non-variable: `{}`", varName), expr);
-                        return false;
-                    } else if (!declarationInfo.value()->isMutable_) {
-                        error(std::format("Assignment to immutable: `{}`", varName), expr);
-                        return false;
-                    }
-                    break;
-                }
-                case AST::NodeKind::ARRAY_ACCESS: {
-                    const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
-                    if (!verifyIsAssignable(*arrayAccess.base_)) return false;
-                    break;
-                }
-                default:
-                    error("Left-hand side of assignment is not a place expression", expr);
-                    return false;
-            }
-            return true;
-        };
-
     if (!verifyIsAssignable(*place)) {
         // If the place is not assignable, we cannot proceed further.
         // Just verify that the value expression is valid then return.
-        getExpressionType(*assignment.value_);
+        checkExpression(*assignment.value_);
         return;
     }
 
-    const TypeID placeType = getExpressionType(*place);
-    const TypeID valueType = getExpressionType(*assignment.value_);
-    typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(placeType, valueType,
-                                                                   assignment);
+    const TypeID placeType = checkExpression(*place);
+    const TypeID valueType = checkExpression(*assignment.value_);
+    equalityConstraint(placeType, valueType, assignment);
 
     if (assignment.operator_ != AST::Operator::ASSIGN) {
-        typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
-            placeType, traitFromOperator(assignment.operator_).value(), assignment);
+        traitConstraint(placeType, traitFromOperator(assignment.operator_).value(), assignment);
     }
 }
 
 void SemanticAnalyser::analyseExpressionStatement(const AST::ExpressionStatement& exprStmt) {
-    getExpressionType(*exprStmt.expression_);
+    checkExpression(*exprStmt.expression_);
 }
 
 void SemanticAnalyser::analyseIfStatement(const AST::IfStatement& ifStmt) {
-    analyseExpression(*ifStmt.condition_, typeManager_.createType(Primitive::Kind::BOOL));
+    checkExpression(*ifStmt.condition_, registerBoolType());
     analyseStatement(*ifStmt.body_);
     if (ifStmt.elseClause_) {
         analyseStatement(*ifStmt.elseClause_);
@@ -375,7 +384,7 @@ void SemanticAnalyser::analyseIfStatement(const AST::IfStatement& ifStmt) {
 }
 
 void SemanticAnalyser::analyseWhileStatement(const AST::WhileStatement& whileStmt) {
-    analyseExpression(*whileStmt.condition_, typeManager_.createType(Primitive::Kind::BOOL));
+    checkExpression(*whileStmt.condition_, registerBoolType());
     loopDepth_++;
     analyseStatement(*whileStmt.body_);
     loopDepth_--;
@@ -394,61 +403,59 @@ void SemanticAnalyser::analyseContinueStatement(const AST::ContinueStatement& co
 }
 
 void SemanticAnalyser::analyseExit(const AST::ExitStatement& exitStmt) {
-    analyseExpression(*exitStmt.exitCode_, typeManager_.createType(Type::integerFamilyType()));
+    checkExpression(*exitStmt.exitCode_, registerIntegerType());
 }
 
 void SemanticAnalyser::analyseStatement(const AST::Statement& stmt) {
     switch (stmt.kind_) {
         case AST::NodeKind::VARIABLE_DEFINITION: {
-            const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
+            const auto& varDecl = *stmt.as<AST::VariableDefinition>();
             analyseVariableDefinition(varDecl);
             break;
         }
         case AST::NodeKind::ASSIGNMENT: {
-            const auto& assignment = static_cast<const AST::Assignment&>(stmt);
+            const auto& assignment = *stmt.as<AST::Assignment>();
             analyseAssignment(assignment);
             break;
         }
         case AST::NodeKind::EXPRESSION_STATEMENT: {
-            const auto& exprStmt = static_cast<const AST::ExpressionStatement&>(stmt);
+            const auto& exprStmt = *stmt.as<AST::ExpressionStatement>();
             analyseExpressionStatement(exprStmt);
             break;
         }
         case AST::NodeKind::IF_STATEMENT: {
-            const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
+            const auto& ifStmt = *stmt.as<AST::IfStatement>();
             analyseIfStatement(ifStmt);
             break;
         }
         case AST::NodeKind::WHILE_STATEMENT: {
-            const auto& whileStmt = static_cast<const AST::WhileStatement&>(stmt);
+            const auto& whileStmt = *stmt.as<AST::WhileStatement>();
             analyseWhileStatement(whileStmt);
             break;
         }
         case AST::NodeKind::BREAK_STATEMENT:
-            analyseBreakStatement(static_cast<const AST::BreakStatement&>(stmt));
+            analyseBreakStatement(*stmt.as<AST::BreakStatement>());
             break;
         case AST::NodeKind::CONTINUE_STATEMENT:
-            analyseContinueStatement(static_cast<const AST::ContinueStatement&>(stmt));
+            analyseContinueStatement(*stmt.as<AST::ContinueStatement>());
             break;
         case AST::NodeKind::RETURN_STATEMENT: {
-            const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
-            const TypeID returnTypeID = getExpressionType(*returnStmt.returnValue_);
-            typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(
-                returnTypeID, currentFunctionReturnTypeID_, returnStmt);
+            const auto& returnStmt = *stmt.as<AST::ReturnStatement>();
+            const TypeID returnTypeID = checkExpression(*returnStmt.returnValue_);
+            equalityConstraint(returnTypeID, currentFunctionReturnTypeID_, returnStmt);
             break;
         }
         case AST::NodeKind::EXIT_STATEMENT: {
-            const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
+            const auto& exitStmt = *stmt.as<AST::ExitStatement>();
             analyseExit(exitStmt);
             break;
         }
         case AST::NodeKind::BLOCK_STATEMENT: {
-            const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
-            enterScope();
+            const auto& blockStmt = *stmt.as<AST::BlockStatement>();
+            const ScopeGuard guard(*this);
             for (const auto& innerStmt : blockStmt.body_) {
                 analyseStatement(*innerStmt);
             }
-            exitScope();
             break;
         }
         default:
@@ -460,7 +467,7 @@ bool SemanticAnalyser::verifyStatementReturns(const AST::Statement& stmt) {
     const AST::NodeKind kind = stmt.kind_;
 
     if (kind == AST::NodeKind::IF_STATEMENT) {
-        const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
+        const auto& ifStmt = *stmt.as<AST::IfStatement>();
         if (!ifStmt.elseClause_) return false;
 
         const bool body = verifyStatementReturns(*ifStmt.body_);
@@ -468,7 +475,7 @@ bool SemanticAnalyser::verifyStatementReturns(const AST::Statement& stmt) {
         return body && elseBody;
 
     } else if (kind == AST::NodeKind::BLOCK_STATEMENT) {
-        const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
+        const auto& blockStmt = *stmt.as<AST::BlockStatement>();
         for (const auto& innerStmt : blockStmt.body_) {
             if (verifyStatementReturns(*innerStmt)) return true;
         }
@@ -483,14 +490,13 @@ bool SemanticAnalyser::verifyStatementReturns(const AST::Statement& stmt) {
 
 void SemanticAnalyser::analyseExternalFunctionDeclaration(
     const AST::ExternalFunctionDeclaration& funcDecl) {
-    enterScope();
+    const ScopeGuard guard(*this);
     handleFunctionDeclaration(&funcDecl, funcDecl.identifier_->name_, funcDecl.returnTypeID_,
                               funcDecl.parameters_);
-    exitScope();
 }
 
 void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& funcDef) {
-    enterScope();
+    const ScopeGuard guard(*this);
     currentFunctionName_ = funcDef.identifier_->name_;
     currentFunctionReturnTypeID_ = funcDef.returnTypeID_;
 
@@ -510,5 +516,4 @@ void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& 
     }
 
     currentFunctionName_.clear();
-    exitScope();
 }

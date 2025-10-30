@@ -3,7 +3,8 @@
 #include <vector>
 
 #include "Type.hpp"
-#include "TypeSolver.hpp"
+#include "TypeArena.hpp"
+#include "inference/TypeSolver.hpp"
 
 /**
  * @class TypeManager
@@ -30,8 +31,8 @@ class TypeManager {
      * @return The unique TypeID assigned to the newly registered type.
      */
     [[nodiscard]] TypeID createType(const Type& type) {
-        const auto id = static_cast<TypeID>(types_.size());
-        types_.push_back(std::make_unique<Type>(type));
+        const auto id = static_cast<TypeID>(typeArena_.size());
+        typeArena_.push(std::make_unique<Type>(type));
         linkingTable_.push_back(id);
         return id;
     }
@@ -62,7 +63,7 @@ class TypeManager {
      */
     [[nodiscard]] const Type& getType(const TypeID id) const {
         const TypeID resolvedID = linkingTable_.at(id);
-        return *types_.at(resolvedID);
+        return typeArena_.at(resolvedID);
     }
 
     /**
@@ -86,7 +87,7 @@ class TypeManager {
      *
      * @return The number of types registered in the TypeManager.
      */
-    [[nodiscard]] size_t getTypeCount() const { return types_.size(); }
+    [[nodiscard]] size_t getTypeCount() const { return typeArena_.size(); }
 
     /**
      * @brief Provides access to the TypeSolver instance within the TypeManager.
@@ -109,7 +110,7 @@ class TypeManager {
     void linkTypes(const TypeID dst, const TypeID src) { linkingTable_[src] = dst; }
 
    private:
-    std::vector<std::unique_ptr<Type>> types_;
+    TypeArena typeArena_;
     TypeSolver typeSolver_;
 
     /** @brief A mapping of TypeIDs to their linked TypeIDs.
