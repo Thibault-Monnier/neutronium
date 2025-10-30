@@ -52,11 +52,15 @@ void SemanticAnalyser::analyse() {
     }
 
     if (diagnosticsEngine_.hasErrors()) {
-        diagnosticsEngine_.emitErrors();
-        exit(EXIT_FAILURE);
+        emitErrorsAndQuit();
     }
 
     typeManager_.getTypeSolver().solve();
+}
+
+void SemanticAnalyser::emitErrorsAndQuit() const {
+    diagnosticsEngine_.emitErrors();
+    exit(EXIT_FAILURE);
 }
 
 void SemanticAnalyser::error(const std::string& errorMessage, const AST::Node& node) const {
@@ -65,8 +69,7 @@ void SemanticAnalyser::error(const std::string& errorMessage, const AST::Node& n
 
 void SemanticAnalyser::fatalError(const std::string& errorMessage, const AST::Node& node) const {
     diagnosticsEngine_.reportError(errorMessage, node.sourceStartIndex(), node.sourceEndIndex());
-    diagnosticsEngine_.emitErrors();
-    exit(EXIT_FAILURE);
+    emitErrorsAndQuit();
 }
 
 void SemanticAnalyser::enterScope() { scopes_.emplace_back(); }

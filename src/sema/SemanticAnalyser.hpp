@@ -20,6 +20,7 @@ class SemanticAnalyser {
           typeManager_(typeManager) {}
 
     void analyse();
+    void emitErrorsAndQuit() const;
 
    private:
     const AST::Program* ast_;
