@@ -63,7 +63,7 @@ int Generator::getScopeFrameSize(const AST::BlockStatement& blockStmt) const {
     int frameSize = 0;
     for (const auto& stmt : blockStmt.body_) {
         if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
-            const auto& varDef = static_cast<const AST::VariableDefinition&>(*stmt);
+            const auto& varDef = *stmt->as<AST::VariableDefinition>();
             frameSize += getVariableSizeBits(varDef.identifier_->name_) / 8;
         }
     }
@@ -73,7 +73,7 @@ int Generator::getScopeFrameSize(const AST::BlockStatement& blockStmt) const {
 void Generator::enterScope(const AST::BlockStatement& blockStmt) {
     for (const auto& stmt : blockStmt.body_) {
         if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
-            const auto& varDef = static_cast<const AST::VariableDefinition&>(*stmt);
+            const auto& varDef = *stmt->as<AST::VariableDefinition>();
             insertSymbol(varDef.identifier_->name_, varDef.typeID_);
         }
     }
@@ -209,18 +209,19 @@ void Generator::moveNumberLitToRax(const AST::NumberLiteral& numberLit) {
 
 void Generator::moveBooleanLitToRax(const AST::BooleanLiteral& booleanLit) {
     const int sizeBits = exprSizeBits(booleanLit);
-    output_ << "    mov " << registerAForSize(sizeBits) << ", " << (booleanLit.value_ ? "1" : "0") << "\n";
+    output_ << "    mov " << registerAForSize(sizeBits) << ", " << (booleanLit.value_ ? "1" : "0")
+            << "\n";
     cleanRax(sizeBits);
 }
 
 void Generator::evaluatePlaceExpressionAddressToRax(const AST::Expression& place) {
     if (place.kind_ == AST::NodeKind::IDENTIFIER) {
-        const auto& identifier = static_cast<const AST::Identifier&>(place);
+        const auto& identifier = *place.as<const AST::Identifier>();
         output_ << "    mov rax, rbp\n";
         output_ << "    sub rax, " << getVariableStackOffset(identifier.name_) << "\n";
 
     } else if (place.kind_ == AST::NodeKind::ARRAY_ACCESS) {
-        const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(place);
+        const auto& arrayAccess = *place.as<const AST::ArrayAccess>();
 
         evaluateExpressionToRax(*arrayAccess.base_);
         push("rax");
@@ -368,38 +369,38 @@ void Generator::generatePrimitiveExpression(
     const AST::Expression& expr, const std::optional<std::string_view>& destinationAddress) {
     switch (expr.kind_) {
         case AST::NodeKind::NUMBER_LITERAL: {
-            const auto& numberLit = static_cast<const AST::NumberLiteral&>(expr);
+            const auto& numberLit = *expr.as<AST::NumberLiteral>();
             moveNumberLitToRax(numberLit);
             break;
         }
         case AST::NodeKind::BOOLEAN_LITERAL: {
-            const auto& booleanLit = static_cast<const AST::BooleanLiteral&>(expr);
+            const auto& booleanLit = *expr.as<AST::BooleanLiteral>();
             moveBooleanLitToRax(booleanLit);
             break;
         }
         case AST::NodeKind::IDENTIFIER: {
-            const auto& identifier = static_cast<const AST::Identifier&>(expr);
+            const auto& identifier = *expr.as<AST::Identifier>();
             moveVariableToRax(identifier.name_);
             break;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
-            const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
+            const auto& arrayAccess = *expr.as<AST::ArrayAccess>();
             evaluatePlaceExpressionAddressToRax(arrayAccess);
             loadValueFromRax(exprSizeBits(expr));
             break;
         }
         case AST::NodeKind::FUNCTION_CALL: {
-            const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
+            const auto& funcCall = *expr.as<AST::FunctionCall>();
             generateFunctionCall(funcCall, destinationAddress);
             return;
         }
         case AST::NodeKind::UNARY_EXPRESSION: {
-            const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
+            const auto& unaryExpr = *expr.as<AST::UnaryExpression>();
             evaluateUnaryExpressionToRax(unaryExpr);
             break;
         }
         case AST::NodeKind::BINARY_EXPRESSION: {
-            const auto& binaryExpr = static_cast<const AST::BinaryExpression&>(expr);
+            const auto& binaryExpr = *expr.as<AST::BinaryExpression>();
             evaluateBinaryExpressionToRax(binaryExpr);
             break;
         }
@@ -417,7 +418,7 @@ void Generator::generatePrimitiveExpression(
 void Generator::generateArrayExpression(const AST::Expression& expr,
                                         const std::optional<std::string_view>& destinationAddress) {
     if (expr.kind_ == AST::NodeKind::ARRAY_LITERAL) {
-        const auto& arrayLit = static_cast<const AST::ArrayLiteral&>(expr);
+        const auto& arrayLit = *expr.as<AST::ArrayLiteral>();
         if (destinationAddress.has_value()) {
             generateArrayLit(arrayLit, destinationAddress.value());
         } else {
@@ -425,7 +426,7 @@ void Generator::generateArrayExpression(const AST::Expression& expr,
         }
 
     } else if (expr.kind_ == AST::NodeKind::FUNCTION_CALL) {
-        const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
+        const auto& funcCall = *expr.as<AST::FunctionCall>();
         if (destinationAddress.has_value()) {
             generateFunctionCall(funcCall, destinationAddress);
         } else {
@@ -461,7 +462,7 @@ void Generator::generateExpression(const AST::Expression& expr,
 
 void Generator::copyArrayContents(const std::string_view sourceAddress,
                                   const std::string_view destinationAddress,
-                                    const int arraySizeBits) {
+                                  const int arraySizeBits) {
     output_ << "    mov rsi, " << sourceAddress << "\n";
     output_ << "    mov rdi, " << destinationAddress << "\n";
     output_ << "    mov rcx, " << (arraySizeBits / 8) << "\n";
@@ -580,27 +581,27 @@ void Generator::generateExit(const AST::ExitStatement& exitStmt) {
 void Generator::generateStmt(const AST::Statement& stmt) {
     switch (stmt.kind_) {
         case AST::NodeKind::VARIABLE_DEFINITION: {
-            const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
+            const auto& varDecl = *stmt.as<AST::VariableDefinition>();
             generateVariableDefinition(varDecl);
             break;
         }
         case AST::NodeKind::ASSIGNMENT: {
-            const auto& assignment = static_cast<const AST::Assignment&>(stmt);
+            const auto& assignment = *stmt.as<AST::Assignment>();
             generateVariableAssignment(assignment);
             break;
         }
         case AST::NodeKind::EXPRESSION_STATEMENT: {
-            const auto& exprStmt = static_cast<const AST::ExpressionStatement&>(stmt);
+            const auto& exprStmt = *stmt.as<AST::ExpressionStatement>();
             generateExpressionStmt(exprStmt);
             break;
         }
         case AST::NodeKind::IF_STATEMENT: {
-            const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
+            const auto& ifStmt = *stmt.as<AST::IfStatement>();
             generateIfStmt(ifStmt);
             break;
         }
         case AST::NodeKind::WHILE_STATEMENT: {
-            const auto& whileStmt = static_cast<const AST::WhileStatement&>(stmt);
+            const auto& whileStmt = *stmt.as<AST::WhileStatement>();
             generateWhileStmt(whileStmt);
             break;
         }
@@ -611,17 +612,17 @@ void Generator::generateStmt(const AST::Statement& stmt) {
             generateContinueStatement();
             break;
         case AST::NodeKind::RETURN_STATEMENT: {
-            const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
+            const auto& returnStmt = *stmt.as<AST::ReturnStatement>();
             generateReturnStatement(returnStmt);
             break;
         }
         case AST::NodeKind::EXIT_STATEMENT: {
-            const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
+            const auto& exitStmt = *stmt.as<AST::ExitStatement>();
             generateExit(exitStmt);
             break;
         }
         case AST::NodeKind::BLOCK_STATEMENT: {
-            const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
+            const auto& blockStmt = *stmt.as<AST::BlockStatement>();
             enterScope(blockStmt);
             for (const auto& innerStmt : blockStmt.body_) {
                 generateStmt(*innerStmt);

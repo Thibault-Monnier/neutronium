@@ -222,7 +222,7 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
             break;
         }
         case AST::NodeKind::ARRAY_LITERAL: {
-            const auto& arrayLiteral = static_cast<const AST::ArrayLiteral&>(expr);
+            const auto& arrayLiteral = *expr.as<AST::ArrayLiteral>();
             if (arrayLiteral.elements_.empty()) {
                 error("Array literal cannot be empty", arrayLiteral);
                 verifier = typeManager_.createType(Type::anyFamilyType());
@@ -238,7 +238,7 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
             break;
         }
         case AST::NodeKind::IDENTIFIER: {
-            const auto& identifier = static_cast<const AST::Identifier&>(expr);
+            const auto& identifier = *expr.as<AST::Identifier>();
             const auto info = getSymbolInfo(identifier.name_);
             if (!info.has_value()) {
                 error(std::format("Attempted to access undeclared symbol: `{}`", identifier.name_),
@@ -255,7 +255,7 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
             break;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
-            const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
+            const auto& arrayAccess = *expr.as<AST::ArrayAccess>();
             const TypeID arrayType = getExpressionType(*arrayAccess.base_);
 
             typeManager_.getTypeSolver().addConstraint<HasTraitConstraint>(
@@ -272,17 +272,17 @@ TypeID SemanticAnalyser::getExpressionType(const AST::Expression& expr) {
             break;
         }
         case AST::NodeKind::FUNCTION_CALL: {
-            const auto& funcCall = static_cast<const AST::FunctionCall&>(expr);
+            const auto& funcCall = *expr.as<AST::FunctionCall>();
             verifier = getFunctionCallType(funcCall);
             break;
         }
         case AST::NodeKind::UNARY_EXPRESSION: {
-            const auto& unaryExpr = static_cast<const AST::UnaryExpression&>(expr);
+            const auto& unaryExpr = *expr.as<AST::UnaryExpression>();
             verifier = getUnaryExpressionType(unaryExpr);
             break;
         }
         case AST::NodeKind::BINARY_EXPRESSION: {
-            const auto& binaryExpr = static_cast<const AST::BinaryExpression&>(expr);
+            const auto& binaryExpr = *expr.as<AST::BinaryExpression>();
             verifier = getBinaryExpressionType(binaryExpr);
             break;
         }
@@ -317,7 +317,7 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
         [&](const AST::Expression& expr) {
             switch (expr.kind_) {
                 case AST::NodeKind::IDENTIFIER: {
-                    const std::string& varName = static_cast<const AST::Identifier&>(expr).name_;
+                    const std::string& varName = expr.as<const AST::Identifier>()->name_;
                     const auto& declarationInfo = getSymbolInfo(varName);
                     if (!declarationInfo.has_value()) {
                         error(std::format("Assignment to undeclared variable: `{}`", varName),
@@ -333,7 +333,7 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
                     break;
                 }
                 case AST::NodeKind::ARRAY_ACCESS: {
-                    const auto& arrayAccess = static_cast<const AST::ArrayAccess&>(expr);
+                    const auto& arrayAccess = *expr.as<const AST::ArrayAccess>();
                     if (!verifyIsAssignable(*arrayAccess.base_)) return false;
                     break;
                 }
@@ -400,50 +400,50 @@ void SemanticAnalyser::analyseExit(const AST::ExitStatement& exitStmt) {
 void SemanticAnalyser::analyseStatement(const AST::Statement& stmt) {
     switch (stmt.kind_) {
         case AST::NodeKind::VARIABLE_DEFINITION: {
-            const auto& varDecl = static_cast<const AST::VariableDefinition&>(stmt);
+            const auto& varDecl = *stmt.as<AST::VariableDefinition>();
             analyseVariableDefinition(varDecl);
             break;
         }
         case AST::NodeKind::ASSIGNMENT: {
-            const auto& assignment = static_cast<const AST::Assignment&>(stmt);
+            const auto& assignment = *stmt.as<AST::Assignment>();
             analyseAssignment(assignment);
             break;
         }
         case AST::NodeKind::EXPRESSION_STATEMENT: {
-            const auto& exprStmt = static_cast<const AST::ExpressionStatement&>(stmt);
+            const auto& exprStmt = *stmt.as<AST::ExpressionStatement>();
             analyseExpressionStatement(exprStmt);
             break;
         }
         case AST::NodeKind::IF_STATEMENT: {
-            const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
+            const auto& ifStmt = *stmt.as<AST::IfStatement>();
             analyseIfStatement(ifStmt);
             break;
         }
         case AST::NodeKind::WHILE_STATEMENT: {
-            const auto& whileStmt = static_cast<const AST::WhileStatement&>(stmt);
+            const auto& whileStmt = *stmt.as<AST::WhileStatement>();
             analyseWhileStatement(whileStmt);
             break;
         }
         case AST::NodeKind::BREAK_STATEMENT:
-            analyseBreakStatement(static_cast<const AST::BreakStatement&>(stmt));
+            analyseBreakStatement(*stmt.as<AST::BreakStatement>());
             break;
         case AST::NodeKind::CONTINUE_STATEMENT:
-            analyseContinueStatement(static_cast<const AST::ContinueStatement&>(stmt));
+            analyseContinueStatement(*stmt.as<AST::ContinueStatement>());
             break;
         case AST::NodeKind::RETURN_STATEMENT: {
-            const auto& returnStmt = static_cast<const AST::ReturnStatement&>(stmt);
+            const auto& returnStmt = *stmt.as<AST::ReturnStatement>();
             const TypeID returnTypeID = getExpressionType(*returnStmt.returnValue_);
             typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(
                 returnTypeID, currentFunctionReturnTypeID_, returnStmt);
             break;
         }
         case AST::NodeKind::EXIT_STATEMENT: {
-            const auto& exitStmt = static_cast<const AST::ExitStatement&>(stmt);
+            const auto& exitStmt = *stmt.as<AST::ExitStatement>();
             analyseExit(exitStmt);
             break;
         }
         case AST::NodeKind::BLOCK_STATEMENT: {
-            const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
+            const auto& blockStmt = *stmt.as<AST::BlockStatement>();
             enterScope();
             for (const auto& innerStmt : blockStmt.body_) {
                 analyseStatement(*innerStmt);
@@ -460,7 +460,7 @@ bool SemanticAnalyser::verifyStatementReturns(const AST::Statement& stmt) {
     const AST::NodeKind kind = stmt.kind_;
 
     if (kind == AST::NodeKind::IF_STATEMENT) {
-        const auto& ifStmt = static_cast<const AST::IfStatement&>(stmt);
+        const auto& ifStmt = *stmt.as<AST::IfStatement>();
         if (!ifStmt.elseClause_) return false;
 
         const bool body = verifyStatementReturns(*ifStmt.body_);
@@ -468,7 +468,7 @@ bool SemanticAnalyser::verifyStatementReturns(const AST::Statement& stmt) {
         return body && elseBody;
 
     } else if (kind == AST::NodeKind::BLOCK_STATEMENT) {
-        const auto& blockStmt = static_cast<const AST::BlockStatement&>(stmt);
+        const auto& blockStmt = *stmt.as<AST::BlockStatement>();
         for (const auto& innerStmt : blockStmt.body_) {
             if (verifyStatementReturns(*innerStmt)) return true;
         }

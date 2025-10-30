@@ -270,7 +270,7 @@ std::unique_ptr<AST::ExpressionStatement> Parser::parseExpressionStatement() {
 std::unique_ptr<AST::VariableDefinition> Parser::parseVariableDefinition() {
     const Token& let = expect(TokenKind::LET);
 
-    bool isMutable = advanceIf(TokenKind::MUT);
+    const bool isMutable = advanceIf(TokenKind::MUT);
 
     auto identifier = parseIdentifier();
 
@@ -431,7 +431,7 @@ std::unique_ptr<AST::Statement> Parser::parseStatement() {
 std::unique_ptr<AST::VariableDefinition> Parser::parseFunctionParameter() {
     const uint32_t sourceStartIndex = peek().byteOffsetStart();
 
-    bool isMutable = advanceIf(TokenKind::MUT);
+    const bool isMutable = advanceIf(TokenKind::MUT);
 
     auto identifier = parseIdentifier();
 
@@ -475,7 +475,7 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parseExternalFunctionD
 std::unique_ptr<AST::FunctionDefinition> Parser::parseFunctionDefinition() {
     const uint32_t sourceStartIndex = peek().byteOffsetStart();
 
-    bool isExported = advanceIf(TokenKind::EXPORT);
+    const bool isExported = advanceIf(TokenKind::EXPORT);
 
     expect(TokenKind::FN);
 
