@@ -4,7 +4,7 @@
 
 #include "Type.hpp"
 #include "TypeArena.hpp"
-#include "TypeSolver.hpp"
+#include "inference/TypeSolver.hpp"
 
 /**
  * @class TypeManager

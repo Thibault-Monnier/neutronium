@@ -1,6 +1,6 @@
 #include "TypeSolver.hpp"
 
-#include "TypeManager.hpp"
+#include "../TypeManager.hpp"
 #include "ast/AST.hpp"
 
 TypeID TypeSolver::findRoot(TypeID x) {
