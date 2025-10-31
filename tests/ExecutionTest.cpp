@@ -137,7 +137,7 @@ TEST_F(NeutroniumTester, CompoundAssignments) {
                 y -= x / (arr[1] + 0);  # y = 9 - 6 / 2 = 6
             }
 
-            if (x == y): {
+            if x == y: {
                 exit x;  # should exit with 6
             } else: {
                 exit 0;  # should not reach here
@@ -375,7 +375,7 @@ TEST_F(NeutroniumTester, FunctionCalls) {
         }
 
         fn setToZero(mut var: int) -> int: {
-            if (var != 0): {
+            if var != 0: {
                 var = 0;
             }
             return var;
@@ -876,9 +876,9 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
             fn make_and_sum(v: int8) -> int8: {
                 let arr = [[v, 2], [3, 4]];
                 let inferred = 71;
-                if (false): {
+                if false: {
                     return 128;
-                } elif (true): {
+                } elif true: {
                     exit arr[0][0] + arr[1][1] + inferred - 71;  # expect v + 4 + 71 - 71 = v + 4
                 } else: {
                     return inferred; # make sure type inference works below usage
