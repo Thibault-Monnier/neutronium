@@ -7,7 +7,7 @@
 Neutronium is a lightweight C-like programming language built as an educational project.
 
 > **Disclaimer:** The Neutronium compiler works on **Linux only**, and the following instructions are tailored for
-> Linux (Ubuntu) environments.
+> Linux (Ubuntu/Debian) environments.
 
 <p>
   <br>
@@ -29,7 +29,7 @@ chmod +x run.sh
 chmod +x test.sh
 ```
 
-To install the required dependencies, run:
+To install the required dependencies, run (on Ubuntu/Debian):
 
 ```bash
 sudo apt update
@@ -62,10 +62,15 @@ To build and run the test suite, run:
 
 ## Contributing
 
-Contributions are welcome! If you find an issue, please report it to
+Contributions are welcome!
+
+If you find an issue, please report it to
 the [Neutronium bug tracker](https://github.com/Thibault-Monnier/neutronium/issues).
+
+If you wish to contribute code, you can find a list of tasks and planned features to implement in
+the [roadmap](docs/roadmap/language-features.md).
 
 ## Language
 
-Refer to the [language documentation](docs/language.md) for syntax.
+Refer to the [language documentation](docs/syntax.md) for formal grammar.
 
