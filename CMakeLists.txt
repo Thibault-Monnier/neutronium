@@ -32,6 +32,7 @@ endif ()
 
 # --- Language standard ---
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Compiler flags ---
