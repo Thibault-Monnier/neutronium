@@ -491,12 +491,21 @@ std::unique_ptr<AST::BlockStatement> Parser::parseBlockStatement() {
         if (auto stmt = parseStatement()) {
             statements.push_back(std::move(stmt));
         } else {
-            // Error recovery: skip to the next semicolon or right brace.
-            while (peek().kind() != TokenKind::SEMICOLON &&
-                   peek().kind() != TokenKind::RIGHT_BRACE && peek().kind() != TokenKind::EOF_) {
+            // Error recovery: skip until top level ';' or '}' that closes this block
+            int depth = 0;
+            while (peek().kind() != TokenKind::EOF_) {
+                const TokenKind tokenKind = peek().kind();
+                if (tokenKind == TokenKind::LEFT_BRACE) {
+                    depth++;
+                } else if (tokenKind == TokenKind::RIGHT_BRACE) {
+                    if (depth == 0) break;
+                    depth--;
+                } else if (tokenKind == TokenKind::SEMICOLON && depth == 0) {
+                    advance();  // Consume the semicolon
+                    break;
+                }
                 advance();
             }
-            advanceIf(TokenKind::SEMICOLON);
         }
     }
 
