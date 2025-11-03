@@ -16,8 +16,7 @@
         *_tok_;                                 \
     })
 #else
-#define EXPECT_OR_RETURN_NULLPTR(tokenKind) \
-    (static_assert(false, "EXPECT_OR_RETURN_NULLPTR is not supported by your compiler."), nullptr)
+#error "EXPECT_OR_RETURN_NULLPTR is not supported by your compiler."
 #endif
 
 std::unique_ptr<AST::Program> Parser::parse() {
@@ -79,7 +78,7 @@ std::optional<std::vector<std::unique_ptr<T>>> Parser::parseCommaSeparatedList(
     std::vector<std::unique_ptr<T>> elements;
     while (peek().kind() != endDelimiter) {
         auto elem = parseElement();
-        if (!elem) return {};
+        if (!elem) return std::nullopt;
         elements.push_back(std::move(elem));
         if (!advanceIf(TokenKind::COMMA)) break;
     }
@@ -633,8 +632,8 @@ std::unique_ptr<AST::Program> Parser::parseProgram() {
                 program->appendFunction(std::move(functionDefinition));
                 continue;
             }
-        } else if (!isRecoveringFromError) {  // If we are already recovering from an error, avoid
-                                              // spamming errors
+        } else if (!isRecoveringFromError) { /* If we are already recovering from an error, avoid
+                                              spamming errors */
             const std::string errorMessage =
                 std::format("Invalid token -> expected function definition, got {}",
                             tokenKindToString(peek().kind()));
