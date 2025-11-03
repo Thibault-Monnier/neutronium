@@ -37,7 +37,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Compiler flags ---
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address,undefined -fno-sanitize-recover=all -g3 -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Wpedantic -Wshadow -flto")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Wpedantic -Wshadow")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-fdiagnostics-color=always -fdiagnostics-show-template-tree -fstandalone-debug)
