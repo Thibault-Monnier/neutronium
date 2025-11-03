@@ -51,7 +51,8 @@ break-statement ::= 'break' ';'
 
 continue-statement ::= 'continue' ';'
 
-return-statement ::= 'return' expression ';'
+return-statement ::= 'return' ';'
+                   | 'return' expression ';'
 
 exit-statement ::= 'exit' expression ';'
 

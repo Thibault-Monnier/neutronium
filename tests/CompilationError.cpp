@@ -1048,7 +1048,48 @@ TEST_F(NeutroniumTester, InvalidTypeSpecifier) {
                 error2.contains("LITERAL"));
 }
 
-TEST_F(NeutroniumTester, MultipleErrorsAllReported) {
+TEST_F(NeutroniumTester, MultipleParseErrorsAllReported) {
+    {
+        const std::string code = R"(
+        extern fn exit(code: int);
+        extern fn nothing()
+        extern fn read_file(path: str) -> str;
+        extern fn write_file(path: unknown, content: unkown);
+    )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+
+        EXPECT_TRUE(error.contains("token") && error.contains("EXIT"));
+        EXPECT_TRUE(error.contains("token") && error.contains("SEMICOLON"));
+        EXPECT_TRUE(error.contains("token") && error.contains("type specifier"));
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+               if x == 6: {
+                   while x < 10: {
+                       x = x + 1
+                   }
+               } else: {
+                   exit = 4;
+               }
+
+               y +-
+            }
+            }
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+
+        EXPECT_TRUE(error.contains("token") && error.contains("SEMICOLON"));
+        EXPECT_TRUE(error.contains("token") && error.contains("EQUAL"));
+        EXPECT_TRUE(error.contains("token") && error.contains("RIGHT_BRACE"));
+        EXPECT_TRUE(error.contains("token") && error.contains("expected FN"));
+    }
+}
+
+TEST_F(NeutroniumTester, MultipleSemaErrorsAllReported) {
     const std::string code = R"(
         extern fn mod(a: int, b: int) -> int;
 

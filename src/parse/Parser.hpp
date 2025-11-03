@@ -34,12 +34,15 @@ class Parser {
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
 
-    [[noreturn]] void abort(const std::string& errorMessage) const;
+    void emitError(const std::string& errorMessage) const;
+
+    template <class T>
+    std::unique_ptr<T> emitError(const std::string& errorMessage) const;
 
     [[nodiscard]] const Token& peek(int amount = 0) const;
     const Token& advance();
     bool advanceIf(TokenKind expected);
-    const Token& expect(TokenKind expected);
+    const Token* expect(TokenKind expected);
 
     /** Gets an instance of Type::anyFamilyType() and registers it in the TypeManager.
      * @return The TypeID of the newly created Type.
@@ -49,12 +52,19 @@ class Parser {
     }
 
     template <class T>
-    std::vector<std::unique_ptr<T>> parseCommaSeparatedList(
+    std::optional<std::vector<std::unique_ptr<T>>> parseCommaSeparatedList(
         TokenKind endDelimiter, const std::function<std::unique_ptr<T>()>& parseElement);
-    std::vector<std::unique_ptr<AST::Expression>> parseExpressionList(TokenKind endDelimiter);
+    std::optional<std::vector<std::unique_ptr<AST::Expression>>> parseExpressionList(
+        TokenKind endDelimiter);
 
     static std::optional<Type> tryParsePrimitiveType(TokenKind tokenKind);
-    Type parseTypeSpecifier();
+    std::unique_ptr<Type> parseTypeSpecifier();
+    /** Parses a type annotation if the next token matches `typeAnnotationIndicator`, and returns it
+     * or std::nullopt if parsing failed.
+     * If the next token does not match `typeAnnotationIndicator`, returns `defaultType`.
+     */
+    std::optional<Type> maybeParseTypeAnnotation(TokenKind typeAnnotationIndicator,
+                                                 Type defaultType);
 
     std::unique_ptr<AST::NumberLiteral> parseNumberLiteral();
     std::unique_ptr<AST::ArrayLiteral> parseArrayLiteral();
@@ -94,7 +104,7 @@ class Parser {
     bool assignmentOperatorAhead() const;
     std::unique_ptr<AST::Statement> parseStatement();
 
-    ParsedFunctionSignature parseFunctionSignature();
+    std::unique_ptr<ParsedFunctionSignature> parseFunctionSignature();
     std::unique_ptr<AST::ExternalFunctionDeclaration> parseExternalFunctionDeclaration();
 
     std::unique_ptr<AST::FunctionDefinition> parseFunctionDefinition();
