@@ -612,35 +612,29 @@ std::unique_ptr<AST::FunctionDefinition> Parser::parseFunctionDefinition() {
 std::unique_ptr<AST::Program> Parser::parseProgram() {
     auto program = std::make_unique<AST::Program>();
 
-    bool isRecoveringFromError = false;
-
     while (peek().kind() == TokenKind::EXTERN) {
         if (auto externFunction = parseExternalFunctionDeclaration()) {
             program->appendExternFunction(std::move(externFunction));
         } else {
-            isRecoveringFromError = true;
-            break;
+            // Error recovery: skip to the next semicolon
+            while (peek().kind() != TokenKind::SEMICOLON && peek().kind() != TokenKind::EOF_) {
+                advance();
+            }
+            advanceIf(TokenKind::SEMICOLON);
         }
     }
 
     while (peek().kind() != TokenKind::EOF_) {
-        if (isRecoveringFromError) advance();
+        if (auto functionDefinition = parseFunctionDefinition()) {
+            program->appendFunction(std::move(functionDefinition));
 
-        if (peek().kind() == TokenKind::FN || peek().kind() == TokenKind::EXPORT) {
-            isRecoveringFromError = false;
-            if (auto functionDefinition = parseFunctionDefinition()) {
-                program->appendFunction(std::move(functionDefinition));
-                continue;
+        } else {
+            // Error recovery: skip to the next function definition
+            while (peek().kind() != TokenKind::FN && peek().kind() != TokenKind::EXPORT &&
+                   peek().kind() != TokenKind::EOF_) {
+                advance();
             }
-        } else if (!isRecoveringFromError) { /* If we are already recovering from an error, avoid
-                                              spamming errors */
-            const std::string errorMessage =
-                std::format("Invalid token -> expected function definition, got {}",
-                            tokenKindToString(peek().kind()));
-            emitError(errorMessage);
         }
-
-        isRecoveringFromError = true;
     }
 
     return program;
