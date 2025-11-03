@@ -1,5 +1,6 @@
 #include "DiagnosticsEngine.hpp"
 
+#include <cassert>
 #include <print>
 
 void DiagnosticsEngine::emitErrorContext(const uint32_t byteOffsetStart,
@@ -9,7 +10,7 @@ void DiagnosticsEngine::emitErrorContext(const uint32_t byteOffsetStart,
     const auto [lineStart, columnStart] = sourceManager_.getLineColumn(fileID_, byteOffsetStart);
     const auto [lineEnd, columnEnd] = sourceManager_.getLineColumn(fileID_, byteOffsetEnd);
 
-    const size_t maxLineNumberWidth = std::to_string(lineEnd).size();
+    const uint32_t maxLineNumberWidth = std::to_string(lineEnd).size();
     constexpr std::string_view BLUE = "\x1b[1;94m";
     constexpr std::string_view RED = "\x1b[91m";
     constexpr std::string_view RESET = "\x1b[0m";
@@ -20,7 +21,27 @@ void DiagnosticsEngine::emitErrorContext(const uint32_t byteOffsetStart,
     std::println("{}{}-->{} {}:{}:{}", padding, BLUE, RESET, filePath, lineStart, columnStart);
     std::println("{}{}", padding, separator);
 
+    const uint32_t nbLines = lineEnd - lineStart + 1;
+
+    const bool skipMiddleLines = nbLines > MAX_ERROR_CONTEXT_LINES;
+    // MAX_ERROR_CONTEXT_LINES - 1 to account for the "lines omitted" message
+    const uint32_t nbOmittedLines = nbLines - (MAX_ERROR_CONTEXT_LINES - 1);
+    const uint32_t skipLinesStart = lineStart + MAX_ERROR_CONTEXT_LINES / 2;
+    const uint32_t skipLinesEnd = skipLinesStart + nbOmittedLines;
+    assert(nbOmittedLines == skipLinesEnd - skipLinesStart);
+
     for (uint32_t line = lineStart; line <= lineEnd; ++line) {
+        if (skipMiddleLines && line == skipLinesStart) {
+            std::println("{}{}", padding, separator);
+
+            std::string linesOmittedPadding(maxLineNumberWidth - 1, ' ');
+            std::println("{}{}... {} line{} omitted ...", BLUE, linesOmittedPadding, nbOmittedLines,
+                         (nbOmittedLines > 1) ? "s" : "");
+
+            std::println("{}{}", padding, separator);
+            line = skipLinesEnd;
+        }
+
         const std::string_view lineContents = sourceManager_.getLineContents(fileID_, line);
         std::println("{}{:>{}}{}{}{}", BLUE, line, maxLineNumberWidth, RESET, separator,
                      lineContents);

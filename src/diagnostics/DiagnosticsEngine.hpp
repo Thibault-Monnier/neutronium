@@ -38,5 +38,7 @@ class DiagnosticsEngine {
 
     std::vector<Diagnostic> diagnostics_;
 
+    static constexpr uint32_t MAX_ERROR_CONTEXT_LINES = 6;
+
     void emitErrorContext(uint32_t byteOffsetStart, uint32_t byteOffsetEnd) const;
 };
