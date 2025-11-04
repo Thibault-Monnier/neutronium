@@ -208,7 +208,7 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
         "@", "$", "~", "let x = 1 + @`", "x$", "let _invalid_identifier = 42;"};
 
     for (const auto& input : badInputs) {
-        fs::path tmp = fs::temp_directory_path() / "test_input.nt";
+        const fs::path tmp = fs::temp_directory_path() / "test_input.nt";
         std::ofstream(tmp) << input;
 
         EXPECT_EXIT(
