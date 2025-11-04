@@ -3,6 +3,7 @@
 #include <format>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "Token.hpp"
@@ -30,28 +31,21 @@ void Lexer::advanceWhile(auto predicate) {
 }
 
 std::optional<TokenKind> Lexer::getKeywordKind() const {
-    if (buffer_ == "true") return TokenKind::TRUE;
-    if (buffer_ == "false") return TokenKind::FALSE;
-    if (buffer_ == "int") return TokenKind::INT;
-    if (buffer_ == "int8") return TokenKind::INT8;
-    if (buffer_ == "int16") return TokenKind::INT16;
-    if (buffer_ == "int32") return TokenKind::INT32;
-    if (buffer_ == "int64") return TokenKind::INT64;
-    if (buffer_ == "bool") return TokenKind::BOOL;
-    if (buffer_ == "let") return TokenKind::LET;
-    if (buffer_ == "mut") return TokenKind::MUT;
-    if (buffer_ == "if") return TokenKind::IF;
-    if (buffer_ == "elif") return TokenKind::ELIF;
-    if (buffer_ == "else") return TokenKind::ELSE;
-    if (buffer_ == "while") return TokenKind::WHILE;
-    if (buffer_ == "break") return TokenKind::BREAK;
-    if (buffer_ == "continue") return TokenKind::CONTINUE;
-    if (buffer_ == "fn") return TokenKind::FN;
-    if (buffer_ == "extern") return TokenKind::EXTERN;
-    if (buffer_ == "export") return TokenKind::EXPORT;
-    if (buffer_ == "return") return TokenKind::RETURN;
-    if (buffer_ == "exit") return TokenKind::EXIT;
+    static const std::unordered_map<std::string_view, TokenKind> keywords = {
+        {"true", TokenKind::TRUE},     {"false", TokenKind::FALSE},
+        {"int", TokenKind::INT},       {"int8", TokenKind::INT8},
+        {"int16", TokenKind::INT16},   {"int32", TokenKind::INT32},
+        {"int64", TokenKind::INT64},   {"bool", TokenKind::BOOL},
+        {"let", TokenKind::LET},       {"mut", TokenKind::MUT},
+        {"if", TokenKind::IF},         {"elif", TokenKind::ELIF},
+        {"else", TokenKind::ELSE},     {"while", TokenKind::WHILE},
+        {"break", TokenKind::BREAK},   {"continue", TokenKind::CONTINUE},
+        {"fn", TokenKind::FN},         {"extern", TokenKind::EXTERN},
+        {"export", TokenKind::EXPORT}, {"return", TokenKind::RETURN},
+        {"exit", TokenKind::EXIT},
+    };
 
+    if (const auto it = keywords.find(buffer_); it != keywords.end()) return it->second;
     return std::nullopt;
 }
 
