@@ -1,9 +1,11 @@
 #include "Lexer.hpp"
 
+#include <frozen/string.h>
+#include <frozen/unordered_map.h>
+
 #include <format>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "Token.hpp"
@@ -31,7 +33,7 @@ void Lexer::advanceWhile(auto predicate) {
 }
 
 std::optional<TokenKind> Lexer::getKeywordKind() const {
-    static const std::unordered_map<std::string_view, TokenKind> keywords = {
+    static constexpr auto keywords = frozen::make_unordered_map<frozen::string, TokenKind>({
         {"true", TokenKind::TRUE},     {"false", TokenKind::FALSE},
         {"int", TokenKind::INT},       {"int8", TokenKind::INT8},
         {"int16", TokenKind::INT16},   {"int32", TokenKind::INT32},
@@ -43,9 +45,10 @@ std::optional<TokenKind> Lexer::getKeywordKind() const {
         {"fn", TokenKind::FN},         {"extern", TokenKind::EXTERN},
         {"export", TokenKind::EXPORT}, {"return", TokenKind::RETURN},
         {"exit", TokenKind::EXIT},
-    };
+    });
 
-    if (const auto it = keywords.find(buffer_); it != keywords.end()) return it->second;
+    if (const auto it = keywords.find(std::string_view(buffer_)); it != keywords.end())
+        return it->second;
     return std::nullopt;
 }
 

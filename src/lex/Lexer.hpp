@@ -34,6 +34,7 @@ class Lexer {
     void advanceWhile(auto predicate);
 
     [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;
+
     void lexPlus();
     void lexMinus();
     void lexStar();
