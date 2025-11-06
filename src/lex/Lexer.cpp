@@ -11,6 +11,26 @@
 #include "Token.hpp"
 #include "TokenKind.hpp"
 
+int Lexer::nbTokensLowEstimate() const {
+    // We will probably reserve again later anyway, so use a low estimate to avoid having to
+    // move to much memory next time
+    return static_cast<int>(sourceCode_.length() / 8);
+}
+
+int Lexer::nbTokensEstimate() const {
+    assert(!tokens_.empty());  // Should be called after a few tokens have been lexed
+
+    const auto currentIndex = static_cast<float>(currentIndex_);
+    const auto tokenCount = static_cast<float>(tokens_.size());
+    const auto sourceSize = static_cast<float>(sourceCode_.size());
+
+    const float averageTokenSize = currentIndex / tokenCount;
+
+    // Avoid reallocation at the end which is very costly
+    constexpr float SAFETY_MARGIN = 1.2f;
+    return static_cast<int>(sourceSize / averageTokenSize * SAFETY_MARGIN);
+}
+
 bool Lexer::isAtEnd() const { return currentIndex_ >= sourceCode_.length(); }
 
 char Lexer::peek() const { return isAtEnd() ? '\0' : sourceCode_.at(currentIndex_); }
@@ -128,7 +148,15 @@ void Lexer::lexBang() {
 }
 
 std::vector<Token> Lexer::tokenize() {
+    tokens_.reserve(nbTokensLowEstimate());
+    // std::println("Initial token buffer capacity {}", tokens_.capacity());
+
     while (!isAtEnd()) {
+        if (tokens_.size() >= tokens_.capacity()) {
+            tokens_.reserve(nbTokensEstimate());
+            // std::println("Resized token buffer to capacity {}", tokens_.capacity());
+        }
+
         buffer_.clear();
         char c = advance();
 
@@ -211,6 +239,11 @@ std::vector<Token> Lexer::tokenize() {
         diagnosticsEngine_.emitErrors();
         std::exit(EXIT_FAILURE);
     }
+
+    // std::println("File size: {} bytes, {} tokens generated", sourceCode_.length(),
+    // tokens_.size()); std::println("Final token average size: {:.2} bytes",
+    //              static_cast<double>(sourceCode_.length()) /
+    //              static_cast<double>(tokens_.size()));
 
     return tokens_;
 }
