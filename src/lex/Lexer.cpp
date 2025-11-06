@@ -13,8 +13,8 @@
 
 int Lexer::nbTokensLowEstimate() const {
     // We will probably reserve again later anyway, so use a low estimate to avoid having to
-    // move to much memory next time
-    return static_cast<int>(sourceCode_.length() / 8);
+    // move too much memory next time
+    return std::max(static_cast<int>(sourceCode_.length() / 8), 16);
 }
 
 int Lexer::nbTokensEstimate() const {
