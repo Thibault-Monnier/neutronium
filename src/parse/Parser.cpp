@@ -1,6 +1,7 @@
 #include "Parser.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <format>
 #include <functional>
 #include <memory>
@@ -140,7 +141,7 @@ std::unique_ptr<Type> Parser::parseTypeSpecifier() {
 std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotationIndicator,
                                                      Type defaultType) {
     if (advanceIf(typeAnnotationIndicator)) {
-        auto parsedType = parseTypeSpecifier();
+        const auto parsedType = parseTypeSpecifier();
         if (!parsedType) return std::nullopt;
         return *parsedType;
     }
@@ -155,7 +156,9 @@ std::unique_ptr<AST::Identifier> Parser::parseIdentifier() {
 
 std::unique_ptr<AST::NumberLiteral> Parser::parseNumberLiteral() {
     const Token& token = EXPECT_OR_RETURN_NULLPTR(TokenKind::NUMBER_LITERAL);
-    return std::make_unique<AST::NumberLiteral>(std::stoll(token.lexeme()), token.byteOffsetStart(),
+    int64_t value;
+    std::from_chars(token.lexeme().data(), token.lexeme().data() + token.lexeme().size(), value);
+    return std::make_unique<AST::NumberLiteral>(value, token.byteOffsetStart(),
                                                 token.byteOffsetEnd(), generateAnyType());
 }
 

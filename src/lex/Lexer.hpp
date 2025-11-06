@@ -22,7 +22,7 @@ class Lexer {
     const std::string_view sourceCode_;
     size_t currentIndex_ = 0;
 
-    std::string buffer_;
+    std::size_t tokenStartIndex_ = 0;
 
     std::vector<Token> tokens_;
 
@@ -36,10 +36,15 @@ class Lexer {
      */
     [[nodiscard]] int nbTokensEstimate() const;
 
+    void tokenStart() { tokenStartIndex_ = currentIndex_; }
+
     [[nodiscard]] bool isAtEnd() const;
     [[nodiscard]] char peek() const;
     char advance();
 
+    [[nodiscard]] std::string_view currentLexeme() const {
+        return sourceCode_.substr(tokenStartIndex_, currentIndex_ - tokenStartIndex_);
+    }
     void createToken(TokenKind kind);
 
     void advanceWhile(auto predicate);

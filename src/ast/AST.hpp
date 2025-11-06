@@ -90,10 +90,11 @@ struct ArrayLiteral final : Expression {
 };
 
 struct Identifier final : Expression {
-    Identifier(std::string name, const uint32_t start, const uint32_t end, const TypeID typeID)
-        : Expression{NodeKind::IDENTIFIER, start, end, typeID}, name_(std::move(name)) {}
+    Identifier(const std::string_view name, const uint32_t start, const uint32_t end,
+               const TypeID typeID)
+        : Expression{NodeKind::IDENTIFIER, start, end, typeID}, name_(name) {}
 
-    const std::string name_;
+    const std::string_view name_;
 };
 
 struct ArrayAccess final : Expression {

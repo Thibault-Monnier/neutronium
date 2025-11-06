@@ -37,13 +37,12 @@ char Lexer::peek() const { return isAtEnd() ? '\0' : sourceCode_.at(currentIndex
 
 char Lexer::advance() {
     const char currentChar = peek();
-    buffer_.push_back(currentChar);
     currentIndex_++;
     return currentChar;
 }
 
 void Lexer::createToken(const TokenKind kind) {
-    tokens_.emplace_back(kind, buffer_, currentIndex_ - buffer_.length());
+    tokens_.emplace_back(kind, currentLexeme(), tokenStartIndex_);
 }
 
 void Lexer::advanceWhile(auto predicate) {
@@ -53,7 +52,7 @@ void Lexer::advanceWhile(auto predicate) {
 }
 
 std::optional<TokenKind> Lexer::getKeywordKind() const {
-    static constexpr auto keywords = frozen::make_unordered_map<frozen::string, TokenKind>({
+    static constexpr auto KEYWORDS = frozen::make_unordered_map<frozen::string, TokenKind>({
         {"true", TokenKind::TRUE},     {"false", TokenKind::FALSE},
         {"int", TokenKind::INT},       {"int8", TokenKind::INT8},
         {"int16", TokenKind::INT16},   {"int32", TokenKind::INT32},
@@ -67,8 +66,7 @@ std::optional<TokenKind> Lexer::getKeywordKind() const {
         {"exit", TokenKind::EXIT},
     });
 
-    if (const auto it = keywords.find(std::string_view(buffer_)); it != keywords.end())
-        return it->second;
+    if (const auto it = KEYWORDS.find(currentLexeme()); it != KEYWORDS.end()) return it->second;
     return std::nullopt;
 }
 
@@ -157,7 +155,7 @@ std::vector<Token> Lexer::tokenize() {
             // std::println("Resized token buffer to capacity {}", tokens_.capacity());
         }
 
-        buffer_.clear();
+        tokenStart();
         char c = advance();
 
         if (static_cast<unsigned char>(c) >= 128) {
@@ -231,7 +229,6 @@ std::vector<Token> Lexer::tokenize() {
         }
     }
 
-    buffer_.clear();
     advance();
     createToken(TokenKind::EOF_);
 
