@@ -146,6 +146,9 @@ void Lexer::lexBang() {
 }
 
 std::vector<Token> Lexer::tokenize() {
+    // The lexer relies on the source code being null-terminated
+    assert(sourceCode_[sourceCode_.size()] == '\0');
+
     tokens_.reserve(nbTokensLowEstimate());
     // std::println("Initial token buffer capacity {}", tokens_.capacity());
 
