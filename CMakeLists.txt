@@ -37,7 +37,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Compiler flags ---
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address,undefined -fno-sanitize-recover=all -g3 -fno-omit-frame-pointer -fno-lto")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -Wall -Wextra -Wpedantic -Wshadow -g -fno-omit-frame-pointer -fno-lto")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -Wall -Wextra -Wpedantic -Wshadow -g3 -fno-omit-frame-pointer -fno-lto")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Wpedantic -Wshadow")
 add_link_options(-fno-lto)
 
