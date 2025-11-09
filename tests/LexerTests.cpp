@@ -100,7 +100,8 @@ INSTANTIATE_TEST_SUITE_P(
                               "    x += 1;\n"
                               "  }\n"
                               "  exit 0;\n"
-                              "}",
+                              "}"
+                              "# Ends on a comment",
                               {TokenKind::FN,
                                TokenKind::IDENTIFIER,
                                TokenKind::COLON,

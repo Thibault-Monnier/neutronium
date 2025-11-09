@@ -34,20 +34,6 @@ int Lexer::nbTokensEstimate() const {
 
 bool Lexer::isAtEnd() const { return currentIndex_ >= sourceCode_.length(); }
 
-bool Lexer::isSpace(const char c) {
-    switch (c) {
-        case ' ':
-        case '\t':
-        case '\n':
-        case '\r':
-        case '\f':
-        case '\v':
-            return true;
-        default:
-            return false;
-    }
-}
-
 char Lexer::peek() const { return sourceCode_[currentIndex_]; }
 
 char Lexer::peekAndAdvance() {

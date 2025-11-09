@@ -37,11 +37,6 @@ class Lexer {
     void tokenStart() { tokenStartIndex_ = currentIndex_; }
 
     [[nodiscard]] bool isAtEnd() const;
-    /** Checks if the given character is a whitespace character.
-     * This is much faster than using std::isspace since it avoids locale checks. It simply performs
-     * a bitmask check.
-     */
-    static bool isSpace(char c);
 
     [[nodiscard]] char peek() const;
     void advance() { currentIndex_++; }
