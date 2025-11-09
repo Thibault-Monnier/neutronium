@@ -49,8 +49,7 @@ fn secondary$ID$(): {
         idx += 1;
     }
 
-    # keep sized vars alive by simple arithmetic (lexer coverage)
-    let sink = (tiny + 1) - (small - 2) + (mid / 3) + (big / 1000);
-    print_num(sink);
+    let sink = (tiny + 1) - (tiny - 2) + (tiny / 3) + (tiny / 50);
+    print_num(k);
     return;
 }
