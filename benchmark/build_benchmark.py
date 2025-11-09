@@ -5,10 +5,10 @@ Usage:
     python3 generate_bench.py <source_directory> <num_variants> [output_filename]
 
 This script will:
-  - Read <source_directory>/main.nt
+  - Read benchmark/tests/<source_directory>/main.nt
   - Append 20,000 randomly chosen variant_i.nt files (1 ≤ i ≤ num_variants)
   - Replace all instances of "$ID$" with the current iteration index
-  - Write the result to generated/<source_dir_name>/<output_filename> (default: bench_final.nt)
+  - Write the result to benchmark/generated/<source_dir_name>/<output_filename> (default: bench_final.nt)
   - Produce deterministic but decorrelated variant ordering based on the directory name
 """
 
@@ -45,13 +45,11 @@ def success(msg: str) -> None:
 
 def main() -> None:
     if len(sys.argv) < 3:
-        print(
-            f"{Color.BOLD}Usage:{Color.RESET} python3 generate_bench.py "
-            "<source_directory> <num_variants> [output_filename]"
-        )
+        print(f"{Color.BOLD}Usage:{Color.RESET} python3 generate_bench.py "
+              "<source_directory> <num_variants> [output_filename]")
         sys.exit(1)
 
-    base_dir = Path(sys.argv[1]).resolve()
+    base_dir = (Path("tests") / sys.argv[1]).resolve()
     max_variant = int(sys.argv[2])
     output_filename = sys.argv[3] if len(sys.argv) > 3 else "bench_final.nt"
 
