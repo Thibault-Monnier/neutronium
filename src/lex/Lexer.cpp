@@ -108,8 +108,8 @@ TokenKind Lexer::lexMinus() {
     }
 }
 
-TokenKind Lexer::lexOpMaybeTwoChars(const TokenKind singleCharKind, const TokenKind twoCharsKind,
-                                    const char otherChar = '=') {
+template <TokenKind singleCharKind, TokenKind twoCharsKind, char otherChar>
+__attribute__((always_inline)) TokenKind Lexer::lexOpMaybeTwoChars() {
     if (peek() == otherChar) {
         advance();
         return twoCharsKind;
@@ -182,28 +182,29 @@ void Lexer::lexNextChar() {
             break;
 
         case '+':
-            kind = lexOpMaybeTwoChars(TokenKind::PLUS, TokenKind::PLUS_EQUAL, '=');
+            kind = lexOpMaybeTwoChars<TokenKind::PLUS, TokenKind::PLUS_EQUAL, '='>();
             break;
         case '-':
             kind = lexMinus();
             break;
         case '*':
-            kind = lexOpMaybeTwoChars(TokenKind::STAR, TokenKind::STAR_EQUAL, '=');
+            kind = lexOpMaybeTwoChars<TokenKind::STAR, TokenKind::STAR_EQUAL, '='>();
             break;
         case '/':
-            kind = lexOpMaybeTwoChars(TokenKind::SLASH, TokenKind::SLASH_EQUAL, '=');
+            kind = lexOpMaybeTwoChars<TokenKind::SLASH, TokenKind::SLASH_EQUAL, '='>();
             break;
         case '!':
-            kind = lexOpMaybeTwoChars(TokenKind::BANG, TokenKind::BANG_EQUAL, '=');
+            kind = lexOpMaybeTwoChars<TokenKind::BANG, TokenKind::BANG_EQUAL, '='>();
             break;
         case '=':
-            kind = lexOpMaybeTwoChars(TokenKind::EQUAL, TokenKind::EQUAL_EQUAL, '=');
+            kind = lexOpMaybeTwoChars<TokenKind::EQUAL, TokenKind::EQUAL_EQUAL, '='>();
             break;
         case '<':
-            kind = lexOpMaybeTwoChars(TokenKind::LESS_THAN, TokenKind::LESS_THAN_EQUAL, '=');
+            kind = lexOpMaybeTwoChars<TokenKind::LESS_THAN, TokenKind::LESS_THAN_EQUAL, '='>();
             break;
         case '>':
-            kind = lexOpMaybeTwoChars(TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL, '=');
+            kind =
+                lexOpMaybeTwoChars<TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL, '='>();
             break;
         case '(':
             kind = TokenKind::LEFT_PAREN;
