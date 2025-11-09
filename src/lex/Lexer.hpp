@@ -57,11 +57,11 @@ class Lexer {
     void advanceWhile(auto predicate);
 
     [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;
+    void lexIdentifierContinuation();
 
     [[nodiscard]] TokenKind lexMinus();
-
     template <TokenKind singleCharKind, TokenKind twoCharsKind, char otherChar>
     [[nodiscard]] TokenKind lexOpMaybeTwoChars();
 
-    void lexNextChar();
+    void lexNextChar(char c);
 };

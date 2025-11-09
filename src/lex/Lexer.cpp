@@ -2,6 +2,7 @@
 
 #include <frozen/string.h>
 #include <frozen/unordered_map.h>
+#include <nmmintrin.h>
 
 #include <cstring>
 #include <format>
@@ -82,6 +83,47 @@ std::optional<TokenKind> Lexer::getKeywordKind() const {
     return std::nullopt;
 }
 
+void Lexer::lexIdentifierContinuation() {
+#ifdef __SSE4_2__
+    // Use SIMD to check for identifier continuation characters
+    // This is highly efficient, as it checks 16 characters at a time
+
+    const char* currCharPtr = sourceCode_.data() + currentIndex_;
+    const char* const bufferEnd = sourceCode_.data() + sourceCode_.length();
+
+    alignas(16) static constexpr char VALID_RANGES[16] = {'_', '_', 'A', 'Z', 'a', 'z', '0', '9',
+                                                          0,   0,   0,   0,   0,   0,   0,   0};
+    static constexpr ssize_t BYTES_PER_REG = 16;
+
+    __m128i validRangesV = _mm_load_si128(reinterpret_cast<const __m128i*>(VALID_RANGES));
+
+    while (bufferEnd - currCharPtr >= BYTES_PER_REG) {
+        __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currCharPtr));
+
+        const int consumed = _mm_cmpistri(
+            validRangesV, charsV,
+            _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES | _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
+        currCharPtr += consumed;
+        if (consumed == BYTES_PER_REG) continue;
+
+        currentIndex_ = static_cast<size_t>(currCharPtr - sourceCode_.data());
+        return;
+    }
+#endif
+
+    // Check for identifier continuation characters
+    // This uses many comparisons but is well optimized by the compiler
+    // It ends up being faster than a lookup table because we don't have to wait for memory
+    static constexpr auto isIdentifierContinueChar = [](const unsigned char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+               (c == '_');
+    };
+
+    while (isIdentifierContinueChar(peek())) {
+        advance();
+    }
+}
+
 TokenKind Lexer::lexMinus() {
     if (peek() == '=') {
         advance();
@@ -104,10 +146,7 @@ __attribute__((always_inline)) TokenKind Lexer::lexOpMaybeTwoChars() {
     }
 }
 
-void Lexer::lexNextChar() {
-    tokenStart();
-    char c = peekAndAdvance();
-
+void Lexer::lexNextChar(char c) {
     if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
         diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
                                        currentIndex_ - 1);
@@ -148,7 +187,7 @@ void Lexer::lexNextChar() {
             // clang-format on
 
             // Identifier or keyword
-            advanceWhile([](const char ch) { return std::isalnum(ch) || ch == '_'; });
+            lexIdentifierContinuation();
 
             if (const auto keywordKind = getKeywordKind()) {
                 kind = *keywordKind;
@@ -244,7 +283,9 @@ std::vector<Token> Lexer::tokenize() {
             tokens_.reserve(nbTokensEstimate());
             // std::println("Resized token buffer to capacity {}", tokens_.capacity());
         }
-        lexNextChar();
+
+        tokenStart();
+        lexNextChar(peekAndAdvance());
     }
 
     advance();
