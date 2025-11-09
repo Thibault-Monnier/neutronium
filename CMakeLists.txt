@@ -37,8 +37,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Compiler flags ---
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address,undefined -fno-sanitize-recover=all -g3 -fno-omit-frame-pointer -fno-lto")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -Wall -Wextra -Wpedantic -Wshadow -g3 -fno-omit-frame-pointer -fno-lto")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Wpedantic -Wshadow")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -Wall -Wextra -Wpedantic -Wshadow -g3 -fno-omit-frame-pointer -fno-lto -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Wpedantic -Wshadow -fno-lto -march=native")
 add_link_options(-fno-lto)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
