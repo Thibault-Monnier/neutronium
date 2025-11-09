@@ -562,7 +562,7 @@ void Generator::generateContinueStatement() {
 }
 
 void Generator::generateReturnStatement(const AST::ReturnStatement& returnStmt) {
-    evaluateExpressionToRax(*returnStmt.returnValue_);
+    if (returnStmt.returnValue_) evaluateExpressionToRax(*returnStmt.returnValue_);
     output_ << "    leave\n";
     output_ << "    ret\n";
 }

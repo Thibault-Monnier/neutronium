@@ -923,3 +923,19 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 10);
     }
 }
+
+TEST_F(NeutroniumTester, EmptyReturnStatement) {
+    const std::string code = R"(
+        fn main(): {
+            let mut x = 0;
+            while x < 5: {
+                x += 1;
+                if x == 3: {
+                    return;
+                }
+            }
+            exit x;  # should not reach here
+        }
+    )";
+    EXPECT_EQ(run(code), 0);
+}

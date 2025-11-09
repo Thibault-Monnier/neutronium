@@ -718,40 +718,72 @@ TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
 }
 
 TEST_F(NeutroniumTester, FunctionReturnTypeMismatch) {
-    const std::string code = R"(
-        fn x() -> bool: {
-            return 1;
-        }
-        fn main(): {}
-    )";
-    auto [status, error] = compile(code);
-    EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("Type mismatch") && error.contains("bool") && error.contains("int"));
+    {
+        const std::string code = R"(
+            fn x() -> bool: {
+                return 1;
+            }
+            fn main(): {}
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type mismatch") && error.contains("bool") &&
+                    error.contains("int"));
+    }
 
-    const std::string code2 = R"(
-        fn x(): {
-            return true;
-        }
-        fn main(): {}
-    )";
-    auto [status2, error2] = compile(code2);
-    EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("Type mismatch") && error2.contains("void") &&
-                error2.contains("bool"));
+    {
+        const std::string code = R"(
+            fn x(): {
+                return true;
+            }
+            fn main(): {}
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type mismatch") && error.contains("void") &&
+                    error.contains("bool"));
+    }
 
-    const std::string code3 = R"(
-        fn x() -> int: {
-            return 1;
-        }
+    {
+        const std::string code = R"(
+            fn x() -> int: {
+                return 1;
+            }
+            fn main(): {
+                let y: bool = x();
+            }
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type mismatch") && error.contains("bool") &&
+                    error.contains("int"));
+    }
 
-        fn main(): {
-            let y: bool = x();
-        }
-    )";
-    auto [status3, error3] = compile(code3);
-    EXPECT_NE(status3, 0);
-    EXPECT_TRUE(error3.contains("Type mismatch") && error3.contains("bool") &&
-                error3.contains("int"));
+    {
+        const std::string code = R"(
+            fn x() -> [int; 2]: {
+                return [false, true];
+            }
+            fn main(): {}
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type mismatch") && error.contains("int") &&
+                    error.contains("bool"));
+    }
+
+    {
+        const std::string code = R"(
+            fn x() -> int: {
+                return;
+            }
+            fn main(): {}
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("Type mismatch") && error.contains("int") &&
+                    error.contains("void"));
+    }
 }
 
 TEST_F(NeutroniumTester, FunctionDoesNotAlwaysReturn) {
