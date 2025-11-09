@@ -1,0 +1,27 @@
+fn processArray$ID$(): {
+    let arr = [5,10,15,20,25];
+    let mut total = 0;
+    let mut index = 0;
+
+    while index < 5: {
+        total += arr[index];
+        index += 1;
+    }
+
+    if total > 50: {
+        println(true);
+    } else: {
+        println(false);
+    }
+
+    # Nested arithmetic test
+    {
+        let mut a = 3;
+        let mut b = 6;
+        let mut c = 9;
+        let mut result = (a + b) * c - 5 / 2;
+        println(true);
+    }
+
+    return;
+}

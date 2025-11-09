@@ -1,0 +1,28 @@
+fn compareValues$ID$(): {
+    let mut p = 30;
+    let mut q = 45;
+    let mut r = -10;
+
+    let m = min(p, q);
+    let M = max(p, q);
+    let absr = abs(r);
+
+    print_num(m);
+    print_num(M);
+    print_num(absr);
+
+    if m < 20: {
+        println(false);
+    } elif M > 40: {
+        println(true);
+    } else: {
+        println(false);
+    }
+
+    while r < 0: {
+        r = r + 1;
+        print_num(r);
+    }
+
+    return;
+}

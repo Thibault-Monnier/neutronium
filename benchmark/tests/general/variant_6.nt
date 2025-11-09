@@ -1,0 +1,33 @@
+fn mathStress$ID$(): {
+    let mut x = 5;
+    let mut y = 12;
+    let mut res = pow(x, 3);
+    let modv = mod(res, y);
+
+    if modv == 0: {
+        println(true);
+    } else: {
+        println(false);
+    }
+
+    let mut a = -45;
+    let b = abs(a);
+    let small = min(a, b);
+    let big = max(a, b);
+
+    print_num(small);
+    print_num(big);
+
+    while x < 20: {
+        x = x + 1;
+        let z = pow(x, 2);
+        let diff = abs(z - y);
+        if diff > 10: {
+            println(true);
+        } else: {
+            println(false);
+        }
+    }
+
+    return;
+}

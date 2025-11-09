@@ -1,0 +1,15 @@
+# Array processing variant with sized locals and indexing
+fn processArray$ID$(): {
+    let values = [[10,15], [20,25], [30,35], [40,45]];
+    let mut i = 0;
+    let mut acc = 0;
+
+    while i < 4: {
+        acc += values[i][0] + values[i][1];
+        i += 1;
+    }
+
+    println(acc > 150);
+    print_num(acc);
+    return;
+}

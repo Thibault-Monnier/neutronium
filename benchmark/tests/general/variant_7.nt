@@ -1,0 +1,24 @@
+fn powerLoop$ID$(): {
+    let mut base = 2;
+    let mut exp = 0;
+    let mut acc = 0;
+
+    while exp < 8: {
+        acc = pow(base, exp);
+        print_num(acc);
+        exp = exp + 1;
+    }
+
+    let modtest = mod(acc, 7);
+    if modtest == 0: {
+        println(true);
+    } else: {
+        println(false);
+    }
+
+    let mut neg = -exp * base;
+    neg = abs(neg);
+    print_num(neg);
+
+    return;
+}

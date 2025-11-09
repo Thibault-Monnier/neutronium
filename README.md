@@ -60,6 +60,11 @@ To build and run the test suite, run:
 ./test.sh
 ```
 
+## Benchmarking
+
+Refer to the [benchmarking documentation](benchmark/README.md) for more information about creating and running
+benchmarks.
+
 ## Contributing
 
 Contributions are welcome!

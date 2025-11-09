@@ -1,0 +1,33 @@
+fn secondary$ID$(): {
+    let mut delta = 99;
+    let mut omega = 300;
+    let mut toggle = false;
+    let limit = 900;
+
+    if delta < omega: {
+        delta += 5 * 2 - 7;
+        println(toggle);
+    } elif omega == limit: {
+        println(true);
+    } else: {
+        println(false);
+    }
+
+    while delta < limit: {
+        delta += 10;
+        omega -= 2;
+        if omega <= 0: {
+            break;
+        }
+    }
+
+    let mut idx = 0;
+    let data = [2, 4, 6, 8];
+    while idx < 4: {
+        let value = data[idx] + delta / 4;
+        println(true);
+        idx += 1;
+    }
+
+    return;
+}
