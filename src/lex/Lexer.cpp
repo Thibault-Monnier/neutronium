@@ -33,20 +33,34 @@ int Lexer::nbTokensEstimate() const {
 
 bool Lexer::isAtEnd() const { return currentIndex_ >= sourceCode_.length(); }
 
-char Lexer::peek() const { return isAtEnd() ? '\0' : sourceCode_.at(currentIndex_); }
+bool Lexer::isSpace(const char c) {
+    switch (c) {
+        case ' ':
+        case '\t':
+        case '\n':
+        case '\r':
+        case '\f':
+        case '\v':
+            return true;
+        default:
+            return false;
+    }
+}
 
-char Lexer::advance() {
+char Lexer::peek() const { return sourceCode_[currentIndex_]; }
+
+char Lexer::peekAndAdvance() {
     const char currentChar = peek();
-    currentIndex_++;
+    advance();
     return currentChar;
 }
 
-void Lexer::createToken(const TokenKind kind) {
+__attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
     tokens_.emplace_back(kind, currentLexeme(), tokenStartIndex_);
 }
 
 void Lexer::advanceWhile(auto predicate) {
-    while (!isAtEnd() && predicate(peek())) {
+    while (predicate(peek())) {
         advance();
     }
 }
@@ -159,7 +173,7 @@ std::vector<Token> Lexer::tokenize() {
         }
 
         tokenStart();
-        char c = advance();
+        char c = peekAndAdvance();
 
         if (static_cast<unsigned char>(c) >= 128) {
             diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
@@ -172,7 +186,7 @@ std::vector<Token> Lexer::tokenize() {
             continue;
         }
 
-        if (std::isspace(c)) continue;
+        if (isSpace(c)) continue;
 
         if (c == '#') {
             while (!isAtEnd() && peek() != '\n') advance();

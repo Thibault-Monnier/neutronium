@@ -37,8 +37,18 @@ class Lexer {
     void tokenStart() { tokenStartIndex_ = currentIndex_; }
 
     [[nodiscard]] bool isAtEnd() const;
+    /** Checks if the given character is a whitespace character.
+     * This is much faster than using std::isspace since it avoids locale checks. It simply performs
+     * a bitmask check.
+     */
+    static bool isSpace(char c);
+
     [[nodiscard]] char peek() const;
-    char advance();
+    void advance() { currentIndex_++; }
+    /** Peeks the current character and advances the current index by one. Then returns the
+     * character.
+     */
+    [[nodiscard]] char peekAndAdvance();
 
     [[nodiscard]] std::string_view currentLexeme() const {
         return sourceCode_.substr(tokenStartIndex_, currentIndex_ - tokenStartIndex_);
