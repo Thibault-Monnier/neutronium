@@ -1,13 +1,13 @@
 # Neutronium Roadmap (Syntax & Features)
 
 This document presents planned features and language constructs for Neutronium. The roadmap is divided into
-two main phases: _BASIC_ and _ADVANCED_. The BASIC phase contains simple constructs to make the language easier and
-friendlier to use, while the ADVANCED phase introduces more complex features that might be implemented in the distant
+two main phases: _basic_ and _advanced_. The basic phase contains simple constructs to make the language easier and
+friendlier to use, while the advanced phase introduces more complex features that might be implemented in the distant
 future.
 
 All of the following is subject to change.
 
-## BASIC
+## Basic
 
 ### 1) Literals
 
@@ -41,7 +41,7 @@ All of the following is subject to change.
 
 ---
 
-## ADVANCED
+## Advanced
 
 ### 1) Modules
 

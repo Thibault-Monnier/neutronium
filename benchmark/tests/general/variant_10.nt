@@ -1,0 +1,21 @@
+# Function with params and return (int -> int), uses std funcs
+fn smallLogicTest$ID$(a: int, b: int) -> int: {
+    # mix std ops
+    let p  = pow(a + 1, 2);
+    let mm = mod(p + b, 7);
+    let lo = min(mm, a);
+    let hi = max(mm, b);
+    let d  = abs(hi - lo);
+    return d + mm;
+}
+
+# Function that returns bool (int -> bool), suitable for println(...)
+fn thresholdCheck$ID$(x: int) -> bool: {
+    # even/odd and range check with comparisons
+    let e = mod(x, 2);
+    if x >= 0: {
+        return e == 0;
+    } else: {
+        return e != 0;
+    }
+}

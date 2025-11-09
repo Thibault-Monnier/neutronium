@@ -1,0 +1,25 @@
+fn nestedLoops$ID$(): {
+    let mut outer = 0;
+    while outer < 3: {
+        let mut inner = 0;
+        while inner < 5: {
+            println(false);
+            inner += 1;
+        }
+        outer += 1;
+    }
+
+    # Arithmetic sanity check
+    let mut val = 100;
+    val -= 20;
+    val *= 2;
+    val /= 4;
+
+    if val >= 40: {
+        println(true);
+    } else: {
+        println(false);
+    }
+
+    return;
+}

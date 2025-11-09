@@ -1,0 +1,56 @@
+fn nestedLoops$ID$(): {
+    let mut outer = 0;
+    while outer < 3: {
+        let mut inner = 0;
+        while inner < 4: {
+            println((outer + inner) >= 2);
+            if inner == 2: { foo(); }  # exercise call inside loop
+            inner += 1;
+        }
+        if outer == 1: { helperFunction(); }
+        outer += 1;
+    }
+    return;
+}
+
+fn helperCaller$ID$(): {
+    # call order and spacing jitter
+    foo();
+    helperFunction();
+    if 1 + 1 == 2: { foo(); } else: { helperFunction(); }
+    return;
+}
+
+# Variant adapted with mixed types, arrays, std funcs
+fn secondary$ID$(): {
+    # explicit sizes and inference mixed
+    let tiny:  int8  = 7;
+    let small: int16 = 300;
+    let mid  : int32 = 12345;
+    let big  : int64 = 500000;
+    let k = 9;
+
+    # typed array declaration + literal
+    let arr: [int; 5] = [1, 2, 3, 4, 5];
+    let mut idx = 0;
+
+    # use std functions that take plain int
+    let q = pow(k, 2);                # inferred int
+    let r = mod(q + 17, 5);
+    let m = min(r, 3);
+    let M = max(r, 3);
+    let ab = abs(m - M);
+
+    println(ab == 0);
+
+    while idx < 5: {
+        let v = arr[idx] + (idx * 2);
+        println(v >= 3);
+        idx += 1;
+    }
+
+    # keep sized vars alive by simple arithmetic (lexer coverage)
+    let sink = (tiny + 1) - (small - 2) + (mid / 3) + (big / 1000);
+    print_num(sink);
+    return;
+}

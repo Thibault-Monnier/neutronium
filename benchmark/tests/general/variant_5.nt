@@ -1,0 +1,26 @@
+fn smallLogicTest$ID$(): {
+    let mut flag = true;
+    let mut number = 10;
+    let mut alt = 5;
+
+    if flag == true: {
+        number += 4 * alt - 3;
+    } else: {
+        number -= 1;
+    }
+
+# While loop. This does a while loop. And this comment explains that.
+    # Note: nope, nothing to note.
+    while number > 0: {
+        number -= 2;
+        if number == 3: {
+            continue;
+        }
+        if number < 0: {
+            break;
+        }
+        println(flag);
+    }
+
+    return;
+}

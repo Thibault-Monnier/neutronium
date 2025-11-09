@@ -1,0 +1,131 @@
+## ------------------------------------------------------------------------------- ##
+##  General purpose benchmark for the Neutronium language                          ##
+##  This is the main file. Other variant files are appended                        ##
+##  to this one many times in a deterministic manner.                              ##
+##  It is intended to benchmark all stages of the compiler.                        ##
+##  It attempts to cover all language constructs, in a realistic                   ##
+##  manner and tries to break branch prediction.                                   ##
+## ------------------------------------------------------------------------------- ##
+
+# --------------------------------
+#   External declarations
+# --------------------------------
+
+# I/O functions imported from standard library
+extern fn print_c(char: int);
+extern fn print_num(num: int);
+
+# Math functions imported from standard library
+extern fn mod(a: int, b: int) -> int;
+extern fn abs(val: int) -> int;
+extern fn min(a: int, b: int) -> int;
+extern fn max(a: int, b: int) -> int;
+extern fn pow(a: int, b: int) -> int;
+
+# ----------------------------------------
+#   Helper functions called elsewhere
+# ----------------------------------------
+
+# A function with weird formatting to test lexing irregularities
+fn helperFunction():   {
+    let  mut index  = -0 ;
+    while index
+     < 10 : {
+        if  index == 5:  {
+            break;
+        }   elif index < 3
+        : {
+            continue;
+        }
+        index +=
+        1 ;
+    }
+
+        exit 0;
+}
+
+# Additional small helper for lexer diversity
+fn foo(): {
+    let mut n=3;
+    while n > 0: {
+        n -= 1;
+        if n == 1 : { println(true); }
+        else : { println(false); }
+    }
+}
+
+
+
+# --------------------------------
+#   Main code
+# --------------------------------
+
+# Println... but it doesn't do anything!
+fn println(noParam: bool): {}
+
+# A helper returning a computed result
+fn computeValue(x: int16, y: int16) -> int16: {
+    let diff = abs(x - y);
+    let power = pow(diff, 2);
+    return power / 2;
+}
+
+# Another helper with mixed inference
+fn mixLogic(flag: bool, base: int): {
+    let value = pow(base, 2);
+    if flag: {
+        print_num(value);
+    } else: {
+        print_num(abs(-value));
+    }
+}
+
+# Entry point
+fn main(): {
+    let mut aLongVariableNameWithLotsOfCharacters = 42893;
+    let mut counter: int = 0;
+    let smallNumber = 5;
+    let mut array: [int32; 5] = [1, 2, 3, 4, 5];
+    let flag = true;
+
+    aLongVariableNameWithLotsOfCharacters += 1 - 42 * (7 / 3) + 5;
+    counter += array[2] * 10 - smallNumber;
+
+    if aLongVariableNameWithLotsOfCharacters > 1000: {
+        println(flag);
+    } elif counter == 0: {
+        println(true);
+    } else: {
+        println(false);
+    }
+
+    while aLongVariableNameWithLotsOfCharacters < 5000: {
+        aLongVariableNameWithLotsOfCharacters -= 250;
+        let mut x = aLongVariableNameWithLotsOfCharacters * 2 + 15;
+        println(flag);
+        x -= 10 + 3;
+        x *= 2;
+        let y = x / 5 - 7;
+
+        if y >= 0: { continue; } else: { break; }
+    }
+
+    # Test calls to stdlib functions
+    let p = pow(2, 8);
+    let m = mod(p, 7);
+    let v = max(p, m);
+    print_num(v);
+
+    # Call to helper and foo
+    helperFunction();
+    foo();
+
+    # Call to new functions
+    let result = computeValue(12, 4);
+    print_num(result);
+
+    mixLogic(true, 9);
+    mixLogic(false, 3);
+
+    return;
+}

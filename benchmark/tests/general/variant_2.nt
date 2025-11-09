@@ -1,0 +1,32 @@
+fn computeStuff$ID$(): {
+    let mut counter = 50;
+    let max = 200;
+    let step = 15;
+    let mut condition = true;
+
+    while counter < max: {
+        counter += step;
+        if counter >= 120: {
+            println(condition);
+        } elif counter == 75: {
+            println(false);
+        } else: {
+            println(true);
+        }
+    }
+
+    # Local block with arithmetic
+    {
+        let mut t = 1;
+        let mut r = 2;
+        let mut s = 3;
+        t += r * s;
+        if t > 5: {
+            println(true);
+        } else: {
+            println(false);
+        }
+    }
+
+    return;
+}
