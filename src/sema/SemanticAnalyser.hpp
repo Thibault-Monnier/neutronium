@@ -115,6 +115,7 @@ class SemanticAnalyser {
     void analyseWhileStatement(const AST::WhileStatement& whileStmt);
     void analyseBreakStatement(const AST::BreakStatement& breakStmt) const;
     void analyseContinueStatement(const AST::ContinueStatement& continueStmt) const;
+    void analyseReturnStatement(const AST::ReturnStatement& returnStmt);
     void analyseExit(const AST::ExitStatement& exitStmt);
     void analyseStatement(const AST::Statement& stmt);
 

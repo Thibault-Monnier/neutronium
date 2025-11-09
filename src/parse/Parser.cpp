@@ -28,6 +28,8 @@ std::unique_ptr<AST::Program> Parser::parse() {
         exit(EXIT_FAILURE);
     }
 
+    assert(ast && "AST should not be null here");
+
     return ast;
 }
 
@@ -175,14 +177,16 @@ std::unique_ptr<AST::ArrayLiteral> Parser::parseArrayLiteral() {
 
 std::unique_ptr<AST::FunctionCall> Parser::parseFunctionCall() {
     auto callee = parseIdentifier();
+    if (!callee) return nullptr;
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::LEFT_PAREN);
     auto arguments = parseExpressionList(TokenKind::RIGHT_PAREN);
     if (!arguments) return nullptr;
     const Token& rParen = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
 
+    const uint32_t startIndex = callee->sourceStartIndex();
     return std::make_unique<AST::FunctionCall>(std::move(callee), std::move(arguments.value()),
-                                               callee->sourceStartIndex(), rParen.byteOffsetEnd(),
+                                               startIndex, rParen.byteOffsetEnd(),
                                                generateAnyType());
 }
 
@@ -192,9 +196,9 @@ std::unique_ptr<AST::ArrayAccess> Parser::parseArrayAccess(std::unique_ptr<AST::
     if (!index) return nullptr;
     const Token& rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
-    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index),
-                                              base->sourceStartIndex(), rBracket.byteOffsetEnd(),
-                                              generateAnyType());
+    const uint32_t startIndex = base->sourceStartIndex();
+    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index), startIndex,
+                                              rBracket.byteOffsetEnd(), generateAnyType());
 }
 
 std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
@@ -265,9 +269,9 @@ std::unique_ptr<AST::Expression> Parser::parseUnaryExpression() {
         auto operand = parsePostfixExpression();
         if (!operand) return nullptr;
 
-        return std::make_unique<AST::UnaryExpression>(op, std::move(operand),
-                                                      token.byteOffsetStart(),
-                                                      operand->sourceEndIndex(), generateAnyType());
+        const uint32_t endIndex = operand->sourceEndIndex();
+        return std::make_unique<AST::UnaryExpression>(
+            op, std::move(operand), token.byteOffsetStart(), endIndex, generateAnyType());
     }
 
     return parsePostfixExpression();
@@ -287,9 +291,10 @@ std::unique_ptr<AST::Expression> Parser::parseBinaryExpression(
         auto right = parseOperand();
         if (!right) return nullptr;
 
+        const uint32_t startIndex = left->sourceStartIndex();
+        const uint32_t endIndex = right->sourceEndIndex();
         left = std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right),
-                                                       left->sourceStartIndex(),
-                                                       right->sourceEndIndex(), generateAnyType());
+                                                       startIndex, endIndex, generateAnyType());
         if (!allowMultiple) break;
     }
 
@@ -321,8 +326,10 @@ std::unique_ptr<AST::ExpressionStatement> Parser::parseExpressionStatement() {
     auto expression = parseExpression();
     if (!expression) return nullptr;
     const Token& semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
-    return std::make_unique<AST::ExpressionStatement>(
-        std::move(expression), expression->sourceStartIndex(), semi.byteOffsetEnd());
+
+    const uint32_t startIndex = expression->sourceStartIndex();
+    return std::make_unique<AST::ExpressionStatement>(std::move(expression), startIndex,
+                                                      semi.byteOffsetEnd());
 }
 
 std::unique_ptr<AST::VariableDefinition> Parser::parseVariableDefinition() {
@@ -366,8 +373,9 @@ std::unique_ptr<AST::Assignment> Parser::parseAssignment() {
     if (!right) return nullptr;
     const Token& semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::Assignment>(std::move(left), op, std::move(right),
-                                             left->sourceStartIndex(), semi.byteOffsetEnd());
+    const uint32_t startIndex = left->sourceStartIndex();
+    return std::make_unique<AST::Assignment>(std::move(left), op, std::move(right), startIndex,
+                                             semi.byteOffsetEnd());
 }
 
 std::unique_ptr<AST::IfStatement> Parser::constructIfStatement(
@@ -406,9 +414,10 @@ std::unique_ptr<AST::BlockStatement> Parser::parseElseClause() {
 
     std::vector<std::unique_ptr<AST::Statement>> statements;
     statements.push_back(std::move(elifStmt));
-    return std::make_unique<AST::BlockStatement>(std::move(statements),
-                                                 statements.front()->sourceStartIndex(),
-                                                 statements.back()->sourceEndIndex());
+
+    const uint32_t startIndex = statements.front()->sourceStartIndex();
+    const uint32_t endIndex = statements.back()->sourceEndIndex();
+    return std::make_unique<AST::BlockStatement>(std::move(statements), startIndex, endIndex);
 }
 
 std::unique_ptr<AST::IfStatement> Parser::parseIfStatement() {
@@ -443,8 +452,9 @@ std::unique_ptr<AST::WhileStatement> Parser::parseWhileStatement() {
     auto body = parseBlockStatement();
     if (!body) return nullptr;
 
-    return std::make_unique<AST::WhileStatement>(
-        std::move(condition), std::move(body), whileTok.byteOffsetStart(), body->sourceEndIndex());
+    const uint32_t endIndex = body->sourceEndIndex();
+    return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body),
+                                                 whileTok.byteOffsetStart(), endIndex);
 }
 
 std::unique_ptr<AST::BreakStatement> Parser::parseBreakStatement() {
@@ -556,8 +566,9 @@ std::unique_ptr<AST::VariableDefinition> Parser::parseFunctionParameter() {
     if (!parsedType) return nullptr;
     const TypeID typeID = typeManager_.createType(*parsedType);
 
-    return std::make_unique<AST::VariableDefinition>(
-        std::move(identifier), typeID, isMutable, sourceStartIndex, identifier->sourceEndIndex());
+    const uint32_t endIndex = identifier->sourceEndIndex();
+    return std::make_unique<AST::VariableDefinition>(std::move(identifier), typeID, isMutable,
+                                                     sourceStartIndex, endIndex);
 }
 
 std::unique_ptr<ParsedFunctionSignature> Parser::parseFunctionSignature() {
@@ -606,10 +617,10 @@ std::unique_ptr<AST::FunctionDefinition> Parser::parseFunctionDefinition() {
     auto body = parseBlockStatement();
     if (!body) return nullptr;
 
+    const uint32_t endIndex = body->sourceEndIndex();
     return std::make_unique<AST::FunctionDefinition>(
         std::move(signature->identifier_), std::move(signature->parameters_),
-        signature->returnTypeID_, isExported, std::move(body), sourceStartIndex,
-        body->sourceEndIndex());
+        signature->returnTypeID_, isExported, std::move(body), sourceStartIndex, endIndex);
 }
 
 std::unique_ptr<AST::Program> Parser::parseProgram() {

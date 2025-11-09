@@ -76,7 +76,7 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
         const Type& bType = typeManager_.getType(rootB);
 
         diagnosticsEngine_.reportError(
-            std::format("Type mismatch: cannot unify Type '{}' and '{}'",
+            std::format("Type mismatch: cannot unify types '{}' and '{}'",
                         aType.toString(typeManager_), bType.toString(typeManager_)),
             equalityConstraint.sourceNode().sourceStartIndex(),
             equalityConstraint.sourceNode().sourceEndIndex());

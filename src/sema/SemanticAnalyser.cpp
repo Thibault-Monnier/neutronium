@@ -395,6 +395,16 @@ void SemanticAnalyser::analyseContinueStatement(const AST::ContinueStatement& co
     }
 }
 
+void SemanticAnalyser::analyseReturnStatement(const AST::ReturnStatement& returnStmt) {
+    TypeID returnTypeID;
+    if (returnStmt.returnValue_) {
+        returnTypeID = checkExpression(*returnStmt.returnValue_);
+    } else {
+        returnTypeID = registerVoidType();
+    }
+    equalityConstraint(returnTypeID, currentFunctionReturnTypeID_, returnStmt);
+}
+
 void SemanticAnalyser::analyseExit(const AST::ExitStatement& exitStmt) {
     checkExpression(*exitStmt.exitCode_, registerIntegerType());
 }
@@ -434,8 +444,7 @@ void SemanticAnalyser::analyseStatement(const AST::Statement& stmt) {
             break;
         case AST::NodeKind::RETURN_STATEMENT: {
             const auto& returnStmt = *stmt.as<AST::ReturnStatement>();
-            const TypeID returnTypeID = checkExpression(*returnStmt.returnValue_);
-            equalityConstraint(returnTypeID, currentFunctionReturnTypeID_, returnStmt);
+            analyseReturnStatement(returnStmt);
             break;
         }
         case AST::NodeKind::EXIT_STATEMENT: {
