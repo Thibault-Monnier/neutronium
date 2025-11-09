@@ -55,6 +55,10 @@ class Lexer {
     }
     void createToken(TokenKind kind);
 
+    /** Skips to the first character of the next line, or to the end of the source code if there is
+     * no other line.
+     */
+    void skipToNextLine();
     void advanceWhile(auto predicate);
 
     [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;

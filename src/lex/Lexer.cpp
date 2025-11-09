@@ -2,6 +2,7 @@
 
 #include <frozen/string.h>
 #include <frozen/unordered_map.h>
+#include <string.h>
 
 #include <format>
 #include <optional>
@@ -57,6 +58,17 @@ char Lexer::peekAndAdvance() {
 
 __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
     tokens_.emplace_back(kind, currentLexeme(), tokenStartIndex_);
+}
+
+void Lexer::skipToNextLine() {
+    const auto nextNewline = static_cast<const char*>(std::memchr(
+        sourceCode_.data() + currentIndex_, '\n', sourceCode_.length() - currentIndex_));
+
+    if (nextNewline)
+        // Skip to character after the newline
+        currentIndex_ = static_cast<size_t>(nextNewline - sourceCode_.data()) + 1;
+    else
+        currentIndex_ = sourceCode_.length();  // skip to end if no newline
 }
 
 void Lexer::advanceWhile(auto predicate) {
@@ -175,7 +187,7 @@ std::vector<Token> Lexer::tokenize() {
         tokenStart();
         char c = peekAndAdvance();
 
-        if (static_cast<unsigned char>(c) >= 128) {
+        if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
             diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
                                            currentIndex_ - 1);
 
@@ -189,7 +201,7 @@ std::vector<Token> Lexer::tokenize() {
         if (isSpace(c)) continue;
 
         if (c == '#') {
-            while (!isAtEnd() && peek() != '\n') advance();
+            skipToNextLine();
             continue;
         }
 
