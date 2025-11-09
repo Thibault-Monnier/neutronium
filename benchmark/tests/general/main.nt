@@ -26,6 +26,9 @@ extern fn pow(a: int, b: int) -> int;
 #   Helper functions called elsewhere
 # ----------------------------------------
 
+# Println... but it doesn't do anything!
+fn println(noParam: bool): {}
+
 # A function with weird formatting to test lexing irregularities
 fn helperFunction():   {
     let  mut index  = -0 ;
@@ -60,11 +63,9 @@ fn foo(): {
 #   Main code
 # --------------------------------
 
-# Println... but it doesn't do anything!
-fn println(noParam: bool): {}
 
 # A helper returning a computed result
-fn computeValue(x: int16, y: int16) -> int16: {
+fn computeValue(x: int, y: int) -> int: {
     let diff = abs(x - y);
     let power = pow(diff, 2);
     return power / 2;
@@ -83,7 +84,7 @@ fn mixLogic(flag: bool, base: int): {
 # Entry point
 fn main(): {
     let mut aLongVariableNameWithLotsOfCharacters = 42893;
-    let mut counter: int = 0;
+    let mut counter = 0;
     let smallNumber = 5;
     let mut array: [int32; 5] = [1, 2, 3, 4, 5];
     let flag = true;

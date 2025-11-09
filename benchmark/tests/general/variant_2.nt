@@ -1,10 +1,10 @@
 fn computeStuff$ID$(): {
     let mut counter = 50;
-    let max = 200;
+    let maxV = 200;
     let step = 15;
     let mut condition = true;
 
-    while counter < max: {
+    while counter < maxV: {
         counter += step;
         if counter >= 120: {
             println(condition);
