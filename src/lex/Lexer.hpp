@@ -63,13 +63,9 @@ class Lexer {
 
     [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;
 
-    void lexPlus();
-    void lexMinus();
-    void lexStar();
-    void lexSlash();
+    [[nodiscard]] TokenKind lexMinus();
+    [[nodiscard]] TokenKind lexOpMaybeTwoChars(TokenKind singleCharKind, TokenKind twoCharsKind,
+                                               char otherChar);
 
-    void lexEqual();
-    void lexLessThan();
-    void lexGreaterThan();
-    void lexBang();
+    void lexNextChar();
 };

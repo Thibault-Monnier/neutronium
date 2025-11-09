@@ -56,7 +56,7 @@ char Lexer::peekAndAdvance() {
     return currentChar;
 }
 
-__attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
+void Lexer::createToken(const TokenKind kind) {
     tokens_.emplace_back(kind, currentLexeme(), tokenStartIndex_);
 }
 
@@ -96,79 +96,153 @@ std::optional<TokenKind> Lexer::getKeywordKind() const {
     return std::nullopt;
 }
 
-void Lexer::lexPlus() {
+TokenKind Lexer::lexMinus() {
     if (peek() == '=') {
         advance();
-        createToken(TokenKind::PLUS_EQUAL);
-    } else {
-        createToken(TokenKind::PLUS);
-    }
-}
-
-void Lexer::lexMinus() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::MINUS_EQUAL);
+        return TokenKind::MINUS_EQUAL;
     } else if (peek() == '>') {
         advance();
-        createToken(TokenKind::RIGHT_ARROW);
+        return TokenKind::RIGHT_ARROW;
     } else {
-        createToken(TokenKind::MINUS);
+        return TokenKind::MINUS;
     }
 }
 
-void Lexer::lexStar() {
-    if (peek() == '=') {
+TokenKind Lexer::lexOpMaybeTwoChars(const TokenKind singleCharKind, const TokenKind twoCharsKind,
+                                    const char otherChar = '=') {
+    if (peek() == otherChar) {
         advance();
-        createToken(TokenKind::STAR_EQUAL);
+        return twoCharsKind;
     } else {
-        createToken(TokenKind::STAR);
+        return singleCharKind;
     }
 }
 
-void Lexer::lexSlash() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::SLASH_EQUAL);
-    } else {
-        createToken(TokenKind::SLASH);
-    }
-}
+void Lexer::lexNextChar() {
+    tokenStart();
+    char c = peekAndAdvance();
 
-void Lexer::lexEqual() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::EQUAL_EQUAL);
-    } else {
-        createToken(TokenKind::EQUAL);
-    }
-}
+    if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
+        diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
+                                       currentIndex_ - 1);
 
-void Lexer::lexLessThan() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::LESS_THAN_EQUAL);
-    } else {
-        createToken(TokenKind::LESS_THAN);
-    }
-}
+        // Skip remaining UTF-8 continuation bytes (10xxxxxx)
+        while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
+            advance();
 
-void Lexer::lexGreaterThan() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::GREATER_THAN_EQUAL);
-    } else {
-        createToken(TokenKind::GREATER_THAN);
+        return;
     }
-}
 
-void Lexer::lexBang() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::BANG_EQUAL);
-    } else {
-        createToken(TokenKind::BANG);
+    TokenKind kind;
+    switch (c) {
+            // clang-format off
+        case ' ': case '\t': case '\n':
+        case '\r': case '\f': case '\v':
+            // clang-format on
+
+            // Skip whitespace
+            return;
+
+        case '#':
+            // Comment
+            skipToNextLine();
+            return;
+
+            // clang-format off
+        case 'a': case 'b': case 'c': case 'd': case 'e':
+        case 'f': case 'g': case 'h': case 'i': case 'j':
+        case 'k': case 'l': case 'm': case 'n': case 'o':
+        case 'p': case 'q': case 'r': case 's': case 't':
+        case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
+        case 'A': case 'B': case 'C': case 'D': case 'E':
+        case 'F': case 'G': case 'H': case 'I': case 'J':
+        case 'K': case 'L': case 'M': case 'N': case 'O':
+        case 'P': case 'Q': case 'R': case 'S': case 'T':
+        case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
+            // clang-format on
+
+            // Identifier or keyword
+            advanceWhile([](const char ch) { return std::isalnum(ch) || ch == '_'; });
+
+            if (const auto keywordKind = getKeywordKind()) {
+                kind = *keywordKind;
+            } else {
+                kind = TokenKind::IDENTIFIER;
+            }
+            break;
+
+            // clang-format off
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+            // clang-format on
+
+            // Number literal
+            advanceWhile(isdigit);
+            kind = TokenKind::NUMBER_LITERAL;
+            break;
+
+        case '+':
+            kind = lexOpMaybeTwoChars(TokenKind::PLUS, TokenKind::PLUS_EQUAL, '=');
+            break;
+        case '-':
+            kind = lexMinus();
+            break;
+        case '*':
+            kind = lexOpMaybeTwoChars(TokenKind::STAR, TokenKind::STAR_EQUAL, '=');
+            break;
+        case '/':
+            kind = lexOpMaybeTwoChars(TokenKind::SLASH, TokenKind::SLASH_EQUAL, '=');
+            break;
+        case '!':
+            kind = lexOpMaybeTwoChars(TokenKind::BANG, TokenKind::BANG_EQUAL, '=');
+            break;
+        case '=':
+            kind = lexOpMaybeTwoChars(TokenKind::EQUAL, TokenKind::EQUAL_EQUAL, '=');
+            break;
+        case '<':
+            kind = lexOpMaybeTwoChars(TokenKind::LESS_THAN, TokenKind::LESS_THAN_EQUAL, '=');
+            break;
+        case '>':
+            kind = lexOpMaybeTwoChars(TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL, '=');
+            break;
+        case '(':
+            kind = TokenKind::LEFT_PAREN;
+            break;
+        case ')':
+            kind = TokenKind::RIGHT_PAREN;
+            break;
+        case '{':
+            kind = TokenKind::LEFT_BRACE;
+            break;
+        case '}':
+            kind = TokenKind::RIGHT_BRACE;
+            break;
+        case '[':
+            kind = TokenKind::LEFT_BRACKET;
+            break;
+        case ']':
+            kind = TokenKind::RIGHT_BRACKET;
+            break;
+        case ':':
+            kind = TokenKind::COLON;
+            break;
+        case ';':
+            kind = TokenKind::SEMICOLON;
+            break;
+        case ',':
+            kind = TokenKind::COMMA;
+            break;
+
+        default: {
+            const std::string errorMessage =
+                std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
+                            static_cast<int>(c));
+            diagnosticsEngine_.reportError(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
+            return;
+        }
     }
+
+    createToken(kind);
 }
 
 std::vector<Token> Lexer::tokenize() {
@@ -183,79 +257,7 @@ std::vector<Token> Lexer::tokenize() {
             tokens_.reserve(nbTokensEstimate());
             // std::println("Resized token buffer to capacity {}", tokens_.capacity());
         }
-
-        tokenStart();
-        char c = peekAndAdvance();
-
-        if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
-            diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
-                                           currentIndex_ - 1);
-
-            // Skip remaining UTF-8 continuation bytes (10xxxxxx)
-            while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
-                advance();
-
-            continue;
-        }
-
-        if (isSpace(c)) continue;
-
-        if (c == '#') {
-            skipToNextLine();
-            continue;
-        }
-
-        if (std::isalpha(c)) {
-            advanceWhile([](const char ch) { return std::isalnum(ch) || ch == '_'; });
-            if (auto keywordKind = getKeywordKind()) {
-                createToken(*keywordKind);
-            } else {
-                createToken(TokenKind::IDENTIFIER);
-            }
-
-        } else if (std::isdigit(c)) {
-            advanceWhile(isdigit);
-            createToken(TokenKind::NUMBER_LITERAL);
-        } else if (c == '+') {
-            lexPlus();
-        } else if (c == '-') {
-            lexMinus();
-        } else if (c == '*') {
-            lexStar();
-        } else if (c == '/') {
-            lexSlash();
-        } else if (c == '!') {
-            lexBang();
-        } else if (c == '=') {
-            lexEqual();
-        } else if (c == '<') {
-            lexLessThan();
-        } else if (c == '>') {
-            lexGreaterThan();
-        } else if (c == '(') {
-            createToken(TokenKind::LEFT_PAREN);
-        } else if (c == ')') {
-            createToken(TokenKind::RIGHT_PAREN);
-        } else if (c == '{') {
-            createToken(TokenKind::LEFT_BRACE);
-        } else if (c == '}') {
-            createToken(TokenKind::RIGHT_BRACE);
-        } else if (c == '[') {
-            createToken(TokenKind::LEFT_BRACKET);
-        } else if (c == ']') {
-            createToken(TokenKind::RIGHT_BRACKET);
-        } else if (c == ':') {
-            createToken(TokenKind::COLON);
-        } else if (c == ';') {
-            createToken(TokenKind::SEMICOLON);
-        } else if (c == ',') {
-            createToken(TokenKind::COMMA);
-        } else {
-            const std::string errorMessage =
-                std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
-                            static_cast<int>(c));
-            diagnosticsEngine_.reportError(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
-        }
+        lexNextChar();
     }
 
     advance();
