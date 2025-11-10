@@ -148,7 +148,7 @@ __attribute__((always_inline)) TokenKind Lexer::lexOpMaybeTwoChars() {
     }
 }
 
-void Lexer::lexNextChar(char c) {
+__attribute__((always_inline)) void Lexer::lexNextChar(char c) {
     if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
         diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
                                        currentIndex_ - 1);
