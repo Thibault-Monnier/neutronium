@@ -46,7 +46,8 @@ class Lexer {
     [[nodiscard]] char peekAndAdvance();
 
     [[nodiscard]] std::string_view currentLexeme() const {
-        return std::string_view(sourceCode_.data() + tokenStartIndex_, currentIndex_ - tokenStartIndex_);
+        return std::string_view(sourceCode_.data() + tokenStartIndex_,
+                                currentIndex_ - tokenStartIndex_);
     }
     void createToken(TokenKind kind);
 

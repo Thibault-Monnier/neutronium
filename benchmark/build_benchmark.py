@@ -6,7 +6,7 @@ Usage:
 
 This script will:
   - Read benchmark/tests/<source_directory>/main.nt
-  - Append 20,000 randomly chosen variant_i.nt files (1 ≤ i ≤ num_variants)
+  - Append 100,000 randomly chosen variant_i.nt files (1 ≤ i ≤ num_variants)
   - Replace all instances of "$ID$" with the current iteration index
   - Write the result to benchmark/generated/<source_dir_name>/<output_filename> (default: bench_final.nt)
   - Produce deterministic but decorrelated variant ordering based on the directory name
@@ -54,7 +54,7 @@ def main() -> None:
     output_filename = sys.argv[3] if len(sys.argv) > 3 else "bench_final.nt"
 
     main_file = base_dir / "main.nt"
-    iterations = 20_000
+    iterations = 100_000
 
     if not main_file.is_file():
         error(f"Main file not found: {main_file}")
