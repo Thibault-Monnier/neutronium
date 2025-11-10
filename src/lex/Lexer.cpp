@@ -95,10 +95,10 @@ void Lexer::lexIdentifierContinuation() {
                                                           0,   0,   0,   0,   0,   0,   0,   0};
     static constexpr ssize_t BYTES_PER_REG = 16;
 
-    __m128i validRangesV = _mm_load_si128(reinterpret_cast<const __m128i*>(VALID_RANGES));
+    const __m128i validRangesV = _mm_load_si128(reinterpret_cast<const __m128i*>(VALID_RANGES));
 
     while (bufferEnd - currCharPtr >= BYTES_PER_REG) {
-        __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currCharPtr));
+        const __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currCharPtr));
 
         const int consumed = _mm_cmpistri(
             validRangesV, charsV,
@@ -109,17 +109,19 @@ void Lexer::lexIdentifierContinuation() {
         currentIndex_ = static_cast<size_t>(currCharPtr - sourceCode_.data());
         return;
     }
+
+    currentIndex_ = static_cast<size_t>(currCharPtr - sourceCode_.data());
 #endif
 
     // Check for identifier continuation characters
     // This uses many comparisons but is well optimized by the compiler
     // It ends up being faster than a lookup table because we don't have to wait for memory
-    static constexpr auto isIdentifierContinueChar = [](const unsigned char c) {
+    static constexpr auto IS_IDENTIFIER_CONTINUE_CHAR = [](const unsigned char c) {
         return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
                (c == '_');
     };
 
-    while (isIdentifierContinueChar(peek())) {
+    while (IS_IDENTIFIER_CONTINUE_CHAR(peek())) {
         advance();
     }
 }
@@ -288,6 +290,7 @@ std::vector<Token> Lexer::tokenize() {
         lexNextChar(peekAndAdvance());
     }
 
+    tokenStart();
     advance();
     createToken(TokenKind::EOF_);
 
