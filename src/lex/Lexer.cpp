@@ -43,7 +43,7 @@ char Lexer::peekAndAdvance() {
     return currentChar;
 }
 
-void Lexer::createToken(const TokenKind kind) {
+__attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
     tokens_.emplace_back(kind, currentLexeme(), tokenStartIndex_);
 }
 
