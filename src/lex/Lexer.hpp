@@ -51,7 +51,10 @@ class Lexer {
      * no other line.
      */
     void skipToNextLine();
-    void advanceWhile(auto predicate);
+    /** Skips to the next non-whitespace character
+     */
+    void skipWhitespace();
+    void lexNumberLiteralContinuation();
 
     [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;
     void lexIdentifierContinuation();

@@ -56,8 +56,22 @@ void Lexer::skipToNextLine() {
         currentIndex_ = sourceCode_.length();  // skip to end if no newline
 }
 
-void Lexer::advanceWhile(auto predicate) {
-    while (predicate(peek())) {
+void __attribute__((always_inline)) Lexer::skipWhitespace() {
+    static constexpr auto IS_WHITESPACE = [](const unsigned char c) {
+        return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
+    };
+
+    while (IS_WHITESPACE(peek())) {
+        advance();
+    }
+}
+
+void __attribute__((always_inline)) Lexer::lexNumberLiteralContinuation() {
+    static constexpr auto IS_NUMBER_CHAR = [](const unsigned char c) {
+        return c >= '0' && c <= '9';
+    };
+
+    while (IS_NUMBER_CHAR(peek())) {
         advance();
     }
 }
@@ -166,6 +180,7 @@ __attribute__((always_inline)) void Lexer::lexNextChar(char c) {
             // clang-format on
 
             // Skip whitespace
+            skipWhitespace();
             return;
 
         case '#':
@@ -202,7 +217,7 @@ __attribute__((always_inline)) void Lexer::lexNextChar(char c) {
             // clang-format on
 
             // Number literal
-            advanceWhile(isdigit);
+            lexNumberLiteralContinuation();
             kind = TokenKind::NUMBER_LITERAL;
             break;
 
