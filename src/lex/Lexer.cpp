@@ -44,7 +44,7 @@ char Lexer::peekAndAdvance() {
 }
 
 __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
-    tokens_.emplace_back(kind, currentLexeme(), tokenStartIndex_);
+    tokens_.emplace_back(kind, tokenStartIndex_, currentIndex_ - tokenStartIndex_);
 }
 
 void Lexer::skipToNextLine() {
@@ -298,6 +298,8 @@ std::vector<Token> Lexer::tokenize() {
         diagnosticsEngine_.emitErrors();
         std::exit(EXIT_FAILURE);
     }
+
+    // std::println("Token size: {} bytes", sizeof(Token));
 
     // std::println("File size: {} bytes, {} tokens generated", sourceCode_.length(),
     // tokens_.size()); std::println("Final token average size: {:.2} bytes",

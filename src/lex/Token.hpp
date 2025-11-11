@@ -2,23 +2,24 @@
 
 #include "TokenKind.hpp"
 
-class Token {
+class alignas(4) Token {
    public:
-    explicit Token(const TokenKind kind, const std::string_view lexeme, const uint32_t byteOffset)
-        : lexeme_(lexeme), kind_(kind), byteOffset_(byteOffset) {}
+    Token(const TokenKind kind, const uint32_t startByteOffset, const uint16_t length)
+        : kind_(kind), length_(length), startByteOffset_(startByteOffset) {}
 
     [[nodiscard]] TokenKind kind() const { return kind_; }
-    [[nodiscard]] std::string_view lexeme() const { return lexeme_; }
 
-    [[nodiscard]] uint32_t byteOffsetStart() const { return byteOffset_; }
-    [[nodiscard]] uint32_t byteOffsetEnd() const {
-        return byteOffset_ + static_cast<uint32_t>(lexeme_.size()) - 1;
+    [[nodiscard]] uint32_t byteOffsetStart() const { return startByteOffset_; }
+    [[nodiscard]] uint32_t byteOffsetEnd() const { return startByteOffset_ + length_ - 1; }
+
+    [[nodiscard]] std::string_view lexeme(const std::string_view source) const {
+        return {source.data() + startByteOffset_, length_};
     }
 
    private:
-    std::string_view lexeme_;
-
     TokenKind kind_;
 
-    const uint32_t byteOffset_;
+    const uint16_t length_;
+
+    const uint32_t startByteOffset_;
 };

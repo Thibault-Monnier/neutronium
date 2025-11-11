@@ -152,14 +152,17 @@ std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotat
 
 std::unique_ptr<AST::Identifier> Parser::parseIdentifier() {
     const Token& ident = EXPECT_OR_RETURN_NULLPTR(TokenKind::IDENTIFIER);
-    return std::make_unique<AST::Identifier>(ident.lexeme(), ident.byteOffsetStart(),
+    return std::make_unique<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
                                              ident.byteOffsetEnd(), generateAnyType());
 }
 
 std::unique_ptr<AST::NumberLiteral> Parser::parseNumberLiteral() {
     const Token& token = EXPECT_OR_RETURN_NULLPTR(TokenKind::NUMBER_LITERAL);
+    const std::string_view lexeme = token.lexeme(sourceCode_);
+
     int64_t value;
-    std::from_chars(token.lexeme().data(), token.lexeme().data() + token.lexeme().size(), value);
+    std::from_chars(lexeme.data(), lexeme.data() + lexeme.size(), value);
+
     return std::make_unique<AST::NumberLiteral>(value, token.byteOffsetStart(),
                                                 token.byteOffsetEnd(), generateAnyType());
 }
