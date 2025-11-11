@@ -13,14 +13,12 @@
 #include "Token.hpp"
 #include "TokenKind.hpp"
 
-int Lexer::nbTokensLowEstimate() const {
-    // We will probably reserve again later anyway, so use a low estimate to avoid having to
-    // move too much memory next time
-    return std::max(static_cast<int>(sourceCode_.length() / 8), 16);
-}
-
 int Lexer::nbTokensEstimate() const {
-    assert(!tokens_.empty());  // Should be called after a few tokens have been lexed
+    if (tokens_.empty()) {
+        // Default estimate: one token every 4 characters
+        // This should be enough for most cases
+        return std::max(static_cast<int>(sourceCode_.length() / 4), 16);
+    }
 
     const auto currentIndex = static_cast<float>(currentIndex_);
     const auto tokenCount = static_cast<float>(tokens_.size());
@@ -29,7 +27,7 @@ int Lexer::nbTokensEstimate() const {
     const float averageTokenSize = currentIndex / tokenCount;
 
     // Avoid reallocation at the end which is very costly
-    constexpr float SAFETY_MARGIN = 1.2f;
+    constexpr float SAFETY_MARGIN = 1.3f;
     return static_cast<int>(sourceSize / averageTokenSize * SAFETY_MARGIN);
 }
 
@@ -51,7 +49,7 @@ void Lexer::skipToNextLine() {
     const auto nextNewline = static_cast<const char*>(std::memchr(
         sourceCode_.data() + currentIndex_, '\n', sourceCode_.length() - currentIndex_));
 
-    if (nextNewline)
+    if (nextNewline) [[likely]]
         // Skip to character after the newline
         currentIndex_ = static_cast<size_t>(nextNewline - sourceCode_.data()) + 1;
     else
@@ -277,11 +275,11 @@ std::vector<Token> Lexer::tokenize() {
     // The lexer relies on the source code being null-terminated
     assert(sourceCode_[sourceCode_.size()] == '\0');
 
-    tokens_.reserve(nbTokensLowEstimate());
+    tokens_.reserve(nbTokensEstimate());
     // std::println("Initial token buffer capacity {}", tokens_.capacity());
 
     while (!isAtEnd()) {
-        if (tokens_.size() >= tokens_.capacity()) {
+        if (tokens_.size() >= tokens_.capacity()) [[unlikely]] {
             tokens_.reserve(nbTokensEstimate());
             // std::println("Resized token buffer to capacity {}", tokens_.capacity());
         }
@@ -300,7 +298,6 @@ std::vector<Token> Lexer::tokenize() {
     }
 
     // std::println("Token size: {} bytes", sizeof(Token));
-
     // std::println("File size: {} bytes, {} tokens generated", sourceCode_.length(),
     // tokens_.size()); std::println("Final token average size: {:.2} bytes",
     //              static_cast<double>(sourceCode_.length()) /
