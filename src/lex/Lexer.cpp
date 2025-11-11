@@ -166,15 +166,18 @@ __attribute__((always_inline)) TokenKind Lexer::lexOpMaybeTwoChars() {
     }
 }
 
+__attribute((cold, noinline)) void Lexer::handleNonAsciiChar() {
+    diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
+                                   currentIndex_ - 1);
+
+    // Skip remaining UTF-8 continuation bytes (10xxxxxx)
+    while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
+        advance();
+}
+
 __attribute__((always_inline)) void Lexer::lexNextChar(char c) {
     if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
-        diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
-                                       currentIndex_ - 1);
-
-        // Skip remaining UTF-8 continuation bytes (10xxxxxx)
-        while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
-            advance();
-
+        handleNonAsciiChar();
         return;
     }
 

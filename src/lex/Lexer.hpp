@@ -63,5 +63,7 @@ class Lexer {
     template <TokenKind singleCharKind, TokenKind twoCharsKind, char otherChar>
     [[nodiscard]] TokenKind lexOpMaybeTwoChars();
 
+    void handleNonAsciiChar();
+
     void lexNextChar(char c);
 };
