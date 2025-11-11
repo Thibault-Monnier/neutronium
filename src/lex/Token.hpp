@@ -4,8 +4,12 @@
 
 class alignas(4) Token {
    public:
-    Token(const TokenKind kind, const uint32_t startByteOffset, const uint16_t length)
+    explicit Token(const TokenKind kind, const uint32_t startByteOffset, const uint16_t length)
         : kind_(kind), length_(length), startByteOffset_(startByteOffset) {}
+
+    // Ensure the caller verifies the length fits in uint16_t
+    template <typename T>
+    explicit Token(TokenKind, uint32_t, T) = delete;
 
     [[nodiscard]] TokenKind kind() const { return kind_; }
 

@@ -42,7 +42,13 @@ char Lexer::peekAndAdvance() {
 }
 
 __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
-    tokens_.emplace_back(kind, tokenStartIndex_, currentIndex_ - tokenStartIndex_);
+    const uint32_t length = static_cast<uint32_t>(currentIndex_ - tokenStartIndex_);
+    if (length > UINT16_MAX) {
+        diagnosticsEngine_.reportError("Token length exceeds maximum allowed length",
+                                       tokenStartIndex_, currentIndex_ - 1);
+        return;
+    }
+    tokens_.emplace_back(kind, tokenStartIndex_, static_cast<uint16_t>(length));
 }
 
 void Lexer::skipToNextLine() {
