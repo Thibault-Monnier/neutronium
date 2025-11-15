@@ -33,7 +33,9 @@ std::unique_ptr<AST::Program> Parser::parse() {
     return ast;
 }
 
-__attribute__((always_inline)) const Token& Parser::advance() {
+__attribute__((always_inline)) void Parser::advance() { currentIndex_++; }
+
+__attribute__((always_inline)) const Token& Parser::peekAndAdvance() {
     const Token& token = peek();
     currentIndex_++;
     return token;
@@ -56,7 +58,8 @@ __attribute__((always_inline)) const Token* Parser::expect(const TokenKind expec
         return nullptr;
     }
 
-    return &advance();
+    advance();
+    return &token;
 }
 
 template <typename T>
@@ -119,7 +122,7 @@ std::unique_ptr<Type> Parser::parseTypeSpecifier() {
         return std::make_unique<Type>(elementTypeID, arrayLength->value_);
     }
 
-    return parseTypeSpecifierError();
+    return invalidTypeSpecifierError();
 }
 
 std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotationIndicator,
@@ -219,7 +222,7 @@ std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
         }
 
         default:
-            return parsePrimaryExpressionError();
+            return invalidPrimaryExpressionError();
     }
 }
 
@@ -341,10 +344,10 @@ std::unique_ptr<AST::Assignment> Parser::parseAssignment() {
     auto left = parseExpression();
     if (!left) return nullptr;
 
-    const Token& operatorToken = advance();
+    const Token& operatorToken = peekAndAdvance();
     const AST::Operator op = AST::tokenKindToOperator(operatorToken.kind());
     if (!AST::isAssignmentOperator(op)) {
-        return parseAssignmentError();
+        return invalidAssignmentOperatorError(operatorToken);
     }
 
     auto right = parseExpression();

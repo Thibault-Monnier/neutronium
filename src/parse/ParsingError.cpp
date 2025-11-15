@@ -1,14 +1,7 @@
 #include "Parser.hpp"
 
-void Parser::emitError(const std::string& errorMessage) const {
-    const Token& token = peek();
+void Parser::emitError(const std::string& errorMessage, const Token& token) const {
     diagnosticsEngine_.reportError(errorMessage, token.byteOffsetStart(), token.byteOffsetEnd());
-}
-
-template <typename T>
-std::unique_ptr<T> Parser::emitError(const std::string& errorMessage) const {
-    emitError(errorMessage);
-    return nullptr;
 }
 
 __attribute__((noinline, cold)) void Parser::expectError(const TokenKind expected) const {
@@ -17,10 +10,10 @@ __attribute__((noinline, cold)) void Parser::expectError(const TokenKind expecte
     const std::string errorMessage =
         std::format("Invalid token -> expected {}, got {}", tokenKindToString(expected),
                     tokenKindToString(token.kind()));
-    emitError(errorMessage);
+    emitError(errorMessage, token);
 }
 
-__attribute__((noinline, cold)) std::unique_ptr<Type> Parser::parseTypeSpecifierError() const {
+__attribute__((noinline, cold)) std::unique_ptr<Type> Parser::invalidTypeSpecifierError() const {
     const TokenKind tokenKind = peek().kind();
 
     const std::string errorMessage = std::format("Invalid token -> expected type specifier, got {}",
@@ -29,7 +22,7 @@ __attribute__((noinline, cold)) std::unique_ptr<Type> Parser::parseTypeSpecifier
 }
 
 __attribute__((noinline, cold)) std::unique_ptr<AST::Expression>
-Parser::parsePrimaryExpressionError() const {
+Parser::invalidPrimaryExpressionError() const {
     const Token& token = peek();
 
     const std::string errorMessage =
@@ -38,11 +31,10 @@ Parser::parsePrimaryExpressionError() const {
     return emitError<AST::Expression>(errorMessage);
 }
 
-__attribute__((noinline, cold)) std::unique_ptr<AST::Assignment> Parser::parseAssignmentError()
-    const {
-    const Token& token = peek();
-
-    const std::string errorMessage = std::format(
-        "Invalid token -> expected assignment operator, got {}", tokenKindToString(token.kind()));
-    return emitError<AST::Assignment>(errorMessage);
+__attribute__((noinline, cold)) std::unique_ptr<AST::Assignment>
+Parser::invalidAssignmentOperatorError(const Token& operatorToken) const {
+    const std::string errorMessage =
+        std::format("Invalid token -> expected assignment operator, got {}",
+                    tokenKindToString(operatorToken.kind()));
+    return emitError<AST::Assignment>(errorMessage, operatorToken);
 }

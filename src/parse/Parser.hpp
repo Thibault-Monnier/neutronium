@@ -40,14 +40,38 @@ class Parser {
     // Error handling
     // --------------
 
-    void emitError(const std::string& errorMessage) const;
+    /** Emits an error with the given message at the location of the given token.
+     * @param errorMessage The error message to emit.
+     * @param token The token where the error occurred.
+     */
+    void emitError(const std::string& errorMessage, const Token& token) const;
+    /** Emits an error and returns nullptr of the template type.
+     * @param errorMessage The error message to emit.
+     * @param token The token where the error occurred.
+     * @tparam T The type of the nullptr to return.
+     * @return nullptr of type T.
+     */
     template <class T>
-    [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage) const;
+    [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage,
+                                               const Token& token) const {
+        emitError(errorMessage, token);
+        return nullptr;
+    }
+    /** Emits an error at the current token and returns nullptr of the template type.
+     * @param errorMessage The error message to emit.
+     * @tparam T The type of the nullptr to return.
+     * @return nullptr of type T.
+     */
+    template <class T>
+    [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage) const {
+        return emitError<T>(errorMessage, peek());
+    }
 
     void expectError(TokenKind expected) const;
-    [[nodiscard]] std::unique_ptr<Type> parseTypeSpecifierError() const;
-    [[nodiscard]] std::unique_ptr<AST::Expression> parsePrimaryExpressionError() const;
-    [[nodiscard]] std::unique_ptr<AST::Assignment> parseAssignmentError() const;
+    [[nodiscard]] std::unique_ptr<Type> invalidTypeSpecifierError() const;
+    [[nodiscard]] std::unique_ptr<AST::Expression> invalidPrimaryExpressionError() const;
+    [[nodiscard]] std::unique_ptr<AST::Assignment> invalidAssignmentOperatorError(
+        const Token& operatorToken) const;
 
     // ---------------
     // Parsing helpers
@@ -58,7 +82,8 @@ class Parser {
         return tokens_[currentIndex_ + amount];
     }
 
-    const Token& advance();
+    void advance();
+    [[nodiscard]] const Token& peekAndAdvance();
     bool advanceIf(TokenKind expected);
     const Token* expect(TokenKind expected);
 
