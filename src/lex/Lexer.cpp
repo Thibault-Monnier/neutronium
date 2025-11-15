@@ -41,11 +41,31 @@ char Lexer::peekAndAdvance() {
     return currentChar;
 }
 
+__attribute__((noinline, cold)) void Lexer::createTokenError() const {
+    diagnosticsEngine_.reportError("Token length exceeds maximum allowed length", tokenStartIndex_,
+                                   currentIndex_ - 1);
+}
+
+__attribute__((noinline, cold)) void Lexer::handleNonAsciiChar() {
+    diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
+                                   currentIndex_ - 1);
+
+    // Skip remaining UTF-8 continuation bytes (10xxxxxx)
+    while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
+        advance();
+}
+
+__attribute__((noinline, cold)) void Lexer::invalidCharacterError(const char c) const {
+    const std::string errorMessage =
+        std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
+                    static_cast<int>(c));
+    diagnosticsEngine_.reportError(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
+}
+
 __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
-    const uint32_t length = static_cast<uint32_t>(currentIndex_ - tokenStartIndex_);
+    const auto length = static_cast<uint32_t>(currentIndex_ - tokenStartIndex_);
     if (length > UINT16_MAX) {
-        diagnosticsEngine_.reportError("Token length exceeds maximum allowed length",
-                                       tokenStartIndex_, currentIndex_ - 1);
+        createTokenError();
         return;
     }
     tokens_.emplace_back(kind, tokenStartIndex_, static_cast<uint16_t>(length));
@@ -62,7 +82,7 @@ void Lexer::skipToNextLine() {
         currentIndex_ = sourceCode_.length();  // skip to end if no newline
 }
 
-void __attribute__((always_inline)) Lexer::skipWhitespace() {
+__attribute__((always_inline)) void Lexer::skipWhitespace() {
     static constexpr auto IS_WHITESPACE = [](const unsigned char c) {
         return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
     };
@@ -72,7 +92,7 @@ void __attribute__((always_inline)) Lexer::skipWhitespace() {
     }
 }
 
-void __attribute__((always_inline)) Lexer::lexNumberLiteralContinuation() {
+__attribute__((always_inline)) void Lexer::lexNumberLiteralContinuation() {
     static constexpr auto IS_NUMBER_CHAR = [](const unsigned char c) {
         return c >= '0' && c <= '9';
     };
@@ -166,16 +186,7 @@ __attribute__((always_inline)) TokenKind Lexer::lexOpMaybeTwoChars() {
     }
 }
 
-__attribute((cold, noinline)) void Lexer::handleNonAsciiChar() {
-    diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
-                                   currentIndex_ - 1);
-
-    // Skip remaining UTF-8 continuation bytes (10xxxxxx)
-    while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
-        advance();
-}
-
-__attribute__((always_inline)) void Lexer::lexNextChar(char c) {
+__attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
     if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
         handleNonAsciiChar();
         return;
@@ -283,13 +294,9 @@ __attribute__((always_inline)) void Lexer::lexNextChar(char c) {
             kind = TokenKind::COMMA;
             break;
 
-        default: {
-            const std::string errorMessage =
-                std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
-                            static_cast<int>(c));
-            diagnosticsEngine_.reportError(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
+        default:
+            invalidCharacterError(c);
             return;
-        }
     }
 
     createToken(kind);

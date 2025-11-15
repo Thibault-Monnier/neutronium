@@ -42,6 +42,10 @@ class Lexer {
      */
     [[nodiscard]] char peekAndAdvance();
 
+    void createTokenError() const;
+    void handleNonAsciiChar();
+    void invalidCharacterError(char c) const;
+
     [[nodiscard]] std::string_view currentLexeme() const {
         return {sourceCode_.data() + tokenStartIndex_, currentIndex_ - tokenStartIndex_};
     }
@@ -62,8 +66,6 @@ class Lexer {
     [[nodiscard]] TokenKind lexMinus();
     template <TokenKind singleCharKind, TokenKind twoCharsKind, char otherChar>
     [[nodiscard]] TokenKind lexOpMaybeTwoChars();
-
-    void handleNonAsciiChar();
 
     void lexNextChar(char c);
 };
