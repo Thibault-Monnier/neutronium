@@ -33,26 +33,13 @@ std::unique_ptr<AST::Program> Parser::parse() {
     return ast;
 }
 
-void Parser::emitError(const std::string& errorMessage) const {
-    const Token& token = peek();
-    diagnosticsEngine_.reportError(errorMessage, token.byteOffsetStart(), token.byteOffsetEnd());
-}
-
-template <typename T>
-std::unique_ptr<T> Parser::emitError(const std::string& errorMessage) const {
-    emitError(errorMessage);
-    return nullptr;
-}
-
-const Token& Parser::peek(const int amount) const { return tokens_.at(currentIndex_ + amount); }
-
-const Token& Parser::advance() {
+__attribute__((always_inline)) const Token& Parser::advance() {
     const Token& token = peek();
     currentIndex_++;
     return token;
 }
 
-bool Parser::advanceIf(const TokenKind expected) {
+__attribute__((always_inline)) bool Parser::advanceIf(const TokenKind expected) {
     const Token& token = peek();
 
     const bool matches = token.kind() == expected;
@@ -61,14 +48,11 @@ bool Parser::advanceIf(const TokenKind expected) {
     return matches;
 }
 
-const Token* Parser::expect(const TokenKind expected) {
+__attribute__((always_inline)) const Token* Parser::expect(const TokenKind expected) {
     const Token& token = peek();
 
-    if (token.kind() != expected) {
-        const std::string errorMessage =
-            std::format("Invalid token -> expected {}, got {}", tokenKindToString(expected),
-                        tokenKindToString(token.kind()));
-        emitError(errorMessage);
+    if (token.kind() != expected) [[unlikely]] {
+        expectError(expected);
         return nullptr;
     }
 
@@ -135,9 +119,7 @@ std::unique_ptr<Type> Parser::parseTypeSpecifier() {
         return std::make_unique<Type>(elementTypeID, arrayLength->value_);
     }
 
-    const std::string errorMessage = std::format("Invalid token -> expected type specifier, got {}",
-                                                 tokenKindToString(tokenKind));
-    return emitError<Type>(errorMessage);
+    return parseTypeSpecifierError();
 }
 
 std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotationIndicator,
@@ -236,12 +218,8 @@ std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
             return inner;
         }
 
-        default: {
-            const std::string errorMessage =
-                std::format("Invalid token at beginning of primary expression -> got {}",
-                            tokenKindToString(token.kind()));
-            return emitError<AST::Expression>(errorMessage);
-        }
+        default:
+            return parsePrimaryExpressionError();
     }
 }
 
@@ -366,10 +344,7 @@ std::unique_ptr<AST::Assignment> Parser::parseAssignment() {
     const Token& operatorToken = advance();
     const AST::Operator op = AST::tokenKindToOperator(operatorToken.kind());
     if (!AST::isAssignmentOperator(op)) {
-        const std::string errorMessage =
-            std::format("Invalid token -> expected assignment operator, got {}",
-                        tokenKindToString(operatorToken.kind()));
-        return emitError<AST::Assignment>(errorMessage);
+        return parseAssignmentError();
     }
 
     auto right = parseExpression();

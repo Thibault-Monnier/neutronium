@@ -36,12 +36,28 @@ class Parser {
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
 
+    // --------------
+    // Error handling
+    // --------------
+
     void emitError(const std::string& errorMessage) const;
-
     template <class T>
-    std::unique_ptr<T> emitError(const std::string& errorMessage) const;
+    [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage) const;
 
-    [[nodiscard]] const Token& peek(int amount = 0) const;
+    void expectError(TokenKind expected) const;
+    [[nodiscard]] std::unique_ptr<Type> parseTypeSpecifierError() const;
+    [[nodiscard]] std::unique_ptr<AST::Expression> parsePrimaryExpressionError() const;
+    [[nodiscard]] std::unique_ptr<AST::Assignment> parseAssignmentError() const;
+
+    // ---------------
+    // Parsing helpers
+    // ---------------
+
+    [[nodiscard]] const Token& peek() const { return tokens_[currentIndex_]; }
+    [[nodiscard]] const Token& peek(const int amount) const {
+        return tokens_[currentIndex_ + amount];
+    }
+
     const Token& advance();
     bool advanceIf(TokenKind expected);
     const Token* expect(TokenKind expected);
