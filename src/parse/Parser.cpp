@@ -381,50 +381,30 @@ std::unique_ptr<AST::Assignment> Parser::parseAssignment() {
                                              semi.byteOffsetEnd());
 }
 
-std::unique_ptr<AST::IfStatement> Parser::constructIfStatement(
-    std::unique_ptr<AST::Expression> condition, std::unique_ptr<AST::BlockStatement> body,
-    std::unique_ptr<AST::BlockStatement> elseClause, uint32_t startIndex) {
-    const uint32_t endIndex = elseClause ? elseClause->sourceEndIndex() : body->sourceEndIndex();
-    return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body),
-                                              std::move(elseClause), startIndex, endIndex);
-}
-
 std::unique_ptr<AST::BlockStatement> Parser::parseElseClause() {
     if (advanceIf(TokenKind::ELSE)) {
         EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);
         return parseBlockStatement();
     }
 
-    // ELIF case
-    const Token& elifTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::ELIF);
+    if (peek().kind() == TokenKind::ELIF) {
+        auto elif = parseIfOrElif(TokenKind::ELIF);
+        if (!elif) return nullptr;
 
-    auto elifCondition = parseExpression();
-    if (!elifCondition) return nullptr;
+        const uint32_t start = elif->sourceStartIndex();
+        const uint32_t end = elif->sourceEndIndex();
 
-    EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);
+        std::vector<std::unique_ptr<AST::Statement>> stmts;
+        stmts.push_back(std::move(elif));
 
-    auto elifBody = parseBlockStatement();
-    if (!elifBody) return nullptr;
-
-    std::unique_ptr<AST::BlockStatement> elseClause;
-    if (peek().kind() == TokenKind::ELIF || peek().kind() == TokenKind::ELSE) {
-        elseClause = parseElseClause();
-        if (!elseClause) return nullptr;
+        return std::make_unique<AST::BlockStatement>(std::move(stmts), start, end);
     }
 
-    auto elifStmt = constructIfStatement(std::move(elifCondition), std::move(elifBody),
-                                         std::move(elseClause), elifTok.byteOffsetStart());
-
-    std::vector<std::unique_ptr<AST::Statement>> statements;
-    statements.push_back(std::move(elifStmt));
-
-    const uint32_t startIndex = statements.front()->sourceStartIndex();
-    const uint32_t endIndex = statements.back()->sourceEndIndex();
-    return std::make_unique<AST::BlockStatement>(std::move(statements), startIndex, endIndex);
+    std::unreachable();
 }
 
-std::unique_ptr<AST::IfStatement> Parser::parseIfStatement() {
-    const Token& ifTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::IF);
+std::unique_ptr<AST::IfStatement> Parser::parseIfOrElif(TokenKind kind) {
+    const Token& keywordTok = EXPECT_OR_RETURN_NULLPTR(kind);
 
     auto condition = parseExpression();
     if (!condition) return nullptr;
@@ -440,8 +420,14 @@ std::unique_ptr<AST::IfStatement> Parser::parseIfStatement() {
         if (!elseClause) return nullptr;
     }
 
-    return constructIfStatement(std::move(condition), std::move(body), std::move(elseClause),
-                                ifTok.byteOffsetStart());
+    const uint32_t endIndex = elseClause ? elseClause->sourceEndIndex() : body->sourceEndIndex();
+    return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body),
+                                              std::move(elseClause), keywordTok.byteOffsetStart(),
+                                              endIndex);
+}
+
+std::unique_ptr<AST::IfStatement> Parser::parseIfStatement() {
+    return parseIfOrElif(TokenKind::IF);
 }
 
 std::unique_ptr<AST::WhileStatement> Parser::parseWhileStatement() {

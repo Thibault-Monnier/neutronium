@@ -89,10 +89,8 @@ class Parser {
     std::unique_ptr<AST::VariableDefinition> parseVariableDefinition();
     std::unique_ptr<AST::Assignment> parseAssignment();
 
-    static std::unique_ptr<AST::IfStatement> constructIfStatement(
-        std::unique_ptr<AST::Expression> condition, std::unique_ptr<AST::BlockStatement> body,
-        std::unique_ptr<AST::BlockStatement> elseClause, uint32_t startIndex);
     std::unique_ptr<AST::BlockStatement> parseElseClause();
+    std::unique_ptr<AST::IfStatement> parseIfOrElif(TokenKind kind);
     std::unique_ptr<AST::IfStatement> parseIfStatement();
     std::unique_ptr<AST::WhileStatement> parseWhileStatement();
 
