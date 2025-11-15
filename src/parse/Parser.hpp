@@ -19,8 +19,9 @@ struct ParsedFunctionSignature {
 class Parser {
    public:
     explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine,
-                    TypeManager& typeManager)
+                    const std::string_view sourceCode, TypeManager& typeManager)
         : diagnosticsEngine_(diagnosticsEngine),
+          sourceCode_(sourceCode),
           typeManager_(typeManager),
           tokens_(std::move(tokens)) {}
 
@@ -28,19 +29,61 @@ class Parser {
 
    private:
     DiagnosticsEngine& diagnosticsEngine_;
+    std::string_view sourceCode_;
 
     TypeManager& typeManager_;
 
     std::vector<Token> tokens_;
     size_t currentIndex_ = 0;
 
-    void emitError(const std::string& errorMessage) const;
+    // --------------
+    // Error handling
+    // --------------
 
+    /** Emits an error with the given message at the location of the given token.
+     * @param errorMessage The error message to emit.
+     * @param token The token where the error occurred.
+     */
+    void emitError(const std::string& errorMessage, const Token& token) const;
+    /** Emits an error and returns nullptr of the template type.
+     * @param errorMessage The error message to emit.
+     * @param token The token where the error occurred.
+     * @tparam T The type of the nullptr to return.
+     * @return nullptr of type T.
+     */
     template <class T>
-    std::unique_ptr<T> emitError(const std::string& errorMessage) const;
+    [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage,
+                                               const Token& token) const {
+        emitError(errorMessage, token);
+        return nullptr;
+    }
+    /** Emits an error at the current token and returns nullptr of the template type.
+     * @param errorMessage The error message to emit.
+     * @tparam T The type of the nullptr to return.
+     * @return nullptr of type T.
+     */
+    template <class T>
+    [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage) const {
+        return emitError<T>(errorMessage, peek());
+    }
 
-    [[nodiscard]] const Token& peek(int amount = 0) const;
-    const Token& advance();
+    void expectError(TokenKind expected) const;
+    [[nodiscard]] std::unique_ptr<Type> invalidTypeSpecifierError() const;
+    [[nodiscard]] std::unique_ptr<AST::Expression> invalidPrimaryExpressionError() const;
+    [[nodiscard]] std::unique_ptr<AST::Assignment> invalidAssignmentOperatorError(
+        const Token& operatorToken) const;
+
+    // ---------------
+    // Parsing helpers
+    // ---------------
+
+    [[nodiscard]] const Token& peek() const { return tokens_[currentIndex_]; }
+    [[nodiscard]] const Token& peek(const int amount) const {
+        return tokens_[currentIndex_ + amount];
+    }
+
+    void advance();
+    [[nodiscard]] const Token& peekAndAdvance();
     bool advanceIf(TokenKind expected);
     const Token* expect(TokenKind expected);
 
@@ -87,10 +130,8 @@ class Parser {
     std::unique_ptr<AST::VariableDefinition> parseVariableDefinition();
     std::unique_ptr<AST::Assignment> parseAssignment();
 
-    static std::unique_ptr<AST::IfStatement> constructIfStatement(
-        std::unique_ptr<AST::Expression> condition, std::unique_ptr<AST::BlockStatement> body,
-        std::unique_ptr<AST::BlockStatement> elseClause, uint32_t startIndex);
     std::unique_ptr<AST::BlockStatement> parseElseClause();
+    std::unique_ptr<AST::IfStatement> parseIfOrElif(TokenKind kind);
     std::unique_ptr<AST::IfStatement> parseIfStatement();
     std::unique_ptr<AST::WhileStatement> parseWhileStatement();
 

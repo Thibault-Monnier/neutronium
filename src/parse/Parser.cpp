@@ -1,6 +1,7 @@
 #include "Parser.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <format>
 #include <functional>
 #include <memory>
@@ -32,26 +33,15 @@ std::unique_ptr<AST::Program> Parser::parse() {
     return ast;
 }
 
-void Parser::emitError(const std::string& errorMessage) const {
-    const Token& token = peek();
-    diagnosticsEngine_.reportError(errorMessage, token.byteOffsetStart(), token.byteOffsetEnd());
-}
+__attribute__((always_inline)) void Parser::advance() { currentIndex_++; }
 
-template <typename T>
-std::unique_ptr<T> Parser::emitError(const std::string& errorMessage) const {
-    emitError(errorMessage);
-    return nullptr;
-}
-
-const Token& Parser::peek(const int amount) const { return tokens_.at(currentIndex_ + amount); }
-
-const Token& Parser::advance() {
+__attribute__((always_inline)) const Token& Parser::peekAndAdvance() {
     const Token& token = peek();
     currentIndex_++;
     return token;
 }
 
-bool Parser::advanceIf(const TokenKind expected) {
+__attribute__((always_inline)) bool Parser::advanceIf(const TokenKind expected) {
     const Token& token = peek();
 
     const bool matches = token.kind() == expected;
@@ -60,18 +50,16 @@ bool Parser::advanceIf(const TokenKind expected) {
     return matches;
 }
 
-const Token* Parser::expect(const TokenKind expected) {
+__attribute__((always_inline)) const Token* Parser::expect(const TokenKind expected) {
     const Token& token = peek();
 
-    if (token.kind() != expected) {
-        const std::string errorMessage =
-            std::format("Invalid token -> expected {}, got {}", tokenKindToString(expected),
-                        tokenKindToString(token.kind()));
-        emitError(errorMessage);
+    if (token.kind() != expected) [[unlikely]] {
+        expectError(expected);
         return nullptr;
     }
 
-    return &advance();
+    advance();
+    return &token;
 }
 
 template <typename T>
@@ -134,15 +122,13 @@ std::unique_ptr<Type> Parser::parseTypeSpecifier() {
         return std::make_unique<Type>(elementTypeID, arrayLength->value_);
     }
 
-    const std::string errorMessage = std::format("Invalid token -> expected type specifier, got {}",
-                                                 tokenKindToString(tokenKind));
-    return emitError<Type>(errorMessage);
+    return invalidTypeSpecifierError();
 }
 
 std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotationIndicator,
                                                      Type defaultType) {
     if (advanceIf(typeAnnotationIndicator)) {
-        auto parsedType = parseTypeSpecifier();
+        const auto parsedType = parseTypeSpecifier();
         if (!parsedType) return std::nullopt;
         return *parsedType;
     }
@@ -151,13 +137,18 @@ std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotat
 
 std::unique_ptr<AST::Identifier> Parser::parseIdentifier() {
     const Token& ident = EXPECT_OR_RETURN_NULLPTR(TokenKind::IDENTIFIER);
-    return std::make_unique<AST::Identifier>(ident.lexeme(), ident.byteOffsetStart(),
+    return std::make_unique<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
                                              ident.byteOffsetEnd(), generateAnyType());
 }
 
 std::unique_ptr<AST::NumberLiteral> Parser::parseNumberLiteral() {
     const Token& token = EXPECT_OR_RETURN_NULLPTR(TokenKind::NUMBER_LITERAL);
-    return std::make_unique<AST::NumberLiteral>(std::stoll(token.lexeme()), token.byteOffsetStart(),
+    const std::string_view lexeme = token.lexeme(sourceCode_);
+
+    int64_t value;
+    std::from_chars(lexeme.data(), lexeme.data() + lexeme.size(), value);
+
+    return std::make_unique<AST::NumberLiteral>(value, token.byteOffsetStart(),
                                                 token.byteOffsetEnd(), generateAnyType());
 }
 
@@ -230,12 +221,8 @@ std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
             return inner;
         }
 
-        default: {
-            const std::string errorMessage =
-                std::format("Invalid token at beginning of primary expression -> got {}",
-                            tokenKindToString(token.kind()));
-            return emitError<AST::Expression>(errorMessage);
-        }
+        default:
+            return invalidPrimaryExpressionError();
     }
 }
 
@@ -357,13 +344,10 @@ std::unique_ptr<AST::Assignment> Parser::parseAssignment() {
     auto left = parseExpression();
     if (!left) return nullptr;
 
-    const Token& operatorToken = advance();
+    const Token& operatorToken = peekAndAdvance();
     const AST::Operator op = AST::tokenKindToOperator(operatorToken.kind());
     if (!AST::isAssignmentOperator(op)) {
-        const std::string errorMessage =
-            std::format("Invalid token -> expected assignment operator, got {}",
-                        tokenKindToString(operatorToken.kind()));
-        return emitError<AST::Assignment>(errorMessage);
+        return invalidAssignmentOperatorError(operatorToken);
     }
 
     auto right = parseExpression();
@@ -375,50 +359,30 @@ std::unique_ptr<AST::Assignment> Parser::parseAssignment() {
                                              semi.byteOffsetEnd());
 }
 
-std::unique_ptr<AST::IfStatement> Parser::constructIfStatement(
-    std::unique_ptr<AST::Expression> condition, std::unique_ptr<AST::BlockStatement> body,
-    std::unique_ptr<AST::BlockStatement> elseClause, uint32_t startIndex) {
-    const uint32_t endIndex = elseClause ? elseClause->sourceEndIndex() : body->sourceEndIndex();
-    return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body),
-                                              std::move(elseClause), startIndex, endIndex);
-}
-
 std::unique_ptr<AST::BlockStatement> Parser::parseElseClause() {
     if (advanceIf(TokenKind::ELSE)) {
         EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);
         return parseBlockStatement();
     }
 
-    // ELIF case
-    const Token& elifTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::ELIF);
+    if (peek().kind() == TokenKind::ELIF) {
+        auto elif = parseIfOrElif(TokenKind::ELIF);
+        if (!elif) return nullptr;
 
-    auto elifCondition = parseExpression();
-    if (!elifCondition) return nullptr;
+        const uint32_t start = elif->sourceStartIndex();
+        const uint32_t end = elif->sourceEndIndex();
 
-    EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);
+        std::vector<std::unique_ptr<AST::Statement>> stmts;
+        stmts.push_back(std::move(elif));
 
-    auto elifBody = parseBlockStatement();
-    if (!elifBody) return nullptr;
-
-    std::unique_ptr<AST::BlockStatement> elseClause;
-    if (peek().kind() == TokenKind::ELIF || peek().kind() == TokenKind::ELSE) {
-        elseClause = parseElseClause();
-        if (!elseClause) return nullptr;
+        return std::make_unique<AST::BlockStatement>(std::move(stmts), start, end);
     }
 
-    auto elifStmt = constructIfStatement(std::move(elifCondition), std::move(elifBody),
-                                         std::move(elseClause), elifTok.byteOffsetStart());
-
-    std::vector<std::unique_ptr<AST::Statement>> statements;
-    statements.push_back(std::move(elifStmt));
-
-    const uint32_t startIndex = statements.front()->sourceStartIndex();
-    const uint32_t endIndex = statements.back()->sourceEndIndex();
-    return std::make_unique<AST::BlockStatement>(std::move(statements), startIndex, endIndex);
+    std::unreachable();
 }
 
-std::unique_ptr<AST::IfStatement> Parser::parseIfStatement() {
-    const Token& ifTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::IF);
+std::unique_ptr<AST::IfStatement> Parser::parseIfOrElif(TokenKind kind) {
+    const Token& keywordTok = EXPECT_OR_RETURN_NULLPTR(kind);
 
     auto condition = parseExpression();
     if (!condition) return nullptr;
@@ -434,8 +398,14 @@ std::unique_ptr<AST::IfStatement> Parser::parseIfStatement() {
         if (!elseClause) return nullptr;
     }
 
-    return constructIfStatement(std::move(condition), std::move(body), std::move(elseClause),
-                                ifTok.byteOffsetStart());
+    const uint32_t endIndex = elseClause ? elseClause->sourceEndIndex() : body->sourceEndIndex();
+    return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body),
+                                              std::move(elseClause), keywordTok.byteOffsetStart(),
+                                              endIndex);
+}
+
+std::unique_ptr<AST::IfStatement> Parser::parseIfStatement() {
+    return parseIfOrElif(TokenKind::IF);
 }
 
 std::unique_ptr<AST::WhileStatement> Parser::parseWhileStatement() {

@@ -1,5 +1,10 @@
 #include "Lexer.hpp"
 
+#include <frozen/string.h>
+#include <frozen/unordered_map.h>
+#include <nmmintrin.h>
+
+#include <cstring>
 #include <format>
 #include <optional>
 #include <string>
@@ -8,205 +13,313 @@
 #include "Token.hpp"
 #include "TokenKind.hpp"
 
+int Lexer::nbTokensEstimate() const {
+    if (tokens_.empty()) {
+        // Default estimate: one token every 4 characters
+        // This should be enough for most cases
+        return std::max(static_cast<int>(sourceCode_.length() / 4), 16);
+    }
+
+    const auto currentIndex = static_cast<float>(currentIndex_);
+    const auto tokenCount = static_cast<float>(tokens_.size());
+    const auto sourceSize = static_cast<float>(sourceCode_.size());
+
+    const float averageTokenSize = currentIndex / tokenCount;
+
+    // Avoid reallocation at the end which is very costly
+    constexpr float SAFETY_MARGIN = 1.3f;
+    return static_cast<int>(sourceSize / averageTokenSize * SAFETY_MARGIN);
+}
+
 bool Lexer::isAtEnd() const { return currentIndex_ >= sourceCode_.length(); }
 
-char Lexer::peek() const { return isAtEnd() ? '\0' : sourceCode_.at(currentIndex_); }
+char Lexer::peek() const { return sourceCode_[currentIndex_]; }
 
-char Lexer::advance() {
+char Lexer::peekAndAdvance() {
     const char currentChar = peek();
-    buffer_.push_back(currentChar);
-    currentIndex_++;
+    advance();
     return currentChar;
 }
 
-void Lexer::createToken(const TokenKind kind) {
-    tokens_.emplace_back(kind, buffer_, currentIndex_ - buffer_.length());
+__attribute__((noinline, cold)) void Lexer::createTokenError() const {
+    diagnosticsEngine_.reportError("Token length exceeds maximum allowed length", tokenStartIndex_,
+                                   currentIndex_ - 1);
 }
 
-void Lexer::advanceWhile(auto predicate) {
-    while (!isAtEnd() && predicate(peek())) {
+__attribute__((noinline, cold)) void Lexer::handleNonAsciiChar() {
+    diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
+                                   currentIndex_ - 1);
+
+    // Skip remaining UTF-8 continuation bytes (10xxxxxx)
+    while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
+        advance();
+}
+
+__attribute__((noinline, cold)) void Lexer::invalidCharacterError(const char c) const {
+    const std::string errorMessage =
+        std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
+                    static_cast<int>(c));
+    diagnosticsEngine_.reportError(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
+}
+
+__attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
+    const auto length = static_cast<uint32_t>(currentIndex_ - tokenStartIndex_);
+    if (length > UINT16_MAX) {
+        createTokenError();
+        return;
+    }
+    tokens_.emplace_back(kind, tokenStartIndex_, static_cast<uint16_t>(length));
+}
+
+void Lexer::skipToNextLine() {
+    const auto nextNewline = static_cast<const char*>(std::memchr(
+        sourceCode_.data() + currentIndex_, '\n', sourceCode_.length() - currentIndex_));
+
+    if (nextNewline) [[likely]]
+        // Skip to character after the newline
+        currentIndex_ = static_cast<size_t>(nextNewline - sourceCode_.data()) + 1;
+    else
+        currentIndex_ = sourceCode_.length();  // skip to end if no newline
+}
+
+__attribute__((always_inline)) void Lexer::skipWhitespace() {
+    static constexpr auto IS_WHITESPACE = [](const unsigned char c) {
+        return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
+    };
+
+    while (IS_WHITESPACE(peek())) {
+        advance();
+    }
+}
+
+__attribute__((always_inline)) void Lexer::lexNumberLiteralContinuation() {
+    static constexpr auto IS_NUMBER_CHAR = [](const unsigned char c) {
+        return c >= '0' && c <= '9';
+    };
+
+    while (IS_NUMBER_CHAR(peek())) {
         advance();
     }
 }
 
 std::optional<TokenKind> Lexer::getKeywordKind() const {
-    if (buffer_ == "true") return TokenKind::TRUE;
-    if (buffer_ == "false") return TokenKind::FALSE;
-    if (buffer_ == "int") return TokenKind::INT;
-    if (buffer_ == "int8") return TokenKind::INT8;
-    if (buffer_ == "int16") return TokenKind::INT16;
-    if (buffer_ == "int32") return TokenKind::INT32;
-    if (buffer_ == "int64") return TokenKind::INT64;
-    if (buffer_ == "bool") return TokenKind::BOOL;
-    if (buffer_ == "let") return TokenKind::LET;
-    if (buffer_ == "mut") return TokenKind::MUT;
-    if (buffer_ == "if") return TokenKind::IF;
-    if (buffer_ == "elif") return TokenKind::ELIF;
-    if (buffer_ == "else") return TokenKind::ELSE;
-    if (buffer_ == "while") return TokenKind::WHILE;
-    if (buffer_ == "break") return TokenKind::BREAK;
-    if (buffer_ == "continue") return TokenKind::CONTINUE;
-    if (buffer_ == "fn") return TokenKind::FN;
-    if (buffer_ == "extern") return TokenKind::EXTERN;
-    if (buffer_ == "export") return TokenKind::EXPORT;
-    if (buffer_ == "return") return TokenKind::RETURN;
-    if (buffer_ == "exit") return TokenKind::EXIT;
+    static constexpr auto KEYWORDS = frozen::make_unordered_map<frozen::string, TokenKind>({
+        {"true", TokenKind::TRUE},     {"false", TokenKind::FALSE},
+        {"int", TokenKind::INT},       {"int8", TokenKind::INT8},
+        {"int16", TokenKind::INT16},   {"int32", TokenKind::INT32},
+        {"int64", TokenKind::INT64},   {"bool", TokenKind::BOOL},
+        {"let", TokenKind::LET},       {"mut", TokenKind::MUT},
+        {"if", TokenKind::IF},         {"elif", TokenKind::ELIF},
+        {"else", TokenKind::ELSE},     {"while", TokenKind::WHILE},
+        {"break", TokenKind::BREAK},   {"continue", TokenKind::CONTINUE},
+        {"fn", TokenKind::FN},         {"extern", TokenKind::EXTERN},
+        {"export", TokenKind::EXPORT}, {"return", TokenKind::RETURN},
+        {"exit", TokenKind::EXIT},
+    });
 
+    if (const auto it = KEYWORDS.find(currentLexeme()); it != KEYWORDS.end()) return it->second;
     return std::nullopt;
 }
 
-void Lexer::lexPlus() {
-    if (peek() == '=') {
+void Lexer::lexIdentifierContinuation() {
+#ifdef __SSE4_2__
+    // Use SIMD to check for identifier continuation characters
+    // This is highly efficient, as it checks 16 characters at a time
+
+    const char* currCharPtr = sourceCode_.data() + currentIndex_;
+    const char* const bufferEnd = sourceCode_.data() + sourceCode_.length();
+
+    alignas(16) static constexpr char VALID_RANGES[16] = {'_', '_', 'A', 'Z', 'a', 'z', '0', '9',
+                                                          0,   0,   0,   0,   0,   0,   0,   0};
+    static constexpr ssize_t BYTES_PER_REG = 16;
+
+    const __m128i validRangesV = _mm_load_si128(reinterpret_cast<const __m128i*>(VALID_RANGES));
+
+    while (bufferEnd - currCharPtr >= BYTES_PER_REG) {
+        const __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currCharPtr));
+
+        const int consumed = _mm_cmpistri(
+            validRangesV, charsV,
+            _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES | _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
+        currCharPtr += consumed;
+        if (consumed == BYTES_PER_REG) continue;
+
+        currentIndex_ = static_cast<size_t>(currCharPtr - sourceCode_.data());
+        return;
+    }
+
+    currentIndex_ = static_cast<size_t>(currCharPtr - sourceCode_.data());
+#endif
+
+    // Check for identifier continuation characters
+    // This uses many comparisons but is well optimized by the compiler
+    // It ends up being faster than a lookup table because we don't have to wait for memory
+    static constexpr auto IS_IDENTIFIER_CONTINUE_CHAR = [](const unsigned char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+               (c == '_');
+    };
+
+    while (IS_IDENTIFIER_CONTINUE_CHAR(peek())) {
         advance();
-        createToken(TokenKind::PLUS_EQUAL);
-    } else {
-        createToken(TokenKind::PLUS);
     }
 }
 
-void Lexer::lexMinus() {
+TokenKind Lexer::lexMinus() {
     if (peek() == '=') {
         advance();
-        createToken(TokenKind::MINUS_EQUAL);
+        return TokenKind::MINUS_EQUAL;
     } else if (peek() == '>') {
         advance();
-        createToken(TokenKind::RIGHT_ARROW);
+        return TokenKind::RIGHT_ARROW;
     } else {
-        createToken(TokenKind::MINUS);
+        return TokenKind::MINUS;
     }
 }
 
-void Lexer::lexStar() {
-    if (peek() == '=') {
+template <TokenKind singleCharKind, TokenKind twoCharsKind, char otherChar>
+__attribute__((always_inline)) TokenKind Lexer::lexOpMaybeTwoChars() {
+    if (peek() == otherChar) {
         advance();
-        createToken(TokenKind::STAR_EQUAL);
+        return twoCharsKind;
     } else {
-        createToken(TokenKind::STAR);
+        return singleCharKind;
     }
 }
 
-void Lexer::lexSlash() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::SLASH_EQUAL);
-    } else {
-        createToken(TokenKind::SLASH);
+__attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
+    if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
+        handleNonAsciiChar();
+        return;
     }
-}
 
-void Lexer::lexEqual() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::EQUAL_EQUAL);
-    } else {
-        createToken(TokenKind::EQUAL);
-    }
-}
+    TokenKind kind;
+    switch (c) {
+            // clang-format off
+        case ' ': case '\t': case '\n':
+        case '\r': case '\f': case '\v':
+            // clang-format on
 
-void Lexer::lexLessThan() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::LESS_THAN_EQUAL);
-    } else {
-        createToken(TokenKind::LESS_THAN);
-    }
-}
+            // Skip whitespace
+            skipWhitespace();
+            return;
 
-void Lexer::lexGreaterThan() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::GREATER_THAN_EQUAL);
-    } else {
-        createToken(TokenKind::GREATER_THAN);
-    }
-}
+        case '#':
+            // Comment
+            skipToNextLine();
+            return;
 
-void Lexer::lexBang() {
-    if (peek() == '=') {
-        advance();
-        createToken(TokenKind::BANG_EQUAL);
-    } else {
-        createToken(TokenKind::BANG);
+            // clang-format off
+        case 'a': case 'b': case 'c': case 'd': case 'e':
+        case 'f': case 'g': case 'h': case 'i': case 'j':
+        case 'k': case 'l': case 'm': case 'n': case 'o':
+        case 'p': case 'q': case 'r': case 's': case 't':
+        case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
+        case 'A': case 'B': case 'C': case 'D': case 'E':
+        case 'F': case 'G': case 'H': case 'I': case 'J':
+        case 'K': case 'L': case 'M': case 'N': case 'O':
+        case 'P': case 'Q': case 'R': case 'S': case 'T':
+        case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
+            // clang-format on
+
+            // Identifier or keyword
+            lexIdentifierContinuation();
+
+            if (const auto keywordKind = getKeywordKind()) {
+                kind = *keywordKind;
+            } else {
+                kind = TokenKind::IDENTIFIER;
+            }
+            break;
+
+            // clang-format off
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+            // clang-format on
+
+            // Number literal
+            lexNumberLiteralContinuation();
+            kind = TokenKind::NUMBER_LITERAL;
+            break;
+
+        case '+':
+            kind = lexOpMaybeTwoChars<TokenKind::PLUS, TokenKind::PLUS_EQUAL, '='>();
+            break;
+        case '-':
+            kind = lexMinus();
+            break;
+        case '*':
+            kind = lexOpMaybeTwoChars<TokenKind::STAR, TokenKind::STAR_EQUAL, '='>();
+            break;
+        case '/':
+            kind = lexOpMaybeTwoChars<TokenKind::SLASH, TokenKind::SLASH_EQUAL, '='>();
+            break;
+        case '!':
+            kind = lexOpMaybeTwoChars<TokenKind::BANG, TokenKind::BANG_EQUAL, '='>();
+            break;
+        case '=':
+            kind = lexOpMaybeTwoChars<TokenKind::EQUAL, TokenKind::EQUAL_EQUAL, '='>();
+            break;
+        case '<':
+            kind = lexOpMaybeTwoChars<TokenKind::LESS_THAN, TokenKind::LESS_THAN_EQUAL, '='>();
+            break;
+        case '>':
+            kind =
+                lexOpMaybeTwoChars<TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL, '='>();
+            break;
+        case '(':
+            kind = TokenKind::LEFT_PAREN;
+            break;
+        case ')':
+            kind = TokenKind::RIGHT_PAREN;
+            break;
+        case '{':
+            kind = TokenKind::LEFT_BRACE;
+            break;
+        case '}':
+            kind = TokenKind::RIGHT_BRACE;
+            break;
+        case '[':
+            kind = TokenKind::LEFT_BRACKET;
+            break;
+        case ']':
+            kind = TokenKind::RIGHT_BRACKET;
+            break;
+        case ':':
+            kind = TokenKind::COLON;
+            break;
+        case ';':
+            kind = TokenKind::SEMICOLON;
+            break;
+        case ',':
+            kind = TokenKind::COMMA;
+            break;
+
+        default:
+            invalidCharacterError(c);
+            return;
     }
+
+    createToken(kind);
 }
 
 std::vector<Token> Lexer::tokenize() {
+    // The lexer relies on the source code being null-terminated
+    assert(sourceCode_[sourceCode_.size()] == '\0');
+
+    tokens_.reserve(nbTokensEstimate());
+    // std::println("Initial token buffer capacity {}", tokens_.capacity());
+
     while (!isAtEnd()) {
-        buffer_.clear();
-        char c = advance();
-
-        if (static_cast<unsigned char>(c) >= 128) {
-            diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
-                                           currentIndex_ - 1);
-
-            // Skip remaining UTF-8 continuation bytes (10xxxxxx)
-            while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
-                advance();
-
-            continue;
+        if (tokens_.size() >= tokens_.capacity()) [[unlikely]] {
+            tokens_.reserve(nbTokensEstimate());
+            // std::println("Resized token buffer to capacity {}", tokens_.capacity());
         }
 
-        if (std::isspace(c)) continue;
-
-        if (c == '#') {
-            while (!isAtEnd() && peek() != '\n') advance();
-            continue;
-        }
-
-        if (std::isalpha(c)) {
-            advanceWhile([](const char ch) { return std::isalnum(ch) || ch == '_'; });
-            if (auto keywordKind = getKeywordKind()) {
-                createToken(*keywordKind);
-            } else {
-                createToken(TokenKind::IDENTIFIER);
-            }
-
-        } else if (std::isdigit(c)) {
-            advanceWhile(isdigit);
-            createToken(TokenKind::NUMBER_LITERAL);
-        } else if (c == '+') {
-            lexPlus();
-        } else if (c == '-') {
-            lexMinus();
-        } else if (c == '*') {
-            lexStar();
-        } else if (c == '/') {
-            lexSlash();
-        } else if (c == '!') {
-            lexBang();
-        } else if (c == '=') {
-            lexEqual();
-        } else if (c == '<') {
-            lexLessThan();
-        } else if (c == '>') {
-            lexGreaterThan();
-        } else if (c == '(') {
-            createToken(TokenKind::LEFT_PAREN);
-        } else if (c == ')') {
-            createToken(TokenKind::RIGHT_PAREN);
-        } else if (c == '{') {
-            createToken(TokenKind::LEFT_BRACE);
-        } else if (c == '}') {
-            createToken(TokenKind::RIGHT_BRACE);
-        } else if (c == '[') {
-            createToken(TokenKind::LEFT_BRACKET);
-        } else if (c == ']') {
-            createToken(TokenKind::RIGHT_BRACKET);
-        } else if (c == ':') {
-            createToken(TokenKind::COLON);
-        } else if (c == ';') {
-            createToken(TokenKind::SEMICOLON);
-        } else if (c == ',') {
-            createToken(TokenKind::COMMA);
-        } else {
-            const std::string errorMessage =
-                std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
-                            static_cast<int>(c));
-            diagnosticsEngine_.reportError(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
-        }
+        tokenStart();
+        lexNextChar(peekAndAdvance());
     }
 
-    buffer_.clear();
+    tokenStart();
     advance();
     createToken(TokenKind::EOF_);
 
@@ -214,6 +327,12 @@ std::vector<Token> Lexer::tokenize() {
         diagnosticsEngine_.emitErrors();
         std::exit(EXIT_FAILURE);
     }
+
+    // std::println("Token size: {} bytes", sizeof(Token));
+    // std::println("File size: {} bytes, {} tokens generated", sourceCode_.length(),
+    // tokens_.size()); std::println("Final token average size: {:.2} bytes",
+    //              static_cast<double>(sourceCode_.length()) /
+    //              static_cast<double>(tokens_.size()));
 
     return tokens_;
 }

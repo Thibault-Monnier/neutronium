@@ -80,4 +80,6 @@ class SourceManager {
         std::vector<uint32_t> linesStarts_;
     };
     std::vector<SourceFile> sourceFiles_;
+
+    static void scanFileLineStarts(std::string_view contents, std::vector<uint32_t>& lineStarts);
 };

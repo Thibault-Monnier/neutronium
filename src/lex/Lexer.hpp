@@ -1,7 +1,6 @@
 #pragma once
 
 #include <optional>
-#include <string>
 #include <vector>
 
 #include "Token.hpp"
@@ -21,26 +20,52 @@ class Lexer {
     const std::string_view sourceCode_;
     size_t currentIndex_ = 0;
 
-    std::string buffer_;
+    std::size_t tokenStartIndex_ = 0;
 
     std::vector<Token> tokens_;
 
-    [[nodiscard]] bool isAtEnd() const;
-    [[nodiscard]] char peek() const;
-    char advance();
+    /** Estimate of the number of tokens in the source code. If no tokens have been lexed yet, a
+     * default estimate is returned. Otherwise, the estimate is based on the average size of the
+     * tokens lexed so far. This should be used to reserve memory for the token vector during lexing
+     * if needed.
+     */
+    [[nodiscard]] int nbTokensEstimate() const;
 
+    void tokenStart() { tokenStartIndex_ = currentIndex_; }
+
+    [[nodiscard]] bool isAtEnd() const;
+
+    [[nodiscard]] char peek() const;
+    void advance() { currentIndex_++; }
+    /** Peeks the current character and advances the current index by one. Then returns the
+     * character.
+     */
+    [[nodiscard]] char peekAndAdvance();
+
+    void createTokenError() const;
+    void handleNonAsciiChar();
+    void invalidCharacterError(char c) const;
+
+    [[nodiscard]] std::string_view currentLexeme() const {
+        return {sourceCode_.data() + tokenStartIndex_, currentIndex_ - tokenStartIndex_};
+    }
     void createToken(TokenKind kind);
 
-    void advanceWhile(auto predicate);
+    /** Skips to the first character of the next line, or to the end of the source code if there is
+     * no other line.
+     */
+    void skipToNextLine();
+    /** Skips to the next non-whitespace character
+     */
+    void skipWhitespace();
+    void lexNumberLiteralContinuation();
 
     [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;
-    void lexPlus();
-    void lexMinus();
-    void lexStar();
-    void lexSlash();
+    void lexIdentifierContinuation();
 
-    void lexEqual();
-    void lexLessThan();
-    void lexGreaterThan();
-    void lexBang();
+    [[nodiscard]] TokenKind lexMinus();
+    template <TokenKind singleCharKind, TokenKind twoCharsKind, char otherChar>
+    [[nodiscard]] TokenKind lexOpMaybeTwoChars();
+
+    void lexNextChar(char c);
 };

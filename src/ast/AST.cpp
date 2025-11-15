@@ -1,33 +1,46 @@
 #include "AST.hpp"
 
-#include <unordered_map>
-
 #include "lex/TokenKind.hpp"
 
 namespace AST {
 
 Operator tokenKindToOperator(const TokenKind tokenKind) {
-    const std::unordered_map<TokenKind, Operator> tokenToOperatorMap = {
-        {TokenKind::PLUS, Operator::ADD},
-        {TokenKind::MINUS, Operator::SUBTRACT},
-        {TokenKind::STAR, Operator::MULTIPLY},
-        {TokenKind::SLASH, Operator::DIVIDE},
-        {TokenKind::BANG, Operator::LOGICAL_NOT},
-        {TokenKind::EQUAL, Operator::ASSIGN},
-        {TokenKind::PLUS_EQUAL, Operator::ADD_ASSIGN},
-        {TokenKind::MINUS_EQUAL, Operator::SUBTRACT_ASSIGN},
-        {TokenKind::STAR_EQUAL, Operator::MULTIPLY_ASSIGN},
-        {TokenKind::SLASH_EQUAL, Operator::DIVIDE_ASSIGN},
-        {TokenKind::EQUAL_EQUAL, Operator::EQUALS},
-        {TokenKind::BANG_EQUAL, Operator::NOT_EQUALS},
-        {TokenKind::LESS_THAN, Operator::LESS_THAN},
-        {TokenKind::LESS_THAN_EQUAL, Operator::LESS_THAN_OR_EQUAL},
-        {TokenKind::GREATER_THAN, Operator::GREATER_THAN},
-        {TokenKind::GREATER_THAN_EQUAL, Operator::GREATER_THAN_OR_EQUAL},
-    };
-
-    auto it = tokenToOperatorMap.find(tokenKind);
-    return it != tokenToOperatorMap.end() ? it->second : Operator::UNDEFINED_OPERATOR;
+    switch (tokenKind) {
+        case TokenKind::PLUS:
+            return Operator::ADD;
+        case TokenKind::MINUS:
+            return Operator::SUBTRACT;
+        case TokenKind::STAR:
+            return Operator::MULTIPLY;
+        case TokenKind::SLASH:
+            return Operator::DIVIDE;
+        case TokenKind::BANG:
+            return Operator::LOGICAL_NOT;
+        case TokenKind::EQUAL:
+            return Operator::ASSIGN;
+        case TokenKind::PLUS_EQUAL:
+            return Operator::ADD_ASSIGN;
+        case TokenKind::MINUS_EQUAL:
+            return Operator::SUBTRACT_ASSIGN;
+        case TokenKind::STAR_EQUAL:
+            return Operator::MULTIPLY_ASSIGN;
+        case TokenKind::SLASH_EQUAL:
+            return Operator::DIVIDE_ASSIGN;
+        case TokenKind::EQUAL_EQUAL:
+            return Operator::EQUALS;
+        case TokenKind::BANG_EQUAL:
+            return Operator::NOT_EQUALS;
+        case TokenKind::LESS_THAN:
+            return Operator::LESS_THAN;
+        case TokenKind::LESS_THAN_EQUAL:
+            return Operator::LESS_THAN_OR_EQUAL;
+        case TokenKind::GREATER_THAN:
+            return Operator::GREATER_THAN;
+        case TokenKind::GREATER_THAN_EQUAL:
+            return Operator::GREATER_THAN_OR_EQUAL;
+        default:
+            return Operator::UNDEFINED_OPERATOR;
+    }
 }
 
 bool isArithmeticOperator(const Operator op) {

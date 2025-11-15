@@ -81,15 +81,16 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, bool
         for (const auto& token : tokens) {
             const auto [line, column] =
                 sourceManager.getLineColumn(fileID, token.byteOffsetStart());
-            std::cout << tokenKindToString(token.kind()) << ": '" << token.lexeme() << "' at "
-                      << filePath << ":" << line << ":" << column << '\n';
+            std::cout << tokenKindToString(token.kind()) << ": '" << token.lexeme(fileContents)
+                      << "' at " << filePath << ":" << line << ":" << column << '\n';
         }
     }
 
     TypeManager typeManager{diagnosticsEngine};
 
-    const auto ast = timed("Parsing", verbose,
-                           [&] { return Parser(tokens, diagnosticsEngine, typeManager).parse(); });
+    const auto ast = timed("Parsing", verbose, [&] {
+        return Parser(tokens, diagnosticsEngine, fileContents, typeManager).parse();
+    });
     if (opts.logAst_) AST::log_ast(*ast);
 
     timed("Semantic analysis", verbose, [&] {
