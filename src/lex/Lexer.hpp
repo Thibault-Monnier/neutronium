@@ -40,14 +40,8 @@ class Lexer {
 
     void tokenStart() { tokenStartPtr_ = currentPtr_; }
 
-    [[nodiscard]] bool isAtEnd() const;
-
     [[nodiscard]] char peek() const;
     void advance() { ++currentPtr_; }
-    /** Peeks the current character and advances the current index by one. Then returns the
-     * character.
-     */
-    [[nodiscard]] char peekAndAdvance();
 
     void createTokenError() const;
     void handleNonAsciiChar();
@@ -64,6 +58,9 @@ class Lexer {
      * no other line.
      */
     void skipToNextLine();
+
+    void skipWhile(const auto& predicate);
+
     /** Skips to the next non-whitespace character
      */
     void skipWhitespace();

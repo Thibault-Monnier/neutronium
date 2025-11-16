@@ -31,15 +31,7 @@ int Lexer::nbTokensEstimate() const {
     return static_cast<int>(sourceSize / averageTokenSize * SAFETY_MARGIN);
 }
 
-bool Lexer::isAtEnd() const { return currentPtr_ >= sourceEnd_; }
-
 char Lexer::peek() const { return *currentPtr_; }
-
-char Lexer::peekAndAdvance() {
-    const char currentChar = peek();
-    advance();
-    return currentChar;
-}
 
 __attribute__((noinline, cold)) void Lexer::createTokenError() const {
     diagnosticsEngine_.reportError("Token length exceeds maximum allowed length",
@@ -50,9 +42,15 @@ __attribute__((noinline, cold)) void Lexer::handleNonAsciiChar() {
     diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex() - 1,
                                    currentIndex() - 1);
 
+    const char* const sourceEnd = sourceEnd_;
+    const char* currentPtr = currentPtr_;
+
     // Skip remaining UTF-8 continuation bytes (10xxxxxx)
-    while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
-        advance();
+    while (currentPtr < sourceEnd &&
+           (static_cast<unsigned char>(*currentPtr) & 0b1100'0000) == 0b1000'0000)
+        currentPtr++;
+
+    currentPtr_ = currentPtr;
 }
 
 __attribute__((noinline, cold)) void Lexer::invalidCharacterError(const char c) const {
@@ -63,17 +61,20 @@ __attribute__((noinline, cold)) void Lexer::invalidCharacterError(const char c) 
 }
 
 __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
-    const auto length = static_cast<uint32_t>(currentPtr_ - tokenStartPtr_);
+    const char* const tokenStartPtr = tokenStartPtr_;
+
+    const auto length = static_cast<uint32_t>(currentPtr_ - tokenStartPtr);
     if (length > UINT16_MAX) {
         createTokenError();
         return;
     }
-    tokens_.emplace_back(kind, tokenStartPtr_ - sourceStart_, static_cast<uint16_t>(length));
+    tokens_.emplace_back(kind, tokenStartPtr - sourceStart_, static_cast<uint16_t>(length));
 }
 
 void Lexer::skipToNextLine() {
+    const char* currentPtr = currentPtr_;
     const auto nextNewline =
-        static_cast<const char*>(std::memchr(currentPtr_, '\n', sourceEnd_ - currentPtr_));
+        static_cast<const char*>(std::memchr(currentPtr, '\n', sourceEnd_ - currentPtr));
 
     if (nextNewline) [[likely]]
         // Skip to character after the newline
@@ -82,24 +83,26 @@ void Lexer::skipToNextLine() {
         currentPtr_ = sourceEnd_;  // skip to end if no newline
 }
 
+__attribute__((always_inline)) void Lexer::skipWhile(const auto& predicate) {
+    const char* ptr = currentPtr_;
+    while (predicate(*ptr)) {
+        ptr++;
+    }
+    currentPtr_ = ptr;
+}
+
 __attribute__((always_inline)) void Lexer::skipWhitespace() {
     static constexpr auto IS_WHITESPACE = [](const unsigned char c) {
         return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
     };
-
-    while (IS_WHITESPACE(peek())) {
-        advance();
-    }
+    skipWhile(IS_WHITESPACE);
 }
 
 __attribute__((always_inline)) void Lexer::lexNumberLiteralContinuation() {
     static constexpr auto IS_NUMBER_CHAR = [](const unsigned char c) {
         return c >= '0' && c <= '9';
     };
-
-    while (IS_NUMBER_CHAR(peek())) {
-        advance();
-    }
+    skipWhile(IS_NUMBER_CHAR);
 }
 
 std::optional<TokenKind> Lexer::getKeywordKind() const {
@@ -130,19 +133,25 @@ void Lexer::lexIdentifierContinuation() {
                                                           0,   0,   0,   0,   0,   0,   0,   0};
     static constexpr ssize_t BYTES_PER_REG = 16;
 
+    const char* const sourceEnd = sourceEnd_;
+    const char* currentPtr = currentPtr_;
+
     const __m128i validRangesV = _mm_load_si128(reinterpret_cast<const __m128i*>(VALID_RANGES));
 
-    while (sourceEnd_ - currentPtr_ >= BYTES_PER_REG) {
-        const __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currentPtr_));
+    while (sourceEnd - currentPtr >= BYTES_PER_REG) {
+        const __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currentPtr));
 
         const int consumed = _mm_cmpistri(
             validRangesV, charsV,
             _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES | _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
-        currentPtr_ += consumed;
+        currentPtr += consumed;
         if (consumed == BYTES_PER_REG) continue;
 
+        currentPtr_ = currentPtr;
         return;
     }
+
+    currentPtr_ = currentPtr;
 
 #endif
 
@@ -153,10 +162,7 @@ void Lexer::lexIdentifierContinuation() {
         return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
                (c == '_');
     };
-
-    while (IS_IDENTIFIER_CONTINUE_CHAR(peek())) {
-        advance();
-    }
+    skipWhile(IS_IDENTIFIER_CONTINUE_CHAR);
 }
 
 TokenKind Lexer::lexMinus() {
@@ -203,19 +209,8 @@ __attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
             skipToNextLine();
             return;
 
-            // clang-format off
-        case 'a': case 'b': case 'c': case 'd': case 'e':
-        case 'f': case 'g': case 'h': case 'i': case 'j':
-        case 'k': case 'l': case 'm': case 'n': case 'o':
-        case 'p': case 'q': case 'r': case 's': case 't':
-        case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-        case 'A': case 'B': case 'C': case 'D': case 'E':
-        case 'F': case 'G': case 'H': case 'I': case 'J':
-        case 'K': case 'L': case 'M': case 'N': case 'O':
-        case 'P': case 'Q': case 'R': case 'S': case 'T':
-        case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
-            // clang-format on
-
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
             // Identifier or keyword
             lexIdentifierContinuation();
 
@@ -226,11 +221,7 @@ __attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
             }
             break;
 
-            // clang-format off
-        case '0': case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7': case '8': case '9':
-            // clang-format on
-
+        case '0' ... '9':
             // Number literal
             lexNumberLiteralContinuation();
             kind = TokenKind::NUMBER_LITERAL;
@@ -304,23 +295,16 @@ std::vector<Token> Lexer::tokenize() {
     tokens_.reserve(nbTokensEstimate());
     // std::println("Initial token buffer capacity {}", tokens_.capacity());
 
-    const char* const base = sourceStart_;
     const char* const end = sourceEnd_;
-    const char* ptr = currentPtr_;
 
-    while (ptr < end) {
+    while (currentPtr_ < end) {
         if (__builtin_expect(tokens_.size() >= tokens_.capacity(), 0)) {
             tokens_.reserve(nbTokensEstimate());
             // std::println("Resized token buffer to capacity {}", tokens_.capacity());
         }
 
-        tokenStartPtr_ = ptr;
-        const char c = *ptr;
-        currentPtr_ = ++ptr;
-
-        lexNextChar(c);
-
-        ptr = currentPtr_;
+        tokenStart();
+        lexNextChar(*currentPtr_++);
     }
 
     tokenStart();
