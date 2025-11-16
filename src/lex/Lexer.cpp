@@ -13,26 +13,6 @@
 #include "Token.hpp"
 #include "TokenKind.hpp"
 
-int Lexer::nbTokensEstimate() const {
-    if (tokens_.empty()) {
-        // Default estimate: one token every 4 characters
-        // This should be enough for most cases
-        return std::max(static_cast<int>(sourceSize_ / 4), 16);
-    }
-
-    const auto currIndex = static_cast<float>(currentIndex());
-    const auto tokenCount = static_cast<float>(tokens_.size());
-    const auto sourceSize = static_cast<float>(sourceSize_);
-
-    const float averageTokenSize = currIndex / tokenCount;
-
-    // Avoid reallocation at the end which is very costly
-    constexpr float SAFETY_MARGIN = 1.3f;
-    return static_cast<int>(sourceSize / averageTokenSize * SAFETY_MARGIN);
-}
-
-char Lexer::peek() const { return *currentPtr_; }
-
 __attribute__((noinline, cold)) void Lexer::createTokenError() const {
     diagnosticsEngine_.reportError("Token length exceeds maximum allowed length",
                                    tokenStartPtr_ - sourceStart_, currentIndex() - 1);
@@ -68,7 +48,9 @@ __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
         createTokenError();
         return;
     }
-    tokens_.emplace_back(kind, tokenStartPtr - sourceStart_, static_cast<uint16_t>(length));
+
+    result_ = Token(kind, tokenStartPtr - sourceStart_, static_cast<uint16_t>(length));
+    hasLexed_ = true;
 }
 
 void Lexer::skipToNextLine() {
@@ -288,39 +270,31 @@ __attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
     createToken(kind);
 }
 
-std::vector<Token> Lexer::tokenize() {
-    // The lexer relies on the source code being null-terminated
-    assert(*sourceEnd_ == '\0');
-
-    tokens_.reserve(nbTokensEstimate());
-    // std::println("Initial token buffer capacity {}", tokens_.capacity());
-
-    const char* const end = sourceEnd_;
-
-    while (currentPtr_ < end) {
-        if (__builtin_expect(tokens_.size() >= tokens_.capacity(), 0)) {
-            tokens_.reserve(nbTokensEstimate());
-            // std::println("Resized token buffer to capacity {}", tokens_.capacity());
+Token Lexer::lex() {
+    hasLexed_ = false;
+    while (!hasLexed_) {
+        if (currentPtr_ >= sourceEnd_) [[unlikely]] {
+            tokenStart();
+            advance();
+            createToken(TokenKind::EOF_);
+            break;
         }
 
         tokenStart();
         lexNextChar(*currentPtr_++);
     }
 
-    tokenStart();
-    advance();
-    createToken(TokenKind::EOF_);
+    return result_;
+}
 
-    if (diagnosticsEngine_.hasErrors()) {
-        diagnosticsEngine_.emitErrors();
-        std::exit(EXIT_FAILURE);
+std::vector<Token> Lexer::tokenize() {
+    std::vector<Token> tokens;
+    tokens.reserve(128);  // Preallocate some space
+    while (true) {
+        const Token token = lex();
+        tokens.push_back(token);
+        if (token.kind() == TokenKind::EOF_) break;
     }
 
-    // std::println("Token size: {} bytes", sizeof(Token));
-    // std::println("File size: {} bytes, {} tokens generated", sourceLength_,
-    // tokens_.size()); std::println("Final token average size: {:.2} bytes",
-    //              static_cast<double>(sourceLength) /
-    //              static_cast<double>(tokens_.size()));
-
-    return tokens_;
+    return tokens;
 }

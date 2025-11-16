@@ -1168,6 +1168,7 @@ TEST_F(NeutroniumTester, AssignmentNonExpressionLHSFails) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("token") && error.contains("assignment operator") &&
+    EXPECT_TRUE(error.contains("token") &&
+                error.contains(tokenKindToString(TokenKind::SEMICOLON)) &&
                 error.contains(tokenKindToString(TokenKind::RIGHT_PAREN)));
 }

@@ -93,7 +93,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
     TypeManager typeManager{diagnosticsEngine};
 
     const auto ast = timed("Parsing", verbose, [&] {
-        return Parser(tokens, diagnosticsEngine, fileContents, typeManager).parse();
+        return Parser(diagnosticsEngine, fileContents, typeManager).parse();
     });
     if (opts.logAst_) AST::log_ast(*ast);
 

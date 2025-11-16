@@ -1,6 +1,6 @@
 #include "Parser.hpp"
 
-void Parser::emitError(const std::string& errorMessage, const Token& token) const {
+void Parser::emitError(const std::string& errorMessage, const Token token) const {
     diagnosticsEngine_.reportError(errorMessage, token.byteOffsetStart(), token.byteOffsetEnd());
 }
 
@@ -29,12 +29,4 @@ Parser::invalidPrimaryExpressionError() const {
         std::format("Invalid token at beginning of primary expression -> got {}",
                     tokenKindToString(token.kind()));
     return emitError<AST::Expression>(errorMessage);
-}
-
-__attribute__((noinline, cold)) std::unique_ptr<AST::Assignment>
-Parser::invalidAssignmentOperatorError(const Token& operatorToken) const {
-    const std::string errorMessage =
-        std::format("Invalid token -> expected assignment operator, got {}",
-                    tokenKindToString(operatorToken.kind()));
-    return emitError<AST::Assignment>(errorMessage, operatorToken);
 }

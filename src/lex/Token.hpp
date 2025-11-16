@@ -11,6 +11,11 @@ class alignas(4) Token {
     template <typename T>
     explicit Token(TokenKind, uint32_t, T) = delete;
 
+    [[nodiscard]] static Token dummy() {
+        static const Token dummy(TokenKind::UNINITIALIZED, 0, static_cast<uint16_t>(0));
+        return dummy;
+    }
+
     [[nodiscard]] TokenKind kind() const { return kind_; }
 
     [[nodiscard]] uint32_t byteOffsetStart() const { return startByteOffset_; }
@@ -23,7 +28,6 @@ class alignas(4) Token {
    private:
     TokenKind kind_;
 
-    const uint16_t length_;
-
-    const uint32_t startByteOffset_;
+    uint16_t length_;
+    uint32_t startByteOffset_;
 };

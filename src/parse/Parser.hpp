@@ -7,6 +7,7 @@
 
 #include "ast/AST.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
+#include "lex/Lexer.hpp"
 #include "lex/Token.hpp"
 #include "type/TypeManager.hpp"
 
@@ -18,23 +19,22 @@ struct ParsedFunctionSignature {
 
 class Parser {
    public:
-    explicit Parser(std::vector<Token> tokens, DiagnosticsEngine& diagnosticsEngine,
-                    const std::string_view sourceCode, TypeManager& typeManager)
-        : diagnosticsEngine_(diagnosticsEngine),
+    explicit Parser(DiagnosticsEngine& diagnosticsEngine, const std::string_view sourceCode,
+                    TypeManager& typeManager)
+        : lexer_(sourceCode, diagnosticsEngine),
+          diagnosticsEngine_(diagnosticsEngine),
           sourceCode_(sourceCode),
-          typeManager_(typeManager),
-          tokens_(std::move(tokens)) {}
+          typeManager_(typeManager) {}
 
     [[nodiscard]] std::unique_ptr<AST::Program> parse();
 
    private:
+    Lexer lexer_;
+
     DiagnosticsEngine& diagnosticsEngine_;
     std::string_view sourceCode_;
 
     TypeManager& typeManager_;
-
-    std::vector<Token> tokens_;
-    size_t currentIndex_ = 0;
 
     // --------------
     // Error handling
@@ -44,7 +44,7 @@ class Parser {
      * @param errorMessage The error message to emit.
      * @param token The token where the error occurred.
      */
-    void emitError(const std::string& errorMessage, const Token& token) const;
+    void emitError(const std::string& errorMessage, Token token) const;
     /** Emits an error and returns nullptr of the template type.
      * @param errorMessage The error message to emit.
      * @param token The token where the error occurred.
@@ -53,7 +53,7 @@ class Parser {
      */
     template <class T>
     [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage,
-                                               const Token& token) const {
+                                               const Token token) const {
         emitError(errorMessage, token);
         return nullptr;
     }
@@ -70,22 +70,17 @@ class Parser {
     void expectError(TokenKind expected) const;
     [[nodiscard]] std::unique_ptr<Type> invalidTypeSpecifierError() const;
     [[nodiscard]] std::unique_ptr<AST::Expression> invalidPrimaryExpressionError() const;
-    [[nodiscard]] std::unique_ptr<AST::Assignment> invalidAssignmentOperatorError(
-        const Token& operatorToken) const;
 
     // ---------------
     // Parsing helpers
     // ---------------
 
-    [[nodiscard]] const Token& peek() const { return tokens_[currentIndex_]; }
-    [[nodiscard]] const Token& peek(const int amount) const {
-        return tokens_[currentIndex_ + amount];
-    }
+    Token token_ = lexer_.lex();  // Initialize with the first token
 
-    void advance();
-    [[nodiscard]] const Token& peekAndAdvance();
+    [[nodiscard]] Token peek() const { return token_; }
+    void advance() { token_ = lexer_.lex(); }
     bool advanceIf(TokenKind expected);
-    const Token* expect(TokenKind expected);
+    bool expect(TokenKind expected, Token& outToken);
 
     /** Gets an instance of Type::anyFamilyType() and registers it in the TypeManager.
      * @return The TypeID of the newly created Type.
@@ -113,7 +108,7 @@ class Parser {
     std::unique_ptr<AST::ArrayLiteral> parseArrayLiteral();
 
     std::unique_ptr<AST::Identifier> parseIdentifier();
-    std::unique_ptr<AST::FunctionCall> parseFunctionCall();
+    std::unique_ptr<AST::Expression> parseIdentifierOrFunctionCall();
     std::unique_ptr<AST::ArrayAccess> parseArrayAccess(std::unique_ptr<AST::Expression> base);
     std::unique_ptr<AST::Expression> parsePrimaryExpression();
     std::unique_ptr<AST::Expression> parsePostfixExpression();
@@ -126,9 +121,8 @@ class Parser {
     std::unique_ptr<AST::Expression> parseComparisonExpression();
     std::unique_ptr<AST::Expression> parseExpression();
 
-    std::unique_ptr<AST::ExpressionStatement> parseExpressionStatement();
     std::unique_ptr<AST::VariableDefinition> parseVariableDefinition();
-    std::unique_ptr<AST::Assignment> parseAssignment();
+    std::unique_ptr<AST::Statement> parseAssignmentOrExpressionStatement();
 
     std::unique_ptr<AST::BlockStatement> parseElseClause();
     std::unique_ptr<AST::IfStatement> parseIfOrElif(TokenKind kind);
@@ -142,7 +136,6 @@ class Parser {
     std::unique_ptr<AST::ExitStatement> parseExitStatement();
     std::unique_ptr<AST::BlockStatement> parseBlockStatement();
 
-    bool assignmentOperatorAhead() const;
     std::unique_ptr<AST::Statement> parseStatement();
 
     std::unique_ptr<ParsedFunctionSignature> parseFunctionSignature();

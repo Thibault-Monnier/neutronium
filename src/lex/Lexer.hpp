@@ -17,6 +17,10 @@ class Lexer {
           currentPtr_(sourceStart_),
           tokenStartPtr_(currentPtr_) {}
 
+    /// Lexes and returns the next token from the source code.
+    [[nodiscard]] Token lex();
+
+    /// Lexes the entire source code and returns a vector of all tokens.
     [[nodiscard]] std::vector<Token> tokenize();
 
    private:
@@ -29,18 +33,11 @@ class Lexer {
     const char* currentPtr_;
     const char* tokenStartPtr_;
 
-    std::vector<Token> tokens_;
-
-    /** Estimate of the number of tokens in the source code. If no tokens have been lexed yet, a
-     * default estimate is returned. Otherwise, the estimate is based on the average size of the
-     * tokens lexed so far. This should be used to reserve memory for the token vector during lexing
-     * if needed.
-     */
-    [[nodiscard]] int nbTokensEstimate() const;
+    bool hasLexed_ = false;
+    Token result_ = Token::dummy();
 
     void tokenStart() { tokenStartPtr_ = currentPtr_; }
-
-    [[nodiscard]] char peek() const;
+    [[nodiscard]] char peek() const { return *currentPtr_; }
     void advance() { ++currentPtr_; }
 
     void createTokenError() const;
