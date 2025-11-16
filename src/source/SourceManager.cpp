@@ -4,9 +4,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <filesystem>
 #include <fstream>
-#include <iostream>
-#include <sstream>
 #include <stdexcept>
 
 std::pair<int, std::string_view> SourceManager::loadNewSourceFile(std::string path) {
