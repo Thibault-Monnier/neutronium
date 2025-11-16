@@ -59,14 +59,18 @@ void runOrDie(const std::string& cmd) {
     }
 }
 
-void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, bool verbose = true) {
+void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool verbose) {
     int fileID = -1;
     std::string_view fileContents;
 
     try {
-        std::tie(fileID, fileContents) = sourceManager.loadNewSourceFile(opts.sourceFilename_);
+        timed("Loading source file", verbose, [&] {
+            std::tie(fileID, fileContents) =
+                sourceManager.loadNewSourceFile(std::move(opts.sourceFilename_));
+        });
+        opts.sourceFilename_.clear();
     } catch (const std::exception& e) {
-        printError(std::format("Could not open file '{}': {}", opts.sourceFilename_, e.what()));
+        printError(e.what());
         exit(EXIT_FAILURE);
     }
 
@@ -107,7 +111,8 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, bool
         outFilename = "neutro/out.asm";
     } else {
         outFilename =
-            "neutro/" + std::filesystem::path(opts.sourceFilename_).stem().string() + ".asm";
+            "neutro/" +
+            std::filesystem::path(sourceManager.getSourceFilePath(fileID)).stem().string() + ".asm";
     }
 
     {
@@ -130,14 +135,14 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, bool
 }  // namespace
 
 int main(const int argc, const char** argv) {
-    const CompilerOptions opts = parse_cli(argc, argv);
+    CompilerOptions opts = parse_cli(argc, argv);
     const auto startTime = Clock::now();
 
     runOrDie("rm -rf neutro && mkdir neutro");
 
     SourceManager sourceManager;
 
-    compileFile(opts, sourceManager);
+    compileFile(std::move(opts), sourceManager, true);
 
     const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
 
