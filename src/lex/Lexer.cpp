@@ -17,23 +17,23 @@ int Lexer::nbTokensEstimate() const {
     if (tokens_.empty()) {
         // Default estimate: one token every 4 characters
         // This should be enough for most cases
-        return std::max(static_cast<int>(sourceCode_.length() / 4), 16);
+        return std::max(static_cast<int>(sourceSize_ / 4), 16);
     }
 
-    const auto currentIndex = static_cast<float>(currentIndex_);
+    const auto currIndex = static_cast<float>(currentIndex());
     const auto tokenCount = static_cast<float>(tokens_.size());
-    const auto sourceSize = static_cast<float>(sourceCode_.size());
+    const auto sourceSize = static_cast<float>(sourceSize_);
 
-    const float averageTokenSize = currentIndex / tokenCount;
+    const float averageTokenSize = currIndex / tokenCount;
 
     // Avoid reallocation at the end which is very costly
     constexpr float SAFETY_MARGIN = 1.3f;
     return static_cast<int>(sourceSize / averageTokenSize * SAFETY_MARGIN);
 }
 
-bool Lexer::isAtEnd() const { return currentIndex_ >= sourceCode_.length(); }
+bool Lexer::isAtEnd() const { return currentPtr_ >= sourceEnd_; }
 
-char Lexer::peek() const { return sourceCode_[currentIndex_]; }
+char Lexer::peek() const { return *currentPtr_; }
 
 char Lexer::peekAndAdvance() {
     const char currentChar = peek();
@@ -42,13 +42,13 @@ char Lexer::peekAndAdvance() {
 }
 
 __attribute__((noinline, cold)) void Lexer::createTokenError() const {
-    diagnosticsEngine_.reportError("Token length exceeds maximum allowed length", tokenStartIndex_,
-                                   currentIndex_ - 1);
+    diagnosticsEngine_.reportError("Token length exceeds maximum allowed length",
+                                   tokenStartPtr_ - sourceStart_, currentIndex() - 1);
 }
 
 __attribute__((noinline, cold)) void Lexer::handleNonAsciiChar() {
-    diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex_ - 1,
-                                   currentIndex_ - 1);
+    diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex() - 1,
+                                   currentIndex() - 1);
 
     // Skip remaining UTF-8 continuation bytes (10xxxxxx)
     while (!isAtEnd() && (static_cast<unsigned char>(peek()) & 0b1100'0000) == 0b1000'0000)
@@ -59,27 +59,27 @@ __attribute__((noinline, cold)) void Lexer::invalidCharacterError(const char c) 
     const std::string errorMessage =
         std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
                     static_cast<int>(c));
-    diagnosticsEngine_.reportError(errorMessage, currentIndex_ - 1, currentIndex_ - 1);
+    diagnosticsEngine_.reportError(errorMessage, currentIndex() - 1, currentIndex() - 1);
 }
 
 __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
-    const auto length = static_cast<uint32_t>(currentIndex_ - tokenStartIndex_);
+    const auto length = static_cast<uint32_t>(currentPtr_ - tokenStartPtr_);
     if (length > UINT16_MAX) {
         createTokenError();
         return;
     }
-    tokens_.emplace_back(kind, tokenStartIndex_, static_cast<uint16_t>(length));
+    tokens_.emplace_back(kind, tokenStartPtr_ - sourceStart_, static_cast<uint16_t>(length));
 }
 
 void Lexer::skipToNextLine() {
-    const auto nextNewline = static_cast<const char*>(std::memchr(
-        sourceCode_.data() + currentIndex_, '\n', sourceCode_.length() - currentIndex_));
+    const auto nextNewline =
+        static_cast<const char*>(std::memchr(currentPtr_, '\n', sourceEnd_ - currentPtr_));
 
     if (nextNewline) [[likely]]
         // Skip to character after the newline
-        currentIndex_ = static_cast<size_t>(nextNewline - sourceCode_.data()) + 1;
+        currentPtr_ = nextNewline + 1;
     else
-        currentIndex_ = sourceCode_.length();  // skip to end if no newline
+        currentPtr_ = sourceEnd_;  // skip to end if no newline
 }
 
 __attribute__((always_inline)) void Lexer::skipWhitespace() {
@@ -126,29 +126,24 @@ void Lexer::lexIdentifierContinuation() {
     // Use SIMD to check for identifier continuation characters
     // This is highly efficient, as it checks 16 characters at a time
 
-    const char* currCharPtr = sourceCode_.data() + currentIndex_;
-    const char* const bufferEnd = sourceCode_.data() + sourceCode_.length();
-
     alignas(16) static constexpr char VALID_RANGES[16] = {'_', '_', 'A', 'Z', 'a', 'z', '0', '9',
                                                           0,   0,   0,   0,   0,   0,   0,   0};
     static constexpr ssize_t BYTES_PER_REG = 16;
 
     const __m128i validRangesV = _mm_load_si128(reinterpret_cast<const __m128i*>(VALID_RANGES));
 
-    while (bufferEnd - currCharPtr >= BYTES_PER_REG) {
-        const __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currCharPtr));
+    while (sourceEnd_ - currentPtr_ >= BYTES_PER_REG) {
+        const __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currentPtr_));
 
         const int consumed = _mm_cmpistri(
             validRangesV, charsV,
             _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES | _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
-        currCharPtr += consumed;
+        currentPtr_ += consumed;
         if (consumed == BYTES_PER_REG) continue;
 
-        currentIndex_ = static_cast<size_t>(currCharPtr - sourceCode_.data());
         return;
     }
 
-    currentIndex_ = static_cast<size_t>(currCharPtr - sourceCode_.data());
 #endif
 
     // Check for identifier continuation characters
@@ -304,19 +299,28 @@ __attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
 
 std::vector<Token> Lexer::tokenize() {
     // The lexer relies on the source code being null-terminated
-    assert(sourceCode_[sourceCode_.size()] == '\0');
+    assert(*sourceEnd_ == '\0');
 
     tokens_.reserve(nbTokensEstimate());
     // std::println("Initial token buffer capacity {}", tokens_.capacity());
 
-    while (!isAtEnd()) {
-        if (tokens_.size() >= tokens_.capacity()) [[unlikely]] {
+    const char* const base = sourceStart_;
+    const char* const end = sourceEnd_;
+    const char* ptr = currentPtr_;
+
+    while (ptr < end) {
+        if (__builtin_expect(tokens_.size() >= tokens_.capacity(), 0)) {
             tokens_.reserve(nbTokensEstimate());
             // std::println("Resized token buffer to capacity {}", tokens_.capacity());
         }
 
-        tokenStart();
-        lexNextChar(peekAndAdvance());
+        tokenStartPtr_ = ptr;
+        const char c = *ptr;
+        currentPtr_ = ++ptr;
+
+        lexNextChar(c);
+
+        ptr = currentPtr_;
     }
 
     tokenStart();
@@ -329,9 +333,9 @@ std::vector<Token> Lexer::tokenize() {
     }
 
     // std::println("Token size: {} bytes", sizeof(Token));
-    // std::println("File size: {} bytes, {} tokens generated", sourceCode_.length(),
+    // std::println("File size: {} bytes, {} tokens generated", sourceLength_,
     // tokens_.size()); std::println("Final token average size: {:.2} bytes",
-    //              static_cast<double>(sourceCode_.length()) /
+    //              static_cast<double>(sourceLength) /
     //              static_cast<double>(tokens_.size()));
 
     return tokens_;

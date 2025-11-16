@@ -10,17 +10,24 @@
 class Lexer {
    public:
     explicit Lexer(const std::string_view sourceCode, DiagnosticsEngine& diagnosticsEngine)
-        : diagnosticsEngine_(diagnosticsEngine), sourceCode_(sourceCode) {}
+        : diagnosticsEngine_(diagnosticsEngine),
+          sourceStart_(sourceCode.data()),
+          sourceEnd_(sourceCode.data() + sourceCode.size()),
+          sourceSize_(sourceCode.size()),
+          currentPtr_(sourceStart_),
+          tokenStartPtr_(currentPtr_) {}
 
     [[nodiscard]] std::vector<Token> tokenize();
 
    private:
     DiagnosticsEngine& diagnosticsEngine_;
 
-    const std::string_view sourceCode_;
-    size_t currentIndex_ = 0;
+    const char* const sourceStart_;
+    const char* const sourceEnd_;
+    const size_t sourceSize_;
 
-    std::size_t tokenStartIndex_ = 0;
+    const char* currentPtr_;
+    const char* tokenStartPtr_;
 
     std::vector<Token> tokens_;
 
@@ -31,12 +38,12 @@ class Lexer {
      */
     [[nodiscard]] int nbTokensEstimate() const;
 
-    void tokenStart() { tokenStartIndex_ = currentIndex_; }
+    void tokenStart() { tokenStartPtr_ = currentPtr_; }
 
     [[nodiscard]] bool isAtEnd() const;
 
     [[nodiscard]] char peek() const;
-    void advance() { currentIndex_++; }
+    void advance() { ++currentPtr_; }
     /** Peeks the current character and advances the current index by one. Then returns the
      * character.
      */
@@ -46,8 +53,10 @@ class Lexer {
     void handleNonAsciiChar();
     void invalidCharacterError(char c) const;
 
+    [[nodiscard]] int currentIndex() const { return static_cast<int>(currentPtr_ - sourceStart_); }
+
     [[nodiscard]] std::string_view currentLexeme() const {
-        return {sourceCode_.data() + tokenStartIndex_, currentIndex_ - tokenStartIndex_};
+        return {tokenStartPtr_, static_cast<size_t>(currentPtr_ - tokenStartPtr_)};
     }
     void createToken(TokenKind kind);
 
