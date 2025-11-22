@@ -2,9 +2,9 @@ fn mathStress$ID$(): {
     let mut x = 5;
     let mut y = 12;
     let mut res = pow(x, 3);
-    let modv = mod(res, y);
+    let modV = mod(res, y);
 
-    if modv == 0: {
+    if modV == 0: {
         println(true);
     } else: {
         println(false);

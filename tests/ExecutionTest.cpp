@@ -1,3 +1,7 @@
+#include <gtest/gtest.h>
+
+#include <string>
+
 #include "common/Tester.hpp"
 
 TEST_F(NeutroniumTester, PrimeNumberCheck) {
@@ -211,9 +215,9 @@ TEST_F(NeutroniumTester, StandardLibrary) {
             print_mod(654, 10);  # should print 4
         }
     )";
-    const auto result = runWithOutput(code);
-    EXPECT_EQ(result.exit, 0);
-    EXPECT_EQ(result.output, "Hello, World!\n42\n\n4\n");
+    const auto [exit, output] = runWithOutput(code);
+    EXPECT_EQ(exit, 0);
+    EXPECT_EQ(output, "Hello, World!\n42\n\n4\n");
 }
 
 TEST_F(NeutroniumTester, FunctionReturnValues) {
@@ -805,7 +809,7 @@ TEST_F(NeutroniumTester, TypeInferenceFromArrayLiteralSucceeds) {
 }
 
 TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
-    // --- Array inference with int16 + literal ---
+    // Array inference with int16 + literal
     {
         const std::string code = R"(
             fn main(): {
@@ -817,7 +821,7 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 200);
     }
 
-    // --- Array with int8 variables and literal elements ---
+    // Array with int8 variables and literal elements
     {
         const std::string code = R"(
             fn main(): {
@@ -829,7 +833,7 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 13);
     }
 
-    // --- Array mutation (int8) ---
+    // Array mutation (int8)
     {
         const std::string code = R"(
             fn main(): {
@@ -842,7 +846,7 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 7);
     }
 
-    // --- Nested arrays using int32 inference ---
+    // Nested arrays using int32 inference
     {
         const std::string code = R"(
             fn main(): {
@@ -854,7 +858,7 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 42);
     }
 
-    // --- Function returns int16 array element ---
+    // Function returns int16 array element
     {
         const std::string code = R"(
             fn get_second(a: [int16; 2]) -> int16: {
@@ -869,8 +873,7 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 200);
     }
 
-    // --- Function returning int8 value from nested literal array with inference and control flow
-    // ---
+    // Function returning int8 value from a nested literal array with inference and control flow
     {
         const std::string code = R"(
             fn make_and_sum(v: int8) -> int8: {
@@ -908,7 +911,7 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
         EXPECT_EQ(run(code), 1);
     }
 
-    // --- Function returning int16 value from nested literal array ---
+    // Function returning int16 value from a nested literal array
     {
         const std::string code = R"(
             fn pick() -> int16: {

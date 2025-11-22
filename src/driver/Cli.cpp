@@ -1,20 +1,23 @@
 #include "Cli.hpp"
 
+#include <cstdlib>
 #include <cxxopts.hpp>
+#include <exception>
 #include <format>
 #include <iostream>
+#include <vector>
 
 #include "utils/Log.hpp"
 
-CompilerOptions parse_cli(const int argc, const char** argv) {
+CompilerOptions parseCli(const int argc, const char** argv) {
     cxxopts::Options options(argv[0], "Neutronium language compiler");
     options.positional_help("<input-file>").show_positional_help();
 
     options.add_options()("h,help", "Print help")("v,version", "Print the compiler version")(
         "target-type", "Compilation target: bin (executable) or lib (library)",
         cxxopts::value<std::string>()->default_value("bin"))("d,debug", "Enable all debug logs")(
-        "log-code", "Log source code processing")("log-tokens", "Log token stream")(
-        "log-ast", "Log AST construction")("log-assembly", "Log final assembly output")(
+        "log-code", "Log source code processing")("log-ast", "Log AST construction")(
+        "log-assembly", "Log final assembly output")(
         "log", "Comma-separated logs (code,tokens,ast,assembly)",
         cxxopts::value<std::vector<std::string>>()->implicit_value(""))(
         "input", "Source file", cxxopts::value<std::string>());
@@ -42,7 +45,6 @@ CompilerOptions parse_cli(const int argc, const char** argv) {
 
     CompilerOptions opts;
     opts.logCode_ = result.count("log-code");
-    opts.logTokens_ = result.count("log-tokens");
     opts.logAst_ = result.count("log-ast");
     opts.logAssembly_ = result.count("log-assembly");
 

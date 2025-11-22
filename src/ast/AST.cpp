@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "Operator.hpp"
 #include "lex/TokenKind.hpp"
 
 namespace AST {
@@ -26,7 +27,7 @@ Operator tokenKindToOperator(const TokenKind tokenKind) {
         {TokenKind::GREATER_THAN_EQUAL, Operator::GREATER_THAN_OR_EQUAL},
     };
 
-    auto it = tokenToOperatorMap.find(tokenKind);
+    const auto it = tokenToOperatorMap.find(tokenKind);
     return it != tokenToOperatorMap.end() ? it->second : Operator::UNDEFINED_OPERATOR;
 }
 

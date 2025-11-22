@@ -1,5 +1,7 @@
 #include "Lexer.hpp"
 
+#include <cctype>
+#include <cstdlib>
 #include <format>
 #include <optional>
 #include <string>

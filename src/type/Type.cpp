@@ -1,7 +1,12 @@
 #include "Type.hpp"
 
 #include <magic_enum/magic_enum.hpp>
+#include <string>
+#include <string_view>
+#include <utility>
 
+#include "Primitive.hpp"
+#include "TypeID.hpp"
 #include "TypeManager.hpp"
 
 int Type::sizeBits(const TypeManager& typeManager) const {
@@ -120,13 +125,12 @@ bool Type::matches(const Type& other, const TypeManager& typeManager) const {
 
     switch (kind_) {
         case TypeKind::PRIMITIVE:
-            // If one of the Type has no family, it is fully determined, so we just need to make
+            // If one of the types has no family, it is fully determined, so we just need to make
             // sure the other type is compatible.
             if (family_->kind() == PrimitiveTypeFamily::Kind::NONE &&
                 other.family_->kind() == PrimitiveTypeFamily::Kind::NONE) {
                 return primitive_ == other.primitive_;
             }
-
             // Otherwise, we checked that the families are not compatible above.
             return false;
 

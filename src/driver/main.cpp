@@ -1,12 +1,16 @@
 #include <chrono>
 #include <cstdlib>
+#include <exception>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <vector>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 #include "Cli.hpp"
 #include "ast/Debug.hpp"
@@ -18,6 +22,7 @@
 #include "parse/Parser.hpp"
 #include "sema/SemanticAnalyser.hpp"
 #include "source/SourceManager.hpp"
+#include "type/TypeManager.hpp"
 #include "utils/Log.hpp"
 
 using Clock = std::chrono::high_resolution_clock;
@@ -32,9 +37,7 @@ template <typename F>
 decltype(auto) timed(const std::string_view message, const bool showStep, F&& f) {
     printStep(message);
 
-    const auto start = Clock::now();
-
-    auto printElapsedTime = [&] {
+    auto printElapsedTime = [&](auto start) {
         if (showStep) {
             const auto ms =
                 std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
@@ -42,12 +45,14 @@ decltype(auto) timed(const std::string_view message, const bool showStep, F&& f)
         }
     };
 
+    const auto start = Clock::now();
+
     if constexpr (std::is_void_v<std::invoke_result_t<F>>) {
         std::forward<F>(f)();
-        printElapsedTime();
+        printElapsedTime(start);
     } else {
         decltype(auto) result = std::forward<F>(f)();
-        printElapsedTime();
+        printElapsedTime(start);
         return result;
     }
 }
@@ -90,7 +95,7 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, bool
 
     const auto ast = timed("Parsing", verbose,
                            [&] { return Parser(tokens, diagnosticsEngine, typeManager).parse(); });
-    if (opts.logAst_) AST::log_ast(*ast);
+    if (opts.logAst_) AST::logAst(*ast);
 
     timed("Semantic analysis", verbose, [&] {
         SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeManager).analyse();
@@ -129,7 +134,7 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, bool
 }  // namespace
 
 int main(const int argc, const char** argv) {
-    const CompilerOptions opts = parse_cli(argc, argv);
+    const CompilerOptions opts = parseCli(argc, argv);
     const auto startTime = Clock::now();
 
     runOrDie("rm -rf neutro && mkdir neutro");

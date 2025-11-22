@@ -158,10 +158,6 @@ TEST(CliNonErrorTest, LogArguments) {
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("fn main():")) << output;
 
-    status = runAndCapture(baseCompileCommand + " --log-tokens", output);
-    EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("EOF_:")) << output;
-
     status = runAndCapture(baseCompileCommand + " --log-ast", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("Program")) << output;
@@ -180,9 +176,9 @@ TEST(CliNonErrorTest, LogArguments) {
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("fn main():") && output.contains("Program")) << output;
 
-    status = runAndCapture(baseCompileCommand + " --log=tokens,assembly", output);
+    status = runAndCapture(baseCompileCommand + " --log=code,assembly", output);
     EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("EOF_:") && output.contains("_start:")) << output;
+    EXPECT_TRUE(output.contains("fn main():") && output.contains("_start:")) << output;
 
     std::remove(tempFile.c_str());
 }

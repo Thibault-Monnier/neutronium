@@ -1,15 +1,25 @@
 #include "SemanticAnalyser.hpp"
 
 #include <cassert>
+#include <cstddef>
+#include <cstdlib>
 #include <format>
-#include <functional>
+#include <memory>
+#include <optional>
 #include <ranges>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "SymbolTable.hpp"
-#include "ast/Debug.hpp"
+#include "ast/AST.hpp"
+#include "ast/Operator.hpp"
+#include "driver/Cli.hpp"
+#include "type/Trait.hpp"
+#include "type/Type.hpp"
+#include "type/TypeID.hpp"
 #include "type/TypeManager.hpp"
+#include "type/inference/Constraint.hpp"
 #include "type/inference/TypeSolver.hpp"
 
 void SemanticAnalyser::equalityConstraint(TypeID a, TypeID b, const AST::Node& node) const {
@@ -349,7 +359,7 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
 
     if (!verifyIsAssignable(*place)) {
         // If the place is not assignable, we cannot proceed further.
-        // Just verify that the value expression is valid then return.
+        // Just verify that the value expression is valid, then return.
         checkExpression(*assignment.value_);
         return;
     }

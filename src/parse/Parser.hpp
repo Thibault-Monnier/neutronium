@@ -61,7 +61,7 @@ class Parser {
     std::unique_ptr<Type> parseTypeSpecifier();
     /** Parses a type annotation if the next token matches `typeAnnotationIndicator`, and returns it
      * or std::nullopt if parsing failed.
-     * If the next token does not match `typeAnnotationIndicator`, returns `defaultType`.
+     * If the next token does not match `typeAnnotationIndicator`, it returns `defaultType`.
      */
     std::optional<Type> maybeParseTypeAnnotation(TokenKind typeAnnotationIndicator,
                                                  Type defaultType);
@@ -101,7 +101,7 @@ class Parser {
     std::unique_ptr<AST::ExitStatement> parseExitStatement();
     std::unique_ptr<AST::BlockStatement> parseBlockStatement();
 
-    bool assignmentOperatorAhead() const;
+    [[nodiscard]] bool assignmentOperatorAhead() const;
     std::unique_ptr<AST::Statement> parseStatement();
 
     std::unique_ptr<ParsedFunctionSignature> parseFunctionSignature();

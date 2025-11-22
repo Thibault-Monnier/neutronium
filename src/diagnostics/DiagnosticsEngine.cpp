@@ -1,7 +1,12 @@
 #include "DiagnosticsEngine.hpp"
 
 #include <cassert>
+#include <cstdint>
+#include <format>
+#include <iostream>
 #include <print>
+#include <string>
+#include <string_view>
 
 void DiagnosticsEngine::emitErrorContext(const uint32_t byteOffsetStart,
                                          const uint32_t byteOffsetEnd) const {
@@ -36,7 +41,7 @@ void DiagnosticsEngine::emitErrorContext(const uint32_t byteOffsetStart,
 
             std::string linesOmittedPadding(maxLineNumberWidth - 1, ' ');
             std::println("{}{}... {} line{} omitted ...", BLUE, linesOmittedPadding, nbOmittedLines,
-                         (nbOmittedLines > 1) ? "s" : "");
+                         nbOmittedLines > 1 ? "s" : "");
 
             std::println("{}{}", padding, separator);
             line = skipLinesEnd;

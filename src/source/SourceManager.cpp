@@ -2,9 +2,16 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 std::pair<int, std::string_view> SourceManager::loadNewSourceFile(std::string path) {
     const std::ifstream source(path);

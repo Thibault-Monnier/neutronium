@@ -60,7 +60,7 @@ def main() -> None:
         error(f"Main file not found: {main_file}")
         sys.exit(1)
 
-    # Prepare output directory: generated/<source_dir_name>/
+    # Prepare the output directory: generated/<source_dir_name>/
     output_dir = Path("generated") / base_dir.name
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_filename

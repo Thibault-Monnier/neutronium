@@ -17,4 +17,4 @@ struct CompilerOptions {
     TargetType targetType_ = TargetType::EXECUTABLE;
 };
 
-CompilerOptions parse_cli(int argc, const char** argv);
+CompilerOptions parseCli(int argc, const char** argv);

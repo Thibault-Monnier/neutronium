@@ -1,5 +1,7 @@
 #include "PrimitiveTypeFamily.hpp"
 
+#include "Primitive.hpp"
+
 const PrimitiveTypeFamily* PrimitiveTypeFamily::familyForType(const Primitive::Kind t) {
     switch (t) {
         case Primitive::Kind::INT:

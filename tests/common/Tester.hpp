@@ -8,7 +8,7 @@
 #include <fstream>
 #include <string>
 
-class NeutroniumTester : public ::testing::Test {
+class NeutroniumTester : public testing::Test {
    public:
     NeutroniumTester() = default;
 
@@ -28,7 +28,7 @@ class NeutroniumTester : public ::testing::Test {
         const int status = WEXITSTATUS(std::system(cmd.c_str()));
 
         std::ifstream err(errorFile);
-        const std::string errorMsg((std::istreambuf_iterator<char>(err)),
+        const std::string errorMsg((std::istreambuf_iterator(err)),
                                    std::istreambuf_iterator<char>());
         std::filesystem::remove(errorFile);
 
@@ -97,7 +97,7 @@ class NeutroniumTester : public ::testing::Test {
     void TearDown() override {
         std::cerr.rdbuf(oldCerrBuf_);
 
-        const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();
+        const auto* info = testing::UnitTest::GetInstance()->current_test_info();
         if (info->result()->Failed() && !capturedCerr_.str().empty()) {
             std::cerr << "\n[Compiler stderr]\n" << capturedCerr_.str() << "[/Compiler stderr]\n";
         }

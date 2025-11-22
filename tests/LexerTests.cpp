@@ -1,11 +1,17 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <string>
+#include <vector>
 
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "lex/Lexer.hpp"
+#include "lex/Token.hpp"
 #include "lex/TokenKind.hpp"
 #include "source/SourceManager.hpp"
 
@@ -14,7 +20,7 @@ struct LexCase {
     std::vector<TokenKind> kinds;
 };
 
-class LexerTokenKindTest : public ::testing::TestWithParam<LexCase> {};
+class LexerTokenKindTest : public testing::TestWithParam<LexCase> {};
 
 TEST_P(LexerTokenKindTest, ProducesExpectedKinds) {
     const SourceManager sm;
@@ -208,7 +214,7 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
         "@", "$", "~", "let x = 1 + @`", "x$", "let _invalid_identifier = 42;"};
 
     for (const auto& input : badInputs) {
-        fs::path tmp = fs::temp_directory_path() / "test_input.nt";
+        const fs::path tmp = fs::temp_directory_path() / "test_input.nt";
         std::ofstream(tmp) << input;
 
         EXPECT_EXIT(
@@ -233,7 +239,7 @@ TEST(LexerErrorTest, NonASCIICharactersCauseExit) {
                                                 "x = y + λ;"};
 
     for (const auto& input : badInputs) {
-        fs::path tmp = fs::temp_directory_path() / "test_input.nt";
+        const fs::path tmp = fs::temp_directory_path() / "test_input.nt";
         std::ofstream(tmp) << input;
 
         EXPECT_EXIT(

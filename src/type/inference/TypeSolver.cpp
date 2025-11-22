@@ -1,7 +1,20 @@
 #include "TypeSolver.hpp"
 
+#include <cassert>
+#include <cstddef>
+#include <cstdlib>
+#include <format>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "../TypeManager.hpp"
+#include "Constraint.hpp"
 #include "ast/AST.hpp"
+#include "type/Primitive.hpp"
+#include "type/Trait.hpp"
+#include "type/Type.hpp"
+#include "type/TypeID.hpp"
 
 TypeID TypeSolver::findRoot(TypeID x) {
     // Find the root of the set containing x
