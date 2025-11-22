@@ -49,26 +49,26 @@ class Lexer {
     [[nodiscard]] std::string_view currentLexeme() const {
         return {tokenStartPtr_, static_cast<size_t>(currentPtr_ - tokenStartPtr_)};
     }
-    void createToken(TokenKind kind);
+    inline void createToken(TokenKind kind);
 
     /** Skips to the first character of the next line, or to the end of the source code if there is
      * no other line.
      */
-    void skipToNextLine();
+    inline void skipToNextLine();
 
-    void skipWhile(const auto& predicate);
+    inline void skipWhile(const auto& predicate);
 
     /** Skips to the next non-whitespace character
      */
-    void skipWhitespace();
-    void lexNumberLiteralContinuation();
+    inline void skipWhitespace();
+    inline void lexNumberLiteralContinuation();
 
     [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;
-    void lexIdentifierContinuation();
+    inline void lexIdentifierContinuation();
 
-    [[nodiscard]] TokenKind lexMinus();
+    [[nodiscard]] inline TokenKind lexMinus();
     template <TokenKind singleCharKind, TokenKind twoCharsKind, char otherChar>
-    [[nodiscard]] TokenKind lexOpMaybeTwoChars();
+    [[nodiscard]] inline TokenKind lexOpMaybeTwoChars();
 
-    void lexNextChar(char c);
+    inline void lexNextChar(char c);
 };

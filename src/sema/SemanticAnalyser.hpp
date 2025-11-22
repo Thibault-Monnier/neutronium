@@ -46,12 +46,18 @@ class SemanticAnalyser {
     void storableConstraint(TypeID type, const AST::Node& node) const;
 
     // Register new type helpers
-    TypeID registerAnyType() const { return typeManager_.createType(Type::anyFamilyType()); }
-    TypeID registerIntegerType() const {
+    [[nodiscard]] TypeID registerAnyType() const {
+        return typeManager_.createType(Type::anyFamilyType());
+    }
+    [[nodiscard]] TypeID registerIntegerType() const {
         return typeManager_.createType(Type::integerFamilyType());
     }
-    TypeID registerBoolType() const { return typeManager_.createType(Type::boolType()); }
-    TypeID registerVoidType() const { return typeManager_.createType(Type::voidType()); }
+    [[nodiscard]] TypeID registerBoolType() const {
+        return typeManager_.createType(Type::boolType());
+    }
+    [[nodiscard]] TypeID registerVoidType() const {
+        return typeManager_.createType(Type::voidType());
+    }
 
     void error(const std::string& errorMessage, const AST::Node& node) const;
     void fatalError(const std::string& errorMessage, const AST::Node& node) const;
@@ -88,8 +94,8 @@ class SemanticAnalyser {
     };
 
     [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(std::string_view name) const;
-    std::optional<const SymbolInfo*> getSymbolInfoOrError(std::string_view name,
-                                                          const AST::Node& node) const;
+    [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfoOrError(
+        std::string_view name, const AST::Node& node) const;
 
     SymbolInfo& declareSymbol(const AST::Node* declarationNode, std::string_view name,
                               SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,

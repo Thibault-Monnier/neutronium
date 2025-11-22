@@ -1,7 +1,5 @@
 #include "AST.hpp"
 
-#include <unordered_map>
-
 #include "Operator.hpp"
 #include "lex/TokenKind.hpp"
 

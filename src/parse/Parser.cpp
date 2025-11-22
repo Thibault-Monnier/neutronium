@@ -5,12 +5,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <charconv>
-#include <format>
 #include <functional>
 #include <initializer_list>
 #include <memory>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -385,7 +383,7 @@ std::unique_ptr<AST::BlockStatement> Parser::parseElseClause() {
     std::unreachable();
 }
 
-std::unique_ptr<AST::IfStatement> Parser::parseIfOrElif(TokenKind kind) {
+std::unique_ptr<AST::IfStatement> Parser::parseIfOrElif(const TokenKind kind) {
     const Token keywordTok = EXPECT_OR_RETURN_NULLPTR(kind);
 
     auto condition = parseExpression();

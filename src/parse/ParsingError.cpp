@@ -1,4 +1,12 @@
+#include <format>
+#include <memory>
+#include <string>
+
 #include "Parser.hpp"
+#include "ast/AST.hpp"
+#include "lex/Token.hpp"
+#include "lex/TokenKind.hpp"
+#include "type/Type.hpp"
 
 void Parser::emitError(const std::string& errorMessage, const Token token) const {
     diagnosticsEngine_.reportError(errorMessage, token.byteOffsetStart(), token.byteOffsetEnd());

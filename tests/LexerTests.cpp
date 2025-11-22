@@ -20,7 +20,7 @@ struct LexCase {
     std::vector<TokenKind> kinds;
 };
 
-class LexerTokenKindTest : public testing::TestWithParam<LexCase> {};
+class LexerTokenKindTest : public ::testing::TestWithParam<LexCase> {};
 
 TEST_P(LexerTokenKindTest, ProducesExpectedKinds) {
     const SourceManager sm;
@@ -220,7 +220,9 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
 
         EXPECT_EXIT(
             {
-                freopen("/dev/null", "w", stdout);
+                {
+                    auto _ = freopen("/dev/null", "w", stdout);
+                }
 
                 SourceManager sm;
                 const auto fileData = sm.loadNewSourceFile(tmp.string());
@@ -245,7 +247,9 @@ TEST(LexerErrorTest, NonASCIICharactersCauseExit) {
 
         EXPECT_EXIT(
             {
-                freopen("/dev/null", "w", stdout);
+                {
+                    auto _ = freopen("/dev/null", "w", stdout);
+                }
 
                 SourceManager sm;
                 const auto fileData = sm.loadNewSourceFile(tmp.string());
@@ -267,7 +271,9 @@ TEST(LexerErrorTest, TokenExceedsMaximumLength) {
 
     EXPECT_EXIT(
         {
-            freopen("/dev/null", "w", stdout);
+            {
+                auto _ = freopen("/dev/null", "w", stdout);
+            }
 
             SourceManager sm;
             const auto fileData = sm.loadNewSourceFile(tmp.string());

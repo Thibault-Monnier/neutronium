@@ -79,8 +79,8 @@ class Parser {
 
     [[nodiscard]] Token peek() const { return token_; }
     void advance() { token_ = lexer_.lex(); }
-    bool advanceIf(TokenKind expected);
-    bool expect(TokenKind expected, Token& outToken);
+    inline bool advanceIf(TokenKind expected);
+    inline bool expect(TokenKind expected, Token& outToken);
 
     /** Gets an instance of Type::anyFamilyType() and registers it in the TypeManager.
      * @return The TypeID of the newly created Type.
