@@ -1,13 +1,22 @@
 #include "Debug.hpp"
 
+#include <cassert>
 #include <iostream>
-#include <magic_enum/magic_enum.hpp>
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
+
+#include "AST.hpp"
+#include "Operator.hpp"
+#include "type/TypeID.hpp"
 
 namespace AST {
 
-std::string operator_to_string(const Operator op) {
+namespace {
+
+std::string operatorToString(const Operator op) {
     static const std::unordered_map<Operator, std::string> table = {
         {Operator::ADD, "+"},
         {Operator::SUBTRACT, "-"},
@@ -32,20 +41,11 @@ std::string operator_to_string(const Operator op) {
     return it->second;
 }
 
-std::string node_kind_to_string(const NodeKind kind) {
-    const auto enumName = magic_enum::enum_name(kind);
-    return std::string{enumName};
-}
-
-// =========================================== //
-// ============= Log AST helpers ============= //
-// =========================================== //
-
-std::string next_prefix(const std::string& p, const bool isLast) {
+std::string nextPrefix(const std::string& p, const bool isLast) {
     return p + (isLast ? "    " : "│   ");
 }
 
-void log_expression(const Expression& expr, const std::string& prefix, const bool isLast) {
+void logExpression(const Expression& expr, const std::string& prefix, const bool isLast) {
     std::string branch = "├── ";
 
     if (expr.kind_ == NodeKind::NUMBER_LITERAL) {
@@ -69,44 +69,44 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
                 const bool isLastElement = i == arrayLit.elements_.size() - 1;
                 const std::string elementBranch = isLastElement ? "└── " : "├── ";
                 std::cout << newPrefix << elementBranch << "Element" << i + 1 << "\n";
-                log_expression(*element, next_prefix(newPrefix, isLastElement), true);
+                logExpression(*element, nextPrefix(newPrefix, isLastElement), true);
             }
 
         } else if (expr.kind_ == NodeKind::ARRAY_ACCESS) {
             const auto& arrayAccess = *expr.as<ArrayAccess>();
             std::cout << prefix << branch << "ArrayAccess\n";
             std::cout << newPrefix << "├── Base\n";
-            log_expression(*arrayAccess.base_, next_prefix(newPrefix, false), true);
+            logExpression(*arrayAccess.base_, nextPrefix(newPrefix, false), true);
             std::cout << newPrefix << "└── Index\n";
-            log_expression(*arrayAccess.index_, next_prefix(newPrefix, true), true);
+            logExpression(*arrayAccess.index_, nextPrefix(newPrefix, true), true);
 
         } else if (expr.kind_ == NodeKind::FUNCTION_CALL) {
             const auto& funcCall = *expr.as<FunctionCall>();
             std::cout << prefix << branch << "FunctionCall\n";
             std::cout << newPrefix << "├── Callee\n";
-            log_expression(*funcCall.callee_, next_prefix(newPrefix, false), true);
+            logExpression(*funcCall.callee_, nextPrefix(newPrefix, false), true);
             std::cout << newPrefix << "└── Arguments\n";
             for (size_t i = 0; i < funcCall.arguments_.size(); ++i) {
                 const auto& arg = funcCall.arguments_[i];
                 const bool isLastArg = i == funcCall.arguments_.size() - 1;
-                const std::string argPrefix = next_prefix(newPrefix, true);
+                const std::string argPrefix = nextPrefix(newPrefix, true);
                 const std::string argBranch = isLastArg ? "└── " : "├── ";
                 std::cout << argPrefix << argBranch << "Argument" << i + 1 << "\n";
-                log_expression(*arg, next_prefix(argPrefix, isLastArg), true);
+                logExpression(*arg, nextPrefix(argPrefix, isLastArg), true);
             }
         } else if (expr.kind_ == NodeKind::BINARY_EXPRESSION) {
             const auto& binaryExpr = *expr.as<BinaryExpression>();
             std::cout << prefix << branch << "BinaryExpression\n";
-            log_expression(*binaryExpr.left_, newPrefix, false);
-            std::cout << newPrefix << "├── Operator: " << operator_to_string(binaryExpr.operator_)
+            logExpression(*binaryExpr.left_, newPrefix, false);
+            std::cout << newPrefix << "├── Operator: " << operatorToString(binaryExpr.operator_)
                       << "\n";
-            log_expression(*binaryExpr.right_, newPrefix, true);
+            logExpression(*binaryExpr.right_, newPrefix, true);
         } else if (expr.kind_ == NodeKind::UNARY_EXPRESSION) {
             const auto& unaryExpr = *expr.as<UnaryExpression>();
             std::cout << prefix << branch << "UnaryExpression\n";
-            std::cout << newPrefix << "├── Operator: " << operator_to_string(unaryExpr.operator_)
+            std::cout << newPrefix << "├── Operator: " << operatorToString(unaryExpr.operator_)
                       << "\n";
-            log_expression(*unaryExpr.operand_, newPrefix, true);
+            logExpression(*unaryExpr.operand_, newPrefix, true);
         }
     }
 
@@ -114,8 +114,8 @@ void log_expression(const Expression& expr, const std::string& prefix, const boo
     std::cout << prefix << branch << "TypeID: " << expr.typeID_ << "\n";
 }
 
-void log_statement(const Statement& stmt, const std::string& prefix, const bool isLast) {
-    const std::string newPrefix = next_prefix(prefix, isLast);
+void logStatement(const Statement& stmt, const std::string& prefix, const bool isLast) {
+    const std::string newPrefix = nextPrefix(prefix, isLast);
     const std::string branch = isLast ? "└── " : "├── ";
 
     switch (stmt.kind_) {
@@ -127,38 +127,38 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             std::cout << newPrefix << "├── IsMutable: " << (varDecl.isMutable_ ? "true" : "false")
                       << "\n";
             std::cout << newPrefix << "└── Value\n";
-            log_expression(*varDecl.value_, next_prefix(newPrefix, true), true);
+            logExpression(*varDecl.value_, nextPrefix(newPrefix, true), true);
             break;
         }
         case NodeKind::ASSIGNMENT: {
             const auto& assignment = *stmt.as<Assignment>();
             std::cout << prefix << branch << "Assignment\n";
             std::cout << newPrefix << "├── Place\n";
-            log_expression(*assignment.place_, next_prefix(newPrefix, false), true);
-            std::cout << newPrefix << "├── Operator: " << operator_to_string(assignment.operator_)
+            logExpression(*assignment.place_, nextPrefix(newPrefix, false), true);
+            std::cout << newPrefix << "├── Operator: " << operatorToString(assignment.operator_)
                       << "\n";
             std::cout << newPrefix << "└── Value\n";
-            log_expression(*assignment.value_, next_prefix(newPrefix, true), true);
+            logExpression(*assignment.value_, nextPrefix(newPrefix, true), true);
             break;
         }
         case NodeKind::EXPRESSION_STATEMENT: {
             const auto& exprStmt = *stmt.as<ExpressionStatement>();
             std::cout << prefix << branch << "ExpressionStatement\n";
             std::cout << newPrefix << "└── Expression\n";
-            log_expression(*exprStmt.expression_, next_prefix(newPrefix, true), true);
+            logExpression(*exprStmt.expression_, nextPrefix(newPrefix, true), true);
             break;
         }
         case NodeKind::IF_STATEMENT: {
             const auto& ifStmt = *stmt.as<IfStatement>();
             std::cout << prefix << branch << "IfStatement\n";
             std::cout << newPrefix << "├── Condition\n";
-            log_expression(*ifStmt.condition_, next_prefix(newPrefix, false), true);
+            logExpression(*ifStmt.condition_, nextPrefix(newPrefix, false), true);
             std::cout << newPrefix << (ifStmt.elseClause_ ? "├── " : "└── ") << "Body\n";
-            log_statement(*ifStmt.body_, next_prefix(newPrefix, !ifStmt.elseClause_),
-                          !ifStmt.elseClause_);
+            logStatement(*ifStmt.body_, nextPrefix(newPrefix, !ifStmt.elseClause_),
+                         !ifStmt.elseClause_);
             if (ifStmt.elseClause_) {
                 std::cout << newPrefix << "└── Else\n";
-                log_statement(*ifStmt.elseClause_, next_prefix(newPrefix, true), true);
+                logStatement(*ifStmt.elseClause_, nextPrefix(newPrefix, true), true);
             }
             break;
         }
@@ -166,9 +166,9 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             const auto& whileStmt = *stmt.as<WhileStatement>();
             std::cout << prefix << branch << "WhileStatement\n";
             std::cout << newPrefix << "├── Condition\n";
-            log_expression(*whileStmt.condition_, next_prefix(newPrefix, false), true);
+            logExpression(*whileStmt.condition_, nextPrefix(newPrefix, false), true);
             std::cout << newPrefix << "└── Body\n";
-            log_statement(*whileStmt.body_, next_prefix(newPrefix, true), true);
+            logStatement(*whileStmt.body_, nextPrefix(newPrefix, true), true);
             break;
         }
         case NodeKind::BREAK_STATEMENT:
@@ -182,7 +182,7 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             std::cout << prefix << branch << "ReturnStatement\n";
             if (returnStmt.returnValue_) {
                 std::cout << newPrefix << "└── Value\n";
-                log_expression(*returnStmt.returnValue_, next_prefix(newPrefix, true), true);
+                logExpression(*returnStmt.returnValue_, nextPrefix(newPrefix, true), true);
             }
             break;
         }
@@ -190,7 +190,7 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             const auto& exit = *stmt.as<ExitStatement>();
             std::cout << prefix << branch << "Exit\n";
             std::cout << newPrefix << "└── ExitCode\n";
-            log_expression(*exit.exitCode_, next_prefix(newPrefix, true), true);
+            logExpression(*exit.exitCode_, nextPrefix(newPrefix, true), true);
             break;
         }
         case NodeKind::BLOCK_STATEMENT: {
@@ -198,7 +198,7 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
             std::cout << prefix << branch << "BlockStatement\n";
             for (size_t i = 0; i < blockStmt.body_.size(); ++i) {
                 const auto& innerStmt = blockStmt.body_[i];
-                log_statement(*innerStmt, newPrefix, i == blockStmt.body_.size() - 1);
+                logStatement(*innerStmt, newPrefix, i == blockStmt.body_.size() - 1);
             }
             break;
         }
@@ -211,7 +211,9 @@ void log_statement(const Statement& stmt, const std::string& prefix, const bool 
     }
 }
 
-void log_ast(const Program& programNode) {
+}  // namespace
+
+void logAst(const Program& programNode) {
     std::cout << "Program\n";
 
     const std::string prefix = "    ";
@@ -225,17 +227,17 @@ void log_ast(const Program& programNode) {
 
             const std::string parametersBranch = hasBody ? "├── " : "└── ";
             std::cout << newPrefix << parametersBranch << "Parameters\n";
-            const std::string paramsPrefix = next_prefix(newPrefix, !hasBody);
+            const std::string paramsPrefix = nextPrefix(newPrefix, !hasBody);
             for (size_t j = 0; j < params.size(); ++j) {
                 const auto& param = params[j];
 
                 const std::string paramBranch = j == params.size() - 1 ? "└── " : "├── ";
                 std::cout << paramsPrefix << paramBranch << "Parameter" << j + 1 << "\n";
-                std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
+                std::cout << nextPrefix(paramsPrefix, j == params.size() - 1)
                           << "├── Identifier: " << param->identifier_->name_ << "\n";
-                std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
+                std::cout << nextPrefix(paramsPrefix, j == params.size() - 1)
                           << "├── TypeID: " << param->typeID_ << "\n";
-                std::cout << next_prefix(paramsPrefix, j == params.size() - 1)
+                std::cout << nextPrefix(paramsPrefix, j == params.size() - 1)
                           << "└── IsMutable: " << (param->isMutable_ ? "true" : "false") << "\n";
             }
         };
@@ -270,7 +272,7 @@ void log_ast(const Program& programNode) {
                   << "\n";
 
         std::cout << newPrefix << "└── Body\n";
-        log_statement(*funcDef.body_, next_prefix(newPrefix, true), true);
+        logStatement(*funcDef.body_, nextPrefix(newPrefix, true), true);
         if (!isLast) {
             std::cout << prefix << "│\n";
         }

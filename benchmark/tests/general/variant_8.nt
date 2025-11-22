@@ -5,11 +5,11 @@ fn compareValues$ID$(): {
 
     let m = min(p, q);
     let M = max(p, q);
-    let absr = abs(r);
+    let absR = abs(r);
 
     print_num(m);
     print_num(M);
-    print_num(absr);
+    print_num(absR);
 
     if m < 20: {
         println(false);

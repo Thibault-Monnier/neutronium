@@ -1,13 +1,25 @@
 #include "Parser.hpp"
 
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <charconv>
 #include <format>
 #include <functional>
+#include <initializer_list>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
+#include "ast/AST.hpp"
+#include "ast/Operator.hpp"
 #include "lex/Token.hpp"
+#include "lex/TokenKind.hpp"
+#include "type/Type.hpp"
+#include "type/TypeID.hpp"
 
 #if defined(__GNUC__) || defined(__clang__)
 #define EXPECT_OR_RETURN_NULLPTR(tokenKind)            \
@@ -71,7 +83,7 @@ std::optional<std::vector<std::unique_ptr<T>>> Parser::parseCommaSeparatedList(
 std::optional<std::vector<std::unique_ptr<AST::Expression>>> Parser::parseExpressionList(
     const TokenKind endDelimiter) {
     return parseCommaSeparatedList<AST::Expression>(endDelimiter,
-                                                    [this]() { return parseExpression(); });
+                                                    [this] { return parseExpression(); });
 }
 
 std::optional<Type> Parser::tryParsePrimitiveType(const TokenKind tokenKind) {
@@ -102,13 +114,13 @@ std::unique_ptr<Type> Parser::parseTypeSpecifier() {
     }
 
     if (advanceIf(TokenKind::LEFT_BRACKET)) {
-        auto elementType = parseTypeSpecifier();
+        const auto elementType = parseTypeSpecifier();
         if (!elementType) return nullptr;
 
         const TypeID elementTypeID = typeManager_.createType(*elementType);
         EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
-        auto arrayLength = parseNumberLiteral();
+        const auto arrayLength = parseNumberLiteral();
         if (!arrayLength) return nullptr;
 
         EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
@@ -281,18 +293,18 @@ std::unique_ptr<AST::Expression> Parser::parseBinaryExpression(
 }
 
 std::unique_ptr<AST::Expression> Parser::parseMultiplicativeExpression() {
-    return parseBinaryExpression([this]() { return parseUnaryExpression(); },
+    return parseBinaryExpression([this] { return parseUnaryExpression(); },
                                  {AST::Operator::MULTIPLY, AST::Operator::DIVIDE}, true);
 }
 
 std::unique_ptr<AST::Expression> Parser::parseAdditiveExpression() {
-    return parseBinaryExpression([this]() { return parseMultiplicativeExpression(); },
+    return parseBinaryExpression([this] { return parseMultiplicativeExpression(); },
                                  {AST::Operator::ADD, AST::Operator::SUBTRACT}, true);
 }
 
 std::unique_ptr<AST::Expression> Parser::parseComparisonExpression() {
     return parseBinaryExpression(
-        [this]() { return parseAdditiveExpression(); },
+        [this] { return parseAdditiveExpression(); },
         {AST::Operator::EQUALS, AST::Operator::NOT_EQUALS, AST::Operator::LESS_THAN,
          AST::Operator::GREATER_THAN, AST::Operator::LESS_THAN_OR_EQUAL,
          AST::Operator::GREATER_THAN_OR_EQUAL},
@@ -309,7 +321,7 @@ std::unique_ptr<AST::VariableDefinition> Parser::parseVariableDefinition() {
     auto identifier = parseIdentifier();
     if (!identifier) return nullptr;
 
-    auto parsedType = maybeParseTypeAnnotation(TokenKind::COLON, Type::anyFamilyType());
+    const auto parsedType = maybeParseTypeAnnotation(TokenKind::COLON, Type::anyFamilyType());
     if (!parsedType) return nullptr;
 
     const TypeID typeID = typeManager_.createType(*parsedType);
@@ -510,7 +522,7 @@ std::unique_ptr<AST::VariableDefinition> Parser::parseFunctionParameter() {
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);
 
-    auto parsedType = parseTypeSpecifier();
+    const auto parsedType = parseTypeSpecifier();
     if (!parsedType) return nullptr;
     const TypeID typeID = typeManager_.createType(*parsedType);
 
@@ -525,7 +537,7 @@ std::unique_ptr<ParsedFunctionSignature> Parser::parseFunctionSignature() {
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::LEFT_PAREN);
     auto parameters = parseCommaSeparatedList<AST::VariableDefinition>(
-        TokenKind::RIGHT_PAREN, [this]() { return parseFunctionParameter(); });
+        TokenKind::RIGHT_PAREN, [this] { return parseFunctionParameter(); });
     if (!parameters) return nullptr;
     EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
 
@@ -541,7 +553,7 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parseExternalFunctionD
     const Token externTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::EXTERN);
     EXPECT_OR_RETURN_NULLPTR(TokenKind::FN);
 
-    auto signature = parseFunctionSignature();
+    const auto signature = parseFunctionSignature();
     if (!signature) return nullptr;
 
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
@@ -558,7 +570,7 @@ std::unique_ptr<AST::FunctionDefinition> Parser::parseFunctionDefinition() {
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::FN);
 
-    auto signature = parseFunctionSignature();
+    const auto signature = parseFunctionSignature();
     if (!signature) return nullptr;
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);

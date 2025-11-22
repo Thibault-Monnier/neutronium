@@ -18,7 +18,7 @@ class TypeManager;
 class TypeSolver {
    public:
     TypeSolver(TypeManager& typeManager, DiagnosticsEngine& diagnosticsEngine)
-        : typeManager_(typeManager), diagnosticsEngine_(diagnosticsEngine) {};
+        : typeManager_(typeManager), diagnosticsEngine_(diagnosticsEngine) {}
 
     /**
      * @brief Registers a new type constraint to the collection of constraints.
@@ -41,7 +41,7 @@ class TypeSolver {
      * @brief Solves all registered type constraints to ensure type consistency.
      *
      * The solve method resolves all collected type constraints, including equality constraints and
-     * trait requirements. It ensures that all Type and their relationships satisfy the constraints
+     * trait requirements. It ensures that all types and their relationships satisfy the constraints
      * imposed during semantic analysis. This method internally uses the union-find algorithm
      * for equality constraints and processes trait requirements to finalize type resolution.
      */

@@ -23,7 +23,7 @@ class PrimitiveTypeFamily {
  * @brief Defines the integer type family.
  *
  * This class is a specialization of the PrimitiveTypeFamily that specifically handles
- * Type categorized as integers, such as INT, INT8, INT16, INT32, and INT64.
+ * types categorized as integers, such as INT, INT8, INT16, INT32, and INT64.
  */
 class IntegerTypeFamily final : public PrimitiveTypeFamily {
    public:
@@ -46,7 +46,7 @@ class IntegerTypeFamily final : public PrimitiveTypeFamily {
  * @brief Represents a special primitive type family encompassing all possible primitive kinds.
  *
  * This class is an implementation of the `PrimitiveTypeFamily` interface, providing
- * functionality to represent a type family that includes all Type defined in the system.
+ * functionality to represent a type family that includes all types defined in the system.
  */
 class AnyTypeFamily final : public PrimitiveTypeFamily {
    public:

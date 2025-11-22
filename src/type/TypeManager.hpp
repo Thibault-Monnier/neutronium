@@ -56,7 +56,7 @@ class TypeManager {
      * @brief Retrieves a reference to a previously registered type.
      *
      * This function fetches the type corresponding to the provided TypeID
-     * from the managed collection of Type.
+     * from the managed collection of types.
      *
      * @param id The unique TypeID of the type to retrieve.
      * @return A constant reference to the Type object associated with the provided TypeID.
@@ -70,7 +70,7 @@ class TypeManager {
      * @brief Retrieves a reference to a previously registered type.
      *
      * This function fetches the type corresponding to the provided TypeID
-     * from the managed collection of Type.
+     * from the managed collection of types.
      *
      * @param id The unique TypeID of the type to retrieve.
      * @return A mutable reference to the Type object associated with the provided TypeID.
@@ -117,7 +117,7 @@ class TypeManager {
      *
      * This vector adds a layer of indirection for TypeIDs, allowing one TypeID to reference
      * another. This is used to allow type equivalence, where modifying one type affects all linked
-     * Type. Initially, every TypeID maps to itself.
+     * types. Initially, every TypeID maps to itself.
      */
     std::vector<TypeID> linkingTable_;
 };

@@ -5,8 +5,16 @@
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
+#include <iterator>
+#include <sstream>
 #include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 std::pair<int, std::string_view> SourceManager::loadNewSourceFile(std::string path) {
     std::ifstream source(path, std::ios::binary);

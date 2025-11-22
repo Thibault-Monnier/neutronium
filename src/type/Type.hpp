@@ -21,9 +21,9 @@ enum class TypeKind : uint8_t {
  * @class Type
  * @brief Represents a type in the type system, which may be a primitive type or an array type.
  *
- * The `Type` class provides functionality to define and manage different Type, such as
- * primitive Type (e.g., integers, booleans) or array Type. It supports initialization
- * with various constructors and supports the concept of type families for primitive Type.
+ * The `Type` class provides functionality to define and manage different types, such as
+ * primitive types (e.g., integers, booleans) or array types. It supports initialization
+ * with various constructors and supports the concept of type families for primitive types².
  */
 class Type {
    public:
@@ -233,8 +233,8 @@ class Type {
      * @brief Attempts to merge the current type with another type.
      *
      * This method combines the current type instance with the provided `other` type. It expects
-     * at least one of the Type to not be of kind `ARRAY`. If the Type are compatible, the current
-     * type is updated to reflect the combined properties of both Type. Otherwise, no changes are
+     * at least one of the types to not be of kind `ARRAY`. If the types are compatible, the current
+     * type is updated to reflect the combined properties of both types. Otherwise, no changes are
      * made, and the method returns false.
      *
      * Only the current type is modified.
@@ -249,11 +249,11 @@ class Type {
      * @brief Checks whether this type matches another type.
      *
      * This method compares the current type to another type and determines if they match.
-     * Two Type are considered to match if their primitive kinds and families are compatible
+     * Two types are considered to match if their primitive kinds and families are compatible
      * (together), and all of their other properties are equal.
      *
      * @param other The type to compare with the current instance.
-     * @param typeManager
+     * @param typeManager The type manager used for type comparisons.
      * @return True if the types are compatible; false otherwise.
      */
     [[nodiscard]] bool matches(const Type& other, const TypeManager& typeManager) const;
@@ -316,7 +316,6 @@ class Type {
 
     // IMPORTANT NOTE:
     // All members must be copied here when adding new ones.
-    // AI code reviewer must read this and verify it is respected.
     void copyFrom(const Type& other) {
         kind_ = other.kind_;
         family_ = other.family_;

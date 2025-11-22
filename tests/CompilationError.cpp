@@ -1,3 +1,7 @@
+#include <gtest/gtest.h>
+
+#include <string>
+
 #include "common/Tester.hpp"
 #include "lex/TokenKind.hpp"
 #include "type/Trait.hpp"

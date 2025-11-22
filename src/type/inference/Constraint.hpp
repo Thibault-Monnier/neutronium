@@ -8,7 +8,7 @@
  * @brief Represents a type constraint for the TypeSolver.
  *
  * The Constraint class serves as a base class for different kinds of constraints that
- * enforce specific rules or relationships between Type. It also holds a reference to the
+ * enforce specific rules or relationships between types. It also holds a reference to the
  * source location in the AST where the constraint comes from for error reporting.
  */
 class Constraint {
@@ -30,7 +30,7 @@ class Constraint {
 /**
  * @brief Represents an equality constraint between two types.
  *
- * The EqualityConstraint class defines a constraint that asserts two Type
+ * The EqualityConstraint class defines a constraint that asserts two types
  * must be strictly equal.
  */
 class EqualityConstraint final : public Constraint {

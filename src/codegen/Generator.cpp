@@ -1,13 +1,21 @@
 #include "Generator.hpp"
 
 #include <cassert>
+#include <format>
+#include <optional>
 #include <ranges>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
+#include "SymbolTable.hpp"
 #include "ast/AST.hpp"
+#include "ast/Operator.hpp"
+#include "driver/Cli.hpp"
+#include "type/Type.hpp"
+#include "type/TypeID.hpp"
 
 using namespace CodeGen;
 
