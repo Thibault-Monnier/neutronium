@@ -4,6 +4,8 @@
 #include <string>
 
 enum class TokenKind : uint8_t {
+    UNINITIALIZED,
+
     // Primary tokens
     IDENTIFIER,
     NUMBER_LITERAL,

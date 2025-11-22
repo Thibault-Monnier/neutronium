@@ -8,6 +8,7 @@
 #include <optional>
 #include <ranges>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -104,7 +105,8 @@ void SemanticAnalyser::enterScope() { scopes_.emplace_back(); }
 
 void SemanticAnalyser::exitScope() { scopes_.pop_back(); }
 
-std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(const std::string& name) const {
+std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(
+    const std::string_view name) const {
     {
         const auto it = functionsTable_.find(name);
         if (it != functionsTable_.end()) return &it->second;
@@ -119,7 +121,7 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(const std::stri
 }
 
 std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfoOrError(
-    const std::string& name, const AST::Node& node) const {
+    const std::string_view name, const AST::Node& node) const {
     const auto info = getSymbolInfo(name);
     if (!info.has_value()) {
         error(std::format("Undeclared symbol: `{}`", name), node);
@@ -128,7 +130,7 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfoOrError(
 }
 
 SymbolInfo& SemanticAnalyser::declareSymbol(const AST::Node* declarationNode,
-                                            const std::string& name, const SymbolKind kind,
+                                            const std::string_view name, const SymbolKind kind,
                                             const bool isMutable, const TypeID typeID,
                                             const bool isScoped,
                                             std::vector<SymbolInfo> parameters) {
@@ -154,7 +156,7 @@ SymbolInfo& SemanticAnalyser::declareSymbol(const AST::Node* declarationNode,
 }
 
 SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
-    const AST::Node* declNode, const std::string& name, const TypeID returnTypeID,
+    const AST::Node* declNode, const std::string_view name, const TypeID returnTypeID,
     const std::vector<std::unique_ptr<AST::VariableDefinition>>& params) {
     std::vector<SymbolInfo> parameterSymbols;
     for (const auto& param : params) {
@@ -168,13 +170,13 @@ SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
 }
 
 SymbolInfo& SemanticAnalyser::handleVariableDeclaration(const AST::VariableDefinition* declNode,
-                                                        const std::string& name,
+                                                        const std::string_view name,
                                                         const bool isMutable, const TypeID typeID) {
     return declareSymbol(declNode, name, SymbolKind::VARIABLE, isMutable, typeID, true, {});
 }
 
 TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
-    const std::string& name = funcCall.callee_->name_;
+    const std::string_view name = funcCall.callee_->name_;
 
     const auto info = getSymbolInfoOrError(name, *funcCall.callee_);
     if (!info.has_value()) {
@@ -319,7 +321,7 @@ void SemanticAnalyser::checkExpression(const AST::Expression& expr, const TypeID
 }
 
 void SemanticAnalyser::analyseVariableDefinition(const AST::VariableDefinition& definition) {
-    const std::string& name = definition.identifier_->name_;
+    const std::string_view name = definition.identifier_->name_;
     const TypeID assignedType = checkExpression(*definition.value_);
 
     equalityConstraint(definition.typeID_, assignedType, definition);
@@ -331,7 +333,7 @@ void SemanticAnalyser::analyseVariableDefinition(const AST::VariableDefinition& 
 bool SemanticAnalyser::verifyIsAssignable(const AST::Expression& expr) {
     switch (expr.kind_) {
         case AST::NodeKind::IDENTIFIER: {
-            const std::string& varName = expr.as<const AST::Identifier>()->name_;
+            const std::string_view varName = expr.as<const AST::Identifier>()->name_;
             const auto& declarationInfo = getSymbolInfoOrError(varName, expr);
             if (!declarationInfo.has_value()) {
                 return false;

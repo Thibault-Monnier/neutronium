@@ -51,13 +51,13 @@ class Generator {
         return typeSizeBits(type);
     }
 
-    void insertSymbol(const std::string& name, TypeID typeID);
+    void insertSymbol(std::string_view name, TypeID typeID);
     int getScopeFrameSize(const AST::BlockStatement& blockStmt) const;
     void enterScope(const AST::BlockStatement& blockStmt);
     void exitScope(const AST::BlockStatement& blockStmt);
 
-    int getVariableSizeBits(const std::string& name) const;
-    int getVariableStackOffset(const std::string& name) const;
+    int getVariableSizeBits(std::string_view name) const;
+    int getVariableStackOffset(std::string_view name) const;
     static std::string_view sizeDirective(int bitSize);
     static std::string_view registerAForSize(int bitSize);
 
@@ -81,8 +81,8 @@ class Generator {
      */
     std::string stackTopMemoryOperand() const;
 
-    void writeToVariableFromRax(const std::string& name);
-    void moveVariableToRax(const std::string& name);
+    void writeToVariableFromRax(std::string_view name);
+    void moveVariableToRax(std::string_view name);
     void moveNumberLitToRax(const AST::NumberLiteral& numberLit);
     void moveBooleanLitToRax(const AST::BooleanLiteral& booleanLit);
 
@@ -91,7 +91,7 @@ class Generator {
     void generateArrayLit(const AST::ArrayLiteral& arrayLit, std::string_view destinationAddress);
     void allocateAndGenerateArrayLiteral(const AST::ArrayLiteral& arrayLit);
 
-    static std::string functionNameWithPrefix(const std::string& name);
+    static std::string functionNameWithPrefix(std::string_view name);
     void generateFunctionCall(const AST::FunctionCall& funcCall,
                               const std::optional<std::string_view>& destinationAddress);
     void allocateAndGenerateFunctionCall(const AST::FunctionCall& funcCall);

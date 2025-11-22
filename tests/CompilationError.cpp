@@ -3,6 +3,7 @@
 #include <string>
 
 #include "common/Tester.hpp"
+#include "lex/TokenKind.hpp"
 #include "type/Trait.hpp"
 
 TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
@@ -1161,4 +1162,17 @@ TEST_F(NeutroniumTester, MultipleSemaErrorsAllReported) {
     EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("truer"));
     EXPECT_TRUE(error.contains("main") && error.contains("function") &&
                 error.contains("executable target"));
+}
+
+TEST_F(NeutroniumTester, AssignmentNonExpressionLHSFails) {
+    const std::string code = R"(
+        fn main(): {
+            a + 2) = 3;
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") &&
+                error.contains(tokenKindToString(TokenKind::SEMICOLON)) &&
+                error.contains(tokenKindToString(TokenKind::RIGHT_PAREN)));
 }

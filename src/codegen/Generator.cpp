@@ -50,7 +50,7 @@ std::stringstream Generator::generate() {
     return std::move(output_);
 }
 
-void Generator::insertSymbol(const std::string& name, const TypeID typeID) {
+void Generator::insertSymbol(const std::string_view name, const TypeID typeID) {
     symbolTable_.erase(name);
 
     const Type& type = typeManager_.getType(typeID);
@@ -101,11 +101,11 @@ void Generator::exitScope(const AST::BlockStatement& blockStmt) {
     }
 }
 
-int Generator::getVariableSizeBits(const std::string& name) const {
+int Generator::getVariableSizeBits(const std::string_view name) const {
     return symbolTable_.at(name).stackSizeBits_;
 }
 
-int Generator::getVariableStackOffset(const std::string& name) const {
+int Generator::getVariableStackOffset(const std::string_view name) const {
     assert(symbolTable_.contains(name) && "Variable not found in stack offset map");
 
     return symbolTable_.at(name).stackOffset_;
@@ -183,7 +183,7 @@ std::string Generator::stackTopMemoryOperand() const {
     return "[rbp - " + std::to_string(currentStackOffset_) + "]";
 }
 
-void Generator::writeToVariableFromRax(const std::string& name) {
+void Generator::writeToVariableFromRax(const std::string_view name) {
     const Type& type = typeManager_.getType(symbolTable_.at(name).typeID_);
     const int size = getVariableSizeBits(name);
     const int stackOffset = getVariableStackOffset(name);
@@ -202,7 +202,7 @@ void Generator::writeToVariableFromRax(const std::string& name) {
     }
 }
 
-void Generator::moveVariableToRax(const std::string& name) {
+void Generator::moveVariableToRax(const std::string_view name) {
     const int sizeBits = getVariableSizeBits(name);
     const int stackOffset = getVariableStackOffset(name);
     output_ << "    mov " << registerAForSize(sizeBits) << ", [rbp - " << stackOffset << "]\n";
@@ -267,8 +267,8 @@ void Generator::allocateAndGenerateArrayLiteral(const AST::ArrayLiteral& arrayLi
     pop("rbx");
 }
 
-std::string Generator::functionNameWithPrefix(const std::string& name) {
-    return "__" + name;  // Prefix with "__" to avoid conflicts with NASM keywords
+std::string Generator::functionNameWithPrefix(const std::string_view name) {
+    return "__" + std::string(name);  // Prefix with "__" to avoid conflicts with NASM keywords
 }
 
 void Generator::generateFunctionCall(const AST::FunctionCall& funcCall,
@@ -360,7 +360,7 @@ void Generator::evaluateBinaryExpressionToRax(const AST::BinaryExpression& binar
     if (AST::isArithmeticOperator(op)) {
         applyArithmeticOperatorToRax(op, "rbx");
     } else if (AST::isComparisonOperator(op)) {
-        const std::unordered_map<AST::Operator, std::string> comparisonSuffixes = {
+        const std::unordered_map<AST::Operator, std::string_view> comparisonSuffixes = {
             {AST::Operator::EQUALS, "e"},       {AST::Operator::NOT_EQUALS, "ne"},
             {AST::Operator::LESS_THAN, "l"},    {AST::Operator::LESS_THAN_OR_EQUAL, "le"},
             {AST::Operator::GREATER_THAN, "g"}, {AST::Operator::GREATER_THAN_OR_EQUAL, "ge"},

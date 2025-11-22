@@ -46,12 +46,18 @@ class SemanticAnalyser {
     void storableConstraint(TypeID type, const AST::Node& node) const;
 
     // Register new type helpers
-    TypeID registerAnyType() const { return typeManager_.createType(Type::anyFamilyType()); }
-    TypeID registerIntegerType() const {
+    [[nodiscard]] TypeID registerAnyType() const {
+        return typeManager_.createType(Type::anyFamilyType());
+    }
+    [[nodiscard]] TypeID registerIntegerType() const {
         return typeManager_.createType(Type::integerFamilyType());
     }
-    TypeID registerBoolType() const { return typeManager_.createType(Type::boolType()); }
-    TypeID registerVoidType() const { return typeManager_.createType(Type::voidType()); }
+    [[nodiscard]] TypeID registerBoolType() const {
+        return typeManager_.createType(Type::boolType());
+    }
+    [[nodiscard]] TypeID registerVoidType() const {
+        return typeManager_.createType(Type::voidType());
+    }
 
     void error(const std::string& errorMessage, const AST::Node& node) const;
     void fatalError(const std::string& errorMessage, const AST::Node& node) const;
@@ -87,19 +93,19 @@ class SemanticAnalyser {
         SemanticAnalyser& analyser_;
     };
 
-    [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(const std::string& name) const;
-    std::optional<const SymbolInfo*> getSymbolInfoOrError(const std::string& name,
-                                                          const AST::Node& node) const;
+    [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(std::string_view name) const;
+    [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfoOrError(
+        std::string_view name, const AST::Node& node) const;
 
-    SymbolInfo& declareSymbol(const AST::Node* declarationNode, const std::string& name,
+    SymbolInfo& declareSymbol(const AST::Node* declarationNode, std::string_view name,
                               SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,
                               std::vector<SymbolInfo> parameters);
 
     SymbolInfo& handleFunctionDeclaration(
-        const AST::Node* declNode, const std::string& name, TypeID returnTypeID,
+        const AST::Node* declNode, std::string_view name, TypeID returnTypeID,
         const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
     SymbolInfo& handleVariableDeclaration(const AST::VariableDefinition* declNode,
-                                          const std::string& name, bool isMutable, TypeID typeID);
+                                          std::string_view name, bool isMutable, TypeID typeID);
 
     TypeID checkFunctionCall(const AST::FunctionCall& funcCall);
     TypeID checkUnaryExpression(const AST::UnaryExpression& unaryExpr);

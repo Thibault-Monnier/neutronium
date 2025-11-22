@@ -1,7 +1,6 @@
 #include "TypeSolver.hpp"
 
 #include <cassert>
-#include <cstddef>
 #include <cstdlib>
 #include <format>
 #include <memory>
