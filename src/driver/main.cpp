@@ -51,7 +51,6 @@ class Stage {
         try {
             printStepEnd(duration);
         } catch (...) {
-            // Ignore any exceptions during logging
         }
     }
 
@@ -61,13 +60,12 @@ class Stage {
     bool verbose_;
 
     void printStepStart() const {
-        std::print("\033[33m- \033[0m{}...", message_);
+        std::print("\033[33m- \033[0m{}...", message_.data());
         std::cout.flush();
-        sched_yield();
     }
 
     void printStepEnd(const std::int64_t duration) const {
-        std::print("\r\33[2K\033[1;32m✓\033[0m {} ({} ms)\n", message_, duration);
+        std::print("\r\33[2K\033[1;32m✓\033[0m {} ({} ms)\n", message_.data(), duration);
     }
 };
 
