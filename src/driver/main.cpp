@@ -76,23 +76,24 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         opts.sourceFilename_.clear();
     } catch (const std::exception& e) {
         printError(e.what());
-        exit(EXIT_FAILURE);
+        std::exit(EXIT_FAILURE);
     }
 
     DiagnosticsEngine diagnosticsEngine(sourceManager, fileID);
 
     if (opts.logCode_) std::cout << fileContents << '\n';
 
-    const auto tokens =
-        timed("Lexing", verbose, [&] { return Lexer(fileContents, diagnosticsEngine).tokenize(); });
-    if (opts.logTokens_) {
-        const std::string_view filePath = sourceManager.getSourceFilePath(fileID);
-        for (const auto& token : tokens) {
-            const auto [line, column] =
-                sourceManager.getLineColumn(fileID, token.byteOffsetStart());
-            std::cout << tokenKindToString(token.kind()) << ": '" << token.lexeme(fileContents)
-                      << "' at " << filePath << ":" << line << ":" << column << '\n';
-        }
+    if (opts.endStage_ == PipelineEndStage::LEX) {
+        timed("Lexing", verbose, [&] {
+            Lexer lexer(fileContents, diagnosticsEngine);
+            while (true) {
+                const Token token = lexer.lex();
+                asm volatile("" : : "r"(token));
+                if (token.kind() == TokenKind::EOF_) [[unlikely]]
+                    break;
+            }
+        });
+        return;
     }
 
     TypeManager typeManager{diagnosticsEngine};
@@ -101,15 +102,18 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         return Parser(diagnosticsEngine, fileContents, typeManager).parse();
     });
     if (opts.logAst_) AST::logAst(*ast);
+    if (opts.endStage_ == PipelineEndStage::PARSE) return;
 
     timed("Semantic analysis", verbose, [&] {
         SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeManager).analyse();
     });
+    if (opts.endStage_ == PipelineEndStage::SEMA) return;
 
-    const auto assembly = timed("Code Generator", verbose, [&] {
+    const auto assembly = timed("Code Generation", verbose, [&] {
         return CodeGen::Generator(*ast, typeManager, opts.targetType_).generate();
     });
     if (opts.logAssembly_) std::cout << assembly.str();
+    if (opts.endStage_ == PipelineEndStage::CODEGEN) return;
 
     std::filesystem::path outFilename;
     if (opts.targetType_ == TargetType::EXECUTABLE) {
@@ -124,7 +128,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         std::ofstream out(outFilename);
         if (!out) {
             printError("Could not open output file");
-            exit(EXIT_FAILURE);
+            std::exit(EXIT_FAILURE);
         }
         out << assembly.str();
     }
@@ -137,18 +141,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
     });
 }
 
-}  // namespace
-
-int main(const int argc, const char** argv) {
-    CompilerOptions opts = parseCli(argc, argv);
-    const auto startTime = Clock::now();
-
-    runOrDie("rm -rf neutro && mkdir neutro");
-
-    SourceManager sourceManager;
-
-    compileFile(std::move(opts), sourceManager, true);
-
+void compileRuntime(SourceManager& sourceManager) {
     const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
 
     timed("Building runtime", true, [&] {
@@ -170,15 +163,35 @@ int main(const int argc, const char** argv) {
 
                 if (std::filesystem::exists(obj)) {
                     printError(std::format("Duplicate object name would overwrite `{}`", obj));
-                    exit(EXIT_FAILURE);
+                    std::exit(EXIT_FAILURE);
                 }
 
                 runOrDie(std::format("as --64 {} -o {}", src, obj));
             }
         }
     });
+}
 
+void link() {
     timed("Linking", true, [] { runOrDie("ld -o neutro/out neutro/*.o"); });
+}
+
+}  // namespace
+
+int main(const int argc, const char** argv) {
+    CompilerOptions opts = parseCli(argc, argv);
+    const auto startTime = Clock::now();
+
+    runOrDie("rm -rf neutro && mkdir neutro");
+
+    SourceManager sourceManager;
+
+    compileFile(std::move(opts), sourceManager, true);
+
+    if (opts.endStage_ == PipelineEndStage::ALL) {
+        compileRuntime(sourceManager);
+        link();
+    }
 
     std::cout
         << "== Compiled successfully in "
