@@ -54,7 +54,6 @@ __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
     }
 
     result_ = Token(kind, tokenStartPtr - sourceStart_, static_cast<uint16_t>(length));
-    hasLexed_ = true;
 }
 
 void Lexer::skipToNextLine() {
@@ -173,10 +172,10 @@ __attribute__((always_inline)) TokenKind Lexer::lexOpMaybeTwoChars() {
     }
 }
 
-__attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
+__attribute__((always_inline)) bool Lexer::lexNextChar(const char c) {
     if (static_cast<unsigned char>(c) >= 128) [[unlikely]] {
         handleNonAsciiChar();
-        return;
+        return false;
     }
 
     TokenKind kind;
@@ -188,12 +187,12 @@ __attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
 
             // Skip whitespace
             skipWhitespace();
-            return;
+            return false;
 
         case '#':
             // Comment
             skipToNextLine();
-            return;
+            return false;
 
         case 'a' ... 'z':
         case 'A' ... 'Z':
@@ -268,15 +267,16 @@ __attribute__((always_inline)) void Lexer::lexNextChar(const char c) {
 
         default:
             invalidCharacterError(c);
-            return;
+            return false;
     }
 
     createToken(kind);
+    return true;
 }
 
 Token Lexer::lex() {
-    hasLexed_ = false;
-    while (!hasLexed_) {
+    bool hasLexed = false;
+    while (!hasLexed) {
         if (currentPtr_ >= sourceEnd_) [[unlikely]] {
             tokenStart();
             advance();
@@ -285,7 +285,7 @@ Token Lexer::lex() {
         }
 
         tokenStart();
-        lexNextChar(*currentPtr_++);
+        hasLexed = lexNextChar(*currentPtr_++);
     }
 
     return result_;

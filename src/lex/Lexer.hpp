@@ -33,7 +33,6 @@ class Lexer {
     const char* currentPtr_;
     const char* tokenStartPtr_;
 
-    bool hasLexed_ = false;
     Token result_ = Token::dummy();
 
     void tokenStart() { tokenStartPtr_ = currentPtr_; }
@@ -70,5 +69,5 @@ class Lexer {
     template <TokenKind singleCharKind, TokenKind twoCharsKind, char otherChar>
     [[nodiscard]] inline TokenKind lexOpMaybeTwoChars();
 
-    inline void lexNextChar(char c);
+    [[nodiscard]] inline bool lexNextChar(char c);
 };
