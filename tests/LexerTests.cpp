@@ -209,7 +209,7 @@ INSTANTIATE_TEST_SUITE_P(
 // ─────────────────────────────────────────────────────────────
 // Unexpected token (invalid input causes exit)
 // ─────────────────────────────────────────────────────────────
-TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
+TEST(LexerErrorTest, UnexpectedCharacterError) {
     namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {
         "@", "$", "~", "let x = 1 + @`", "x$", "let _invalid_identifier = 42;"};
@@ -236,7 +236,7 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
     }
 }
 
-TEST(LexerErrorTest, NonASCIICharactersCauseExit) {
+TEST(LexerErrorTest, NonASCIICharacterError) {
     namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {"let x = 42π;", "こんにちは", "let привет = 1;",
                                                 "x = y + λ;"};

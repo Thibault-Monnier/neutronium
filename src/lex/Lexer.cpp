@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <format>
 #include <optional>
@@ -297,6 +298,11 @@ std::vector<Token> Lexer::tokenize() {
         const Token token = lex();
         tokens.push_back(token);
         if (token.kind() == TokenKind::EOF_) break;
+    }
+
+    if (diagnosticsEngine_.hasErrors()) {
+        diagnosticsEngine_.emitErrors();
+        std::exit(EXIT_FAILURE);
     }
 
     return tokens;

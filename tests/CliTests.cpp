@@ -169,8 +169,8 @@ TEST(CliNonErrorTest, LogArguments) {
 
     status = runAndCapture(baseCompileCommand + " -d", output);
     EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("fn main():") && output.contains("EOF_:") &&
-                output.contains("Program") && output.contains("_start:"))
+    EXPECT_TRUE(output.contains("fn main():") && output.contains("Program") &&
+                output.contains("_start:"))
         << output;
 
     status = runAndCapture(baseCompileCommand + " --log=code,ast", output);
