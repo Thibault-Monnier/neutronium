@@ -1,3 +1,5 @@
+#include <sched.h>
+
 #include <chrono>
 #include <cstdlib>
 #include <exception>
@@ -5,11 +7,11 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <print>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 
 #include "Cli.hpp"
@@ -29,33 +31,45 @@ using Clock = std::chrono::high_resolution_clock;
 
 namespace {
 
-void printStep(const std::string_view message) {
-    std::cout << "\033[33m- \033[0m" << message << "..." << std::flush;
-}
+class Stage {
+   public:
+    explicit Stage(const std::string_view message, const bool verbose)
+        : message_(message), verbose_(verbose) {
+        if (!verbose_) return;
 
-template <typename F>
-decltype(auto) timed(const std::string_view message, const bool showStep, F&& f) {
-    printStep(message);
-
-    auto printElapsedTime = [&](auto start) {
-        if (showStep) {
-            const auto ms =
-                std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
-            std::cout << "\r\33[2K\033[1;32m✓\033[0m " << message << " (" << ms << " ms)\n";
-        }
-    };
-
-    const auto start = Clock::now();
-
-    if constexpr (std::is_void_v<std::invoke_result_t<F>>) {
-        std::forward<F>(f)();
-        printElapsedTime(start);
-    } else {
-        decltype(auto) result = std::forward<F>(f)();
-        printElapsedTime(start);
-        return result;
+        printStepStart();
+        startTime_ = Clock::now();
     }
-}
+
+    ~Stage() {
+        if (!verbose_) return;
+
+        const auto end = Clock::now();
+        const auto duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - startTime_).count();
+
+        try {
+            printStepEnd(duration);
+        } catch (...) {
+            // Ignore any exceptions during logging
+        }
+    }
+
+   private:
+    std::string_view message_;
+    Clock::time_point startTime_;
+    bool verbose_;
+
+    void printStepStart() const {
+        std::print("\033[33m- \033[0m{}...", message_);
+        std::cout.flush();
+        sched_yield();
+    }
+
+    void printStepEnd(const std::int64_t duration) const {
+        std::print("\r\33[2K\033[1;32m✓\033[0m {} ({} ms)\n", message_, duration);
+    }
+};
 
 void runOrDie(const std::string& cmd) {
     if (std::system(cmd.c_str()) != 0) {
@@ -69,10 +83,12 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
     std::string_view fileContents;
 
     try {
-        timed("Loading source file", verbose, [&] {
+        {
+            const Stage stage("Loading source file", verbose);
             std::tie(fileID, fileContents) =
                 sourceManager.loadNewSourceFile(std::move(opts.sourceFilename_));
-        });
+        }
+
         opts.sourceFilename_.clear();
     } catch (const std::exception& e) {
         printError(e.what());
@@ -84,34 +100,47 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
     if (opts.logCode_) std::cout << fileContents << '\n';
 
     if (opts.endStage_ == PipelineEndStage::LEX) {
-        timed("Lexing", verbose, [&] {
+        {
+            const Stage stage("Lexing", verbose);
+
             Lexer lexer(fileContents, diagnosticsEngine);
-            while (true) {
-                const Token token = lexer.lex();
-                asm volatile("" : : "r"(token));
-                if (token.kind() == TokenKind::EOF_) [[unlikely]]
-                    break;
+            Token token = lexer.lex();
+            while (token.kind() != TokenKind::EOF_) {
+                token = lexer.lex();
             }
-        });
+        }
+
         return;
     }
 
     TypeManager typeManager{diagnosticsEngine};
 
-    const auto ast = timed("Parsing", verbose, [&] {
-        return Parser(diagnosticsEngine, fileContents, typeManager).parse();
-    });
+    const std::unique_ptr<AST::Program> ast = [&] {
+        const Stage stage("Parsing", verbose);
+
+        Parser parser(diagnosticsEngine, fileContents, typeManager);
+        return parser.parse();
+    }();
+
     if (opts.logAst_) AST::logAst(*ast);
     if (opts.endStage_ == PipelineEndStage::PARSE) return;
 
-    timed("Semantic analysis", verbose, [&] {
-        SemanticAnalyser(*ast, opts.targetType_, diagnosticsEngine, typeManager).analyse();
-    });
+    {
+        const Stage stage("Semantic Analysis", verbose);
+
+        SemanticAnalyser sema(*ast, opts.targetType_, diagnosticsEngine, typeManager);
+        sema.analyse();
+    }
+
     if (opts.endStage_ == PipelineEndStage::SEMA) return;
 
-    const auto assembly = timed("Code Generation", verbose, [&] {
-        return CodeGen::Generator(*ast, typeManager, opts.targetType_).generate();
-    });
+    const auto assembly = [&] {
+        const Stage stage("Code Generation", verbose);
+
+        CodeGen::Generator generator(*ast, typeManager, opts.targetType_);
+        return generator.generate();
+    }();
+
     if (opts.logAssembly_) std::cout << assembly.str();
     if (opts.endStage_ == PipelineEndStage::CODEGEN) return;
 
@@ -133,18 +162,22 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         out << assembly.str();
     }
 
-    const auto asmFilename = outFilename;
-    const auto objFilename = outFilename.replace_extension(".o");
+    const std::filesystem::path asmFilename = outFilename;
+    const std::filesystem::path objFilename = outFilename.replace_extension(".o");
 
-    timed("Assembling", verbose, [&] {
+    {
+        const Stage stage("Assembling", verbose);
+
         runOrDie(std::format("as --64 {} -o {}", asmFilename.string(), objFilename.string()));
-    });
+    }
 }
 
 void compileRuntime(SourceManager& sourceManager) {
     const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
 
-    timed("Building runtime", true, [&] {
+    {
+        const Stage stage("Building runtime", true);
+
         for (const auto& entry : std::filesystem::recursive_directory_iterator(runtimePath)) {
             if (!entry.is_regular_file()) continue;
 
@@ -169,11 +202,12 @@ void compileRuntime(SourceManager& sourceManager) {
                 runOrDie(std::format("as --64 {} -o {}", src, obj));
             }
         }
-    });
+    }
 }
 
 void link() {
-    timed("Linking", true, [] { runOrDie("ld -o neutro/out neutro/*.o"); });
+    const Stage stage("Linking", true);
+    runOrDie("ld -o neutro/out neutro/*.o");
 }
 
 }  // namespace
