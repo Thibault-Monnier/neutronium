@@ -203,13 +203,13 @@ TEST(CliNonErrorTest, StopAtStages) {
 
     status = runAndCapture(baseCompileCommand + " --only-parse", output);
     EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("Parsing") && !output.contains("Semantic analysis") &&
+    EXPECT_TRUE(output.contains("Parsing") && !output.contains("Semantic Analysis") &&
                 !output.contains("runtime"))
         << output;
 
     status = runAndCapture(baseCompileCommand + " --only-sema", output);
     EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("Semantic analysis") && !output.contains("Code Generation") &&
+    EXPECT_TRUE(output.contains("Semantic Analysis") && !output.contains("Code Generation") &&
                 !output.contains("runtime"))
         << output;
 
