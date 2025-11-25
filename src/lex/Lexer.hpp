@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include <string_view>
 #include <vector>
 
 #include "Token.hpp"
@@ -62,7 +62,7 @@ class Lexer {
     inline void skipWhitespace();
     inline void lexNumberLiteralContinuation();
 
-    [[nodiscard]] std::optional<TokenKind> getKeywordKind() const;
+    [[nodiscard]] static inline TokenKind classifyIdentifier(const char* s, std::size_t len);
     inline void lexIdentifierContinuation();
 
     [[nodiscard]] inline TokenKind lexMinus();

@@ -1,8 +1,6 @@
 #include "Lexer.hpp"
 
 #include <emmintrin.h>
-#include <frozen/string.h>
-#include <frozen/unordered_map.h>
 #include <smmintrin.h>
 
 #include <cstdint>
@@ -10,7 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
-#include <optional>
+#include <lib/StringSwitch.hpp>
 #include <string>
 #include <vector>
 
@@ -90,23 +88,32 @@ __attribute__((always_inline)) void Lexer::lexNumberLiteralContinuation() {
     skipWhile(IS_NUMBER_CHAR);
 }
 
-std::optional<TokenKind> Lexer::getKeywordKind() const {
-    static constexpr auto KEYWORDS = frozen::make_unordered_map<frozen::string, TokenKind>({
-        {"true", TokenKind::TRUE},     {"false", TokenKind::FALSE},
-        {"int", TokenKind::INT},       {"int8", TokenKind::INT8},
-        {"int16", TokenKind::INT16},   {"int32", TokenKind::INT32},
-        {"int64", TokenKind::INT64},   {"bool", TokenKind::BOOL},
-        {"let", TokenKind::LET},       {"mut", TokenKind::MUT},
-        {"if", TokenKind::IF},         {"elif", TokenKind::ELIF},
-        {"else", TokenKind::ELSE},     {"while", TokenKind::WHILE},
-        {"break", TokenKind::BREAK},   {"continue", TokenKind::CONTINUE},
-        {"fn", TokenKind::FN},         {"extern", TokenKind::EXTERN},
-        {"export", TokenKind::EXPORT}, {"return", TokenKind::RETURN},
-        {"exit", TokenKind::EXIT},
-    });
-
-    if (const auto it = KEYWORDS.find(currentLexeme()); it != KEYWORDS.end()) return it->second;
-    return std::nullopt;
+__attribute__((always_inline)) TokenKind Lexer::classifyIdentifier(const char* const s,
+                                                                   const std::size_t len) {
+    const TokenKind tokenKind = neutro::StringSwitch<TokenKind>(neutro::FastStringView(s, len))
+                                    .newCase("if", TokenKind::IF)
+                                    .newCase("fn", TokenKind::FN)
+                                    .newCase("int", TokenKind::INT)
+                                    .newCase("let", TokenKind::LET)
+                                    .newCase("mut", TokenKind::MUT)
+                                    .newCase("true", TokenKind::TRUE)
+                                    .newCase("else", TokenKind::ELSE)
+                                    .newCase("elif", TokenKind::ELIF)
+                                    .newCase("exit", TokenKind::EXIT)
+                                    .newCase("int8", TokenKind::INT8)
+                                    .newCase("bool", TokenKind::BOOL)
+                                    .newCase("false", TokenKind::FALSE)
+                                    .newCase("break", TokenKind::BREAK)
+                                    .newCase("while", TokenKind::WHILE)
+                                    .newCase("int16", TokenKind::INT16)
+                                    .newCase("int32", TokenKind::INT32)
+                                    .newCase("int64", TokenKind::INT64)
+                                    .newCase("return", TokenKind::RETURN)
+                                    .newCase("extern", TokenKind::EXTERN)
+                                    .newCase("export", TokenKind::EXPORT)
+                                    .newCase("continue", TokenKind::CONTINUE)
+                                    .defaultCase(TokenKind::IDENTIFIER);
+    return tokenKind;
 }
 
 void Lexer::lexIdentifierContinuation() {
@@ -195,17 +202,20 @@ __attribute__((always_inline)) bool Lexer::lexNextChar(const char c) {
             return false;
 
         case 'a' ... 'z':
-        case 'A' ... 'Z':
+        case 'A' ... 'Z': {
             // Identifier or keyword
             lexIdentifierContinuation();
 
-            if (const auto keywordKind = getKeywordKind()) {
-                kind = *keywordKind;
+            const std::string_view lexeme = currentLexeme();
+            const size_t length = lexeme.length();
+            if (length >= 2 && length <= 8) {
+                kind = classifyIdentifier(lexeme.data(), length);
             } else {
                 kind = TokenKind::IDENTIFIER;
             }
-            break;
 
+            break;
+        }
         case '0' ... '9':
             // Number literal
             lexNumberLiteralContinuation();
