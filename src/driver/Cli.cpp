@@ -16,11 +16,14 @@ CompilerOptions parseCli(const int argc, const char** argv) {
     options.add_options()("h,help", "Print help")("v,version", "Print the compiler version")(
         "target-type", "Compilation target: bin (executable) or lib (library)",
         cxxopts::value<std::string>()->default_value("bin"))("d,debug", "Enable all debug logs")(
-        "log-code", "Log source code processing")("log-ast", "Log AST construction")(
-        "log-assembly", "Log final assembly output")(
-        "log", "Comma-separated logs (code,tokens,ast,assembly)",
+        "log-code", "Log the raw source file")("log-ast", "Log the generated AST")(
+        "log-assembly", "Log the final assembly output")(
+        "log", "Comma-separated logs (code,ast,assembly)",
         cxxopts::value<std::vector<std::string>>()->implicit_value(""))(
-        "input", "Source file", cxxopts::value<std::string>());
+        "input", "Specify the source file", cxxopts::value<std::string>())(
+        "only-lex", "Run the lexer, then stop")("only-parse", "Run the parser, then stop")(
+        "only-sema", "Run semantic analysis, then stop")("only-codegen",
+                                                         "Run code generation, then stop");
 
     options.parse_positional({"input"});
 
@@ -60,7 +63,7 @@ CompilerOptions parseCli(const int argc, const char** argv) {
     }
 
     if (result.count("debug")) {
-        opts.logCode_ = opts.logTokens_ = opts.logAst_ = opts.logAssembly_ = true;
+        opts.logCode_ = opts.logAst_ = opts.logAssembly_ = true;
     }
 
     if (result.count("log")) {
@@ -69,8 +72,6 @@ CompilerOptions parseCli(const int argc, const char** argv) {
             if (item.empty()) continue;  // implicit empty value
             if (item == "code")
                 opts.logCode_ = true;
-            else if (item == "tokens")
-                opts.logTokens_ = true;
             else if (item == "ast")
                 opts.logAst_ = true;
             else if (item == "assembly")
@@ -89,6 +90,16 @@ CompilerOptions parseCli(const int argc, const char** argv) {
         std::exit(EXIT_FAILURE);
     }
     opts.sourceFilename_ = result["input"].as<std::string>();
+
+    if (result.count("only-lex")) {
+        opts.endStage_ = PipelineEndStage::LEX;
+    } else if (result.count("only-parse")) {
+        opts.endStage_ = PipelineEndStage::PARSE;
+    } else if (result.count("only-sema")) {
+        opts.endStage_ = PipelineEndStage::SEMA;
+    } else if (result.count("only-codegen")) {
+        opts.endStage_ = PipelineEndStage::CODEGEN;
+    }
 
     return opts;
 }

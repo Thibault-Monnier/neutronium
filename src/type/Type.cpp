@@ -3,7 +3,6 @@
 #include <magic_enum/magic_enum.hpp>
 #include <string>
 #include <string_view>
-#include <utility>
 
 #include "Primitive.hpp"
 #include "TypeID.hpp"

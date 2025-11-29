@@ -19,7 +19,7 @@ class NeutroniumTester : public testing::Test {
             out << code;
         }
 
-        chdir(projectRoot_.c_str());
+        auto _ = chdir(projectRoot_.c_str());
 
         const std::string errorFile = (projectRoot_ / "compile_error.log").string();
         const std::string cmd = compiler_.string() + " -d " + sourceFile_.filename().string() +
@@ -43,7 +43,7 @@ class NeutroniumTester : public testing::Test {
     [[nodiscard]] int run(const std::string& code) const {
         auto [compileStatus, compileErr] = compile(code);
         EXPECT_EQ(compileStatus, 0) << "Compilation failed unexpectedly:\n" << compileErr;
-        chdir(originalCwd_.c_str());
+        auto _ = chdir(originalCwd_.c_str());
         return WEXITSTATUS(std::system(outputBinary_.c_str()));
     }
 
@@ -56,7 +56,7 @@ class NeutroniumTester : public testing::Test {
         auto [compileStatus, compileErr] = compile(code);
         EXPECT_EQ(compileStatus, 0) << "Compilation failed unexpectedly:\n" << compileErr;
 
-        chdir(originalCwd_.c_str());
+        auto _ = chdir(originalCwd_.c_str());
 
         const std::string cmd = outputBinary_.string() + " 2>&1";
         FILE* pipe = popen(cmd.c_str(), "r");
@@ -103,6 +103,6 @@ class NeutroniumTester : public testing::Test {
         }
 
         std::filesystem::remove(sourceFile_);
-        chdir(originalCwd_.c_str());
+        auto _ = chdir(originalCwd_.c_str());
     }
 };

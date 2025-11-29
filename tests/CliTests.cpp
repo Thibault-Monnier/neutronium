@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <string>
 
@@ -65,7 +66,7 @@ TEST(CLITargetTest, LibraryTarget) {
         out << "fn main(): { exit 0; }\n";  // Adding main function should fail
     }
 
-    status = runAndCapture(neutroniumPath + " --target-type=library " + tempFile, output);
+    status = runAndCapture(neutroniumPath + " --target-type=lib " + tempFile, output);
     EXPECT_NE(status, 0);
     EXPECT_TRUE(output.contains("main") && output.contains("library target")) << output;
 }
@@ -87,7 +88,7 @@ TEST(CLITargetTest, ExecutableTarget) {
         out << "fn main(): { exit 0; }\n";  // Adding main function should succeed
     }
 
-    status = runAndCapture(neutroniumPath + " --target-type=executable " + tempFile, output);
+    status = runAndCapture(neutroniumPath + " --target-type=bin " + tempFile, output);
     EXPECT_TRUE(status == 0 || output.contains("Assembling"))
         << output;  // Ensure it compiles successfully
 }
@@ -168,8 +169,8 @@ TEST(CliNonErrorTest, LogArguments) {
 
     status = runAndCapture(baseCompileCommand + " -d", output);
     EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("fn main():") && output.contains("EOF_:") &&
-                output.contains("Program") && output.contains("_start:"))
+    EXPECT_TRUE(output.contains("fn main():") && output.contains("Program") &&
+                output.contains("_start:"))
         << output;
 
     status = runAndCapture(baseCompileCommand + " --log=code,ast", output);
@@ -179,6 +180,44 @@ TEST(CliNonErrorTest, LogArguments) {
     status = runAndCapture(baseCompileCommand + " --log=code,assembly", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("fn main():") && output.contains("_start:")) << output;
+
+    std::remove(tempFile.c_str());
+}
+
+TEST(CliNonErrorTest, StopAtStages) {
+    const std::string tempFile = projectRoot + "/temp_test.nt";
+    {
+        std::ofstream out(tempFile);
+        out << "fn main(): { exit 0; }\n";
+    }
+
+    std::string output;
+
+    const std::string baseCompileCommand = neutroniumPath + " " + tempFile;
+
+    int status = runAndCapture(baseCompileCommand + " --only-lex", output);
+    EXPECT_EQ(status, 0) << output;
+    EXPECT_TRUE(output.contains("Lexing") && !output.contains("Parsing") &&
+                !output.contains("runtime"))
+        << output;
+
+    status = runAndCapture(baseCompileCommand + " --only-parse", output);
+    EXPECT_EQ(status, 0) << output;
+    EXPECT_TRUE(output.contains("Parsing") && !output.contains("Semantic Analysis") &&
+                !output.contains("runtime"))
+        << output;
+
+    status = runAndCapture(baseCompileCommand + " --only-sema", output);
+    EXPECT_EQ(status, 0) << output;
+    EXPECT_TRUE(output.contains("Semantic Analysis") && !output.contains("Code Generation") &&
+                !output.contains("runtime"))
+        << output;
+
+    status = runAndCapture(baseCompileCommand + " --only-codegen", output);
+    EXPECT_EQ(status, 0) << output;
+    EXPECT_TRUE(output.contains("Code Generation") && !output.contains("Assembling") &&
+                !output.contains("runtime"))
+        << output;
 
     std::remove(tempFile.c_str());
 }

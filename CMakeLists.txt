@@ -36,11 +36,14 @@ set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Compiler flags ---
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address,undefined -fno-sanitize-recover=all -g3 -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Wpedantic -Wshadow")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -Wextra -Wshadow -fsanitize=address,undefined -fno-sanitize-recover=all -g3 -fno-omit-frame-pointer -fno-lto")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -Wall -Wextra -Wshadow -g3 -fno-omit-frame-pointer -fno-lto -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Wshadow -fno-lto -march=native")
+add_link_options(-fno-lto)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-fdiagnostics-color=always -fdiagnostics-show-template-tree -fstandalone-debug)
+    add_compile_options(-stdlib=libc++ -fdiagnostics-color=always -fdiagnostics-show-template-tree -fstandalone-debug)
+    add_link_options(-stdlib=libc++ -lc++ -lc++abi)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_compile_options(-fdiagnostics-color=always)
 endif ()
@@ -81,7 +84,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(magic_enum)
 
-target_link_libraries(neutronium_lib PRIVATE cxxopts magic_enum)
+FetchContent_Declare(
+        frozen
+        GIT_REPOSITORY https://github.com/serge-sans-paille/frozen.git
+        master
+)
+FetchContent_MakeAvailable(frozen)
+
+target_link_libraries(neutronium_lib PRIVATE cxxopts magic_enum frozen)
 
 # --- Tests ---
 FetchContent_Declare(

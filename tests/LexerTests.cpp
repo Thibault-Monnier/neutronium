@@ -20,7 +20,7 @@ struct LexCase {
     std::vector<TokenKind> kinds;
 };
 
-class LexerTokenKindTest : public testing::TestWithParam<LexCase> {};
+class LexerTokenKindTest : public ::testing::TestWithParam<LexCase> {};
 
 TEST_P(LexerTokenKindTest, ProducesExpectedKinds) {
     const SourceManager sm;
@@ -106,7 +106,8 @@ INSTANTIATE_TEST_SUITE_P(
                               "    x += 1;\n"
                               "  }\n"
                               "  exit 0;\n"
-                              "}",
+                              "}"
+                              "# Ends on a comment",
                               {TokenKind::FN,
                                TokenKind::IDENTIFIER,
                                TokenKind::COLON,
@@ -208,7 +209,7 @@ INSTANTIATE_TEST_SUITE_P(
 // ─────────────────────────────────────────────────────────────
 // Unexpected token (invalid input causes exit)
 // ─────────────────────────────────────────────────────────────
-TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
+TEST(LexerErrorTest, UnexpectedCharacterError) {
     namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {
         "@", "$", "~", "let x = 1 + @`", "x$", "let _invalid_identifier = 42;"};
@@ -219,7 +220,9 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
 
         EXPECT_EXIT(
             {
-                freopen("/dev/null", "w", stdout);
+                {
+                    auto _ = freopen("/dev/null", "w", stdout);
+                }
 
                 SourceManager sm;
                 const auto fileData = sm.loadNewSourceFile(tmp.string());
@@ -233,7 +236,7 @@ TEST(LexerErrorTest, UnexpectedCharactersCauseExit) {
     }
 }
 
-TEST(LexerErrorTest, NonASCIICharactersCauseExit) {
+TEST(LexerErrorTest, NonASCIICharacterError) {
     namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {"let x = 42π;", "こんにちは", "let привет = 1;",
                                                 "x = y + λ;"};
@@ -244,7 +247,9 @@ TEST(LexerErrorTest, NonASCIICharactersCauseExit) {
 
         EXPECT_EXIT(
             {
-                freopen("/dev/null", "w", stdout);
+                {
+                    auto _ = freopen("/dev/null", "w", stdout);
+                }
 
                 SourceManager sm;
                 const auto fileData = sm.loadNewSourceFile(tmp.string());
@@ -256,6 +261,29 @@ TEST(LexerErrorTest, NonASCIICharactersCauseExit) {
             },
             ::testing::ExitedWithCode(EXIT_FAILURE), "Non-ASCII character");
     }
+}
+
+TEST(LexerErrorTest, TokenExceedsMaximumLength) {
+    namespace fs = std::filesystem;
+    const std::string longIdentifier((2 << 16) + 1, 'a');
+    const auto tmp = fs::temp_directory_path() / "test_input.nt";
+    std::ofstream(tmp) << "let " << longIdentifier << " = 42;";
+
+    EXPECT_EXIT(
+        {
+            {
+                auto _ = freopen("/dev/null", "w", stdout);
+            }
+
+            SourceManager sm;
+            const auto fileData = sm.loadNewSourceFile(tmp.string());
+            const auto fileID = fileData.first;
+            const auto fileContents = fileData.second;
+            DiagnosticsEngine de(sm, fileID);
+            Lexer lexer(fileContents, de);
+            auto _ = lexer.tokenize();
+        },
+        ::testing::ExitedWithCode(EXIT_FAILURE), "exceeds maximum allowed length");
 }
 
 // ─────────────────────────────────────────────────────────────
