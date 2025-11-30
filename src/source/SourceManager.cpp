@@ -1,11 +1,17 @@
 #include "SourceManager.hpp"
 
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <cassert>
+#include <cerrno>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
-#include <fstream>
-#include <ios>
+#include <format>
 #include <iterator>
 #include <stdexcept>
 #include <string>
@@ -13,20 +19,26 @@
 #include <utility>
 #include <vector>
 
+#include "FileID.hpp"
+
 std::pair<FileID, std::string_view> SourceManager::loadNewSourceFile(std::string path) {
-    std::ifstream source(path, std::ios::binary);
-    if (!source) {
-        throw std::runtime_error("Could not open file: " + path);
+    const int fd = open(path.c_str(), O_RDONLY);
+    if (fd == -1) {
+        throw std::runtime_error(
+            std::format("Could not open file `{}`: {}", path, std::strerror(errno)));
     }
 
-    const uintmax_t fileSize = std::filesystem::file_size(path);
-    std::string contents(fileSize, '\0');
-    source.read(contents.data(), static_cast<std::streamsize>(fileSize));
-    if (!source) {
-        throw std::runtime_error("Could not read file: " + path);
-    }
+    const size_t fileSize = std::filesystem::file_size(path);
 
-    sourceFiles_.emplace_back(std::move(path), std::move(contents));
+    const void* ptr = mmap(nullptr, fileSize, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (ptr == MAP_FAILED) {
+        throw std::runtime_error(
+            std::format("Could not mmap file `{}`: {}", path, std::strerror(errno)));
+    }
+    close(fd);
+
+    sourceFiles_.emplace_back(std::move(path),
+                              std::string_view(static_cast<const char*>(ptr), fileSize));
     return {sourceFiles_.size() - 1, sourceFiles_.back().contents()};
 }
 
@@ -45,14 +57,17 @@ std::pair<uint32_t, uint32_t> SourceManager::getLineColumn(const FileID fileID,
 
 std::string_view SourceManager::getLineContents(const FileID fileID,
                                                 const uint32_t lineNumber) const {
-    const std::string& contents = sourceFiles_.at(fileID).contents();
+    assert(fileID < sourceFiles_.size());
+    assert(lineNumber > 0 && lineNumber <= sourceFiles_.at(fileID).linesStarts().size());
 
-    const auto lineStarts = sourceFiles_.at(fileID).linesStarts();
+    const std::string_view contents = sourceFiles_[fileID].contents();
+
+    const auto lineStarts = sourceFiles_[fileID].linesStarts();
     const uint32_t lineStart = lineStarts[lineNumber - 1];
     const uint32_t nextLineStart = lineStarts[lineNumber];
 
     // Exclude the newline character at the end of the line
     uint32_t length = nextLineStart - lineStart;
     if (contents[nextLineStart - 1] == '\n') --length;
-    return std::string_view(contents).substr(lineStart, length);
+    return contents.substr(lineStart, length);
 }

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -68,11 +69,11 @@ class SourceManager {
    private:
     class SourceFile {
        public:
-        SourceFile(std::string path, std::string contents)
+        SourceFile(std::string path, std::string_view contents)
             : path_(std::move(path)), contents_(std::move(contents)) {}
 
         [[nodiscard]] const std::string& path() const { return path_; }
-        [[nodiscard]] const std::string& contents() const { return contents_; }
+        [[nodiscard]] const std::string_view& contents() const { return contents_; }
         [[nodiscard]] const std::vector<uint32_t>& linesStarts() const {
             if (lineStarts_.empty()) {
                 scanFileLineStarts();
@@ -81,7 +82,8 @@ class SourceManager {
         }
 
        private:
-        std::string path_, contents_;
+        std::string path_;
+        std::string_view contents_;
         mutable std::vector<uint32_t> lineStarts_;
 
         void nbLinesEstimate() const;
