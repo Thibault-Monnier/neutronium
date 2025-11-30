@@ -24,7 +24,9 @@ class Parser {
         : lexer_(sourceCode, diagnosticsEngine),
           diagnosticsEngine_(diagnosticsEngine),
           sourceCode_(sourceCode),
-          typeManager_(typeManager) {}
+          typeManager_(typeManager) {
+        token_ = lexer_.lex();
+    }
 
     [[nodiscard]] std::unique_ptr<AST::Program> parse();
 
@@ -75,7 +77,7 @@ class Parser {
     // Parsing helpers
     // ---------------
 
-    Token token_ = lexer_.lex();  // Initialize with the first token
+    Token token_ = Token::dummy();
 
     [[nodiscard]] Token peek() const { return token_; }
     void advance() { token_ = lexer_.lex(); }

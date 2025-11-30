@@ -211,14 +211,14 @@ void link() {
 }  // namespace
 
 int main(const int argc, const char** argv) {
-    CompilerOptions opts = parseCli(argc, argv);
+    const CompilerOptions opts = parseCli(argc, argv);
     const auto startTime = Clock::now();
 
     runOrDie("rm -rf neutro && mkdir neutro");
 
     SourceManager sourceManager;
 
-    compileFile(std::move(opts), sourceManager, true);
+    compileFile(opts, sourceManager, true);
 
     if (opts.endStage_ == PipelineEndStage::ALL) {
         compileRuntime(sourceManager);
