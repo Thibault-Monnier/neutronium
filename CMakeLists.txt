@@ -84,14 +84,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(magic_enum)
 
-FetchContent_Declare(
-        frozen
-        GIT_REPOSITORY https://github.com/serge-sans-paille/frozen.git
-        master
-)
-FetchContent_MakeAvailable(frozen)
-
-target_link_libraries(neutronium_lib PRIVATE cxxopts magic_enum frozen)
+target_link_libraries(neutronium_lib PRIVATE cxxopts magic_enum)
 
 # --- Tests ---
 FetchContent_Declare(
