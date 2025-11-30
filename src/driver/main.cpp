@@ -23,6 +23,7 @@
 #include "lex/TokenKind.hpp"
 #include "parse/Parser.hpp"
 #include "sema/SemanticAnalyser.hpp"
+#include "source/FileID.hpp"
 #include "source/SourceManager.hpp"
 #include "type/TypeManager.hpp"
 #include "utils/Log.hpp"
@@ -77,7 +78,7 @@ void runOrDie(const std::string& cmd) {
 }
 
 void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool verbose) {
-    int fileID = -1;
+    FileID fileID = 0;
     std::string_view fileContents;
 
     try {

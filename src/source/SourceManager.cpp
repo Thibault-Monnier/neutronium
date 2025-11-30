@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-std::pair<int, std::string_view> SourceManager::loadNewSourceFile(std::string path) {
+std::pair<FileID, std::string_view> SourceManager::loadNewSourceFile(std::string path) {
     std::ifstream source(path, std::ios::binary);
     if (!source) {
         throw std::runtime_error("Could not open file: " + path);
@@ -23,18 +23,18 @@ std::pair<int, std::string_view> SourceManager::loadNewSourceFile(std::string pa
 
     const uintmax_t fileSize = std::filesystem::file_size(path);
     std::string contents(fileSize, '\0');
-    source.read(contents.data(), fileSize);
+    source.read(contents.data(), static_cast<std::streamsize>(fileSize));
 
     std::vector<uint32_t> lineStarts;
     scanFileLineStarts(contents, lineStarts);
 
     sourceFiles_.emplace_back(std::move(path), std::move(contents), std::move(lineStarts));
-    return {static_cast<int>(sourceFiles_.size() - 1), sourceFiles_.back().contents()};
+    return {sourceFiles_.size() - 1, sourceFiles_.back().contents()};
 }
 
-std::pair<uint32_t, uint32_t> SourceManager::getLineColumn(const int fileID,
+std::pair<uint32_t, uint32_t> SourceManager::getLineColumn(const FileID fileID,
                                                            const uint32_t offset) const {
-    assert(fileID >= 0 && fileID < static_cast<int>(sourceFiles_.size()));
+    assert(fileID < sourceFiles_.size());
     assert(offset <= sourceFiles_.at(fileID).contents().size());
 
     const SourceFile& file = sourceFiles_[fileID];
@@ -45,7 +45,8 @@ std::pair<uint32_t, uint32_t> SourceManager::getLineColumn(const int fileID,
     return {line + 1, column + 1};  // Convert to 1-based indexing
 }
 
-std::string_view SourceManager::getLineContents(const int fileID, const uint32_t lineNumber) const {
+std::string_view SourceManager::getLineContents(const FileID fileID,
+                                                const uint32_t lineNumber) const {
     const std::string& contents = sourceFiles_.at(fileID).contents();
 
     const auto lineStarts = sourceFiles_.at(fileID).linesStarts();

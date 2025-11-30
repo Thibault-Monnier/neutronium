@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "source/FileID.hpp"
 #include "source/SourceManager.hpp"
 
 struct Diagnostic {
@@ -15,7 +16,7 @@ struct Diagnostic {
 
 class DiagnosticsEngine {
    public:
-    DiagnosticsEngine(const SourceManager& sourceManager, const int fileID)
+    DiagnosticsEngine(const SourceManager& sourceManager, const FileID fileID)
         : sourceManager_(sourceManager), fileID_(fileID) {}
 
     void reportError(std::string message, const uint32_t byteOffsetStart,
@@ -34,7 +35,7 @@ class DiagnosticsEngine {
 
    private:
     const SourceManager& sourceManager_;
-    const int fileID_;
+    const FileID fileID_;
 
     std::vector<Diagnostic> diagnostics_;
 
