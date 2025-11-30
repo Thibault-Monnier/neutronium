@@ -265,7 +265,7 @@ TEST(LexerErrorTest, NonASCIICharacterError) {
 
 TEST(LexerErrorTest, TokenExceedsMaximumLength) {
     namespace fs = std::filesystem;
-    const std::string longIdentifier((2 << 16) + 1, 'a');
+    const std::string longIdentifier(1 << 16, 'a');
     const auto tmp = fs::temp_directory_path() / "test_input.nt";
     std::ofstream(tmp) << "let " << longIdentifier << " = 42;";
 
