@@ -69,8 +69,8 @@ class SourceManager {
    private:
     class SourceFile {
        public:
-        SourceFile(std::string path, std::string_view contents)
-            : path_(std::move(path)), contents_(std::move(contents)) {}
+        SourceFile(std::string path, const std::string_view contents)
+            : path_(std::move(path)), contents_(contents) {}
 
         [[nodiscard]] const std::string& path() const { return path_; }
         [[nodiscard]] const std::string_view& contents() const { return contents_; }
