@@ -38,3 +38,9 @@ Parser::invalidPrimaryExpressionError() const {
                     tokenKindToString(token.kind()));
     return emitError<AST::Expression>(errorMessage);
 }
+
+__attribute__((noinline, cold)) std::unique_ptr<AST::NumberLiteral>
+Parser::invalidNumberLiteralError(const Token& token) const {
+    const std::string errorMessage = "Invalid number literal";
+    return emitError<AST::NumberLiteral>(errorMessage, token);
+}

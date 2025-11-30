@@ -1176,3 +1176,14 @@ TEST_F(NeutroniumTester, AssignmentNonExpressionLHSFails) {
                 error.contains(tokenKindToString(TokenKind::SEMICOLON)) &&
                 error.contains(tokenKindToString(TokenKind::RIGHT_PAREN)));
 }
+
+TEST_F(NeutroniumTester, TooLargeNumberLiteralFails) {
+    const std::string code = R"(
+        fn main(): {
+            let a: int64 = 9223372036854775808; # int64 max value + 1
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("number literal"));
+}

@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <charconv>
 #include <cstdint>
 #include <cstdlib>
-#include <charconv>
 #include <functional>
 #include <initializer_list>
 #include <memory>
@@ -149,7 +149,12 @@ std::unique_ptr<AST::NumberLiteral> Parser::parseNumberLiteral() {
     const std::string_view lexeme = token.lexeme(sourceCode_);
 
     int64_t value;
-    std::from_chars(lexeme.data(), lexeme.data() + lexeme.size(), value);
+    const std::from_chars_result res =
+        std::from_chars(lexeme.data(), lexeme.data() + lexeme.size(), value);
+
+    if (res.ec != std::errc{}) [[unlikely]] {
+        return invalidNumberLiteralError(token);
+    }
 
     return std::make_unique<AST::NumberLiteral>(value, token.byteOffsetStart(),
                                                 token.byteOffsetEnd(), generateAnyType());

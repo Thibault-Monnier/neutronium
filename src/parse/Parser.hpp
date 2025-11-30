@@ -72,6 +72,8 @@ class Parser {
     void expectError(TokenKind expected) const;
     [[nodiscard]] std::unique_ptr<Type> invalidTypeSpecifierError() const;
     [[nodiscard]] std::unique_ptr<AST::Expression> invalidPrimaryExpressionError() const;
+    [[nodiscard]] std::unique_ptr<AST::NumberLiteral> invalidNumberLiteralError(
+        const Token& token) const;
 
     // ---------------
     // Parsing helpers
