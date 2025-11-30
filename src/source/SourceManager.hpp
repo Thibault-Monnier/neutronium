@@ -68,20 +68,25 @@ class SourceManager {
    private:
     class SourceFile {
        public:
-        SourceFile(std::string path, std::string contents, std::vector<uint32_t> linesStarts)
-            : path_(std::move(path)),
-              contents_(std::move(contents)),
-              linesStarts_(std::move(linesStarts)) {}
+        SourceFile(std::string path, std::string contents)
+            : path_(std::move(path)), contents_(std::move(contents)) {}
 
         [[nodiscard]] const std::string& path() const { return path_; }
         [[nodiscard]] const std::string& contents() const { return contents_; }
-        [[nodiscard]] const std::vector<uint32_t>& linesStarts() const { return linesStarts_; }
+        [[nodiscard]] const std::vector<uint32_t>& linesStarts() const {
+            if (lineStarts_.empty()) {
+                scanFileLineStarts();
+            }
+            return lineStarts_;
+        }
 
        private:
         std::string path_, contents_;
-        std::vector<uint32_t> linesStarts_;
-    };
-    std::vector<SourceFile> sourceFiles_;
+        mutable std::vector<uint32_t> lineStarts_;
 
-    static void scanFileLineStarts(std::string_view contents, std::vector<uint32_t>& lineStarts);
+        void nbLinesEstimate() const;
+        void scanFileLineStarts() const;
+    };
+
+    std::vector<SourceFile> sourceFiles_;
 };
