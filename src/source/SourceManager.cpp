@@ -24,6 +24,9 @@ std::pair<FileID, std::string_view> SourceManager::loadNewSourceFile(std::string
     const uintmax_t fileSize = std::filesystem::file_size(path);
     std::string contents(fileSize, '\0');
     source.read(contents.data(), static_cast<std::streamsize>(fileSize));
+    if (!source) {
+        throw std::runtime_error("Could not read file: " + path);
+    }
 
     std::vector<uint32_t> lineStarts;
     scanFileLineStarts(contents, lineStarts);
