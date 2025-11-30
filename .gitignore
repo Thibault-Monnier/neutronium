@@ -1,6 +1,7 @@
 # Build directories
 build/
 cmake-build-*/
+.venv/
 
 # Compiled object files
 *.o
