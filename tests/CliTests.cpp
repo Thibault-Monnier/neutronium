@@ -159,6 +159,10 @@ TEST(CliNonErrorTest, LogArguments) {
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("fn main():")) << output;
 
+    status = runAndCapture(baseCompileCommand + " --log-tokens --only-lex", output);
+    EXPECT_EQ(status, 0) << output;
+    EXPECT_TRUE(output.contains("EOF_")) << output;
+
     status = runAndCapture(baseCompileCommand + " --log-ast", output);
     EXPECT_EQ(status, 0) << output;
     EXPECT_TRUE(output.contains("Program")) << output;

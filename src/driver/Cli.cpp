@@ -16,8 +16,8 @@ CompilerOptions parseCli(const int argc, const char** argv) {
     options.add_options()("h,help", "Print help")("v,version", "Print the compiler version")(
         "target-type", "Compilation target: bin (executable) or lib (library)",
         cxxopts::value<std::string>()->default_value("bin"))("d,debug", "Enable all debug logs")(
-        "log-code", "Log the raw source file")("log-ast", "Log the generated AST")(
-        "log-assembly", "Log the final assembly output")(
+        "log-code", "Log the raw source file")("log-tokens", "Log the generated tokens")(
+        "log-ast", "Log the generated AST")("log-assembly", "Log the final assembly output")(
         "log", "Comma-separated logs (code,ast,assembly)",
         cxxopts::value<std::vector<std::string>>()->implicit_value(""))(
         "input", "Specify the source file", cxxopts::value<std::string>())(
@@ -48,6 +48,7 @@ CompilerOptions parseCli(const int argc, const char** argv) {
 
     CompilerOptions opts;
     opts.logCode_ = result.count("log-code");
+    opts.logTokens_ = result.count("log-tokens");
     opts.logAst_ = result.count("log-ast");
     opts.logAssembly_ = result.count("log-assembly");
 
@@ -99,6 +100,10 @@ CompilerOptions parseCli(const int argc, const char** argv) {
         opts.endStage_ = PipelineEndStage::SEMA;
     } else if (result.count("only-codegen")) {
         opts.endStage_ = PipelineEndStage::CODEGEN;
+    }
+
+    if (opts.logTokens_ && opts.endStage_ != PipelineEndStage::LEX) {
+        printWarning("Token logging requires the --only-lex option");
     }
 
     return opts;

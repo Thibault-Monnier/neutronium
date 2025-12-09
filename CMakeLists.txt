@@ -13,7 +13,7 @@ if (DEFINED COMPILER)
     endif ()
 endif ()
 
-project(neutronium LANGUAGES CXX DESCRIPTION "The Neutronium language compiler")
+project(neutronium LANGUAGES CXX DESCRIPTION "Neutronium language compiler")
 
 # --- Compiler mismatch warning ---
 if (DEFINED COMPILER)
@@ -46,6 +46,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_link_options(-stdlib=libc++ -lc++ -lc++abi)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_compile_options(-fdiagnostics-color=always)
+    message(WARNING "Using GNU compiler. Consider using Clang which is better tested and optimized.")
 endif ()
 
 if (COVERAGE)

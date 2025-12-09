@@ -1,12 +1,14 @@
 #include <sched.h>
 
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <print>
 #include <sstream>
 #include <string>
@@ -15,6 +17,7 @@
 #include <utility>
 
 #include "Cli.hpp"
+#include "ast/AST.hpp"
 #include "ast/Debug.hpp"
 #include "codegen/Generator.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
@@ -104,8 +107,10 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
 
             Lexer lexer(fileContents, diagnosticsEngine);
             Token token = lexer.lex();
+            if (opts.logTokens_) std::print("{}\n", tokenKindToString(token.kind()));
             while (token.kind() != TokenKind::EOF_) {
                 token = lexer.lex();
+                if (opts.logTokens_) std::print("{}\n", tokenKindToString(token.kind()));
             }
         }
 

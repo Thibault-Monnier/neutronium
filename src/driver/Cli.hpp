@@ -18,6 +18,7 @@ enum class PipelineEndStage : uint8_t {
 
 struct CompilerOptions {
     bool logCode_ = false;
+    bool logTokens_ = false;
     bool logAst_ = false;
     bool logAssembly_ = false;
     std::string sourceFilename_;
