@@ -132,20 +132,19 @@ void Lexer::lexIdentifierContinuation() {
     // Use SIMD to check for identifier continuation characters
     // This is highly efficient, as it checks 16 characters at a time
 
-    alignas(16) static constexpr char VALID_RANGES[16] = {'_', '_', 'A', 'Z', 'a', 'z', '0', '9',
-                                                          0,   0,   0,   0,   0,   0,   0,   0};
+    alignas(16) static constexpr char VALID_RANGES[8] = {'_', '_', 'A', 'Z', 'a', 'z', '0', '9'};
     static constexpr ssize_t BYTES_PER_REG = 16;
 
     const char* const sourceEnd = sourceEnd_;
     const char* currentPtr = currentPtr_;
 
-    const __m128i validRangesV = _mm_load_si128(reinterpret_cast<const __m128i*>(VALID_RANGES));
+    const __m128i ranges = _mm_load_si128(reinterpret_cast<const __m128i*>(VALID_RANGES));
 
     while (sourceEnd - currentPtr >= BYTES_PER_REG) {
-        const __m128i charsV = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currentPtr));
+        const __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(currentPtr));
 
         const int consumed = _mm_cmpistri(
-            validRangesV, charsV,
+            ranges, chunk,
             _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES | _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
         currentPtr += consumed;
         if (consumed == BYTES_PER_REG) continue;
