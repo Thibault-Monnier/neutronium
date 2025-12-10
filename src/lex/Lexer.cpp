@@ -276,6 +276,10 @@ __attribute__((always_inline)) bool Lexer::lexNextChar(const char c) {
             kind = TokenKind::COMMA;
             break;
 
+        case 0:
+            kind = TokenKind::EOF_;
+            break;
+
         default:
             invalidCharacterError(c);
             return false;
@@ -288,13 +292,6 @@ __attribute__((always_inline)) bool Lexer::lexNextChar(const char c) {
 Token Lexer::lex() {
     bool hasLexed = false;
     while (!hasLexed) {
-        if (currentPtr_ >= sourceEnd_) [[unlikely]] {
-            tokenStart();
-            advance();
-            createToken(TokenKind::EOF_);
-            break;
-        }
-
         tokenStart();
         hasLexed = lexNextChar(*currentPtr_++);
     }
