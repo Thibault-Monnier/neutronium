@@ -76,10 +76,20 @@ __attribute__((always_inline)) void Lexer::skipWhile(const auto& predicate) {
 }
 
 __attribute__((always_inline)) void Lexer::skipWhitespace() {
-    static constexpr auto IS_WHITESPACE = [](const unsigned char c) {
-        return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
-    };
-    skipWhile(IS_WHITESPACE);
+    const char* ptr = currentPtr_;
+    while (true) {
+        const unsigned char c = *ptr;
+
+        // Fast path for very common space character
+        if (c == ' ') [[likely]] {
+            ptr++;
+            continue;
+        }
+
+        if (!(c == '\n' || c == '\t' || c == '\r' || c == '\f' || c == '\v')) break;
+        ptr++;
+    }
+    currentPtr_ = ptr;
 }
 
 __attribute__((always_inline)) void Lexer::lexNumberLiteralContinuation() {
