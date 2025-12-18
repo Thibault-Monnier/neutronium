@@ -1,4 +1,5 @@
 #pragma once
-#include <cstdint>
+
+#include <cstddef>
 
 using FileID = std::size_t;

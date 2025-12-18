@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+#include <string_view>
+
 #include "TokenKind.hpp"
 
 class alignas(4) Token {
