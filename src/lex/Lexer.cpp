@@ -25,13 +25,10 @@ __attribute__((noinline, cold)) void Lexer::handleNonAsciiChar() {
     diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex() - 1,
                                    currentIndex() - 1);
 
-    const char* const sourceEnd = sourceEnd_;
     const char* currentPtr = currentPtr_;
 
     // Skip remaining UTF-8 continuation bytes (10xxxxxx)
-    while (currentPtr < sourceEnd &&
-           (static_cast<unsigned char>(*currentPtr) & 0b1100'0000) == 0b1000'0000)
-        currentPtr++;
+    while ((static_cast<unsigned char>(*currentPtr) & 0b1100'0000) == 0b1000'0000) currentPtr++;
 
     currentPtr_ = currentPtr;
 }
