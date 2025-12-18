@@ -88,7 +88,7 @@ void SemanticAnalyser::analyse() {
 }
 
 void SemanticAnalyser::emitErrorsAndQuit() const {
-    diagnosticsEngine_.emitErrors();
+    diagnosticsEngine_.emit();
     exit(EXIT_FAILURE);
 }
 

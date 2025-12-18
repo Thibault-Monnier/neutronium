@@ -34,7 +34,7 @@ std::unique_ptr<AST::Program> Parser::parse() {
     auto ast = parseProgram();
 
     if (diagnosticsEngine_.hasErrors()) {
-        diagnosticsEngine_.emitErrors();
+        diagnosticsEngine_.emit();
         exit(EXIT_FAILURE);
     }
 

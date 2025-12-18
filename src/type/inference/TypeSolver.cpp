@@ -92,7 +92,7 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
                         aType.toString(typeManager_), bType.toString(typeManager_)),
             equalityConstraint.sourceNode().sourceStartIndex(),
             equalityConstraint.sourceNode().sourceEndIndex());
-        diagnosticsEngine_.emitErrors();
+        diagnosticsEngine_.emit();
         exit(EXIT_FAILURE);
     }
 
@@ -131,7 +131,7 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
                         traitToString(trait)),
             hasTraitConstraint.sourceNode().sourceStartIndex(),
             hasTraitConstraint.sourceNode().sourceEndIndex());
-        diagnosticsEngine_.emitErrors();
+        diagnosticsEngine_.emit();
         exit(EXIT_FAILURE);
     }
 
@@ -148,7 +148,7 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
             diagnosticsEngine_.reportError("Type 'void' is not storable",
                                            storableConstraint.sourceNode().sourceStartIndex(),
                                            storableConstraint.sourceNode().sourceEndIndex());
-            diagnosticsEngine_.emitErrors();
+            diagnosticsEngine_.emit();
             exit(EXIT_FAILURE);
         }
         return true;

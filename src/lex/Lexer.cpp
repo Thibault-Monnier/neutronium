@@ -315,7 +315,7 @@ std::vector<Token> Lexer::tokenize() {
     }
 
     if (diagnosticsEngine_.hasErrors()) {
-        diagnosticsEngine_.emitErrors();
+        diagnosticsEngine_.emit();
         std::exit(EXIT_FAILURE);
     }
 
