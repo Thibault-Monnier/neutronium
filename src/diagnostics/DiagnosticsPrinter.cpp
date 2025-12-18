@@ -3,8 +3,6 @@
 #include <cassert>
 #include <cstdint>
 #include <format>
-#include <iostream>
-#include <print>
 #include <string>
 #include <string_view>
 
@@ -28,9 +26,21 @@ void DiagnosticsPrinter::emit(const Diagnostic& diagnostic) {
 void DiagnosticsPrinter::emitError(const Diagnostic& diagnostic) const {
     assert(diagnostic.level_ == Diagnostic::Level::ERROR);
 
-    println("{}{}error:{} {}{}{}", Params::ANSI_BOLD, Params::ANSI_RED, Params::ANSI_RESET,
-            Params::ANSI_BOLD, diagnostic.message_, Params::ANSI_RESET);
+    emitErrorMessage(diagnostic.message_);
     emitErrorContext(diagnostic.byteOffsetStart_, diagnostic.byteOffsetEnd_);
+}
+
+void DiagnosticsPrinter::emitErrorMessage(const std::string_view message) const {
+    println("{}{}error:{} {}{}{}", Params::ANSI_BOLD, Params::ANSI_RED, Params::ANSI_RESET,
+            Params::ANSI_BOLD, message, Params::ANSI_RESET);
+}
+
+void DiagnosticsPrinter::emitErrorLocation(const std::string_view padding,
+                                           const std::string_view filePath,
+                                           const uint32_t lineStart,
+                                           const uint32_t columnStart) const {
+    println("{}{}-->{} {}:{}:{}", padding, Params::ANSI_BLUE, Params::ANSI_RESET, filePath,
+            lineStart, columnStart);
 }
 
 void DiagnosticsPrinter::emitErrorContext(const uint32_t byteOffsetStart,
@@ -45,8 +55,8 @@ void DiagnosticsPrinter::emitErrorContext(const uint32_t byteOffsetStart,
     const std::string padding(maxLineNumberWidth, ' ');
     const std::string separator = std::format(" {}|{} ", Params::ANSI_BLUE, Params::ANSI_RESET);
 
-    println("{}{}-->{} {}:{}:{}", padding, Params::ANSI_BLUE, Params::ANSI_RESET, filePath,
-            lineStart, columnStart);
+    emitErrorLocation(padding, filePath, lineStart, columnStart);
+
     println("{}{}", padding, separator);
 
     const uint32_t nbLines = lineEnd - lineStart + 1;

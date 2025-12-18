@@ -1,7 +1,8 @@
 #include <immintrin.h>
 
 #include <cassert>
-#include <print>
+#include <cstddef>
+#include <cstdint>
 
 #include "SourceManager.hpp"
 

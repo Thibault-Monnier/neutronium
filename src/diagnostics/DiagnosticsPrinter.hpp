@@ -75,5 +75,8 @@ class DiagnosticsPrinter {
     // -------------------------------------
 
     void emitError(const Diagnostic& diagnostic) const;
+    void emitErrorMessage(std::string_view message) const;
+    void emitErrorLocation(std::string_view padding, std::string_view filePath, uint32_t lineStart,
+                           uint32_t columnStart) const;
     void emitErrorContext(uint32_t byteOffsetStart, uint32_t byteOffsetEnd) const;
 };

@@ -75,6 +75,7 @@ class SourceManager {
         [[nodiscard]] const std::string& path() const { return path_; }
         [[nodiscard]] const std::string_view& contents() const { return contents_; }
         [[nodiscard]] const std::vector<uint32_t>& linesStarts() const {
+            // Lazy initialization of line starts
             if (lineStarts_.empty()) {
                 scanFileLineStarts();
             }
