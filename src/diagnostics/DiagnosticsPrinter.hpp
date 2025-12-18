@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <format>
+#include <iostream>
+#include <print>
 #include <string_view>
 
 #include "Diagnostic.hpp"
@@ -43,6 +46,33 @@ class DiagnosticsPrinter {
         static constexpr std::string_view ANSI_LIGHT_RED = "\x1b[91m";
         static constexpr std::string_view ANSI_RESET = "\x1b[0m";
     };
+
+    // ----------------------------
+    // ----- Helper functions -----
+    // ----------------------------
+
+    /**
+     * @brief Print a formatted line to stderr.
+     *
+     * Wrapper around std::println that always writes to std::cerr.
+     *
+     * @tparam Args The types of the format arguments.
+     * @param fmt The format string.
+     * @param args The format arguments.
+     */
+    template <class... Args>
+    static void println(std::format_string<Args...> fmt, Args&&... args) {
+        std::println(std::cerr, fmt, std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Print a blank line to stderr.
+     */
+    static void println() { std::println(std::cerr); }
+
+    // -------------------------------------
+    // --- Diagnostic emission functions ---
+    // -------------------------------------
 
     void emitError(const Diagnostic& diagnostic) const;
     void emitErrorContext(uint32_t byteOffsetStart, uint32_t byteOffsetEnd) const;
