@@ -14,79 +14,91 @@ void DiagnosticsPrinter::emit(const Diagnostic& diagnostic) {
         println();
     }
 
+    computeDiagLayout(diagnostic);
+
     switch (diagnostic.level_) {
         case Diagnostic::Level::ERROR:
-            emitError(diagnostic);
+            emitError();
             break;
     }
+
+    diagLayout_.reset();
 
     println();
 }
 
-void DiagnosticsPrinter::emitError(const Diagnostic& diagnostic) const {
-    assert(diagnostic.level_ == Diagnostic::Level::ERROR);
+void DiagnosticsPrinter::computeDiagLayout(const Diagnostic& diagnostic) {
+    const auto [lineStart, columnStart] =
+        sourceManager_.getLineColumn(diagnostic.fileID_, diagnostic.byteOffsetStart_);
+    const auto [lineEnd, columnEnd] =
+        sourceManager_.getLineColumn(diagnostic.fileID_, diagnostic.byteOffsetEnd_);
+    const Span span(lineStart, columnStart, lineEnd, columnEnd, diagnostic.fileID_);
 
-    emitErrorMessage(diagnostic.message_);
-    emitErrorContext(diagnostic.byteOffsetStart_, diagnostic.byteOffsetEnd_);
+    const uint32_t gutterWidth = std::to_string(lineEnd).size();
+
+    diagLayout_ = Layout(diagnostic, span, gutterWidth);
 }
 
-void DiagnosticsPrinter::emitErrorMessage(const std::string_view message) const {
+void DiagnosticsPrinter::emitError() const {
+    assert(diagLayout_.has_value() && "diagLayout_ should be initialized");
+    assert(diagLayout().diag().level_ == Diagnostic::Level::ERROR);
+
+    emitErrorMessage();
+    emitErrorLocation();
+    emitErrorContext();
+}
+
+void DiagnosticsPrinter::emitErrorMessage() const {
     println("{}{}error:{} {}{}{}", Params::ANSI_BOLD, Params::ANSI_RED, Params::ANSI_RESET,
-            Params::ANSI_BOLD, message, Params::ANSI_RESET);
+            Params::ANSI_BOLD, diagLayout().diag().message_, Params::ANSI_RESET);
 }
 
-void DiagnosticsPrinter::emitErrorLocation(const std::string_view padding,
-                                           const std::string_view filePath,
-                                           const uint32_t lineStart,
-                                           const uint32_t columnStart) const {
-    println("{}{}-->{} {}:{}:{}", padding, Params::ANSI_BLUE, Params::ANSI_RESET, filePath,
-            lineStart, columnStart);
+void DiagnosticsPrinter::emitErrorLocation() const {
+    const std::string_view filePath =
+        sourceManager_.getSourceFilePath(diagLayout().span().fileID());
+
+    println("{}{}-->{} {}:{}:{}", blankGutter(), Params::ANSI_BLUE, Params::ANSI_RESET, filePath,
+            diagLayout().span().startLine(), diagLayout().span().startColumn());
 }
 
-void DiagnosticsPrinter::emitErrorContext(const uint32_t byteOffsetStart,
-                                          const uint32_t byteOffsetEnd) const {
-    const std::string_view filePath = sourceManager_.getSourceFilePath(fileID_);
+void DiagnosticsPrinter::emitErrorContext() const {
+    const Span& span = diagLayout().span();
 
-    const auto [lineStart, columnStart] = sourceManager_.getLineColumn(fileID_, byteOffsetStart);
-    const auto [lineEnd, columnEnd] = sourceManager_.getLineColumn(fileID_, byteOffsetEnd);
+    const uint32_t startLine = span.startLine();
+    const uint32_t endLine = span.endLine();
 
-    const uint32_t maxLineNumberWidth = std::to_string(lineEnd).size();
-
-    const std::string padding(maxLineNumberWidth, ' ');
-    const std::string separator = std::format(" {}|{} ", Params::ANSI_BLUE, Params::ANSI_RESET);
-
-    emitErrorLocation(padding, filePath, lineStart, columnStart);
-
-    println("{}{}", padding, separator);
-
-    const uint32_t nbLines = lineEnd - lineStart + 1;
+    const uint32_t nbLines = endLine - startLine + 1;
 
     const bool skipMiddleLines = nbLines > Params::MAX_ERROR_CONTEXT_LINES;
     // MAX_ERROR_CONTEXT_LINES - 1 to account for the "lines omitted" message
     const uint32_t nbOmittedLines = nbLines - (Params::MAX_ERROR_CONTEXT_LINES - 1);
-    const uint32_t skipLinesStart = lineStart + Params::MAX_ERROR_CONTEXT_LINES / 2;
+    const uint32_t skipLinesStart = startLine + Params::MAX_ERROR_CONTEXT_LINES / 2;
     const uint32_t skipLinesEnd = skipLinesStart + nbOmittedLines;
     assert(nbOmittedLines == skipLinesEnd - skipLinesStart);
 
-    for (uint32_t line = lineStart; line <= lineEnd; ++line) {
-        if (skipMiddleLines && line == skipLinesStart) {
-            println("{}{}", padding, separator);
+    const std::string separator = std::format(" {}|{} ", Params::ANSI_BLUE, Params::ANSI_RESET);
+    println("{}{}", blankGutter(), separator);
 
-            std::string linesOmittedPadding(maxLineNumberWidth - 1, ' ');
+    for (uint32_t line = startLine; line <= endLine; ++line) {
+        if (skipMiddleLines && line == skipLinesStart) {
+            println("{}{}", blankGutter(), separator);
+
+            std::string linesOmittedPadding(diagLayout().gutterWidth() - 1, ' ');
             println("{}{}... {} line{} omitted ...", Params::ANSI_BLUE, linesOmittedPadding,
                     nbOmittedLines, nbOmittedLines > 1 ? "s" : "");
 
-            println("{}{}", padding, separator);
+            println("{}{}", blankGutter(), separator);
             line = skipLinesEnd;
         }
 
-        const std::string_view lineContents = sourceManager_.getLineContents(fileID_, line);
-        println("{}{:>{}}{}{}{}", Params::ANSI_BLUE, line, maxLineNumberWidth, Params::ANSI_RESET,
-                separator, lineContents);
+        const std::string_view lineContents = sourceManager_.getLineContents(span.fileID(), line);
+        println("{}{:>{}}{}{}{}", Params::ANSI_BLUE, line, diagLayout().gutterWidth(),
+                Params::ANSI_RESET, separator, lineContents);
 
-        const uint32_t errorColumnStart = (line == lineStart) ? columnStart : 1;
-        const uint32_t errorColumnEnd = (line == lineEnd) ? columnEnd + 1 : lineContents.size() + 1;
-        println("{}{}{}{}{}{}", padding, separator, std::string(errorColumnStart - 1, ' '),
+        const uint32_t errorColumnStart = (line == startLine) ? span.startColumn() : 1;
+        const uint32_t errorColumnEnd =
+            (line == endLine) ? span.endColumn() + 1 : lineContents.size() + 1;
+        println("{}{}{}{}{}{}", blankGutter(), separator, std::string(errorColumnStart - 1, ' '),
                 Params::ANSI_LIGHT_RED, std::string(errorColumnEnd - errorColumnStart, '^'),
                 Params::ANSI_RESET);
     }

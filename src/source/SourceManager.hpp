@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "FileID.hpp"
-#include "SourceLocation.hpp"
 
 class SourceManager {
    public:

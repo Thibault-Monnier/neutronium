@@ -91,7 +91,7 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
             std::format("Type mismatch: cannot unify types '{}' and '{}'",
                         aType.toString(typeManager_), bType.toString(typeManager_)),
             equalityConstraint.sourceNode().sourceStartIndex(),
-            equalityConstraint.sourceNode().sourceEndIndex());
+            equalityConstraint.sourceNode().sourceEndIndex(), fileID_);
         diagnosticsEngine_.emit();
         exit(EXIT_FAILURE);
     }
@@ -130,7 +130,7 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
             std::format("Type '{}' does not implement the trait '{}'", type.toString(typeManager_),
                         traitToString(trait)),
             hasTraitConstraint.sourceNode().sourceStartIndex(),
-            hasTraitConstraint.sourceNode().sourceEndIndex());
+            hasTraitConstraint.sourceNode().sourceEndIndex(), fileID_);
         diagnosticsEngine_.emit();
         exit(EXIT_FAILURE);
     }
@@ -145,9 +145,9 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
 
     if (type.kind() == TypeKind::PRIMITIVE) {
         if (type.primitive() == Primitive::Kind::VOID) {
-            diagnosticsEngine_.reportError("Type 'void' is not storable",
-                                           storableConstraint.sourceNode().sourceStartIndex(),
-                                           storableConstraint.sourceNode().sourceEndIndex());
+            diagnosticsEngine_.reportError(
+                "Type 'void' is not storable", storableConstraint.sourceNode().sourceStartIndex(),
+                storableConstraint.sourceNode().sourceEndIndex(), fileID_);
             diagnosticsEngine_.emit();
             exit(EXIT_FAILURE);
         }

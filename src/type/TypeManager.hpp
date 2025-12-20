@@ -1,10 +1,17 @@
 #pragma once
 
+#include <cstddef>
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "Type.hpp"
 #include "TypeArena.hpp"
+#include "diagnostics/DiagnosticsEngine.hpp"
 #include "inference/TypeSolver.hpp"
+#include "source/FileID.hpp"
+#include "type/TypeID.hpp"
 
 /**
  * @class TypeManager
@@ -18,8 +25,8 @@
 
 class TypeManager {
    public:
-    explicit TypeManager(DiagnosticsEngine& diagnosticsEngine)
-        : typeSolver_(*this, diagnosticsEngine) {}
+    explicit TypeManager(DiagnosticsEngine& diagnosticsEngine, const FileID fileID)
+        : typeSolver_(*this, diagnosticsEngine, fileID) {}
 
     /**
      * @brief Registers a new type in the type manager.

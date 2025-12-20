@@ -1,9 +1,14 @@
 #pragma once
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "Constraint.hpp"
+#include "ast/AST.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
+#include "source/FileID.hpp"
+#include "type/TypeID.hpp"
 
 class TypeManager;
 
@@ -17,8 +22,8 @@ class TypeManager;
 
 class TypeSolver {
    public:
-    TypeSolver(TypeManager& typeManager, DiagnosticsEngine& diagnosticsEngine)
-        : typeManager_(typeManager), diagnosticsEngine_(diagnosticsEngine) {}
+    TypeSolver(TypeManager& typeManager, DiagnosticsEngine& diagnosticsEngine, const FileID fileID)
+        : typeManager_(typeManager), diagnosticsEngine_(diagnosticsEngine), fileID_(fileID) {}
 
     /**
      * @brief Registers a new type constraint to the collection of constraints.
@@ -52,6 +57,7 @@ class TypeSolver {
 
     TypeManager& typeManager_;
     DiagnosticsEngine& diagnosticsEngine_;
+    FileID fileID_;
 
     struct Node {
         TypeID parent_;

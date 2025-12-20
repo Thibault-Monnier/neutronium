@@ -1,14 +1,19 @@
 #pragma once
 
 #include <functional>
-#include <memory>
+#include <initializer_list>
+#include <optional>
 #include <string>
-#include <vector>
+#include <string_view>
 
-#include "ast/AST.hpp"
+#include "ast/Operator.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "lex/Lexer.hpp"
 #include "lex/Token.hpp"
+#include "lex/TokenKind.hpp"
+#include "source/FileID.hpp"
+#include "type/Type.hpp"
+#include "type/TypeID.hpp"
 #include "type/TypeManager.hpp"
 
 struct ParsedFunctionSignature {
@@ -19,10 +24,11 @@ struct ParsedFunctionSignature {
 
 class Parser {
    public:
-    explicit Parser(DiagnosticsEngine& diagnosticsEngine, const std::string_view sourceCode,
-                    TypeManager& typeManager)
-        : lexer_(sourceCode, diagnosticsEngine),
+    explicit Parser(DiagnosticsEngine& diagnosticsEngine, const FileID fileID,
+                    const std::string_view sourceCode, TypeManager& typeManager)
+        : lexer_(sourceCode, diagnosticsEngine, fileID),
           diagnosticsEngine_(diagnosticsEngine),
+          fileID_(fileID),
           sourceCode_(sourceCode),
           typeManager_(typeManager) {
         token_ = lexer_.lex();
@@ -34,6 +40,7 @@ class Parser {
     Lexer lexer_;
 
     DiagnosticsEngine& diagnosticsEngine_;
+    FileID fileID_;
     std::string_view sourceCode_;
 
     TypeManager& typeManager_;

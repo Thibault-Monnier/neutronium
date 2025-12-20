@@ -13,8 +13,7 @@
 
 class DiagnosticsEngine {
    public:
-    DiagnosticsEngine(const SourceManager& sourceManager, const FileID fileID)
-        : diagnosticsPrinter_(sourceManager, fileID) {}
+    DiagnosticsEngine(const SourceManager& sourceManager) : diagnosticsPrinter_(sourceManager) {}
 
     /**
      * @brief Report an error diagnostic.
@@ -25,10 +24,11 @@ class DiagnosticsEngine {
      * @param message The error message.
      * @param byteOffsetStart The starting byte offset of the source location range.
      * @param byteOffsetEnd The ending byte offset of the source location range.
+     * @param fileID The FileID of the source file where the error occurred.
      */
     void reportError(std::string message, const uint32_t byteOffsetStart,
-                     const uint32_t byteOffsetEnd) {
-        diagnostics_.emplace_back(std::move(message), byteOffsetStart, byteOffsetEnd,
+                     const uint32_t byteOffsetEnd, const FileID fileID) {
+        diagnostics_.emplace_back(std::move(message), byteOffsetStart, byteOffsetEnd, fileID,
                                   Diagnostic::Level::ERROR);
     }
 

@@ -8,22 +8,21 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
-#include <lib/StringSwitch.hpp>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include "Token.hpp"
 #include "TokenKind.hpp"
+#include "lib/StringSwitch.hpp"
 
 __attribute__((noinline, cold)) void Lexer::createTokenError() const {
     diagnosticsEngine_.reportError("Token length exceeds maximum allowed length",
-                                   tokenStartPtr_ - sourceStart_, currentIndex() - 1);
+                                   tokenStartPtr_ - sourceStart_, currentIndex() - 1, fileID_);
 }
 
 __attribute__((noinline, cold)) void Lexer::handleNonAsciiChar() {
     diagnosticsEngine_.reportError("Non-ASCII character encountered", currentIndex() - 1,
-                                   currentIndex() - 1);
+                                   currentIndex() - 1, fileID_);
 
     const char* currentPtr = currentPtr_;
 
@@ -37,7 +36,7 @@ __attribute__((noinline, cold)) void Lexer::invalidCharacterError(const char c) 
     const std::string errorMessage =
         std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
                     static_cast<int>(c));
-    diagnosticsEngine_.reportError(errorMessage, currentIndex() - 1, currentIndex() - 1);
+    diagnosticsEngine_.reportError(errorMessage, currentIndex() - 1, currentIndex() - 1, fileID_);
 }
 
 __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {

@@ -97,7 +97,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         std::exit(EXIT_FAILURE);
     }
 
-    DiagnosticsEngine diagnosticsEngine(sourceManager, fileID);
+    DiagnosticsEngine diagnosticsEngine(sourceManager);
 
     if (opts.logCode_) std::cout << fileContents << '\n';
 
@@ -105,7 +105,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         {
             const Stage stage("Lexing", verbose);
 
-            Lexer lexer(fileContents, diagnosticsEngine);
+            Lexer lexer(fileContents, diagnosticsEngine, fileID);
             Token token = lexer.lex();
             if (opts.logTokens_) std::print("{}\n", tokenKindToString(token.kind()));
             while (token.kind() != TokenKind::EOF_) {
@@ -117,12 +117,12 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         return;
     }
 
-    TypeManager typeManager{diagnosticsEngine};
+    TypeManager typeManager{diagnosticsEngine, fileID};
 
     const std::unique_ptr<AST::Program> ast = [&] {
         const Stage stage("Parsing", verbose);
 
-        Parser parser(diagnosticsEngine, fileContents, typeManager);
+        Parser parser(diagnosticsEngine, fileID, fileContents, typeManager);
         return parser.parse();
     }();
 
@@ -132,7 +132,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
     {
         const Stage stage("Semantic Analysis", verbose);
 
-        SemanticAnalyser sema(*ast, opts.targetType_, diagnosticsEngine, typeManager);
+        SemanticAnalyser sema(*ast, opts.targetType_, diagnosticsEngine, fileID, typeManager);
         sema.analyse();
     }
 

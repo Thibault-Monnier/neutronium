@@ -2,22 +2,28 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "SymbolTable.hpp"
 #include "ast/AST.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "driver/Cli.hpp"
+#include "source/FileID.hpp"
+#include "type/Trait.hpp"
 #include "type/Type.hpp"
+#include "type/TypeID.hpp"
 #include "type/TypeManager.hpp"
 
 class SemanticAnalyser {
    public:
     explicit SemanticAnalyser(const AST::Program& ast, const TargetType targetType,
-                              DiagnosticsEngine& diagnosticsEngine, TypeManager& typeManager)
+                              DiagnosticsEngine& diagnosticsEngine, const FileID fileID,
+                              TypeManager& typeManager)
         : ast_(&ast),
           targetType_(targetType),
           diagnosticsEngine_(diagnosticsEngine),
+          fileID_(fileID),
           typeManager_(typeManager) {}
 
     void analyse();
@@ -27,6 +33,7 @@ class SemanticAnalyser {
     const TargetType targetType_;
 
     DiagnosticsEngine& diagnosticsEngine_;
+    const FileID fileID_;
     TypeManager& typeManager_;
 
     std::vector<SymbolTable> scopes_;

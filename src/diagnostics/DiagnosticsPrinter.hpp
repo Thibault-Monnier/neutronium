@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <format>
 #include <iostream>
+#include <optional>
 #include <print>
+#include <string>
 #include <string_view>
 
 #include "Diagnostic.hpp"
@@ -12,8 +14,8 @@
 
 class DiagnosticsPrinter {
    public:
-    explicit DiagnosticsPrinter(const SourceManager& sourceManager, const FileID fileID)
-        : sourceManager_(sourceManager), fileID_(fileID) {}
+    explicit DiagnosticsPrinter(const SourceManager& sourceManager)
+        : sourceManager_(sourceManager) {}
 
     /**
      * @brief Emit a single diagnostic to stderr.
@@ -33,8 +35,8 @@ class DiagnosticsPrinter {
 
    private:
     const SourceManager& sourceManager_;
-    const FileID fileID_;
 
+    /** @brief Records whether any diagnostics have been emitted yet. */
     bool hasEmittedAny_ = false;
 
     struct Params {
@@ -46,6 +48,87 @@ class DiagnosticsPrinter {
         static constexpr std::string_view ANSI_LIGHT_RED = "\x1b[91m";
         static constexpr std::string_view ANSI_RESET = "\x1b[0m";
     };
+
+    /**
+     * @brief Represents a specific location within a source file.
+     *
+     * This class encapsulates the information necessary to identify a precise
+     * position in a file, such as line and column numbers.
+     */
+    class SourceLocation {
+        uint32_t line_;
+        uint32_t column_;
+
+       public:
+        SourceLocation(const uint32_t line, const uint32_t column) : line_(line), column_(column) {}
+
+        [[nodiscard]] uint32_t line() const { return line_; }
+        [[nodiscard]] uint32_t column() const { return column_; }
+    };
+
+    /**
+     * @brief Represents a span (range) within a source file.
+     *
+     * This class encapsulates the start and end locations of a span,
+     * along with the associated file identifier.
+     */
+    class Span {
+        SourceLocation start_;
+        SourceLocation end_;
+        FileID fileID_;
+
+       public:
+        Span(const SourceLocation start, const SourceLocation end, const FileID fileID)
+            : start_(start), end_(end), fileID_(fileID) {}
+        Span(const uint32_t startLine, const uint32_t startColumn, const uint32_t endLine,
+             const uint32_t endColumn, const FileID fileID)
+            : start_{startLine, startColumn}, end_{endLine, endColumn}, fileID_(fileID) {}
+
+        [[nodiscard]] SourceLocation start() const { return start_; }
+        [[nodiscard]] SourceLocation end() const { return end_; }
+
+        [[nodiscard]] uint32_t startLine() const { return start_.line(); }
+        [[nodiscard]] uint32_t startColumn() const { return start_.column(); }
+        [[nodiscard]] uint32_t endLine() const { return end_.line(); }
+        [[nodiscard]] uint32_t endColumn() const { return end_.column(); }
+
+        [[nodiscard]] FileID fileID() const { return fileID_; }
+    };
+
+    /**
+     * @brief Represents the layout information for a diagnostic.
+     *
+     * This class encapsulates all the information used for emitting a diagnostic.
+     */
+    class Layout {
+        const Diagnostic* diag_;
+        Span span_;
+        uint32_t gutterWidth_;
+
+       public:
+        Layout(const Diagnostic& diag, const Span span, const uint32_t gutterWidth)
+            : diag_(&diag), span_(span), gutterWidth_(gutterWidth) {}
+
+        [[nodiscard]] const Diagnostic& diag() const { return *diag_; }
+        [[nodiscard]] const Span& span() const { return span_; }
+        [[nodiscard]] uint32_t gutterWidth() const { return gutterWidth_; }
+    };
+
+    /**
+     * @brief The current diagnostic layout.
+     *
+     * This should be set before starting to emit a diagnostic.
+     */
+    std::optional<Layout> diagLayout_;
+
+    /**
+     * @brief Get the current diagnostic layout.
+     *
+     * If no layout has been computed yet, this function will throw an exception.
+     *
+     * @return The current diagnostic layout.
+     */
+    [[nodiscard]] const Layout& diagLayout() const { return diagLayout_.value(); }
 
     // ----------------------------
     // ----- Helper functions -----
@@ -70,13 +153,26 @@ class DiagnosticsPrinter {
      */
     static void println() { std::println(std::cerr); }
 
+    [[nodiscard]] std::string blankGutter() const {
+        return std::string(diagLayout().gutterWidth(), ' ');
+    }
+
     // -------------------------------------
     // --- Diagnostic emission functions ---
     // -------------------------------------
 
-    void emitError(const Diagnostic& diagnostic) const;
-    void emitErrorMessage(std::string_view message) const;
-    void emitErrorLocation(std::string_view padding, std::string_view filePath, uint32_t lineStart,
-                           uint32_t columnStart) const;
-    void emitErrorContext(uint32_t byteOffsetStart, uint32_t byteOffsetEnd) const;
+    /**
+     * @brief Compute the layout for a diagnostic.
+     *
+     * This function computes the layout for the provided diagnostic and stores it in diagLayout_.
+     * It should be called before emitting the diagnostic.
+     *
+     * @param diagnostic The diagnostic to compute the layout for.
+     */
+    void computeDiagLayout(const Diagnostic& diagnostic);
+
+    void emitError() const;
+    void emitErrorMessage() const;
+    void emitErrorLocation() const;
+    void emitErrorContext() const;
 };
