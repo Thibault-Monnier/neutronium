@@ -7,13 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "../TypeManager.hpp"
 #include "Constraint.hpp"
 #include "ast/AST.hpp"
 #include "type/Primitive.hpp"
 #include "type/Trait.hpp"
 #include "type/Type.hpp"
 #include "type/TypeID.hpp"
+#include "type/TypeManager.hpp"
 
 TypeID TypeSolver::findRoot(TypeID x) {
     // Find the root of the set containing x
@@ -87,11 +87,11 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
         const Type& aType = typeManager_.getType(rootA);
         const Type& bType = typeManager_.getType(rootB);
 
+        const AST::Node& sourceNode = equalityConstraint.sourceNode();
         diagnosticsEngine_.reportError(
             std::format("Type mismatch: cannot unify types '{}' and '{}'",
                         aType.toString(typeManager_), bType.toString(typeManager_)),
-            equalityConstraint.sourceNode().sourceStartIndex(),
-            equalityConstraint.sourceNode().sourceEndIndex(), fileID_);
+            sourceNode.sourceStartIndex(), sourceNode.sourceEndIndex(), sourceNode.fileID());
         diagnosticsEngine_.emit();
         exit(EXIT_FAILURE);
     }
@@ -126,11 +126,12 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
     if (type.isUnknownKind()) return false;
 
     if (!type.hasTrait(trait)) {
+        const AST::Node& sourceNode = hasTraitConstraint.sourceNode();
+
         diagnosticsEngine_.reportError(
             std::format("Type '{}' does not implement the trait '{}'", type.toString(typeManager_),
                         traitToString(trait)),
-            hasTraitConstraint.sourceNode().sourceStartIndex(),
-            hasTraitConstraint.sourceNode().sourceEndIndex(), fileID_);
+            sourceNode.sourceStartIndex(), sourceNode.sourceEndIndex(), sourceNode.fileID());
         diagnosticsEngine_.emit();
         exit(EXIT_FAILURE);
     }
@@ -145,9 +146,10 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
 
     if (type.kind() == TypeKind::PRIMITIVE) {
         if (type.primitive() == Primitive::Kind::VOID) {
-            diagnosticsEngine_.reportError(
-                "Type 'void' is not storable", storableConstraint.sourceNode().sourceStartIndex(),
-                storableConstraint.sourceNode().sourceEndIndex(), fileID_);
+            const AST::Node& sourceNode = storableConstraint.sourceNode();
+            diagnosticsEngine_.reportError("Type 'void' is not storable",
+                                           sourceNode.sourceStartIndex(),
+                                           sourceNode.sourceEndIndex(), sourceNode.fileID());
             diagnosticsEngine_.emit();
             exit(EXIT_FAILURE);
         }

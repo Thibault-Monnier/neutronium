@@ -2,10 +2,13 @@
 
 #include <functional>
 #include <initializer_list>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include "ast/AST.hpp"
 #include "ast/Operator.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "lex/Lexer.hpp"

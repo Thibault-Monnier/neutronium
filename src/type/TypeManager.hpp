@@ -10,7 +10,6 @@
 #include "TypeArena.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "inference/TypeSolver.hpp"
-#include "source/FileID.hpp"
 #include "type/TypeID.hpp"
 
 /**
@@ -25,8 +24,8 @@
 
 class TypeManager {
    public:
-    explicit TypeManager(DiagnosticsEngine& diagnosticsEngine, const FileID fileID)
-        : typeSolver_(*this, diagnosticsEngine, fileID) {}
+    explicit TypeManager(DiagnosticsEngine& diagnosticsEngine)
+        : typeSolver_(*this, diagnosticsEngine) {}
 
     /**
      * @brief Registers a new type in the type manager.

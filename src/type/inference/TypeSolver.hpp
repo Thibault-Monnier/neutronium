@@ -22,8 +22,8 @@ class TypeManager;
 
 class TypeSolver {
    public:
-    TypeSolver(TypeManager& typeManager, DiagnosticsEngine& diagnosticsEngine, const FileID fileID)
-        : typeManager_(typeManager), diagnosticsEngine_(diagnosticsEngine), fileID_(fileID) {}
+    TypeSolver(TypeManager& typeManager, DiagnosticsEngine& diagnosticsEngine)
+        : typeManager_(typeManager), diagnosticsEngine_(diagnosticsEngine) {}
 
     /**
      * @brief Registers a new type constraint to the collection of constraints.
@@ -57,7 +57,6 @@ class TypeSolver {
 
     TypeManager& typeManager_;
     DiagnosticsEngine& diagnosticsEngine_;
-    FileID fileID_;
 
     struct Node {
         TypeID parent_;

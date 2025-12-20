@@ -117,7 +117,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         return;
     }
 
-    TypeManager typeManager{diagnosticsEngine, fileID};
+    TypeManager typeManager(diagnosticsEngine);
 
     const std::unique_ptr<AST::Program> ast = [&] {
         const Stage stage("Parsing", verbose);
