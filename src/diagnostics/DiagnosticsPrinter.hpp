@@ -160,6 +160,11 @@ class DiagnosticsPrinter {
         return std::string(diagLayout().gutterWidth(), ' ');
     }
 
+    /** @brief Get the number of bytes in a UTF-8 character given its first byte.
+     *
+     * @param c The first byte of the UTF-8 character.
+     * @return The number of bytes in the UTF-8 character.
+     */
     static uint32_t utf8ByteLength(const unsigned char c) {
         if ((c & 0x80) == 0) return 1;     // ASCII
         if ((c & 0xE0) == 0xC0) return 2;  // 2-byte UTF-8
