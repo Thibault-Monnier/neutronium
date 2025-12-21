@@ -81,6 +81,7 @@ void DiagnosticsPrinter::emitErrorContext() const {
     println("{}{}", blankGutter(), separator);
 
     for (uint32_t line = startLine; line <= endLine; ++line) {
+        // Handle omitted lines
         if (skipMiddleLines && line == skipLinesStart) {
             println("{}{}", blankGutter(), separator);
 
@@ -94,12 +95,17 @@ void DiagnosticsPrinter::emitErrorContext() const {
 
         const std::string_view lineContents = sourceManager_.getLineContents(span.fileID(), line);
         println("{}{:>{}}{}{}{}", Params::ANSI_BLUE, line, diagLayout().gutterWidth(),
+
+        // Print the line with its number (1-based)
+        println("{}{:>{}}{}{}{}", Params::ANSI_BLUE, line + 1, diagLayout().gutterWidth(),
                 Params::ANSI_RESET, separator, lineContents);
 
-        const uint32_t errorColumnStart = (line == startLine) ? span.startColumn() : 1;
+        const uint32_t errorColumnStart = (line == startLine) ? span.startColumn() : 0;
         const uint32_t errorColumnEnd =
-            (line == endLine) ? span.endColumn() + 1 : lineContents.size() + 1;
-        println("{}{}{}{}{}{}", blankGutter(), separator, std::string(errorColumnStart - 1, ' '),
+            (line == endLine) ? span.endColumn() + 1 : lineContents.size();
+
+        // Print the error underline
+        println("{}{}{}{}{}{}", blankGutter(), separator, std::string(errorColumnStart, ' '),
                 Params::ANSI_LIGHT_RED, std::string(errorColumnEnd - errorColumnStart, '^'),
                 Params::ANSI_RESET);
     }

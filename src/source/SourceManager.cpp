@@ -51,19 +51,19 @@ std::pair<uint32_t, uint32_t> SourceManager::getLineColumn(const FileID fileID,
     const uint32_t line = static_cast<int>(std::distance(file.linesStarts().begin(), it));
     const uint32_t column = offset - *it;
 
-    return {line + 1, column + 1};  // Convert to 1-based indexing
+    return {line, column};  // 0-based
 }
 
 std::string_view SourceManager::getLineContents(const FileID fileID,
                                                 const uint32_t lineNumber) const {
     assert(fileID < sourceFiles_.size());
-    assert(lineNumber > 0 && lineNumber <= sourceFiles_.at(fileID).linesStarts().size());
+    assert(lineNumber < sourceFiles_.at(fileID).linesStarts().size());
 
     const std::string_view contents = sourceFiles_[fileID].contents();
 
     const auto lineStarts = sourceFiles_[fileID].linesStarts();
-    const uint32_t lineStart = lineStarts[lineNumber - 1];
-    const uint32_t nextLineStart = lineStarts[lineNumber];
+    const uint32_t lineStart = lineStarts[lineNumber];
+    const uint32_t nextLineStart = lineStarts[lineNumber + 1];
 
     // Exclude the newline character at the end of the line
     uint32_t length = nextLineStart - lineStart;
