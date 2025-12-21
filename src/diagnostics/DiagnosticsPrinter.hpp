@@ -7,6 +7,7 @@
 #include <print>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "Diagnostic.hpp"
 #include "source/FileID.hpp"
@@ -47,6 +48,8 @@ class DiagnosticsPrinter {
         static constexpr std::string_view ANSI_BLUE = "\x1b[1;94m";
         static constexpr std::string_view ANSI_LIGHT_RED = "\x1b[91m";
         static constexpr std::string_view ANSI_RESET = "\x1b[0m";
+
+        static constexpr uint8_t TAB_WIDTH = 4;
     };
 
     /**
@@ -157,6 +160,15 @@ class DiagnosticsPrinter {
         return std::string(diagLayout().gutterWidth(), ' ');
     }
 
+    static uint32_t utf8ByteLength(const unsigned char c) {
+        if ((c & 0x80) == 0) return 1;     // ASCII
+        if ((c & 0xE0) == 0xC0) return 2;  // 2-byte UTF-8
+        if ((c & 0xF0) == 0xE0) return 3;  // 3-byte UTF-8
+        if ((c & 0xF8) == 0xF0) return 4;  // 4-byte UTF-8
+
+        std::unreachable();
+    }
+
     // -------------------------------------
     // --- Diagnostic emission functions ---
     // -------------------------------------
@@ -170,6 +182,21 @@ class DiagnosticsPrinter {
      * @param diagnostic The diagnostic to compute the layout for.
      */
     void computeDiagLayout(const Diagnostic& diagnostic);
+
+    /** @brief Normalize line contents by using constant width characters.
+     *
+     * @param lineContents The line contents which are normalized in place.
+     */
+    static void normalizeLineContents(std::string& lineContents);
+
+    /** @brief Compute the column span to underline for a line of a diagnostic.
+     *
+     * @param line The line number to compute the underline span for.
+     * @param lineContents The contents of the line.
+     * @return A pair (startColumn, endColumn) representing the column range to underline
+     */
+    std::pair<uint32_t, uint32_t> computeUnderlineColumnRange(uint32_t line,
+                                                              std::string_view lineContents) const;
 
     void emitError() const;
     void emitErrorMessage() const;
