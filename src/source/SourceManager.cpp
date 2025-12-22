@@ -57,7 +57,7 @@ std::pair<uint32_t, uint32_t> SourceManager::getLineColumn(const FileID fileID,
 std::string_view SourceManager::getLineContents(const FileID fileID,
                                                 const uint32_t lineNumber) const {
     assert(fileID < sourceFiles_.size());
-    assert(lineNumber < sourceFiles_.at(fileID).linesStarts().size());
+    assert(lineNumber + 1 < sourceFiles_.at(fileID).linesStarts().size());
 
     const std::string_view contents = sourceFiles_[fileID].contents();
 

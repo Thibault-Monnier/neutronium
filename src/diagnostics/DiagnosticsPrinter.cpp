@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -37,17 +36,19 @@ void DiagnosticsPrinter::computeDiagLayout(const Diagnostic& diagnostic) {
         sourceManager_.getLineColumn(diagnostic.fileID_, diagnostic.byteOffsetEnd_);
     const Span span(lineStart, columnStart, lineEnd, columnEnd, diagnostic.fileID_);
 
-    const uint32_t gutterWidth = std::to_string(lineEnd).size();
+    const uint32_t gutterWidth = std::to_string(lineEnd + 1).size();
 
     diagLayout_ = Layout(diagnostic, span, gutterWidth);
 }
 
 void DiagnosticsPrinter::normalizeLineContents(std::string& lineContents) {
     // Replace tabs with spaces
-    for (size_t pos = 0; pos < lineContents.size(); ++pos) {
+    for (size_t pos = 0; pos < lineContents.size();) {
         if (lineContents[pos] == '\t') {
             lineContents.replace(pos, 1, std::string(Params::TAB_WIDTH, ' '));
             pos += Params::TAB_WIDTH;
+        } else {
+            ++pos;
         }
     }
 }
