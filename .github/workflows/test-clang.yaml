@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build clang lld
+          sudo apt install -y cmake ninja-build clang lld libc++-dev libc++abi-dev
 
       - name: Make config script executable
         run: chmod +x ./configure-cmake.sh
