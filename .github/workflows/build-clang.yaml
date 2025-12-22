@@ -1,4 +1,4 @@
-name: Build all targets
+name: Build all targets (Clang)
 permissions:
   contents: read
 
@@ -15,20 +15,15 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build build-essential
-
-      - name: Setup GCC 14
-        uses: egor-tensin/setup-gcc@v1
-        with:
-          version: 14
+          sudo apt install -y cmake ninja-build clang lld
 
       - name: Make config script executable
         run: chmod +x ./configure-cmake.sh
 
       - name: Run build
-        id: build_run
         run: ./configure-cmake.sh && cmake --build build
         shell: bash
         env:
-          CXX: g++-14
-          CC: gcc-14
+          CC: clang
+          CXX: clang++
+          LDFLAGS: -fuse-ld=lld
