@@ -1,6 +1,6 @@
 # Build directories
-build/
-cmake-build-*/
+/build/
+/cmake-build-*/
 .venv/
 
 # Compiled object files
@@ -26,5 +26,5 @@ cmake-build-*/
 .idea/
 
 # Misc
-scripts/
-neutro/
+/scripts/
+/neutro/
