@@ -154,7 +154,7 @@ class DiagnosticsPrinter {
     /**
      * @brief Print a blank line to stderr.
      */
-    static void println() { std::println(std::cerr); }
+    static void println() { std::println(std::cerr, ""); }
 
     [[nodiscard]] std::string blankGutter() const {
         return std::string(diagLayout().gutterWidth(), ' ');
