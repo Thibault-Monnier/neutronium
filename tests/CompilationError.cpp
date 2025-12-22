@@ -1187,3 +1187,11 @@ TEST_F(NeutroniumTester, TooLargeNumberLiteralFails) {
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("number literal"));
 }
+
+TEST_F(NeutroniumTester, FailureWithTabsInSource) {
+    const std::string code = "fn a(): {\n\tlet x = 1;\n\tif x > 0: {\n\t\texit 0;\n\t}\n}";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("main") && error.contains("function") &&
+                error.contains("executable target"));
+}

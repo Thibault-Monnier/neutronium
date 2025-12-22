@@ -239,7 +239,7 @@ TEST(LexerErrorTest, UnexpectedCharacterError) {
 TEST(LexerErrorTest, NonASCIICharacterError) {
     namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {"let x = 42π;", "こんにちは", "let привет = 1;",
-                                                "x = y + λ;"};
+                                                "x = y + λ;", "if 👌 { }"};
 
     for (const auto& input : badInputs) {
         const fs::path tmp = fs::temp_directory_path() / "test_input.nt";
