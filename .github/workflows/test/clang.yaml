@@ -1,0 +1,36 @@
+name: Run tests (Clang)
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake ninja-build clang lld
+
+      - name: Make config script executable
+        run: chmod +x ./configure-cmake.sh
+
+      - name: Run build
+        run: ./configure-cmake.sh && cmake --build build
+        shell: bash
+        env:
+          CC: clang
+          CXX: clang++
+          LDFLAGS: -fuse-ld=lld
+
+      - name: Run tests
+        run: cd build && ctest --output-on-failure
