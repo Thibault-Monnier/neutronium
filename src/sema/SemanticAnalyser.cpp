@@ -88,16 +88,18 @@ void SemanticAnalyser::analyse() {
 }
 
 void SemanticAnalyser::emitErrorsAndQuit() const {
-    diagnosticsEngine_.emitErrors();
+    diagnosticsEngine_.emit();
     exit(EXIT_FAILURE);
 }
 
 void SemanticAnalyser::error(const std::string& errorMessage, const AST::Node& node) const {
-    diagnosticsEngine_.reportError(errorMessage, node.sourceStartIndex(), node.sourceEndIndex());
+    diagnosticsEngine_.reportError(errorMessage, node.sourceStartIndex(), node.sourceEndIndex(),
+                                   fileID_);
 }
 
 void SemanticAnalyser::fatalError(const std::string& errorMessage, const AST::Node& node) const {
-    diagnosticsEngine_.reportError(errorMessage, node.sourceStartIndex(), node.sourceEndIndex());
+    diagnosticsEngine_.reportError(errorMessage, node.sourceStartIndex(), node.sourceEndIndex(),
+                                   fileID_);
     emitErrorsAndQuit();
 }
 

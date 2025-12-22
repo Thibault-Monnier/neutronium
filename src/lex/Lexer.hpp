@@ -1,16 +1,19 @@
 #pragma once
 
+#include <cstddef>
 #include <string_view>
-#include <vector>
 
 #include "Token.hpp"
 #include "TokenKind.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
+#include "source/FileID.hpp"
 
 class Lexer {
    public:
-    explicit Lexer(const std::string_view sourceCode, DiagnosticsEngine& diagnosticsEngine)
+    explicit Lexer(const std::string_view sourceCode, DiagnosticsEngine& diagnosticsEngine,
+                   const FileID fileID)
         : diagnosticsEngine_(diagnosticsEngine),
+          fileID_(fileID),
           sourceStart_(sourceCode.data()),
           sourceEnd_(sourceCode.data() + sourceCode.size()),
           sourceSize_(sourceCode.size()),
@@ -25,6 +28,7 @@ class Lexer {
 
    private:
     DiagnosticsEngine& diagnosticsEngine_;
+    FileID fileID_;
 
     const char* const sourceStart_;
     const char* const sourceEnd_;

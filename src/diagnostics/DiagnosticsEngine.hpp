@@ -1,32 +1,55 @@
 #pragma once
-#include <algorithm>
-#include <iostream>
 
+#include <algorithm>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "Diagnostic.hpp"
+#include "DiagnosticsPrinter.hpp"
 #include "source/FileID.hpp"
 #include "source/SourceManager.hpp"
 
-struct Diagnostic {
-    enum class Level : uint8_t { ERROR };
-
-    const std::string message_;
-    const int byteOffsetStart_;
-    const int byteOffsetEnd_;
-    Level level_;
-};
-
 class DiagnosticsEngine {
    public:
-    DiagnosticsEngine(const SourceManager& sourceManager, const FileID fileID)
-        : sourceManager_(sourceManager), fileID_(fileID) {}
+    DiagnosticsEngine(const SourceManager& sourceManager) : diagnosticsPrinter_(sourceManager) {}
 
+    /**
+     * @brief Report an error diagnostic.
+     *
+     * Collects an error diagnostic with the given message and source
+     * location range.
+     *
+     * @param message The error message.
+     * @param byteOffsetStart The starting byte offset of the source location range.
+     * @param byteOffsetEnd The ending byte offset of the source location range.
+     * @param fileID The FileID of the source file where the error occurred.
+     */
     void reportError(std::string message, const uint32_t byteOffsetStart,
-                     const uint32_t byteOffsetEnd) {
-        diagnostics_.emplace_back(std::move(message), byteOffsetStart, byteOffsetEnd,
+                     const uint32_t byteOffsetEnd, const FileID fileID) {
+        diagnostics_.emplace_back(std::move(message), byteOffsetStart, byteOffsetEnd, fileID,
                                   Diagnostic::Level::ERROR);
     }
 
-    void emitErrors() const;
+    /**
+     * @brief Emit all collected diagnostics to stderr.
+     *
+     * Emits all diagnostics that have been reported so far using the
+     * DiagnosticsPrinter.
+     */
+    void emit() {
+        for (const Diagnostic& diagnostic : diagnostics_) {
+            diagnosticsPrinter_.emit(diagnostic);
+        }
+    }
 
+    /**
+     * @brief Check if any errors have been reported.
+     *
+     * @return @code true@endcode if at least one error diagnostic has been reported,
+     * @code false@endcode otherwise.
+     */
     [[nodiscard]] bool hasErrors() const {
         return std::ranges::any_of(diagnostics_, [](const Diagnostic& diagnostic) {
             return diagnostic.level_ == Diagnostic::Level::ERROR;
@@ -34,12 +57,7 @@ class DiagnosticsEngine {
     }
 
    private:
-    const SourceManager& sourceManager_;
-    const FileID fileID_;
+    DiagnosticsPrinter diagnosticsPrinter_;
 
     std::vector<Diagnostic> diagnostics_;
-
-    static constexpr uint32_t MAX_ERROR_CONTEXT_LINES = 6;
-
-    void emitErrorContext(uint32_t byteOffsetStart, uint32_t byteOffsetEnd) const;
 };

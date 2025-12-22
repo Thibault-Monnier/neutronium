@@ -35,7 +35,7 @@ class SourceManager {
      * @param offset The byte offset within the source file for which the line
      *        and column should be calculated.
      * @return A pair of integers where the first element is the line number and
-     *         the second element is the column number, 1-based.
+     *         the second element is the column number, 0-based.
      */
     [[nodiscard]] std::pair<uint32_t, uint32_t> getLineColumn(FileID fileID, uint32_t offset) const;
 
@@ -60,7 +60,7 @@ class SourceManager {
      * the behavior is undefined.
      *
      * @param fileID The unique identifier of the source file.
-     * @param lineNumber The 1-based line number of the line to retrieve.
+     * @param lineNumber The 0-based line number of the line to retrieve.
      * @return A string view containing the contents of the specified line, excluding the newline
      *         character at the end of the line.
      */
@@ -75,6 +75,7 @@ class SourceManager {
         [[nodiscard]] const std::string& path() const { return path_; }
         [[nodiscard]] const std::string_view& contents() const { return contents_; }
         [[nodiscard]] const std::vector<uint32_t>& linesStarts() const {
+            // Lazy initialization of line starts
             if (lineStarts_.empty()) {
                 scanFileLineStarts();
             }

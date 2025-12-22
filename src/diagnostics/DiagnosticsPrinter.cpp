@@ -1,0 +1,162 @@
+#include "DiagnosticsPrinter.hpp"
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <format>
+#include <string>
+#include <string_view>
+#include <utility>
+
+#include "Diagnostic.hpp"
+
+void DiagnosticsPrinter::emit(const Diagnostic& diagnostic) {
+    if (!hasEmittedAny_) {
+        hasEmittedAny_ = true;
+        println();
+    }
+
+    computeDiagLayout(diagnostic);
+
+    switch (diagnostic.level_) {
+        case Diagnostic::Level::ERROR:
+            emitError();
+            break;
+    }
+
+    diagLayout_.reset();
+
+    println();
+}
+
+void DiagnosticsPrinter::computeDiagLayout(const Diagnostic& diagnostic) {
+    const auto [lineStart, columnStart] =
+        sourceManager_.getLineColumn(diagnostic.fileID_, diagnostic.byteOffsetStart_);
+    const auto [lineEnd, columnEnd] =
+        sourceManager_.getLineColumn(diagnostic.fileID_, diagnostic.byteOffsetEnd_);
+    const Span span(lineStart, columnStart, lineEnd, columnEnd, diagnostic.fileID_);
+
+    const uint32_t gutterWidth = std::to_string(lineEnd + 1).size();
+
+    diagLayout_ = Layout(diagnostic, span, gutterWidth);
+}
+
+void DiagnosticsPrinter::normalizeLineContents(std::string& lineContents) {
+    // Replace tabs with spaces
+    for (size_t pos = 0; pos < lineContents.size();) {
+        if (lineContents[pos] == '\t') {
+            lineContents.replace(pos, 1, std::string(Params::TAB_WIDTH, ' '));
+            pos += Params::TAB_WIDTH;
+        } else {
+            ++pos;
+        }
+    }
+}
+
+std::pair<uint32_t, uint32_t> DiagnosticsPrinter::computeUnderlineColumnRange(
+    const uint32_t line, const std::string_view lineContents) const {
+    const Span& span = diagLayout().span();
+
+    if (lineContents.empty()) {
+        return {0, 0};
+    }
+
+    const uint32_t rawErrorColumnStart = (line == span.startLine()) ? span.startColumn() : 0;
+    const uint32_t rawErrorColumnEnd =
+        (line == span.endLine()) ? span.endColumn() : lineContents.size() - 1;
+
+    uint32_t errorColumnStart = -1;
+    uint32_t errorColumnEnd = -1;
+
+    for (size_t i = 0, col = 0; i <= lineContents.size();) {
+        if (i == rawErrorColumnStart) errorColumnStart = col;
+        if (i == rawErrorColumnEnd) errorColumnEnd = col;
+
+        if (i == lineContents.size()) break;
+
+        if (lineContents[i] == '\t')
+            col += Params::TAB_WIDTH;
+        else
+            ++col;
+
+        i += utf8ByteLength(lineContents[i]);
+    }
+
+    assert(errorColumnStart != static_cast<uint32_t>(-1) &&
+           "errorColumnStart has not been initialized");
+    assert(errorColumnEnd != static_cast<uint32_t>(-1) &&
+           "errorColumnEnd has not been initialized");
+    assert(errorColumnStart <= errorColumnEnd);
+
+    return {errorColumnStart, errorColumnEnd};
+}
+
+void DiagnosticsPrinter::emitError() const {
+    assert(diagLayout_.has_value() && "diagLayout_ should be initialized");
+    assert(diagLayout().diag().level_ == Diagnostic::Level::ERROR);
+
+    emitErrorMessage();
+    emitErrorLocation();
+    emitErrorContext();
+}
+
+void DiagnosticsPrinter::emitErrorMessage() const {
+    println("{}{}error:{} {}{}{}", Params::ANSI_BOLD, Params::ANSI_RED, Params::ANSI_RESET,
+            Params::ANSI_BOLD, diagLayout().diag().message_, Params::ANSI_RESET);
+}
+
+void DiagnosticsPrinter::emitErrorLocation() const {
+    const std::string_view filePath =
+        sourceManager_.getSourceFilePath(diagLayout().span().fileID());
+
+    println("{}{}-->{} {}:{}:{}", blankGutter(), Params::ANSI_BLUE, Params::ANSI_RESET, filePath,
+            diagLayout().span().startLine() + 1, diagLayout().span().startColumn() + 1);
+}
+
+void DiagnosticsPrinter::emitErrorContext() const {
+    const Span& span = diagLayout().span();
+
+    const uint32_t startLine = span.startLine();
+    const uint32_t endLine = span.endLine();
+
+    const uint32_t nbLines = endLine - startLine + 1;
+
+    const bool skipMiddleLines = nbLines > Params::MAX_ERROR_CONTEXT_LINES;
+    // MAX_ERROR_CONTEXT_LINES - 1 to account for the "lines omitted" message
+    const uint32_t nbOmittedLines = nbLines - (Params::MAX_ERROR_CONTEXT_LINES - 1);
+    const uint32_t skipLinesStart = startLine + Params::MAX_ERROR_CONTEXT_LINES / 2;
+    const uint32_t skipLinesEnd = skipLinesStart + nbOmittedLines;
+    assert(nbOmittedLines == skipLinesEnd - skipLinesStart);
+
+    const std::string separator = std::format(" {}|{} ", Params::ANSI_BLUE, Params::ANSI_RESET);
+    println("{}{}", blankGutter(), separator);
+
+    for (uint32_t line = startLine; line <= endLine; ++line) {
+        // Handle omitted lines
+        if (skipMiddleLines && line == skipLinesStart) {
+            println("{}{}", blankGutter(), separator);
+
+            std::string linesOmittedPadding(diagLayout().gutterWidth() - 1, ' ');
+            println("{}{}... {} line{} omitted ...", Params::ANSI_BLUE, linesOmittedPadding,
+                    nbOmittedLines, nbOmittedLines > 1 ? "s" : "");
+
+            println("{}{}", blankGutter(), separator);
+            line = skipLinesEnd;
+        }
+
+        auto lineContents = std::string(sourceManager_.getLineContents(span.fileID(), line));
+        const auto [errorColumnStart, errorColumnEnd] =
+            computeUnderlineColumnRange(line, lineContents);
+
+        normalizeLineContents(lineContents);
+
+        // Print the line with its number (1-based)
+        println("{}{:>{}}{}{}{}", Params::ANSI_BLUE, line + 1, diagLayout().gutterWidth(),
+                Params::ANSI_RESET, separator, lineContents);
+
+        // Print the error underline
+        println("{}{}{}{}{}{}", blankGutter(), separator, std::string(errorColumnStart, ' '),
+                Params::ANSI_LIGHT_RED, std::string(errorColumnEnd - errorColumnStart + 1, '^'),
+                Params::ANSI_RESET);
+    }
+}

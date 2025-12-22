@@ -1,9 +1,14 @@
 #pragma once
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "Constraint.hpp"
+#include "ast/AST.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
+#include "source/FileID.hpp"
+#include "type/TypeID.hpp"
 
 class TypeManager;
 

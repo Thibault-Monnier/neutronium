@@ -24,9 +24,9 @@ class LexerTokenKindTest : public ::testing::TestWithParam<LexCase> {};
 
 TEST_P(LexerTokenKindTest, ProducesExpectedKinds) {
     const SourceManager sm;
-    DiagnosticsEngine de(sm, 0);
+    DiagnosticsEngine de(sm);
 
-    Lexer lex(GetParam().src, de);
+    Lexer lex(GetParam().src, de, 0);
     auto toks = lex.tokenize();
     std::vector<TokenKind> got;
     std::ranges::transform(toks, std::back_inserter(got), [](const Token& t) { return t.kind(); });
@@ -228,8 +228,8 @@ TEST(LexerErrorTest, UnexpectedCharacterError) {
                 const auto fileData = sm.loadNewSourceFile(tmp.string());
                 const auto fileID = fileData.first;
                 const auto fileContents = fileData.second;
-                DiagnosticsEngine de(sm, fileID);
-                Lexer lexer(fileContents, de);
+                DiagnosticsEngine de(sm);
+                Lexer lexer(fileContents, de, fileID);
                 auto _ = lexer.tokenize();
             },
             ::testing::ExitedWithCode(EXIT_FAILURE), "Invalid character");
@@ -239,7 +239,7 @@ TEST(LexerErrorTest, UnexpectedCharacterError) {
 TEST(LexerErrorTest, NonASCIICharacterError) {
     namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {"let x = 42π;", "こんにちは", "let привет = 1;",
-                                                "x = y + λ;"};
+                                                "x = y + λ;", "if 👌 { }"};
 
     for (const auto& input : badInputs) {
         const fs::path tmp = fs::temp_directory_path() / "test_input.nt";
@@ -255,8 +255,8 @@ TEST(LexerErrorTest, NonASCIICharacterError) {
                 const auto fileData = sm.loadNewSourceFile(tmp.string());
                 const auto fileID = fileData.first;
                 const auto fileContents = fileData.second;
-                DiagnosticsEngine de(sm, fileID);
-                Lexer lexer(fileContents, de);
+                DiagnosticsEngine de(sm);
+                Lexer lexer(fileContents, de, fileID);
                 auto _ = lexer.tokenize();
             },
             ::testing::ExitedWithCode(EXIT_FAILURE), "Non-ASCII character");
@@ -279,8 +279,8 @@ TEST(LexerErrorTest, TokenExceedsMaximumLength) {
             const auto fileData = sm.loadNewSourceFile(tmp.string());
             const auto fileID = fileData.first;
             const auto fileContents = fileData.second;
-            DiagnosticsEngine de(sm, fileID);
-            Lexer lexer(fileContents, de);
+            DiagnosticsEngine de(sm);
+            Lexer lexer(fileContents, de, fileID);
             auto _ = lexer.tokenize();
         },
         ::testing::ExitedWithCode(EXIT_FAILURE), "exceeds maximum allowed length");

@@ -1,10 +1,16 @@
 #pragma once
 
+#include <cstddef>
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "Type.hpp"
 #include "TypeArena.hpp"
+#include "diagnostics/DiagnosticsEngine.hpp"
 #include "inference/TypeSolver.hpp"
+#include "type/TypeID.hpp"
 
 /**
  * @class TypeManager
