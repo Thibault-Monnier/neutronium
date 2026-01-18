@@ -31,7 +31,7 @@
 #error "EXPECT_OR_RETURN_NULLPTR is not supported by your compiler."
 #endif
 
-std::unique_ptr<AST::Program> Parser::parse() {
+AST::Program* Parser::parse() {
     auto ast = parseProgram();
 
     if (diagnosticsEngine_.hasErrors()) {
@@ -67,19 +67,19 @@ __attribute__((always_inline)) bool Parser::expect(const TokenKind expected, Tok
 }
 
 template <typename T>
-std::optional<std::vector<std::unique_ptr<T>>> Parser::parseCommaSeparatedList(
-    const TokenKind endDelimiter, const std::function<std::unique_ptr<T>()>& parseElement) {
-    std::vector<std::unique_ptr<T>> elements;
+std::optional<std::vector<T*>> Parser::parseCommaSeparatedList(
+    const TokenKind endDelimiter, const std::function<T*()>& parseElement) {
+    std::vector<T*> elements;
     while (peek().kind() != endDelimiter) {
         auto elem = parseElement();
         if (!elem) return std::nullopt;
-        elements.push_back(std::move(elem));
+        elements.push_back(elem);
         if (!advanceIf(TokenKind::COMMA)) break;
     }
     return elements;
 }
 
-std::optional<std::vector<std::unique_ptr<AST::Expression>>> Parser::parseExpressionList(
+std::optional<std::vector<AST::Expression*>> Parser::parseExpressionList(
     const TokenKind endDelimiter) {
     return parseCommaSeparatedList<AST::Expression>(endDelimiter,
                                                     [this] { return parseExpression(); });
@@ -139,13 +139,13 @@ std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotat
     return defaultType;
 }
 
-std::unique_ptr<AST::Identifier> Parser::parseIdentifier() {
+AST::Identifier* Parser::parseIdentifier() {
     const Token ident = EXPECT_OR_RETURN_NULLPTR(TokenKind::IDENTIFIER);
-    return std::make_unique<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
-                                             ident.byteOffsetEnd(), fileID_, generateAnyType());
+    return astArena_.allocate<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
+                                               ident.byteOffsetEnd(), fileID_, generateAnyType());
 }
 
-std::unique_ptr<AST::NumberLiteral> Parser::parseNumberLiteral() {
+AST::NumberLiteral* Parser::parseNumberLiteral() {
     const Token token = EXPECT_OR_RETURN_NULLPTR(TokenKind::NUMBER_LITERAL);
     const std::string_view lexeme = token.lexeme(sourceCode_);
 
@@ -157,22 +157,22 @@ std::unique_ptr<AST::NumberLiteral> Parser::parseNumberLiteral() {
         return invalidNumberLiteralError(token);
     }
 
-    return std::make_unique<AST::NumberLiteral>(value, token.byteOffsetStart(),
-                                                token.byteOffsetEnd(), fileID_, generateAnyType());
+    return astArena_.allocate<AST::NumberLiteral>(
+        value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateAnyType());
 }
 
-std::unique_ptr<AST::ArrayLiteral> Parser::parseArrayLiteral() {
+AST::ArrayLiteral* Parser::parseArrayLiteral() {
     const Token lBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::LEFT_BRACKET);
     auto elements = parseExpressionList(TokenKind::RIGHT_BRACKET);
     if (!elements) return nullptr;
     const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
-    return std::make_unique<AST::ArrayLiteral>(std::move(elements.value()),
-                                               lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
-                                               fileID_, generateAnyType());
+    return astArena_.allocate<AST::ArrayLiteral>(
+        std::move(elements.value()), lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(), fileID_,
+        generateAnyType());
 }
 
-std::unique_ptr<AST::Expression> Parser::parseIdentifierOrFunctionCall() {
+AST::Expression* Parser::parseIdentifierOrFunctionCall() {
     auto ident = parseIdentifier();
     if (!ident) return nullptr;
 
@@ -183,27 +183,27 @@ std::unique_ptr<AST::Expression> Parser::parseIdentifierOrFunctionCall() {
         const Token rParen = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
 
         const uint32_t startIndex = ident->sourceStartIndex();
-        return std::make_unique<AST::FunctionCall>(std::move(ident), std::move(arguments.value()),
-                                                   startIndex, rParen.byteOffsetEnd(), fileID_,
-                                                   generateAnyType());
+        return astArena_.allocate<AST::FunctionCall>(ident, std::move(arguments.value()),
+                                                     startIndex, rParen.byteOffsetEnd(), fileID_,
+                                                     generateAnyType());
     } else {
         // Identifier
         return ident;
     }
 }
 
-std::unique_ptr<AST::ArrayAccess> Parser::parseArrayAccess(std::unique_ptr<AST::Expression> base) {
+AST::ArrayAccess* Parser::parseArrayAccess(const AST::Expression* base) {
     EXPECT_OR_RETURN_NULLPTR(TokenKind::LEFT_BRACKET);
     auto index = parseExpression();
     if (!index) return nullptr;
     const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
     const uint32_t startIndex = base->sourceStartIndex();
-    return std::make_unique<AST::ArrayAccess>(std::move(base), std::move(index), startIndex,
-                                              rBracket.byteOffsetEnd(), fileID_, generateAnyType());
+    return astArena_.allocate<AST::ArrayAccess>(base, index, startIndex, rBracket.byteOffsetEnd(),
+                                                fileID_, generateAnyType());
 }
 
-std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
+AST::Expression* Parser::parsePrimaryExpression() {
     const Token token = peek();
 
     switch (token.kind()) {
@@ -217,7 +217,7 @@ std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
         case TokenKind::FALSE: {
             const bool value = token.kind() == TokenKind::TRUE;
             advance();
-            return std::make_unique<AST::BooleanLiteral>(
+            return astArena_.allocate<AST::BooleanLiteral>(
                 value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateAnyType());
         }
 
@@ -237,14 +237,14 @@ std::unique_ptr<AST::Expression> Parser::parsePrimaryExpression() {
     }
 }
 
-std::unique_ptr<AST::Expression> Parser::parsePostfixExpression() {
+AST::Expression* Parser::parsePostfixExpression() {
     auto postfixExpr = parsePrimaryExpression();
     if (!postfixExpr) return nullptr;
 
     while (true) {
         const Token token = peek();
         if (token.kind() == TokenKind::LEFT_BRACKET) {
-            postfixExpr = parseArrayAccess(std::move(postfixExpr));
+            postfixExpr = parseArrayAccess(postfixExpr);
             if (!postfixExpr) return nullptr;
         } else {
             break;
@@ -254,7 +254,7 @@ std::unique_ptr<AST::Expression> Parser::parsePostfixExpression() {
     return postfixExpr;
 }
 
-std::unique_ptr<AST::Expression> Parser::parseUnaryExpression() {
+AST::Expression* Parser::parseUnaryExpression() {
     const Token token = peek();
 
     const AST::Operator op = AST::tokenKindToOperator(token.kind());
@@ -265,15 +265,15 @@ std::unique_ptr<AST::Expression> Parser::parseUnaryExpression() {
         if (!operand) return nullptr;
 
         const uint32_t endIndex = operand->sourceEndIndex();
-        return std::make_unique<AST::UnaryExpression>(
-            op, std::move(operand), token.byteOffsetStart(), endIndex, fileID_, generateAnyType());
+        return astArena_.allocate<AST::UnaryExpression>(op, operand, token.byteOffsetStart(),
+                                                        endIndex, fileID_, generateAnyType());
     }
 
     return parsePostfixExpression();
 }
 
-std::unique_ptr<AST::Expression> Parser::parseBinaryExpression(
-    const std::function<std::unique_ptr<AST::Expression>()>& parseOperand,
+AST::Expression* Parser::parseBinaryExpression(
+    const std::function<AST::Expression*()>& parseOperand,
     const std::initializer_list<AST::Operator> allowedOps, const bool allowMultiple) {
     auto left = parseOperand();
     if (!left) return nullptr;
@@ -288,26 +288,25 @@ std::unique_ptr<AST::Expression> Parser::parseBinaryExpression(
 
         const uint32_t startIndex = left->sourceStartIndex();
         const uint32_t endIndex = right->sourceEndIndex();
-        left = std::make_unique<AST::BinaryExpression>(std::move(left), op, std::move(right),
-                                                       startIndex, endIndex, fileID_,
-                                                       generateAnyType());
+        left = astArena_.allocate<AST::BinaryExpression>(left, op, right, startIndex, endIndex,
+                                                         fileID_, generateAnyType());
         if (!allowMultiple) break;
     }
 
     return left;
 }
 
-std::unique_ptr<AST::Expression> Parser::parseMultiplicativeExpression() {
+AST::Expression* Parser::parseMultiplicativeExpression() {
     return parseBinaryExpression([this] { return parseUnaryExpression(); },
                                  {AST::Operator::MULTIPLY, AST::Operator::DIVIDE}, true);
 }
 
-std::unique_ptr<AST::Expression> Parser::parseAdditiveExpression() {
+AST::Expression* Parser::parseAdditiveExpression() {
     return parseBinaryExpression([this] { return parseMultiplicativeExpression(); },
                                  {AST::Operator::ADD, AST::Operator::SUBTRACT}, true);
 }
 
-std::unique_ptr<AST::Expression> Parser::parseComparisonExpression() {
+AST::Expression* Parser::parseComparisonExpression() {
     return parseBinaryExpression(
         [this] { return parseAdditiveExpression(); },
         {AST::Operator::EQUALS, AST::Operator::NOT_EQUALS, AST::Operator::LESS_THAN,
@@ -316,9 +315,9 @@ std::unique_ptr<AST::Expression> Parser::parseComparisonExpression() {
         false);
 }
 
-std::unique_ptr<AST::Expression> Parser::parseExpression() { return parseComparisonExpression(); }
+AST::Expression* Parser::parseExpression() { return parseComparisonExpression(); }
 
-std::unique_ptr<AST::VariableDefinition> Parser::parseVariableDefinition() {
+AST::VariableDefinition* Parser::parseVariableDefinition() {
     const Token let = EXPECT_OR_RETURN_NULLPTR(TokenKind::LET);
 
     const bool isMutable = advanceIf(TokenKind::MUT);
@@ -337,12 +336,11 @@ std::unique_ptr<AST::VariableDefinition> Parser::parseVariableDefinition() {
 
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::VariableDefinition>(std::move(identifier), typeID, isMutable,
-                                                     std::move(value), let.byteOffsetStart(),
-                                                     semi.byteOffsetEnd(), fileID_);
+    return astArena_.allocate<AST::VariableDefinition>(
+        identifier, typeID, isMutable, value, let.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
 }
 
-std::unique_ptr<AST::Statement> Parser::parseAssignmentOrExpressionStatement() {
+AST::Statement* Parser::parseAssignmentOrExpressionStatement() {
     auto expression = parseExpression();
     if (!expression) return nullptr;
 
@@ -357,18 +355,18 @@ std::unique_ptr<AST::Statement> Parser::parseAssignmentOrExpressionStatement() {
         const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
         const uint32_t startIndex = expression->sourceStartIndex();
-        return std::make_unique<AST::Assignment>(std::move(expression), op, std::move(right),
-                                                 startIndex, semi.byteOffsetEnd(), fileID_);
+        return astArena_.allocate<AST::Assignment>(expression, op, right, startIndex,
+                                                   semi.byteOffsetEnd(), fileID_);
     } else {
         // Expression statement
         const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
         const uint32_t startIndex = expression->sourceStartIndex();
-        return std::make_unique<AST::ExpressionStatement>(std::move(expression), startIndex,
-                                                          semi.byteOffsetEnd(), fileID_);
+        return astArena_.allocate<AST::ExpressionStatement>(expression, startIndex,
+                                                            semi.byteOffsetEnd(), fileID_);
     }
 }
 
-std::unique_ptr<AST::BlockStatement> Parser::parseElseClause() {
+AST::BlockStatement* Parser::parseElseClause() {
     if (advanceIf(TokenKind::ELSE)) {
         EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);
         return parseBlockStatement();
@@ -381,16 +379,16 @@ std::unique_ptr<AST::BlockStatement> Parser::parseElseClause() {
         const uint32_t start = elif->sourceStartIndex();
         const uint32_t end = elif->sourceEndIndex();
 
-        std::vector<std::unique_ptr<AST::Statement>> stmts;
-        stmts.push_back(std::move(elif));
+        std::vector<AST::Statement*> stmts;
+        stmts.push_back(elif);
 
-        return std::make_unique<AST::BlockStatement>(std::move(stmts), start, end, fileID_);
+        return astArena_.allocate<AST::BlockStatement>(std::move(stmts), start, end, fileID_);
     }
 
     std::unreachable();
 }
 
-std::unique_ptr<AST::IfStatement> Parser::parseIfOrElif(const TokenKind kind) {
+AST::IfStatement* Parser::parseIfOrElif(const TokenKind kind) {
     const Token keywordTok = EXPECT_OR_RETURN_NULLPTR(kind);
 
     auto condition = parseExpression();
@@ -401,23 +399,20 @@ std::unique_ptr<AST::IfStatement> Parser::parseIfOrElif(const TokenKind kind) {
     auto body = parseBlockStatement();
     if (!body) return nullptr;
 
-    std::unique_ptr<AST::BlockStatement> elseClause;
+    const AST::BlockStatement* elseClause = nullptr;
     if (peek().kind() == TokenKind::ELIF || peek().kind() == TokenKind::ELSE) {
         elseClause = parseElseClause();
         if (!elseClause) return nullptr;
     }
 
     const uint32_t endIndex = elseClause ? elseClause->sourceEndIndex() : body->sourceEndIndex();
-    return std::make_unique<AST::IfStatement>(std::move(condition), std::move(body),
-                                              std::move(elseClause), keywordTok.byteOffsetStart(),
-                                              endIndex, fileID_);
+    return astArena_.allocate<AST::IfStatement>(condition, body, elseClause,
+                                                keywordTok.byteOffsetStart(), endIndex, fileID_);
 }
 
-std::unique_ptr<AST::IfStatement> Parser::parseIfStatement() {
-    return parseIfOrElif(TokenKind::IF);
-}
+AST::IfStatement* Parser::parseIfStatement() { return parseIfOrElif(TokenKind::IF); }
 
-std::unique_ptr<AST::WhileStatement> Parser::parseWhileStatement() {
+AST::WhileStatement* Parser::parseWhileStatement() {
     const Token whileTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::WHILE);
 
     auto condition = parseExpression();
@@ -429,28 +424,28 @@ std::unique_ptr<AST::WhileStatement> Parser::parseWhileStatement() {
     if (!body) return nullptr;
 
     const uint32_t endIndex = body->sourceEndIndex();
-    return std::make_unique<AST::WhileStatement>(std::move(condition), std::move(body),
-                                                 whileTok.byteOffsetStart(), endIndex, fileID_);
+    return astArena_.allocate<AST::WhileStatement>(condition, body, whileTok.byteOffsetStart(),
+                                                   endIndex, fileID_);
 }
 
-std::unique_ptr<AST::BreakStatement> Parser::parseBreakStatement() {
+AST::BreakStatement* Parser::parseBreakStatement() {
     const Token breakTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::BREAK);
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
-    return std::make_unique<AST::BreakStatement>(breakTok.byteOffsetStart(),
-                                                 semiTok.byteOffsetEnd(), fileID_);
+    return astArena_.allocate<AST::BreakStatement>(breakTok.byteOffsetStart(),
+                                                   semiTok.byteOffsetEnd(), fileID_);
 }
 
-std::unique_ptr<AST::ContinueStatement> Parser::parseContinueStatement() {
+AST::ContinueStatement* Parser::parseContinueStatement() {
     const Token continueTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::CONTINUE);
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
-    return std::make_unique<AST::ContinueStatement>(continueTok.byteOffsetStart(),
-                                                    semiTok.byteOffsetEnd(), fileID_);
+    return astArena_.allocate<AST::ContinueStatement>(continueTok.byteOffsetStart(),
+                                                      semiTok.byteOffsetEnd(), fileID_);
 }
 
-std::unique_ptr<AST::ReturnStatement> Parser::parseReturnStatement() {
+AST::ReturnStatement* Parser::parseReturnStatement() {
     const Token returnTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::RETURN);
 
-    std::unique_ptr<AST::Expression> returnValue;
+    const AST::Expression* returnValue = nullptr;
     if (peek().kind() != TokenKind::SEMICOLON) {
         returnValue = parseExpression();
         if (!returnValue) return nullptr;
@@ -458,26 +453,26 @@ std::unique_ptr<AST::ReturnStatement> Parser::parseReturnStatement() {
 
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::ReturnStatement>(
-        std::move(returnValue), returnTok.byteOffsetStart(), semiTok.byteOffsetEnd(), fileID_);
+    return astArena_.allocate<AST::ReturnStatement>(returnValue, returnTok.byteOffsetStart(),
+                                                    semiTok.byteOffsetEnd(), fileID_);
 }
 
-std::unique_ptr<AST::ExitStatement> Parser::parseExitStatement() {
+AST::ExitStatement* Parser::parseExitStatement() {
     const Token exitTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::EXIT);
     auto exitCode = parseExpression();
     if (!exitCode) return nullptr;
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
-    return std::make_unique<AST::ExitStatement>(std::move(exitCode), exitTok.byteOffsetStart(),
-                                                semiTok.byteOffsetEnd(), fileID_);
+    return astArena_.allocate<AST::ExitStatement>(exitCode, exitTok.byteOffsetStart(),
+                                                  semiTok.byteOffsetEnd(), fileID_);
 }
 
-std::unique_ptr<AST::BlockStatement> Parser::parseBlockStatement() {
+AST::BlockStatement* Parser::parseBlockStatement() {
     const Token lBrace = EXPECT_OR_RETURN_NULLPTR(TokenKind::LEFT_BRACE);
 
-    std::vector<std::unique_ptr<AST::Statement>> statements;
+    std::vector<AST::Statement*> statements;
     while (peek().kind() != TokenKind::EOF_ && peek().kind() != TokenKind::RIGHT_BRACE) {
         if (auto stmt = parseStatement()) {
-            statements.push_back(std::move(stmt));
+            statements.push_back(stmt);
         } else {
             // Error recovery: skip until top level ';' or '}' that closes this block
             int depth = 0;
@@ -499,11 +494,11 @@ std::unique_ptr<AST::BlockStatement> Parser::parseBlockStatement() {
 
     const Token rBrace = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACE);
 
-    return std::make_unique<AST::BlockStatement>(std::move(statements), lBrace.byteOffsetStart(),
-                                                 rBrace.byteOffsetEnd(), fileID_);
+    return astArena_.allocate<AST::BlockStatement>(std::move(statements), lBrace.byteOffsetStart(),
+                                                   rBrace.byteOffsetEnd(), fileID_);
 }
 
-std::unique_ptr<AST::Statement> Parser::parseStatement() {
+AST::Statement* Parser::parseStatement() {
     const TokenKind tokenKind = peek().kind();
 
     if (tokenKind == TokenKind::LET) return parseVariableDefinition();
@@ -517,7 +512,7 @@ std::unique_ptr<AST::Statement> Parser::parseStatement() {
     return parseAssignmentOrExpressionStatement();
 }
 
-std::unique_ptr<AST::VariableDefinition> Parser::parseFunctionParameter() {
+AST::VariableDefinition* Parser::parseFunctionParameter() {
     const uint32_t sourceStartIndex = peek().byteOffsetStart();
 
     const bool isMutable = advanceIf(TokenKind::MUT);
@@ -532,8 +527,8 @@ std::unique_ptr<AST::VariableDefinition> Parser::parseFunctionParameter() {
     const TypeID typeID = typeManager_.createType(*parsedType);
 
     const uint32_t endIndex = identifier->sourceEndIndex();
-    return std::make_unique<AST::VariableDefinition>(std::move(identifier), typeID, isMutable,
-                                                     sourceStartIndex, endIndex, fileID_);
+    return astArena_.allocate<AST::VariableDefinition>(identifier, typeID, isMutable,
+                                                       sourceStartIndex, endIndex, fileID_);
 }
 
 std::unique_ptr<ParsedFunctionSignature> Parser::parseFunctionSignature() {
@@ -549,12 +544,11 @@ std::unique_ptr<ParsedFunctionSignature> Parser::parseFunctionSignature() {
     const auto returnType = maybeParseTypeAnnotation(TokenKind::RIGHT_ARROW, Type::voidType());
     if (!returnType) return nullptr;
 
-    return std::make_unique<ParsedFunctionSignature>(std::move(identifier),
-                                                     std::move(parameters.value()),
+    return std::make_unique<ParsedFunctionSignature>(identifier, std::move(parameters.value()),
                                                      typeManager_.createType(returnType.value()));
 }
 
-std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parseExternalFunctionDeclaration() {
+AST::ExternalFunctionDeclaration* Parser::parseExternalFunctionDeclaration() {
     const Token externTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::EXTERN);
     EXPECT_OR_RETURN_NULLPTR(TokenKind::FN);
 
@@ -563,12 +557,12 @@ std::unique_ptr<AST::ExternalFunctionDeclaration> Parser::parseExternalFunctionD
 
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
-    return std::make_unique<AST::ExternalFunctionDeclaration>(
-        std::move(signature->identifier_), std::move(signature->parameters_),
-        signature->returnTypeID_, externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
+    return astArena_.allocate<AST::ExternalFunctionDeclaration>(
+        signature->identifier_, std::move(signature->parameters_), signature->returnTypeID_,
+        externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
 }
 
-std::unique_ptr<AST::FunctionDefinition> Parser::parseFunctionDefinition() {
+AST::FunctionDefinition* Parser::parseFunctionDefinition() {
     const uint32_t sourceStartIndex = peek().byteOffsetStart();
 
     const bool isExported = advanceIf(TokenKind::EXPORT);
@@ -583,17 +577,17 @@ std::unique_ptr<AST::FunctionDefinition> Parser::parseFunctionDefinition() {
     if (!body) return nullptr;
 
     const uint32_t endIndex = body->sourceEndIndex();
-    return std::make_unique<AST::FunctionDefinition>(
-        std::move(signature->identifier_), std::move(signature->parameters_),
-        signature->returnTypeID_, isExported, std::move(body), sourceStartIndex, endIndex, fileID_);
+    return astArena_.allocate<AST::FunctionDefinition>(
+        signature->identifier_, std::move(signature->parameters_), signature->returnTypeID_,
+        isExported, body, sourceStartIndex, endIndex, fileID_);
 }
 
-std::unique_ptr<AST::Program> Parser::parseProgram() {
-    auto program = std::make_unique<AST::Program>(fileID_);
+AST::Program* Parser::parseProgram() {
+    auto program = astArena_.allocate<AST::Program>(fileID_);
 
     while (peek().kind() == TokenKind::EXTERN) {
         if (auto externFunction = parseExternalFunctionDeclaration()) {
-            program->appendExternFunction(std::move(externFunction));
+            program->appendExternFunction(externFunction);
         } else {
             // Error recovery: skip to the next semicolon
             while (peek().kind() != TokenKind::SEMICOLON && peek().kind() != TokenKind::EOF_) {
@@ -605,7 +599,7 @@ std::unique_ptr<AST::Program> Parser::parseProgram() {
 
     while (peek().kind() != TokenKind::EOF_) {
         if (auto functionDefinition = parseFunctionDefinition()) {
-            program->appendFunction(std::move(functionDefinition));
+            program->appendFunction(functionDefinition);
 
         } else {
             // Error recovery: skip to the next function definition

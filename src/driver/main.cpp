@@ -8,7 +8,6 @@
 #include <format>
 #include <fstream>
 #include <iostream>
-#include <memory>
 #include <print>
 #include <sstream>
 #include <string>
@@ -119,7 +118,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
 
     TypeManager typeManager(diagnosticsEngine);
 
-    const std::unique_ptr<AST::Program> ast = [&] {
+    AST::Program* const ast = [&] {
         const Stage stage("Parsing", verbose);
 
         Parser parser(diagnosticsEngine, fileID, fileContents, typeManager);

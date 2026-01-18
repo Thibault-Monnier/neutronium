@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -64,7 +63,7 @@ struct Node {
    protected:
     uint32_t sourceStartIndex_;
     uint32_t sourceEndIndex_;
-    FileID fileID_;
+    const FileID fileID_;
 };
 
 struct Expression : Node {
@@ -72,7 +71,7 @@ struct Expression : Node {
                const FileID fileID, const TypeID typeID)
         : Node{kind, sourceStartIndex, sourceEndIndex, fileID}, typeID_(typeID) {}
 
-    TypeID typeID_;
+    const TypeID typeID_;
 };
 
 struct NumberLiteral final : Expression {
@@ -92,12 +91,12 @@ struct BooleanLiteral final : Expression {
 };
 
 struct ArrayLiteral final : Expression {
-    ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements, const uint32_t start,
-                 const uint32_t end, const FileID fileID, const TypeID typeID)
+    ArrayLiteral(std::vector<Expression*> elements, const uint32_t start, const uint32_t end,
+                 const FileID fileID, const TypeID typeID)
         : Expression{NodeKind::ARRAY_LITERAL, start, end, fileID, typeID},
           elements_(std::move(elements)) {}
 
-    const std::vector<std::unique_ptr<Expression>> elements_;
+    const std::vector<Expression*> elements_;
 };
 
 struct Identifier final : Expression {
@@ -109,51 +108,50 @@ struct Identifier final : Expression {
 };
 
 struct ArrayAccess final : Expression {
-    ArrayAccess(std::unique_ptr<Expression> base, std::unique_ptr<Expression> index,
-                const uint32_t start, const uint32_t end, const FileID fileID, const TypeID typeID)
+    ArrayAccess(const Expression* base, const Expression* index, const uint32_t start,
+                const uint32_t end, const FileID fileID, const TypeID typeID)
         : Expression{NodeKind::ARRAY_ACCESS, start, end, fileID, typeID},
-          base_(std::move(base)),
-          index_(std::move(index)) {}
+          base_(base),
+          index_(index) {}
 
-    std::unique_ptr<Expression> base_;
-    std::unique_ptr<Expression> index_;
+    const Expression* base_;
+    const Expression* index_;
 };
 
 struct FunctionCall final : Expression {
-    FunctionCall(std::unique_ptr<Identifier> callee,
-                 std::vector<std::unique_ptr<Expression>> arguments, const uint32_t start,
+    FunctionCall(const Identifier* callee, std::vector<Expression*> arguments, const uint32_t start,
                  const uint32_t end, const FileID fileID, const TypeID typeID)
         : Expression{NodeKind::FUNCTION_CALL, start, end, fileID, typeID},
-          callee_(std::move(callee)),
+          callee_(callee),
           arguments_(std::move(arguments)) {}
 
-    std::unique_ptr<Identifier> callee_;
-    const std::vector<std::unique_ptr<Expression>> arguments_;
+    const Identifier* callee_;
+    const std::vector<Expression*> arguments_;
 };
 
 struct UnaryExpression final : Expression {
-    UnaryExpression(const Operator op, std::unique_ptr<Expression> operand, const uint32_t start,
+    UnaryExpression(const Operator op, const Expression* operand, const uint32_t start,
                     const uint32_t end, const FileID fileID, const TypeID typeID)
         : Expression{NodeKind::UNARY_EXPRESSION, start, end, fileID, typeID},
           operator_(op),
-          operand_(std::move(operand)) {}
+          operand_(operand) {}
 
     const Operator operator_;
-    std::unique_ptr<Expression> operand_;
+    const Expression* operand_;
 };
 
 struct BinaryExpression final : Expression {
-    BinaryExpression(std::unique_ptr<Expression> left, const Operator op,
-                     std::unique_ptr<Expression> right, const uint32_t start, const uint32_t end,
-                     const FileID fileID, const TypeID typeID)
+    BinaryExpression(const Expression* left, const Operator op, const Expression* right,
+                     const uint32_t start, const uint32_t end, const FileID fileID,
+                     const TypeID typeID)
         : Expression{NodeKind::BINARY_EXPRESSION, start, end, fileID, typeID},
-          left_(std::move(left)),
+          left_(left),
           operator_(op),
-          right_(std::move(right)) {}
+          right_(right) {}
 
-    std::unique_ptr<Expression> left_;
+    const Expression* left_;
     const Operator operator_;
-    std::unique_ptr<Expression> right_;
+    const Expression* right_;
 };
 
 struct Statement : Node {
@@ -161,83 +159,81 @@ struct Statement : Node {
 };
 
 struct BlockStatement final : Statement {
-    explicit BlockStatement(std::vector<std::unique_ptr<Statement>> body, const uint32_t start,
-                            const uint32_t end, const FileID fileID)
+    explicit BlockStatement(std::vector<Statement*> body, const uint32_t start, const uint32_t end,
+                            const FileID fileID)
         : Statement{NodeKind::BLOCK_STATEMENT, start, end, fileID}, body_(std::move(body)) {}
 
-    std::vector<std::unique_ptr<Statement>> body_;
+    const std::vector<Statement*> body_;
 };
 
 struct VariableDefinition final : Statement {
-    VariableDefinition(std::unique_ptr<Identifier> identifier, const TypeID typeID,
-                       const bool isMutable, const uint32_t start, const uint32_t end,
-                       const FileID fileID)
-        : Statement{NodeKind::VARIABLE_DEFINITION, start, end, fileID},
-          identifier_(std::move(identifier)),
-          typeID_(typeID),
-          isMutable_(isMutable) {}
-
-    VariableDefinition(std::unique_ptr<Identifier> identifier, const TypeID typeID,
-                       const bool isMutable, std::unique_ptr<Expression> value,
+    VariableDefinition(const Identifier* identifier, const TypeID typeID, const bool isMutable,
                        const uint32_t start, const uint32_t end, const FileID fileID)
         : Statement{NodeKind::VARIABLE_DEFINITION, start, end, fileID},
-          identifier_(std::move(identifier)),
+          identifier_(identifier),
           typeID_(typeID),
           isMutable_(isMutable),
-          value_(std::move(value)) {}
+          value_(nullptr) {}
 
-    std::unique_ptr<Identifier> identifier_;
+    VariableDefinition(const Identifier* identifier, const TypeID typeID, const bool isMutable,
+                       const Expression* value, const uint32_t start, const uint32_t end,
+                       const FileID fileID)
+        : Statement{NodeKind::VARIABLE_DEFINITION, start, end, fileID},
+          identifier_(identifier),
+          typeID_(typeID),
+          isMutable_(isMutable),
+          value_(value) {}
+
+    const Identifier* identifier_;
     const TypeID typeID_;
     const bool isMutable_;
-    std::unique_ptr<Expression> value_;
+    const Expression* value_;
 };
 
 struct Assignment final : Statement {
-    Assignment(std::unique_ptr<Expression> place, const Operator op,
-               std::unique_ptr<Expression> value, const uint32_t start, const uint32_t end,
-               const FileID fileID)
+    Assignment(const Expression* place, const Operator op, const Expression* value,
+               const uint32_t start, const uint32_t end, const FileID fileID)
         : Statement{NodeKind::ASSIGNMENT, start, end, fileID},
-          place_(std::move(place)),
+          place_(place),
           operator_(op),
-          value_(std::move(value)) {}
+          value_(value) {}
 
-    std::unique_ptr<Expression> place_;
+    const Expression* place_;
     const Operator operator_;
-    std::unique_ptr<Expression> value_;
+    const Expression* value_;
 };
 
 struct ExpressionStatement final : Statement {
-    ExpressionStatement(std::unique_ptr<Expression> expression, const uint32_t start,
-                        const uint32_t end, const FileID fileID)
-        : Statement{NodeKind::EXPRESSION_STATEMENT, start, end, fileID},
-          expression_(std::move(expression)) {}
+    ExpressionStatement(const Expression* expression, const uint32_t start, const uint32_t end,
+                        const FileID fileID)
+        : Statement{NodeKind::EXPRESSION_STATEMENT, start, end, fileID}, expression_(expression) {}
 
-    std::unique_ptr<Expression> expression_;
+    const Expression* expression_;
 };
 
 struct IfStatement final : Statement {
-    IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
-                std::unique_ptr<BlockStatement> elseClause, const uint32_t start,
-                const uint32_t end, const FileID fileID)
+    IfStatement(const Expression* condition, const BlockStatement* body,
+                const BlockStatement* elseClause, const uint32_t start, const uint32_t end,
+                const FileID fileID)
         : Statement{NodeKind::IF_STATEMENT, start, end, fileID},
-          condition_(std::move(condition)),
-          body_(std::move(body)),
-          elseClause_(std::move(elseClause)) {}
+          condition_(condition),
+          body_(body),
+          elseClause_(elseClause) {}
 
-    std::unique_ptr<Expression> condition_;
-    std::unique_ptr<BlockStatement> body_;
-    std::unique_ptr<BlockStatement> elseClause_;
+    const Expression* condition_;
+    const BlockStatement* body_;
+    const BlockStatement* elseClause_;
 };
 
 struct WhileStatement final : Statement {
-    WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<BlockStatement> body,
-                   const uint32_t start, const uint32_t end, const FileID fileID)
+    WhileStatement(const Expression* condition, const BlockStatement* body, const uint32_t start,
+                   const uint32_t end, const FileID fileID)
         : Statement{NodeKind::WHILE_STATEMENT, start, end, fileID},
-          condition_(std::move(condition)),
-          body_(std::move(body)) {}
+          condition_(condition),
+          body_(body) {}
 
-    std::unique_ptr<Expression> condition_;
-    std::unique_ptr<BlockStatement> body_;
+    const Expression* condition_;
+    const BlockStatement* body_;
 };
 
 struct BreakStatement final : Statement {
@@ -251,72 +247,69 @@ struct ContinueStatement final : Statement {
 };
 
 struct ExitStatement final : Statement {
-    ExitStatement(std::unique_ptr<Expression> exitCode, const uint32_t start, const uint32_t end,
+    ExitStatement(const Expression* exitCode, const uint32_t start, const uint32_t end,
                   const FileID fileID)
-        : Statement{NodeKind::EXIT_STATEMENT, start, end, fileID}, exitCode_(std::move(exitCode)) {}
+        : Statement{NodeKind::EXIT_STATEMENT, start, end, fileID}, exitCode_(exitCode) {}
 
-    std::unique_ptr<Expression> exitCode_;
+    const Expression* exitCode_;
 };
 
 struct ReturnStatement final : Statement {
-    ReturnStatement(std::unique_ptr<Expression> returnValue, const uint32_t start,
-                    const uint32_t end, const FileID fileID)
-        : Statement{NodeKind::RETURN_STATEMENT, start, end, fileID},
-          returnValue_(std::move(returnValue)) {}
+    ReturnStatement(const Expression* returnValue, const uint32_t start, const uint32_t end,
+                    const FileID fileID)
+        : Statement{NodeKind::RETURN_STATEMENT, start, end, fileID}, returnValue_(returnValue) {}
 
-    std::unique_ptr<Expression> returnValue_;
+    const Expression* returnValue_;
 };
 
 struct ExternalFunctionDeclaration final : Node {
-    ExternalFunctionDeclaration(std::unique_ptr<Identifier> identifier,
-                                std::vector<std::unique_ptr<VariableDefinition>> parameters,
+    ExternalFunctionDeclaration(const Identifier* identifier,
+                                std::vector<VariableDefinition*> parameters,
                                 const TypeID returnTypeID, const uint32_t start, const uint32_t end,
                                 const FileID fileID)
         : Node{NodeKind::EXTERNAL_FUNCTION_DECLARATION, start, end, fileID},
-          identifier_(std::move(identifier)),
+          identifier_(identifier),
           parameters_(std::move(parameters)),
           returnTypeID_(returnTypeID) {}
 
-    std::unique_ptr<Identifier> identifier_;
-    const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
+    const Identifier* identifier_;
+    const std::vector<VariableDefinition*> parameters_;
     const TypeID returnTypeID_;
 };
 
 struct FunctionDefinition final : Node {
-    FunctionDefinition(std::unique_ptr<Identifier> identifier,
-                       std::vector<std::unique_ptr<VariableDefinition>> parameters,
-                       const TypeID returnTypeID, const bool isExported,
-                       std::unique_ptr<BlockStatement> body, const uint32_t start,
-                       const uint32_t end, const FileID fileID)
+    FunctionDefinition(const Identifier* identifier, std::vector<VariableDefinition*> parameters,
+                       const TypeID returnTypeID, const bool isExported, const BlockStatement* body,
+                       const uint32_t start, const uint32_t end, const FileID fileID)
         : Node{NodeKind::FUNCTION_DEFINITION, start, end, fileID},
-          identifier_(std::move(identifier)),
+          identifier_(identifier),
           parameters_(std::move(parameters)),
           returnTypeID_(returnTypeID),
           isExported_(isExported),
-          body_(std::move(body)) {}
+          body_(body) {}
 
-    std::unique_ptr<Identifier> identifier_;
-    const std::vector<std::unique_ptr<VariableDefinition>> parameters_;
+    const Identifier* identifier_;
+    const std::vector<VariableDefinition*> parameters_;
     const TypeID returnTypeID_;
     const bool isExported_;
-    std::unique_ptr<BlockStatement> body_;
+    const BlockStatement* body_;
 };
 
 struct Program final : Node {
     explicit Program(const FileID fileID) : Node{NodeKind::PROGRAM, 0, 0, fileID} {}
 
-    void appendFunction(std::unique_ptr<FunctionDefinition> function) {
-        functions_.emplace_back(std::move(function));
+    void appendFunction(FunctionDefinition* function) {
+        functions_.emplace_back(function);
         sourceEndIndex_ = functions_.back()->sourceEndIndex();
     }
 
-    void appendExternFunction(std::unique_ptr<ExternalFunctionDeclaration> externFunction) {
-        externalFunctions_.emplace_back(std::move(externFunction));
+    void appendExternFunction(ExternalFunctionDeclaration* externFunction) {
+        externalFunctions_.emplace_back(externFunction);
         sourceEndIndex_ = externalFunctions_.back()->sourceEndIndex();
     }
 
-    std::vector<std::unique_ptr<ExternalFunctionDeclaration>> externalFunctions_;
-    std::vector<std::unique_ptr<FunctionDefinition>> functions_;
+    std::vector<ExternalFunctionDeclaration*> externalFunctions_;
+    std::vector<FunctionDefinition*> functions_;
 };
 
 Operator tokenKindToOperator(TokenKind tokenKind);
