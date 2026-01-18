@@ -24,7 +24,7 @@ enum class TypeKind : uint8_t {
  *
  * The `Type` class provides functionality to define and manage different types, such as
  * primitive types (e.g., integers, booleans) or array types. It supports initialization
- * with various constructors and supports the concept of type families for primitive types².
+ * with various constructors and supports the concept of type families for primitive types.
  */
 class Type {
    public:
