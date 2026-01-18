@@ -2,4 +2,4 @@
 
 #include <cstddef>
 
-using FileID = std::size_t;
+using FileID = std::uint16_t;
