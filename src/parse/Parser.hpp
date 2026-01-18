@@ -28,11 +28,12 @@ struct ParsedFunctionSignature {
 class Parser {
    public:
     explicit Parser(DiagnosticsEngine& diagnosticsEngine, const FileID fileID,
-                    const std::string_view sourceCode, TypeManager& typeManager)
+                    const std::string_view sourceCode, ASTArena& astArena, TypeManager& typeManager)
         : lexer_(sourceCode, diagnosticsEngine, fileID),
           diagnosticsEngine_(diagnosticsEngine),
           fileID_(fileID),
           sourceCode_(sourceCode),
+          astArena_(astArena),
           typeManager_(typeManager) {
         token_ = lexer_.lex();
     }
@@ -46,7 +47,7 @@ class Parser {
     FileID fileID_;
     std::string_view sourceCode_;
 
-    ASTArena astArena_;
+    ASTArena& astArena_;
 
     TypeManager& typeManager_;
 
@@ -66,8 +67,7 @@ class Parser {
      * @return nullptr of type T.
      */
     template <class T>
-    [[nodiscard]] T* emitError(const std::string& errorMessage,
-                               const Token token) const {
+    [[nodiscard]] T* emitError(const std::string& errorMessage, const Token token) const {
         emitError(errorMessage, token);
         return nullptr;
     }
@@ -84,8 +84,7 @@ class Parser {
     void expectError(TokenKind expected) const;
     [[nodiscard]] std::unique_ptr<Type> invalidTypeSpecifierError() const;
     [[nodiscard]] AST::Expression* invalidPrimaryExpressionError() const;
-    [[nodiscard]] AST::NumberLiteral* invalidNumberLiteralError(
-        const Token& token) const;
+    [[nodiscard]] AST::NumberLiteral* invalidNumberLiteralError(const Token& token) const;
 
     // ---------------
     // Parsing helpers
@@ -106,10 +105,9 @@ class Parser {
     }
 
     template <class T>
-    std::optional<std::vector<T*>> parseCommaSeparatedList(
-        TokenKind endDelimiter, const std::function<T*()>& parseElement);
-    std::optional<std::vector<AST::Expression*>> parseExpressionList(
-        TokenKind endDelimiter);
+    std::optional<std::vector<T*>> parseCommaSeparatedList(TokenKind endDelimiter,
+                                                           const std::function<T*()>& parseElement);
+    std::optional<std::vector<AST::Expression*>> parseExpressionList(TokenKind endDelimiter);
 
     static std::optional<Type> tryParsePrimitiveType(TokenKind tokenKind);
     std::unique_ptr<Type> parseTypeSpecifier();
@@ -129,9 +127,9 @@ class Parser {
     AST::Expression* parsePrimaryExpression();
     AST::Expression* parsePostfixExpression();
     AST::Expression* parseUnaryExpression();
-    AST::Expression* parseBinaryExpression(
-        const std::function<AST::Expression*()>& parseOperand,
-        std::initializer_list<AST::Operator> allowedOps, bool allowMultiple);
+    AST::Expression* parseBinaryExpression(const std::function<AST::Expression*()>& parseOperand,
+                                           std::initializer_list<AST::Operator> allowedOps,
+                                           bool allowMultiple);
     AST::Expression* parseMultiplicativeExpression();
     AST::Expression* parseAdditiveExpression();
     AST::Expression* parseComparisonExpression();

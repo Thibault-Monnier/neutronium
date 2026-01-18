@@ -32,7 +32,7 @@
 #endif
 
 AST::Program* Parser::parse() {
-    auto ast = parseProgram();
+    const auto ast = parseProgram();
 
     if (diagnosticsEngine_.hasErrors()) {
         diagnosticsEngine_.emit();
@@ -583,10 +583,10 @@ AST::FunctionDefinition* Parser::parseFunctionDefinition() {
 }
 
 AST::Program* Parser::parseProgram() {
-    auto program = astArena_.allocate<AST::Program>(fileID_);
+    const auto program = astArena_.allocate<AST::Program>(fileID_);
 
     while (peek().kind() == TokenKind::EXTERN) {
-        if (auto externFunction = parseExternalFunctionDeclaration()) {
+        if (const auto externFunction = parseExternalFunctionDeclaration()) {
             program->appendExternFunction(externFunction);
         } else {
             // Error recovery: skip to the next semicolon
@@ -598,7 +598,7 @@ AST::Program* Parser::parseProgram() {
     }
 
     while (peek().kind() != TokenKind::EOF_) {
-        if (auto functionDefinition = parseFunctionDefinition()) {
+        if (const auto functionDefinition = parseFunctionDefinition()) {
             program->appendFunction(functionDefinition);
 
         } else {

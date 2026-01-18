@@ -17,6 +17,7 @@
 
 #include "Cli.hpp"
 #include "ast/AST.hpp"
+#include "ast/ASTArena.hpp"
 #include "ast/Debug.hpp"
 #include "codegen/Generator.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
@@ -116,12 +117,13 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         return;
     }
 
+    ASTArena astArena;
     TypeManager typeManager(diagnosticsEngine);
 
     AST::Program* const ast = [&] {
         const Stage stage("Parsing", verbose);
 
-        Parser parser(diagnosticsEngine, fileID, fileContents, typeManager);
+        Parser parser(diagnosticsEngine, fileID, fileContents, astArena, typeManager);
         return parser.parse();
     }();
 
