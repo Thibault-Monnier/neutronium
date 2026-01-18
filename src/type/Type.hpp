@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <string>
-#include <vector>
 
 #include "Primitive.hpp"
 #include "PrimitiveTypeFamily.hpp"
@@ -28,7 +29,7 @@ enum class TypeKind : uint8_t {
 class Type {
    public:
     Type(const Primitive::Kind t, const PrimitiveTypeFamily* family, const TypeKind kind)
-        : kind_(kind), family_(family), primitive_(t) {
+        : kind_(kind), primitive_(t), family_(family) {
         assert(family_->isInFamily(t) && "Type must be in its own family");
         initializeTraits();
     }
@@ -268,10 +269,7 @@ class Type {
      * @return True if the specified trait is present, false otherwise.
      */
     [[nodiscard]] bool hasTrait(const Trait trait) const {
-        for (const auto& t : traits_) {
-            if (t == trait) return true;
-        }
-        return false;
+        return (traits_ & static_cast<uint16_t>(trait)) != 0;
     }
 
    private:
@@ -285,13 +283,14 @@ class Type {
     }
 
     TypeKind kind_;
-    const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
     Primitive::Kind primitive_;
 
-    TypeID arrayElementTypeID_{0};
-    std::size_t arrayLength_{0};
+    uint16_t traits_;
 
-    std::vector<Trait> traits_;
+    TypeID arrayElementTypeID_{0};
+
+    const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
+    std::size_t arrayLength_{0};
 
     /**
      * @brief Initializes the traits of the type based on its kind and primitive kind.
@@ -306,10 +305,10 @@ class Type {
                 traits_ = Primitive::defaultTraits(primitive_);
                 break;
             case TypeKind::ARRAY:
-                traits_ = {Trait::EQ, Trait::SUBSCRIPT};
+                traits_ = Trait::EQ | Trait::SUBSCRIPT;
                 break;
             case TypeKind::UNKNOWN:
-                traits_.clear();
+                traits_ = 0;
                 break;
         }
     }
