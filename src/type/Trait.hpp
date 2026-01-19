@@ -2,29 +2,38 @@
 
 #include <cstdint>
 #include <optional>
-#include <string>
+#include <string_view>
+#include <type_traits>
 
 #include "ast/Operator.hpp"
 
-enum class Trait : uint8_t {
+enum class Trait : uint16_t {
     // Arithmetic traits
-    ADD,
-    SUB,
-    MUL,
-    DIV,
+    ADD = 1 << 0,
+    SUB = 1 << 1,
+    MUL = 1 << 2,
+    DIV = 1 << 3,
 
     // Logical traits
-    NOT,
+    NOT = 1 << 4,
 
     // Comparison traits
-    EQ,
-    LT,
-    LTE,
-    GT,
-    GTE,
+    EQ = 1 << 5,
+    LT = 1 << 6,
+    LTE = 1 << 7,
+    GT = 1 << 8,
+    GTE = 1 << 9,
 
-    SUBSCRIPT,
+    SUBSCRIPT = 1 << 10,
 };
+
+inline uint16_t operator|(Trait a, Trait b) {
+    return static_cast<uint16_t>(a) | static_cast<uint16_t>(b);
+}
+
+inline uint16_t operator|(const std::underlying_type_t<Trait> a, Trait b) {
+    return a | static_cast<std::underlying_type_t<Trait>>(b);
+}
 
 [[nodiscard]] std::optional<Trait> traitFromOperator(AST::Operator op);
 

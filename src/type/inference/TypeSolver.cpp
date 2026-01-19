@@ -46,8 +46,6 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sour
     if (dstType.kind() != srcType.kind()) return false;
 
     switch (dstType.kind()) {
-        case TypeKind::UNKNOWN:
-            std::unreachable();
         case TypeKind::PRIMITIVE:
             return dstType.mergeWith(srcType, typeManager_);
         case TypeKind::ARRAY: {
@@ -56,8 +54,9 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sour
                 dstType.arrayElementTypeId(), srcType.arrayElementTypeId(), sourceNode);
             return true;
         }
+        default:
+            std::unreachable();
     }
-    std::unreachable();
 }
 
 void TypeSolver::prepareUnionFind() {
