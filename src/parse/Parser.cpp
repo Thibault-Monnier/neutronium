@@ -167,7 +167,7 @@ AST::ArrayLiteral* Parser::parseArrayLiteral() {
     if (!elements) return nullptr;
     const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
-    return astArena_.insert<AST::ArrayLiteral>(std::move(elements.value()),
+    return astArena_.insert<AST::ArrayLiteral>(insertVector(std::move(elements.value())),
                                                lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
                                                fileID_, generateAnyType());
 }
@@ -183,9 +183,9 @@ AST::Expression* Parser::parseIdentifierOrFunctionCall() {
         const Token rParen = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
 
         const uint32_t startIndex = ident->sourceStartIndex();
-        return astArena_.insert<AST::FunctionCall>(ident, std::move(arguments.value()), startIndex,
-                                                   rParen.byteOffsetEnd(), fileID_,
-                                                   generateAnyType());
+        return astArena_.insert<AST::FunctionCall>(
+            ident, insertVector(std::move(arguments.value())), startIndex, rParen.byteOffsetEnd(),
+            fileID_, generateAnyType());
     } else {
         // Identifier
         return ident;
@@ -382,7 +382,8 @@ AST::BlockStatement* Parser::parseElseClause() {
         std::vector<AST::Statement*> stmts;
         stmts.push_back(elif);
 
-        return astArena_.insert<AST::BlockStatement>(std::move(stmts), start, end, fileID_);
+        return astArena_.insert<AST::BlockStatement>(insertVector(std::move(stmts)), start, end,
+                                                     fileID_);
     }
 
     std::unreachable();
@@ -494,8 +495,9 @@ AST::BlockStatement* Parser::parseBlockStatement() {
 
     const Token rBrace = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACE);
 
-    return astArena_.insert<AST::BlockStatement>(std::move(statements), lBrace.byteOffsetStart(),
-                                                 rBrace.byteOffsetEnd(), fileID_);
+    return astArena_.insert<AST::BlockStatement>(insertVector(std::move(statements)),
+                                                 lBrace.byteOffsetStart(), rBrace.byteOffsetEnd(),
+                                                 fileID_);
 }
 
 AST::Statement* Parser::parseStatement() {
@@ -558,8 +560,8 @@ AST::ExternalFunctionDeclaration* Parser::parseExternalFunctionDeclaration() {
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
     return astArena_.insert<AST::ExternalFunctionDeclaration>(
-        signature->identifier_, std::move(signature->parameters_), signature->returnTypeID_,
-        externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
+        signature->identifier_, insertVector(std::move(signature->parameters_)),
+        signature->returnTypeID_, externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
 }
 
 AST::FunctionDefinition* Parser::parseFunctionDefinition() {
@@ -578,16 +580,17 @@ AST::FunctionDefinition* Parser::parseFunctionDefinition() {
 
     const uint32_t endIndex = body->sourceEndIndex();
     return astArena_.insert<AST::FunctionDefinition>(
-        signature->identifier_, std::move(signature->parameters_), signature->returnTypeID_,
-        isExported, body, sourceStartIndex, endIndex, fileID_);
+        signature->identifier_, insertVector(std::move(signature->parameters_)),
+        signature->returnTypeID_, isExported, body, sourceStartIndex, endIndex, fileID_);
 }
 
 AST::Program* Parser::parseProgram() {
-    const auto program = astArena_.insert<AST::Program>(fileID_);
+    std::vector<AST::ExternalFunctionDeclaration*> externalFunctions;
+    std::vector<AST::FunctionDefinition*> functions;
 
     while (peek().kind() == TokenKind::EXTERN) {
         if (const auto externFunction = parseExternalFunctionDeclaration()) {
-            program->appendExternFunction(externFunction);
+            externalFunctions.push_back(externFunction);
         } else {
             // Error recovery: skip to the next semicolon
             while (peek().kind() != TokenKind::SEMICOLON && peek().kind() != TokenKind::EOF_) {
@@ -599,7 +602,7 @@ AST::Program* Parser::parseProgram() {
 
     while (peek().kind() != TokenKind::EOF_) {
         if (const auto functionDefinition = parseFunctionDefinition()) {
-            program->appendFunction(functionDefinition);
+            functions.push_back(functionDefinition);
 
         } else {
             // Error recovery: skip to the next function definition
@@ -610,5 +613,7 @@ AST::Program* Parser::parseProgram() {
         }
     }
 
-    return program;
+    return astArena_.insert<AST::Program>(insertVector(std::move(externalFunctions)),
+                                          insertVector(std::move(functions)), fileID_,
+                                          sourceCode_.size());
 }

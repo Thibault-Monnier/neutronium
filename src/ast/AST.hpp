@@ -1,9 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 #include <string_view>
-#include <utility>
-#include <vector>
 
 #include "Operator.hpp"
 #include "lex/TokenKind.hpp"
@@ -91,12 +90,11 @@ struct BooleanLiteral final : Expression {
 };
 
 struct ArrayLiteral final : Expression {
-    ArrayLiteral(std::vector<Expression*> elements, const uint32_t start, const uint32_t end,
+    ArrayLiteral(const std::span<Expression*> elements, const uint32_t start, const uint32_t end,
                  const FileID fileID, const TypeID typeID)
-        : Expression{NodeKind::ARRAY_LITERAL, start, end, fileID, typeID},
-          elements_(std::move(elements)) {}
+        : Expression{NodeKind::ARRAY_LITERAL, start, end, fileID, typeID}, elements_(elements) {}
 
-    const std::vector<Expression*> elements_;
+    const std::span<Expression*> elements_;
 };
 
 struct Identifier final : Expression {
@@ -119,14 +117,14 @@ struct ArrayAccess final : Expression {
 };
 
 struct FunctionCall final : Expression {
-    FunctionCall(const Identifier* callee, std::vector<Expression*> arguments, const uint32_t start,
-                 const uint32_t end, const FileID fileID, const TypeID typeID)
+    FunctionCall(const Identifier* callee, const std::span<Expression*> arguments,
+                 const uint32_t start, const uint32_t end, const FileID fileID, const TypeID typeID)
         : Expression{NodeKind::FUNCTION_CALL, start, end, fileID, typeID},
           callee_(callee),
-          arguments_(std::move(arguments)) {}
+          arguments_(arguments) {}
 
     const Identifier* callee_;
-    const std::vector<Expression*> arguments_;
+    const std::span<Expression*> arguments_;
 };
 
 struct UnaryExpression final : Expression {
@@ -159,11 +157,11 @@ struct Statement : Node {
 };
 
 struct BlockStatement final : Statement {
-    explicit BlockStatement(std::vector<Statement*> body, const uint32_t start, const uint32_t end,
-                            const FileID fileID)
-        : Statement{NodeKind::BLOCK_STATEMENT, start, end, fileID}, body_(std::move(body)) {}
+    explicit BlockStatement(const std::span<Statement*> body, const uint32_t start,
+                            const uint32_t end, const FileID fileID)
+        : Statement{NodeKind::BLOCK_STATEMENT, start, end, fileID}, body_(body) {}
 
-    const std::vector<Statement*> body_;
+    const std::span<Statement*> body_;
 };
 
 struct VariableDefinition final : Statement {
@@ -264,52 +262,48 @@ struct ReturnStatement final : Statement {
 
 struct ExternalFunctionDeclaration final : Node {
     ExternalFunctionDeclaration(const Identifier* identifier,
-                                std::vector<VariableDefinition*> parameters,
+                                const std::span<VariableDefinition*> parameters,
                                 const TypeID returnTypeID, const uint32_t start, const uint32_t end,
                                 const FileID fileID)
         : Node{NodeKind::EXTERNAL_FUNCTION_DECLARATION, start, end, fileID},
           identifier_(identifier),
-          parameters_(std::move(parameters)),
+          parameters_(parameters),
           returnTypeID_(returnTypeID) {}
 
     const Identifier* identifier_;
-    const std::vector<VariableDefinition*> parameters_;
+    const std::span<VariableDefinition*> parameters_;
     const TypeID returnTypeID_;
 };
 
 struct FunctionDefinition final : Node {
-    FunctionDefinition(const Identifier* identifier, std::vector<VariableDefinition*> parameters,
-                       const TypeID returnTypeID, const bool isExported, const BlockStatement* body,
-                       const uint32_t start, const uint32_t end, const FileID fileID)
+    FunctionDefinition(const Identifier* identifier,
+                       const std::span<VariableDefinition*> parameters, const TypeID returnTypeID,
+                       const bool isExported, const BlockStatement* body, const uint32_t start,
+                       const uint32_t end, const FileID fileID)
         : Node{NodeKind::FUNCTION_DEFINITION, start, end, fileID},
           identifier_(identifier),
-          parameters_(std::move(parameters)),
+          parameters_(parameters),
           returnTypeID_(returnTypeID),
           isExported_(isExported),
           body_(body) {}
 
     const Identifier* identifier_;
-    const std::vector<VariableDefinition*> parameters_;
+    const std::span<VariableDefinition*> parameters_;
     const TypeID returnTypeID_;
     const bool isExported_;
     const BlockStatement* body_;
 };
 
 struct Program final : Node {
-    explicit Program(const FileID fileID) : Node{NodeKind::PROGRAM, 0, 0, fileID} {}
+    explicit Program(const std::span<ExternalFunctionDeclaration*> externalFunctions,
+                     const std::span<FunctionDefinition*> functions, const FileID fileID,
+                     const uint32_t sourceEndIndex)
+        : Node{NodeKind::PROGRAM, 0, sourceEndIndex, fileID},
+          externalFunctions_(externalFunctions),
+          functions_(functions) {}
 
-    void appendFunction(FunctionDefinition* function) {
-        functions_.emplace_back(function);
-        sourceEndIndex_ = functions_.back()->sourceEndIndex();
-    }
-
-    void appendExternFunction(ExternalFunctionDeclaration* externFunction) {
-        externalFunctions_.emplace_back(externFunction);
-        sourceEndIndex_ = externalFunctions_.back()->sourceEndIndex();
-    }
-
-    std::vector<ExternalFunctionDeclaration*> externalFunctions_;
-    std::vector<FunctionDefinition*> functions_;
+    const std::span<ExternalFunctionDeclaration*> externalFunctions_;
+    const std::span<FunctionDefinition*> functions_;
 };
 
 Operator tokenKindToOperator(TokenKind tokenKind);

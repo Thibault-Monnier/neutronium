@@ -219,7 +219,7 @@ void logAst(const Program& programNode) {
     const std::string prefix = "    ";
 
     const auto functionSignature =
-        [&](const Identifier& identifier, const std::vector<VariableDefinition*>& params,
+        [&](const Identifier& identifier, const std::span<VariableDefinition*> params,
             const TypeID returnTypeID, const std::string& newPrefix, const bool hasBody) {
             std::cout << newPrefix << "├── Identifier: " << identifier.name_ << "\n";
             std::cout << newPrefix << "├── ReturnTypeID: " << returnTypeID << "\n";

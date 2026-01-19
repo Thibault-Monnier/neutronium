@@ -6,6 +6,7 @@
 #include <format>
 #include <optional>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -158,7 +159,7 @@ SymbolInfo& SemanticAnalyser::declareSymbol(const AST::Node* declarationNode,
 
 SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
     const AST::Node* declNode, const std::string_view name, const TypeID returnTypeID,
-    const std::vector<AST::VariableDefinition*>& params) {
+    const std::span<AST::VariableDefinition*> params) {
     std::vector<SymbolInfo> parameterSymbols;
     for (const auto* param : params) {
         const TypeID paramType = param->typeID_;

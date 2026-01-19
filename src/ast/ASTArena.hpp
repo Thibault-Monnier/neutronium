@@ -28,6 +28,12 @@ class ASTArena {
         return new (mem) T(std::forward<Args>(args)...);
     }
 
+    template <typename T>
+    T* insertArray(const size_t count) {
+        uintptr_t mem = allocate(sizeof(T) * count, alignof(T));
+        return reinterpret_cast<T*>(mem);
+    }
+
    private:
     uintptr_t allocate(const size_t size, const size_t alignment) {
         assert((alignment & (alignment - 1)) == 0 && "Alignment must be power of two");
