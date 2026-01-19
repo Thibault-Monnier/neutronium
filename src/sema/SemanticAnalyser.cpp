@@ -530,5 +530,5 @@ void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& 
             funcDef);
     }
 
-    currentFunctionName_.clear();
+    currentFunctionName_ = "";
 }

@@ -41,7 +41,7 @@ class SemanticAnalyser {
 
     int loopDepth_ = 0;
 
-    std::string currentFunctionName_;
+    std::string_view currentFunctionName_;
     TypeID currentFunctionReturnTypeID_ = 0;
 
     static constexpr std::string_view ENTRY_POINT_NAME = "main";
