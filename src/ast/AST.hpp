@@ -39,11 +39,9 @@ struct Node {
     Node(const NodeKind kind, const uint32_t sourceStartIndex, const uint32_t sourceEndIndex,
          const FileID fileID)
         : kind_(kind),
+          fileID_(fileID),
           sourceStartIndex_(sourceStartIndex),
-          sourceEndIndex_(sourceEndIndex),
-          fileID_(fileID) {}
-
-    const NodeKind kind_;
+          sourceEndIndex_(sourceEndIndex) {}
 
     [[nodiscard]] uint32_t sourceStartIndex() const { return sourceStartIndex_; }
     [[nodiscard]] uint32_t sourceEndIndex() const { return sourceEndIndex_; }
@@ -58,10 +56,13 @@ struct Node {
         return static_cast<const T*>(this);
     }
 
+    const NodeKind kind_;
+
    protected:
+    const FileID fileID_;
+
     uint32_t sourceStartIndex_;
     uint32_t sourceEndIndex_;
-    const FileID fileID_;
 };
 
 struct Expression : Node {
