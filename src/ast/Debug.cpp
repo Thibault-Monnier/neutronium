@@ -2,8 +2,8 @@
 
 #include <cassert>
 #include <iostream>
-#include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -219,8 +219,7 @@ void logAst(const Program& programNode) {
     const std::string prefix = "    ";
 
     const auto functionSignature =
-        [&](const Identifier& identifier,
-            const std::vector<std::unique_ptr<VariableDefinition>>& params,
+        [&](const Identifier& identifier, const std::span<VariableDefinition*> params,
             const TypeID returnTypeID, const std::string& newPrefix, const bool hasBody) {
             std::cout << newPrefix << "├── Identifier: " << identifier.name_ << "\n";
             std::cout << newPrefix << "├── ReturnTypeID: " << returnTypeID << "\n";

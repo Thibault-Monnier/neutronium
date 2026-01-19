@@ -1,14 +1,17 @@
 #pragma once
 
+#include <cstring>
 #include <functional>
 #include <initializer_list>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "ast/AST.hpp"
+#include "ast/ASTArena.hpp"
 #include "ast/Operator.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "lex/Lexer.hpp"
@@ -20,24 +23,25 @@
 #include "type/TypeManager.hpp"
 
 struct ParsedFunctionSignature {
-    std::unique_ptr<AST::Identifier> identifier_;
-    std::vector<std::unique_ptr<AST::VariableDefinition>> parameters_;
+    AST::Identifier* identifier_;
+    std::vector<AST::VariableDefinition*> parameters_;
     TypeID returnTypeID_;
 };
 
 class Parser {
    public:
     explicit Parser(DiagnosticsEngine& diagnosticsEngine, const FileID fileID,
-                    const std::string_view sourceCode, TypeManager& typeManager)
+                    const std::string_view sourceCode, ASTArena& astArena, TypeManager& typeManager)
         : lexer_(sourceCode, diagnosticsEngine, fileID),
           diagnosticsEngine_(diagnosticsEngine),
           fileID_(fileID),
           sourceCode_(sourceCode),
+          astArena_(astArena),
           typeManager_(typeManager) {
         token_ = lexer_.lex();
     }
 
-    [[nodiscard]] std::unique_ptr<AST::Program> parse();
+    [[nodiscard]] AST::Program* parse();
 
    private:
     Lexer lexer_;
@@ -45,6 +49,8 @@ class Parser {
     DiagnosticsEngine& diagnosticsEngine_;
     FileID fileID_;
     std::string_view sourceCode_;
+
+    ASTArena& astArena_;
 
     TypeManager& typeManager_;
 
@@ -64,8 +70,7 @@ class Parser {
      * @return nullptr of type T.
      */
     template <class T>
-    [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage,
-                                               const Token token) const {
+    [[nodiscard]] T* emitError(const std::string& errorMessage, const Token token) const {
         emitError(errorMessage, token);
         return nullptr;
     }
@@ -75,15 +80,14 @@ class Parser {
      * @return nullptr of type T.
      */
     template <class T>
-    [[nodiscard]] std::unique_ptr<T> emitError(const std::string& errorMessage) const {
+    [[nodiscard]] T* emitError(const std::string& errorMessage) const {
         return emitError<T>(errorMessage, peek());
     }
 
     void expectError(TokenKind expected) const;
     [[nodiscard]] std::unique_ptr<Type> invalidTypeSpecifierError() const;
-    [[nodiscard]] std::unique_ptr<AST::Expression> invalidPrimaryExpressionError() const;
-    [[nodiscard]] std::unique_ptr<AST::NumberLiteral> invalidNumberLiteralError(
-        const Token& token) const;
+    [[nodiscard]] AST::Expression* invalidPrimaryExpressionError() const;
+    [[nodiscard]] AST::NumberLiteral* invalidNumberLiteralError(const Token& token) const;
 
     // ---------------
     // Parsing helpers
@@ -103,11 +107,25 @@ class Parser {
         return typeManager_.createType(Type::anyFamilyType());
     }
 
+    /** Inserts a vector into the ASTArena and returns a span to it.
+     * @tparam T The type of the elements in the vector.
+     * @param vec The vector to insert.
+     * @return A span to the inserted vector.
+     */
+    template <typename T>
+        requires std::is_trivially_copyable_v<T>
+    [[nodiscard]] std::span<T> insertVector(std::vector<T>&& vec) {
+        if (vec.empty()) return {};
+
+        T* data = astArena_.insertArray<T>(vec.size());
+        std::memcpy(reinterpret_cast<void*>(data), vec.data(), vec.size() * sizeof(T));
+        return {data, vec.size()};
+    }
+
     template <class T>
-    std::optional<std::vector<std::unique_ptr<T>>> parseCommaSeparatedList(
-        TokenKind endDelimiter, const std::function<std::unique_ptr<T>()>& parseElement);
-    std::optional<std::vector<std::unique_ptr<AST::Expression>>> parseExpressionList(
-        TokenKind endDelimiter);
+    std::optional<std::vector<T*>> parseCommaSeparatedList(TokenKind endDelimiter,
+                                                           const std::function<T*()>& parseElement);
+    std::optional<std::vector<AST::Expression*>> parseExpressionList(TokenKind endDelimiter);
 
     static std::optional<Type> tryParsePrimitiveType(TokenKind tokenKind);
     std::unique_ptr<Type> parseTypeSpecifier();
@@ -118,43 +136,43 @@ class Parser {
     std::optional<Type> maybeParseTypeAnnotation(TokenKind typeAnnotationIndicator,
                                                  Type defaultType);
 
-    std::unique_ptr<AST::NumberLiteral> parseNumberLiteral();
-    std::unique_ptr<AST::ArrayLiteral> parseArrayLiteral();
+    AST::NumberLiteral* parseNumberLiteral();
+    AST::ArrayLiteral* parseArrayLiteral();
 
-    std::unique_ptr<AST::Identifier> parseIdentifier();
-    std::unique_ptr<AST::Expression> parseIdentifierOrFunctionCall();
-    std::unique_ptr<AST::ArrayAccess> parseArrayAccess(std::unique_ptr<AST::Expression> base);
-    std::unique_ptr<AST::Expression> parsePrimaryExpression();
-    std::unique_ptr<AST::Expression> parsePostfixExpression();
-    std::unique_ptr<AST::Expression> parseUnaryExpression();
-    std::unique_ptr<AST::Expression> parseBinaryExpression(
-        const std::function<std::unique_ptr<AST::Expression>()>& parseOperand,
-        std::initializer_list<AST::Operator> allowedOps, bool allowMultiple);
-    std::unique_ptr<AST::Expression> parseMultiplicativeExpression();
-    std::unique_ptr<AST::Expression> parseAdditiveExpression();
-    std::unique_ptr<AST::Expression> parseComparisonExpression();
-    std::unique_ptr<AST::Expression> parseExpression();
+    AST::Identifier* parseIdentifier();
+    AST::Expression* parseIdentifierOrFunctionCall();
+    AST::ArrayAccess* parseArrayAccess(const AST::Expression* base);
+    AST::Expression* parsePrimaryExpression();
+    AST::Expression* parsePostfixExpression();
+    AST::Expression* parseUnaryExpression();
+    AST::Expression* parseBinaryExpression(const std::function<AST::Expression*()>& parseOperand,
+                                           std::initializer_list<AST::Operator> allowedOps,
+                                           bool allowMultiple);
+    AST::Expression* parseMultiplicativeExpression();
+    AST::Expression* parseAdditiveExpression();
+    AST::Expression* parseComparisonExpression();
+    AST::Expression* parseExpression();
 
-    std::unique_ptr<AST::VariableDefinition> parseVariableDefinition();
-    std::unique_ptr<AST::Statement> parseAssignmentOrExpressionStatement();
+    AST::VariableDefinition* parseVariableDefinition();
+    AST::Statement* parseAssignmentOrExpressionStatement();
 
-    std::unique_ptr<AST::BlockStatement> parseElseClause();
-    std::unique_ptr<AST::IfStatement> parseIfOrElif(TokenKind kind);
-    std::unique_ptr<AST::IfStatement> parseIfStatement();
-    std::unique_ptr<AST::WhileStatement> parseWhileStatement();
+    AST::BlockStatement* parseElseClause();
+    AST::IfStatement* parseIfOrElif(TokenKind kind);
+    AST::IfStatement* parseIfStatement();
+    AST::WhileStatement* parseWhileStatement();
 
-    std::unique_ptr<AST::VariableDefinition> parseFunctionParameter();
-    std::unique_ptr<AST::BreakStatement> parseBreakStatement();
-    std::unique_ptr<AST::ContinueStatement> parseContinueStatement();
-    std::unique_ptr<AST::ReturnStatement> parseReturnStatement();
-    std::unique_ptr<AST::ExitStatement> parseExitStatement();
-    std::unique_ptr<AST::BlockStatement> parseBlockStatement();
+    AST::VariableDefinition* parseFunctionParameter();
+    AST::BreakStatement* parseBreakStatement();
+    AST::ContinueStatement* parseContinueStatement();
+    AST::ReturnStatement* parseReturnStatement();
+    AST::ExitStatement* parseExitStatement();
+    AST::BlockStatement* parseBlockStatement();
 
-    std::unique_ptr<AST::Statement> parseStatement();
+    AST::Statement* parseStatement();
 
     std::unique_ptr<ParsedFunctionSignature> parseFunctionSignature();
-    std::unique_ptr<AST::ExternalFunctionDeclaration> parseExternalFunctionDeclaration();
+    AST::ExternalFunctionDeclaration* parseExternalFunctionDeclaration();
 
-    std::unique_ptr<AST::FunctionDefinition> parseFunctionDefinition();
-    std::unique_ptr<AST::Program> parseProgram();
+    AST::FunctionDefinition* parseFunctionDefinition();
+    AST::Program* parseProgram();
 };
