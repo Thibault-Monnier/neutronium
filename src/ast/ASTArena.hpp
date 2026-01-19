@@ -1,31 +1,66 @@
 #pragma once
 
-#include <memory>
+#include <algorithm>
+#include <cassert>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
+#include <new>
+#include <utility>
 #include <vector>
+
+#include "AST.hpp"
 
 class ASTArena {
    public:
     ASTArena() = default;
-    ~ASTArena() = default;
+
+    ~ASTArena() {
+        for (void* block : blocks_) {
+            ::operator delete(block, static_cast<std::align_val_t>(MAX_ALIGNMENT));
+        }
+    };
 
     template <typename T, typename... Args>
         requires std::derived_from<T, AST::Node>
-    T* allocate(Args&&... args) {
-        auto node = std::make_unique<T>(std::forward<Args>(args)...);
-        T* ptr = node.get();
-        nodes_.push_back(std::move(node));
-        return ptr;
-    }
-
-    template <typename T, typename... Args>
-        requires std::derived_from<T, AST::Node>
-    const T* allocate(const Args&&... args) {
-        auto node = std::make_unique<T>(std::forward<Args>(args)...);
-        const T* ptr = node.get();
-        nodes_.push_back(std::move(node));
-        return ptr;
+    T* insert(Args&&... args) {
+        void* mem = reinterpret_cast<void*>(allocate(sizeof(T), alignof(T)));
+        return new (mem) T(std::forward<Args>(args)...);
     }
 
    private:
-    std::vector<std::unique_ptr<AST::Node>> nodes_;
+    uintptr_t allocate(const size_t size, const size_t alignment) {
+        assert((alignment & (alignment - 1)) == 0 && "Alignment must be power of two");
+
+        uintptr_t currentPos = currentBlockPos_;
+        uintptr_t alignedPos = (currentPos + alignment - 1) & ~(alignment - 1);
+        uintptr_t newPos = alignedPos + size;
+
+        if (newPos > currentBlockEnd_) {
+            allocateBlock(std::max(size, BLOCK_SIZE));
+
+            currentPos = currentBlockPos_;
+            alignedPos = (currentPos + alignment - 1) & ~(alignment - 1);
+            newPos = alignedPos + size;
+
+            assert(newPos <= currentBlockEnd_ && "New block should have enough space");
+        }
+
+        currentBlockPos_ = newPos;
+        return alignedPos;
+    }
+
+    void allocateBlock(const size_t size) {
+        void* block = ::operator new(size, static_cast<std::align_val_t>(MAX_ALIGNMENT));
+        blocks_.push_back(block);
+        currentBlockPos_ = reinterpret_cast<uintptr_t>(block);
+        currentBlockEnd_ = reinterpret_cast<uintptr_t>(block) + size;
+    }
+
+    static constexpr size_t MAX_ALIGNMENT = alignof(std::max_align_t);
+    static constexpr size_t BLOCK_SIZE = 1 << 20;  // 1 MiB
+
+    std::vector<void*> blocks_;
+    uintptr_t currentBlockPos_ = 0;
+    uintptr_t currentBlockEnd_ = 0;
 };

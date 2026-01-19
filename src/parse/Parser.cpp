@@ -141,7 +141,7 @@ std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotat
 
 AST::Identifier* Parser::parseIdentifier() {
     const Token ident = EXPECT_OR_RETURN_NULLPTR(TokenKind::IDENTIFIER);
-    return astArena_.allocate<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
+    return astArena_.insert<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
                                                ident.byteOffsetEnd(), fileID_, generateAnyType());
 }
 
@@ -157,7 +157,7 @@ AST::NumberLiteral* Parser::parseNumberLiteral() {
         return invalidNumberLiteralError(token);
     }
 
-    return astArena_.allocate<AST::NumberLiteral>(
+    return astArena_.insert<AST::NumberLiteral>(
         value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateAnyType());
 }
 
@@ -167,7 +167,7 @@ AST::ArrayLiteral* Parser::parseArrayLiteral() {
     if (!elements) return nullptr;
     const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
-    return astArena_.allocate<AST::ArrayLiteral>(
+    return astArena_.insert<AST::ArrayLiteral>(
         std::move(elements.value()), lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(), fileID_,
         generateAnyType());
 }
@@ -183,7 +183,7 @@ AST::Expression* Parser::parseIdentifierOrFunctionCall() {
         const Token rParen = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
 
         const uint32_t startIndex = ident->sourceStartIndex();
-        return astArena_.allocate<AST::FunctionCall>(ident, std::move(arguments.value()),
+        return astArena_.insert<AST::FunctionCall>(ident, std::move(arguments.value()),
                                                      startIndex, rParen.byteOffsetEnd(), fileID_,
                                                      generateAnyType());
     } else {
@@ -199,7 +199,7 @@ AST::ArrayAccess* Parser::parseArrayAccess(const AST::Expression* base) {
     const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
     const uint32_t startIndex = base->sourceStartIndex();
-    return astArena_.allocate<AST::ArrayAccess>(base, index, startIndex, rBracket.byteOffsetEnd(),
+    return astArena_.insert<AST::ArrayAccess>(base, index, startIndex, rBracket.byteOffsetEnd(),
                                                 fileID_, generateAnyType());
 }
 
@@ -217,7 +217,7 @@ AST::Expression* Parser::parsePrimaryExpression() {
         case TokenKind::FALSE: {
             const bool value = token.kind() == TokenKind::TRUE;
             advance();
-            return astArena_.allocate<AST::BooleanLiteral>(
+            return astArena_.insert<AST::BooleanLiteral>(
                 value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateAnyType());
         }
 
@@ -265,7 +265,7 @@ AST::Expression* Parser::parseUnaryExpression() {
         if (!operand) return nullptr;
 
         const uint32_t endIndex = operand->sourceEndIndex();
-        return astArena_.allocate<AST::UnaryExpression>(op, operand, token.byteOffsetStart(),
+        return astArena_.insert<AST::UnaryExpression>(op, operand, token.byteOffsetStart(),
                                                         endIndex, fileID_, generateAnyType());
     }
 
@@ -288,7 +288,7 @@ AST::Expression* Parser::parseBinaryExpression(
 
         const uint32_t startIndex = left->sourceStartIndex();
         const uint32_t endIndex = right->sourceEndIndex();
-        left = astArena_.allocate<AST::BinaryExpression>(left, op, right, startIndex, endIndex,
+        left = astArena_.insert<AST::BinaryExpression>(left, op, right, startIndex, endIndex,
                                                          fileID_, generateAnyType());
         if (!allowMultiple) break;
     }
@@ -336,7 +336,7 @@ AST::VariableDefinition* Parser::parseVariableDefinition() {
 
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
-    return astArena_.allocate<AST::VariableDefinition>(
+    return astArena_.insert<AST::VariableDefinition>(
         identifier, typeID, isMutable, value, let.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
 }
 
@@ -355,13 +355,13 @@ AST::Statement* Parser::parseAssignmentOrExpressionStatement() {
         const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
         const uint32_t startIndex = expression->sourceStartIndex();
-        return astArena_.allocate<AST::Assignment>(expression, op, right, startIndex,
+        return astArena_.insert<AST::Assignment>(expression, op, right, startIndex,
                                                    semi.byteOffsetEnd(), fileID_);
     } else {
         // Expression statement
         const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
         const uint32_t startIndex = expression->sourceStartIndex();
-        return astArena_.allocate<AST::ExpressionStatement>(expression, startIndex,
+        return astArena_.insert<AST::ExpressionStatement>(expression, startIndex,
                                                             semi.byteOffsetEnd(), fileID_);
     }
 }
@@ -382,7 +382,7 @@ AST::BlockStatement* Parser::parseElseClause() {
         std::vector<AST::Statement*> stmts;
         stmts.push_back(elif);
 
-        return astArena_.allocate<AST::BlockStatement>(std::move(stmts), start, end, fileID_);
+        return astArena_.insert<AST::BlockStatement>(std::move(stmts), start, end, fileID_);
     }
 
     std::unreachable();
@@ -406,7 +406,7 @@ AST::IfStatement* Parser::parseIfOrElif(const TokenKind kind) {
     }
 
     const uint32_t endIndex = elseClause ? elseClause->sourceEndIndex() : body->sourceEndIndex();
-    return astArena_.allocate<AST::IfStatement>(condition, body, elseClause,
+    return astArena_.insert<AST::IfStatement>(condition, body, elseClause,
                                                 keywordTok.byteOffsetStart(), endIndex, fileID_);
 }
 
@@ -424,21 +424,21 @@ AST::WhileStatement* Parser::parseWhileStatement() {
     if (!body) return nullptr;
 
     const uint32_t endIndex = body->sourceEndIndex();
-    return astArena_.allocate<AST::WhileStatement>(condition, body, whileTok.byteOffsetStart(),
+    return astArena_.insert<AST::WhileStatement>(condition, body, whileTok.byteOffsetStart(),
                                                    endIndex, fileID_);
 }
 
 AST::BreakStatement* Parser::parseBreakStatement() {
     const Token breakTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::BREAK);
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
-    return astArena_.allocate<AST::BreakStatement>(breakTok.byteOffsetStart(),
+    return astArena_.insert<AST::BreakStatement>(breakTok.byteOffsetStart(),
                                                    semiTok.byteOffsetEnd(), fileID_);
 }
 
 AST::ContinueStatement* Parser::parseContinueStatement() {
     const Token continueTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::CONTINUE);
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
-    return astArena_.allocate<AST::ContinueStatement>(continueTok.byteOffsetStart(),
+    return astArena_.insert<AST::ContinueStatement>(continueTok.byteOffsetStart(),
                                                       semiTok.byteOffsetEnd(), fileID_);
 }
 
@@ -453,7 +453,7 @@ AST::ReturnStatement* Parser::parseReturnStatement() {
 
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
-    return astArena_.allocate<AST::ReturnStatement>(returnValue, returnTok.byteOffsetStart(),
+    return astArena_.insert<AST::ReturnStatement>(returnValue, returnTok.byteOffsetStart(),
                                                     semiTok.byteOffsetEnd(), fileID_);
 }
 
@@ -462,7 +462,7 @@ AST::ExitStatement* Parser::parseExitStatement() {
     auto exitCode = parseExpression();
     if (!exitCode) return nullptr;
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
-    return astArena_.allocate<AST::ExitStatement>(exitCode, exitTok.byteOffsetStart(),
+    return astArena_.insert<AST::ExitStatement>(exitCode, exitTok.byteOffsetStart(),
                                                   semiTok.byteOffsetEnd(), fileID_);
 }
 
@@ -494,7 +494,7 @@ AST::BlockStatement* Parser::parseBlockStatement() {
 
     const Token rBrace = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACE);
 
-    return astArena_.allocate<AST::BlockStatement>(std::move(statements), lBrace.byteOffsetStart(),
+    return astArena_.insert<AST::BlockStatement>(std::move(statements), lBrace.byteOffsetStart(),
                                                    rBrace.byteOffsetEnd(), fileID_);
 }
 
@@ -527,7 +527,7 @@ AST::VariableDefinition* Parser::parseFunctionParameter() {
     const TypeID typeID = typeManager_.createType(*parsedType);
 
     const uint32_t endIndex = identifier->sourceEndIndex();
-    return astArena_.allocate<AST::VariableDefinition>(identifier, typeID, isMutable,
+    return astArena_.insert<AST::VariableDefinition>(identifier, typeID, isMutable,
                                                        sourceStartIndex, endIndex, fileID_);
 }
 
@@ -557,7 +557,7 @@ AST::ExternalFunctionDeclaration* Parser::parseExternalFunctionDeclaration() {
 
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
-    return astArena_.allocate<AST::ExternalFunctionDeclaration>(
+    return astArena_.insert<AST::ExternalFunctionDeclaration>(
         signature->identifier_, std::move(signature->parameters_), signature->returnTypeID_,
         externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
 }
@@ -577,13 +577,13 @@ AST::FunctionDefinition* Parser::parseFunctionDefinition() {
     if (!body) return nullptr;
 
     const uint32_t endIndex = body->sourceEndIndex();
-    return astArena_.allocate<AST::FunctionDefinition>(
+    return astArena_.insert<AST::FunctionDefinition>(
         signature->identifier_, std::move(signature->parameters_), signature->returnTypeID_,
         isExported, body, sourceStartIndex, endIndex, fileID_);
 }
 
 AST::Program* Parser::parseProgram() {
-    const auto program = astArena_.allocate<AST::Program>(fileID_);
+    const auto program = astArena_.insert<AST::Program>(fileID_);
 
     while (peek().kind() == TokenKind::EXTERN) {
         if (const auto externFunction = parseExternalFunctionDeclaration()) {
