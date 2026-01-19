@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstring>
 #include <functional>
 #include <initializer_list>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
