@@ -108,9 +108,9 @@ class SemanticAnalyser {
                               SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,
                               std::vector<SymbolInfo> parameters);
 
-    SymbolInfo& handleFunctionDeclaration(
-        const AST::Node* declNode, std::string_view name, TypeID returnTypeID,
-        const std::vector<std::unique_ptr<AST::VariableDefinition>>& params);
+    SymbolInfo& handleFunctionDeclaration(const AST::Node* declNode, std::string_view name,
+                                          TypeID returnTypeID,
+                                          std::span<AST::VariableDefinition*> params);
     SymbolInfo& handleVariableDeclaration(const AST::VariableDefinition* declNode,
                                           std::string_view name, bool isMutable, TypeID typeID);
 

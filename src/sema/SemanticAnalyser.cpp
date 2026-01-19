@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <cstdlib>
 #include <format>
-#include <memory>
 #include <optional>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -50,9 +50,9 @@ void SemanticAnalyser::analyse() {
     }
 
     const AST::FunctionDefinition* mainDef = nullptr;
-    for (const auto& funcDef : ast_->functions_) {
+    for (const auto* funcDef : ast_->functions_) {
         if (funcDef->identifier_->name_ == ENTRY_POINT_NAME) {
-            mainDef = funcDef.get();
+            mainDef = funcDef;
             break;
         }
     }
@@ -159,12 +159,12 @@ SymbolInfo& SemanticAnalyser::declareSymbol(const AST::Node* declarationNode,
 
 SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
     const AST::Node* declNode, const std::string_view name, const TypeID returnTypeID,
-    const std::vector<std::unique_ptr<AST::VariableDefinition>>& params) {
+    const std::span<AST::VariableDefinition*> params) {
     std::vector<SymbolInfo> parameterSymbols;
-    for (const auto& param : params) {
+    for (const auto* param : params) {
         const TypeID paramType = param->typeID_;
-        parameterSymbols.emplace_back(handleVariableDeclaration(
-            param.get(), param->identifier_->name_, param->isMutable_, paramType));
+        parameterSymbols.emplace_back(handleVariableDeclaration(param, param->identifier_->name_,
+                                                                param->isMutable_, paramType));
     }
 
     return declareSymbol(declNode, name, SymbolKind::FUNCTION, false, returnTypeID, false,
@@ -257,7 +257,7 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
             }
 
             const TypeID elementTypeID = checkExpression(*arrayLiteral.elements_[0]);
-            for (const auto& element : arrayLiteral.elements_ | std::views::drop(1)) {
+            for (const auto* element : arrayLiteral.elements_ | std::views::drop(1)) {
                 checkExpression(*element, elementTypeID);
             }
 
@@ -359,7 +359,7 @@ bool SemanticAnalyser::verifyIsAssignable(const AST::Expression& expr) {
 }
 
 void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
-    const auto& place = assignment.place_;
+    const auto* place = assignment.place_;
 
     if (!verifyIsAssignable(*place)) {
         // If the place is not assignable, we cannot proceed further.
@@ -468,7 +468,7 @@ void SemanticAnalyser::analyseStatement(const AST::Statement& stmt) {
         case AST::NodeKind::BLOCK_STATEMENT: {
             const auto& blockStmt = *stmt.as<AST::BlockStatement>();
             const ScopeGuard guard(*this);
-            for (const auto& innerStmt : blockStmt.body_) {
+            for (const auto* innerStmt : blockStmt.body_) {
                 analyseStatement(*innerStmt);
             }
             break;
@@ -491,7 +491,7 @@ bool SemanticAnalyser::verifyStatementReturns(const AST::Statement& stmt) {
 
     } else if (kind == AST::NodeKind::BLOCK_STATEMENT) {
         const auto& blockStmt = *stmt.as<AST::BlockStatement>();
-        for (const auto& innerStmt : blockStmt.body_) {
+        for (const auto* innerStmt : blockStmt.body_) {
             if (verifyStatementReturns(*innerStmt)) return true;
         }
 

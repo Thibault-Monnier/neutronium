@@ -27,11 +27,10 @@ __attribute__((noinline, cold)) std::unique_ptr<Type> Parser::invalidTypeSpecifi
 
     const std::string errorMessage = std::format("Invalid token -> expected type specifier, got {}",
                                                  tokenKindToString(tokenKind));
-    return emitError<Type>(errorMessage);
+    return std::unique_ptr<Type>(emitError<Type>(errorMessage));
 }
 
-__attribute__((noinline, cold)) std::unique_ptr<AST::Expression>
-Parser::invalidPrimaryExpressionError() const {
+__attribute__((noinline, cold)) AST::Expression* Parser::invalidPrimaryExpressionError() const {
     const Token& token = peek();
 
     const std::string errorMessage =
@@ -40,8 +39,8 @@ Parser::invalidPrimaryExpressionError() const {
     return emitError<AST::Expression>(errorMessage);
 }
 
-__attribute__((noinline, cold)) std::unique_ptr<AST::NumberLiteral>
-Parser::invalidNumberLiteralError(const Token& token) const {
+__attribute__((noinline, cold)) AST::NumberLiteral* Parser::invalidNumberLiteralError(
+    const Token& token) const {
     const std::string errorMessage = "Invalid number literal";
     return emitError<AST::NumberLiteral>(errorMessage, token);
 }
