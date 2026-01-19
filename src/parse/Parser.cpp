@@ -142,7 +142,7 @@ std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotat
 AST::Identifier* Parser::parseIdentifier() {
     const Token ident = EXPECT_OR_RETURN_NULLPTR(TokenKind::IDENTIFIER);
     return astArena_.insert<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
-                                               ident.byteOffsetEnd(), fileID_, generateAnyType());
+                                             ident.byteOffsetEnd(), fileID_, generateAnyType());
 }
 
 AST::NumberLiteral* Parser::parseNumberLiteral() {
@@ -157,8 +157,8 @@ AST::NumberLiteral* Parser::parseNumberLiteral() {
         return invalidNumberLiteralError(token);
     }
 
-    return astArena_.insert<AST::NumberLiteral>(
-        value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateAnyType());
+    return astArena_.insert<AST::NumberLiteral>(value, token.byteOffsetStart(),
+                                                token.byteOffsetEnd(), fileID_, generateAnyType());
 }
 
 AST::ArrayLiteral* Parser::parseArrayLiteral() {
@@ -167,9 +167,9 @@ AST::ArrayLiteral* Parser::parseArrayLiteral() {
     if (!elements) return nullptr;
     const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
-    return astArena_.insert<AST::ArrayLiteral>(
-        std::move(elements.value()), lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(), fileID_,
-        generateAnyType());
+    return astArena_.insert<AST::ArrayLiteral>(std::move(elements.value()),
+                                               lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
+                                               fileID_, generateAnyType());
 }
 
 AST::Expression* Parser::parseIdentifierOrFunctionCall() {
@@ -183,9 +183,9 @@ AST::Expression* Parser::parseIdentifierOrFunctionCall() {
         const Token rParen = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
 
         const uint32_t startIndex = ident->sourceStartIndex();
-        return astArena_.insert<AST::FunctionCall>(ident, std::move(arguments.value()),
-                                                     startIndex, rParen.byteOffsetEnd(), fileID_,
-                                                     generateAnyType());
+        return astArena_.insert<AST::FunctionCall>(ident, std::move(arguments.value()), startIndex,
+                                                   rParen.byteOffsetEnd(), fileID_,
+                                                   generateAnyType());
     } else {
         // Identifier
         return ident;
@@ -200,7 +200,7 @@ AST::ArrayAccess* Parser::parseArrayAccess(const AST::Expression* base) {
 
     const uint32_t startIndex = base->sourceStartIndex();
     return astArena_.insert<AST::ArrayAccess>(base, index, startIndex, rBracket.byteOffsetEnd(),
-                                                fileID_, generateAnyType());
+                                              fileID_, generateAnyType());
 }
 
 AST::Expression* Parser::parsePrimaryExpression() {
@@ -266,7 +266,7 @@ AST::Expression* Parser::parseUnaryExpression() {
 
         const uint32_t endIndex = operand->sourceEndIndex();
         return astArena_.insert<AST::UnaryExpression>(op, operand, token.byteOffsetStart(),
-                                                        endIndex, fileID_, generateAnyType());
+                                                      endIndex, fileID_, generateAnyType());
     }
 
     return parsePostfixExpression();
@@ -289,7 +289,7 @@ AST::Expression* Parser::parseBinaryExpression(
         const uint32_t startIndex = left->sourceStartIndex();
         const uint32_t endIndex = right->sourceEndIndex();
         left = astArena_.insert<AST::BinaryExpression>(left, op, right, startIndex, endIndex,
-                                                         fileID_, generateAnyType());
+                                                       fileID_, generateAnyType());
         if (!allowMultiple) break;
     }
 
@@ -356,13 +356,13 @@ AST::Statement* Parser::parseAssignmentOrExpressionStatement() {
 
         const uint32_t startIndex = expression->sourceStartIndex();
         return astArena_.insert<AST::Assignment>(expression, op, right, startIndex,
-                                                   semi.byteOffsetEnd(), fileID_);
+                                                 semi.byteOffsetEnd(), fileID_);
     } else {
         // Expression statement
         const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
         const uint32_t startIndex = expression->sourceStartIndex();
         return astArena_.insert<AST::ExpressionStatement>(expression, startIndex,
-                                                            semi.byteOffsetEnd(), fileID_);
+                                                          semi.byteOffsetEnd(), fileID_);
     }
 }
 
@@ -407,7 +407,7 @@ AST::IfStatement* Parser::parseIfOrElif(const TokenKind kind) {
 
     const uint32_t endIndex = elseClause ? elseClause->sourceEndIndex() : body->sourceEndIndex();
     return astArena_.insert<AST::IfStatement>(condition, body, elseClause,
-                                                keywordTok.byteOffsetStart(), endIndex, fileID_);
+                                              keywordTok.byteOffsetStart(), endIndex, fileID_);
 }
 
 AST::IfStatement* Parser::parseIfStatement() { return parseIfOrElif(TokenKind::IF); }
@@ -425,21 +425,21 @@ AST::WhileStatement* Parser::parseWhileStatement() {
 
     const uint32_t endIndex = body->sourceEndIndex();
     return astArena_.insert<AST::WhileStatement>(condition, body, whileTok.byteOffsetStart(),
-                                                   endIndex, fileID_);
+                                                 endIndex, fileID_);
 }
 
 AST::BreakStatement* Parser::parseBreakStatement() {
     const Token breakTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::BREAK);
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
     return astArena_.insert<AST::BreakStatement>(breakTok.byteOffsetStart(),
-                                                   semiTok.byteOffsetEnd(), fileID_);
+                                                 semiTok.byteOffsetEnd(), fileID_);
 }
 
 AST::ContinueStatement* Parser::parseContinueStatement() {
     const Token continueTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::CONTINUE);
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
     return astArena_.insert<AST::ContinueStatement>(continueTok.byteOffsetStart(),
-                                                      semiTok.byteOffsetEnd(), fileID_);
+                                                    semiTok.byteOffsetEnd(), fileID_);
 }
 
 AST::ReturnStatement* Parser::parseReturnStatement() {
@@ -454,7 +454,7 @@ AST::ReturnStatement* Parser::parseReturnStatement() {
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
     return astArena_.insert<AST::ReturnStatement>(returnValue, returnTok.byteOffsetStart(),
-                                                    semiTok.byteOffsetEnd(), fileID_);
+                                                  semiTok.byteOffsetEnd(), fileID_);
 }
 
 AST::ExitStatement* Parser::parseExitStatement() {
@@ -463,7 +463,7 @@ AST::ExitStatement* Parser::parseExitStatement() {
     if (!exitCode) return nullptr;
     const Token semiTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
     return astArena_.insert<AST::ExitStatement>(exitCode, exitTok.byteOffsetStart(),
-                                                  semiTok.byteOffsetEnd(), fileID_);
+                                                semiTok.byteOffsetEnd(), fileID_);
 }
 
 AST::BlockStatement* Parser::parseBlockStatement() {
@@ -495,7 +495,7 @@ AST::BlockStatement* Parser::parseBlockStatement() {
     const Token rBrace = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACE);
 
     return astArena_.insert<AST::BlockStatement>(std::move(statements), lBrace.byteOffsetStart(),
-                                                   rBrace.byteOffsetEnd(), fileID_);
+                                                 rBrace.byteOffsetEnd(), fileID_);
 }
 
 AST::Statement* Parser::parseStatement() {
@@ -528,7 +528,7 @@ AST::VariableDefinition* Parser::parseFunctionParameter() {
 
     const uint32_t endIndex = identifier->sourceEndIndex();
     return astArena_.insert<AST::VariableDefinition>(identifier, typeID, isMutable,
-                                                       sourceStartIndex, endIndex, fileID_);
+                                                     sourceStartIndex, endIndex, fileID_);
 }
 
 std::unique_ptr<ParsedFunctionSignature> Parser::parseFunctionSignature() {
