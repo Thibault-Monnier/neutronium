@@ -115,7 +115,7 @@ class Parser {
     template <typename T>
         requires std::is_trivially_copyable_v<T>
     [[nodiscard]] std::span<T> insertVector(std::vector<T>&& vec) {
-        if (vec.size() == 0) return {};
+        if (vec.empty()) return {};
 
         T* data = astArena_.insertArray<T>(vec.size());
         std::memcpy(reinterpret_cast<void*>(data), vec.data(), vec.size() * sizeof(T));

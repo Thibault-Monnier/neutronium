@@ -42,7 +42,6 @@ struct Node {
           sourceStartIndex_(sourceStartIndex),
           sourceEndIndex_(sourceEndIndex),
           fileID_(fileID) {}
-    virtual ~Node() = default;
 
     const NodeKind kind_;
 

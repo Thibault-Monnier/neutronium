@@ -15,20 +15,27 @@ class ASTArena {
    public:
     ASTArena() = default;
 
+    ASTArena(const ASTArena&) = delete;
+    ASTArena& operator=(const ASTArena&) = delete;
+
+    ASTArena(ASTArena&&) = delete;
+    ASTArena& operator=(ASTArena&&) = delete;
+
     ~ASTArena() {
         for (void* block : blocks_) {
             ::operator delete(block, static_cast<std::align_val_t>(MAX_ALIGNMENT));
         }
-    };
+    }
 
     template <typename T, typename... Args>
-        requires std::derived_from<T, AST::Node>
+        requires std::derived_from<T, AST::Node> && std::is_trivially_destructible_v<T>
     T* insert(Args&&... args) {
         void* mem = reinterpret_cast<void*>(allocate(sizeof(T), alignof(T)));
         return new (mem) T(std::forward<Args>(args)...);
     }
 
     template <typename T>
+        requires std::is_trivially_constructible_v<T> && std::is_trivially_destructible_v<T>
     T* insertArray(const size_t count) {
         uintptr_t mem = allocate(sizeof(T) * count, alignof(T));
         return reinterpret_cast<T*>(mem);
@@ -37,6 +44,7 @@ class ASTArena {
    private:
     uintptr_t allocate(const size_t size, const size_t alignment) {
         assert((alignment & (alignment - 1)) == 0 && "Alignment must be power of two");
+        assert(alignment <= MAX_ALIGNMENT && "Alignment exceeds maximum supported alignment");
 
         uintptr_t currentPos = currentBlockPos_;
         uintptr_t alignedPos = (currentPos + alignment - 1) & ~(alignment - 1);
