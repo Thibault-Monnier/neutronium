@@ -11,6 +11,7 @@
 
 #include "AST.hpp"
 
+/// An arena allocator for holding AST data. This allows for fast bulk allocation and deallocation.
 class ASTArena {
    public:
     ASTArena() = default;
@@ -27,6 +28,14 @@ class ASTArena {
         }
     }
 
+    /** Insert a new AST node into the arena.
+     *
+     * @tparam T The type of AST node to insert. Must derive from AST::Node and be trivially
+     * destructible.
+     * @tparam Args The types of the constructor arguments for T.
+     * @param args The constructor arguments for T.
+     * @return A pointer to the newly inserted AST node.
+     */
     template <typename T, typename... Args>
         requires std::derived_from<T, AST::Node> && std::is_trivially_destructible_v<T>
     T* insert(Args&&... args) {
@@ -34,6 +43,12 @@ class ASTArena {
         return new (mem) T(std::forward<Args>(args)...);
     }
 
+    /** Insert an array of trivially constructible and destructible objects into the arena.
+     *
+     * @tparam T The type of object to insert. Must be trivially constructible and destructible.
+     * @param count The number of objects to insert.
+     * @return A pointer to the first object in the newly inserted array.
+     */
     template <typename T>
         requires std::is_trivially_constructible_v<T> && std::is_trivially_destructible_v<T>
     T* insertArray(const size_t count) {
