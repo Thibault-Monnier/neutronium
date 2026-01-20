@@ -44,6 +44,7 @@ class TypeArena {
      * @return A reference to the Type at the given index.
      */
     [[nodiscard]] Type& at(const size_t index) const {
+        assert(index < count_ && "Index out of bounds");
         const size_t block = index / BLOCK_SIZE_ELEMS;
         const size_t idx = index % BLOCK_SIZE_ELEMS;
         return blocks_[block][idx];
@@ -56,17 +57,15 @@ class TypeArena {
     [[nodiscard]] size_t count() const { return count_; }
 
    private:
-    uintptr_t allocate(const size_t size = sizeof(Type), const size_t alignment = alignof(Type)) {
-        assert(alignment == ALIGNMENT && "Alignments don't match");
-
+    uintptr_t allocate() {
         uintptr_t pos = currentBlockPos_;
-        uintptr_t newPos = pos + size;
+        uintptr_t newPos = pos + sizeof(Type);
 
         if (newPos > currentBlockEnd_) {
             allocateBlock();
 
             pos = currentBlockPos_;
-            newPos = pos + size;
+            newPos = pos + sizeof(Type);
         }
 
         currentBlockPos_ = newPos;
