@@ -1,9 +1,11 @@
 #include "Type.hpp"
 
+#include <cassert>
 #include <cstdint>
 #include <magic_enum/magic_enum.hpp>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "Primitive.hpp"
 #include "TypeID.hpp"
@@ -102,24 +104,22 @@ TypeID Type::arrayElementTypeId() const {
     std::unreachable();
 }
 
-bool Type::mergeWith(const Type& other, const TypeManager& typeManager) {
+bool Type::mergeWith(const Type& other) {
     if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) std::unreachable();
 
-    if (!matches(other, typeManager)) return false;
+    if (!matches(other)) return false;
 
     // We only need to modify `this`
-    if (!isInFamily_ || other.family()->isInFamily(primitive_)) return true;
+    if (!hasFamily_ || other.family()->isInFamily(primitive_)) return true;
 
-    if (kind_ == TypeKind::UNKNOWN || !other.isInFamily_ ||
-        family()->isInFamily(other.primitive_)) {
-        *this = other;
-        return true;
-    }
+    assert(kind_ == TypeKind::UNKNOWN || !other.hasFamily_ ||
+           family()->isInFamily(other.primitive_));
 
-    std::unreachable();
+    *this = other;
+    return true;
 }
 
-bool Type::matches(const Type& other, const TypeManager& typeManager) const {
+bool Type::matches(const Type& other) const {
     if (family()->isInFamily(other.primitive_) || other.family()->isInFamily(primitive_)) {
         return true;
     }
@@ -131,18 +131,14 @@ bool Type::matches(const Type& other, const TypeManager& typeManager) const {
         case TypeKind::PRIMITIVE:
             // If one of the types has no family, it is fully determined, so we just need to make
             // sure the other type is compatible.
-            if (!isInFamily_ && !other.isInFamily_) {
+            if (!hasFamily_ && !other.hasFamily_) {
                 return primitive_ == other.primitive_;
             }
             // Otherwise, we checked that the families are not compatible above.
             return false;
 
-        case TypeKind::ARRAY: {
-            const Type& arrayElement = typeManager.getType(arrayElementTypeID_);
-            const Type& otherArrayElement = typeManager.getType(other.arrayElementTypeID_);
-            return arrayLength_ == other.arrayLength_ &&
-                   arrayElement.matches(otherArrayElement, typeManager);
-        }
+        case TypeKind::ARRAY:
+            return arrayLength_ == other.arrayLength_;
         case TypeKind::UNKNOWN:
             return true;
     }

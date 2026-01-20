@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "../Trait.hpp"
 #include "../TypeID.hpp"
 #include "ast/AST.hpp"
@@ -19,6 +21,15 @@ class Constraint {
 
     [[nodiscard]] virtual Kind kind() const = 0;
     [[nodiscard]] const AST::Node& sourceNode() const { return sourceNode_; }
+
+    template <typename T>
+    [[nodiscard]] T& as() {
+        return *static_cast<T*>(this);
+    }
+    template <typename T>
+    [[nodiscard]] T& as() const {
+        return *static_cast<const T*>(this);
+    }
 
    protected:
     explicit Constraint(const AST::Node& sourceNode) : sourceNode_(sourceNode) {}

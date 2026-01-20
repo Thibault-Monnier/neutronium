@@ -29,14 +29,14 @@ enum class TypeKind : uint8_t {
 class Type {
    public:
     Type(const Primitive::Kind t, const bool inFamily, const TypeKind kind)
-        : kind_(kind), primitive_(t), isInFamily_(inFamily) {
+        : kind_(kind), primitive_(t), hasFamily_(inFamily) {
         initializeTraits();
     }
 
     Type(const TypeID elementTypeID, const std::size_t arrayLength)
         : kind_(TypeKind::ARRAY),
           primitive_(Primitive::Kind::VOID),
-          isInFamily_(false),
+          hasFamily_(false),
           arrayElementTypeID_(elementTypeID),
           arrayLength_(arrayLength) {
         initializeTraits();
@@ -182,7 +182,7 @@ class Type {
      * @return A const pointer to the `PrimitiveTypeFamily` associated with this type.
      */
     [[nodiscard]] const PrimitiveTypeFamily* family() const {
-        if (isInFamily_) {
+        if (hasFamily_) {
             return PrimitiveTypeFamily::familyForType(primitive_);
         }
         return &NoTypeFamily::getInstance();
@@ -245,10 +245,9 @@ class Type {
      * Only the current type is modified.
      *
      * @param other The type to merge with the current type.
-     * @param typeManager
      * @return True if the types were successfully merged; false otherwise.
      */
-    [[nodiscard]] bool mergeWith(const Type& other, const TypeManager& typeManager);
+    [[nodiscard]] bool mergeWith(const Type& other);
 
     /**
      * @brief Checks whether this type matches another type.
@@ -257,11 +256,13 @@ class Type {
      * Two types are considered to match if their primitive kinds and families are compatible
      * (together), and all of their other properties are equal.
      *
+     * Note that this is a shallow comparison and does not consider nested types (e.g., array
+     * element types).
+     *
      * @param other The type to compare with the current instance.
-     * @param typeManager The type manager used for type comparisons.
      * @return True if the types are compatible; false otherwise.
      */
-    [[nodiscard]] bool matches(const Type& other, const TypeManager& typeManager) const;
+    [[nodiscard]] bool matches(const Type& other) const;
 
     /**
      * @brief Checks if a specific trait is present in the list of traits.
@@ -278,7 +279,7 @@ class Type {
 
    private:
     explicit Type(const Primitive::Kind t, const bool inFamily = false)
-        : kind_(TypeKind::PRIMITIVE), primitive_(t), isInFamily_(inFamily) {
+        : kind_(TypeKind::PRIMITIVE), primitive_(t), hasFamily_(inFamily) {
         initializeTraits();
     }
 
@@ -286,7 +287,7 @@ class Type {
     Primitive::Kind primitive_;
 
     uint16_t traits_ : 15;
-    uint16_t isInFamily_ : 1;
+    uint16_t hasFamily_ : 1;
 
     TypeID arrayElementTypeID_{0};
     uint32_t arrayLength_{0};
@@ -316,7 +317,7 @@ class Type {
     // All members must be copied here when adding new ones.
     void copyFrom(const Type& other) {
         kind_ = other.kind_;
-        isInFamily_ = other.isInFamily_;
+        hasFamily_ = other.hasFamily_;
         primitive_ = other.primitive_;
         arrayElementTypeID_ = other.arrayElementTypeID_;
         arrayLength_ = other.arrayLength_;

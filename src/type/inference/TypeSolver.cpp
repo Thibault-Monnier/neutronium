@@ -2,8 +2,8 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <format>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -40,16 +40,15 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sour
     // The following modifies dstType only, but it is fine since src will never be root
     // again, so we don't care about its type anymore
 
-    if (dstType.isUnknownKind() || srcType.isUnknownKind())
-        return dstType.mergeWith(srcType, typeManager_);
+    if (dstType.isUnknownKind() || srcType.isUnknownKind()) return dstType.mergeWith(srcType);
 
     if (dstType.kind() != srcType.kind()) return false;
 
     switch (dstType.kind()) {
         case TypeKind::PRIMITIVE:
-            return dstType.mergeWith(srcType, typeManager_);
+            return dstType.mergeWith(srcType);
         case TypeKind::ARRAY: {
-            if (!dstType.matches(srcType, typeManager_)) return false;
+            if (!dstType.matches(srcType)) return false;
             typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(
                 dstType.arrayElementTypeId(), srcType.arrayElementTypeId(), sourceNode);
             return true;
@@ -67,7 +66,7 @@ void TypeSolver::prepareUnionFind() {
     }
 }
 
-bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConstraint) {
+std::true_type TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConstraint) {
     // Uses a union-find algorithm to solve equality constraints
     assert(equalityConstraint.kind() == Constraint::Kind::EQUALITY);
 
@@ -77,25 +76,16 @@ bool TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConst
     TypeID rootA = findRoot(a);
     TypeID rootB = findRoot(b);
 
-    if (rootA == rootB) return true;
+    if (rootA == rootB) return std::true_type{};
 
     if (nodes_[rootA].setSize_ < nodes_[rootB].setSize_) std::swap(rootA, rootB);
 
-    if (!unify(rootA, rootB, equalityConstraint.sourceNode())) {
+    if (!unify(rootA, rootB, equalityConstraint.sourceNode())) [[unlikely]] {
         // Types are not compatible
-        const Type& aType = typeManager_.getType(rootA);
-        const Type& bType = typeManager_.getType(rootB);
-
-        const AST::Node& sourceNode = equalityConstraint.sourceNode();
-        diagnosticsEngine_.reportError(
-            std::format("Type mismatch: cannot unify types '{}' and '{}'",
-                        aType.toString(typeManager_), bType.toString(typeManager_)),
-            sourceNode.sourceStartIndex(), sourceNode.sourceEndIndex(), sourceNode.fileID());
-        diagnosticsEngine_.emit();
-        exit(EXIT_FAILURE);
+        equalityConstraintError(rootA, rootB, equalityConstraint.sourceNode());
     }
 
-    return true;
+    return std::true_type{};
 }
 
 bool TypeSolver::solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint) const {
@@ -125,14 +115,7 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
     if (type.isUnknownKind()) return false;
 
     if (!type.hasTrait(trait)) {
-        const AST::Node& sourceNode = hasTraitConstraint.sourceNode();
-
-        diagnosticsEngine_.reportError(
-            std::format("Type '{}' does not implement the trait '{}'", type.toString(typeManager_),
-                        traitToString(trait)),
-            sourceNode.sourceStartIndex(), sourceNode.sourceEndIndex(), sourceNode.fileID());
-        diagnosticsEngine_.emit();
-        exit(EXIT_FAILURE);
+        hasTraitConstraintError(type, trait, hasTraitConstraint.sourceNode());
     }
 
     return true;
@@ -143,26 +126,26 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
 
     const Type& type = typeManager_.getType(storableConstraint.type());
 
-    if (type.kind() == TypeKind::PRIMITIVE) {
-        if (type.primitive() == Primitive::Kind::VOID) {
-            const AST::Node& sourceNode = storableConstraint.sourceNode();
-            diagnosticsEngine_.reportError("Type 'void' is not storable",
-                                           sourceNode.sourceStartIndex(),
-                                           sourceNode.sourceEndIndex(), sourceNode.fileID());
-            diagnosticsEngine_.emit();
-            exit(EXIT_FAILURE);
+    switch (type.kind()) {
+        case TypeKind::PRIMITIVE: {
+            if (type.primitive() == Primitive::Kind::VOID) {
+                const AST::Node& sourceNode = storableConstraint.sourceNode();
+                storableConstraintError(type, sourceNode);
+            } else {
+                return true;
+            }
         }
-        return true;
-    }
 
-    if (type.kind() == TypeKind::ARRAY) {
-        const TypeID elementTypeID = type.arrayElementTypeId();
-        typeManager_.getTypeSolver().addConstraint(
-            std::make_unique<StorableConstraint>(elementTypeID, storableConstraint.sourceNode()));
-        return true;
-    }
+        case TypeKind::ARRAY: {
+            const TypeID elementTypeID = type.arrayElementTypeId();
+            typeManager_.getTypeSolver().addConstraint(std::make_unique<StorableConstraint>(
+                elementTypeID, storableConstraint.sourceNode()));
+            return true;
+        }
 
-    return false;
+        default:
+            return false;
+    }
 }
 
 void TypeSolver::solve() {
@@ -176,29 +159,18 @@ void TypeSolver::solve() {
 
             bool solved = false;
             switch (constraint.kind()) {
-                case Constraint::Kind::EQUALITY: {
-                    auto& equalityConstraint = static_cast<const EqualityConstraint&>(constraint);
-                    solved = solveEqualityConstraint(equalityConstraint);
+                case Constraint::Kind::EQUALITY:
+                    solved = solveEqualityConstraint(constraint.as<const EqualityConstraint>());
                     break;
-                }
-                case Constraint::Kind::SUBSCRIPT: {
-                    const auto& subscriptConstraint =
-                        static_cast<const SubscriptConstraint&>(constraint);
-                    solved = solveSubscriptConstraint(subscriptConstraint);
+                case Constraint::Kind::SUBSCRIPT:
+                    solved = solveSubscriptConstraint(constraint.as<const SubscriptConstraint>());
                     break;
-                }
-                case Constraint::Kind::HAS_TRAIT: {
-                    const auto& hasTraitConstraint =
-                        static_cast<const HasTraitConstraint&>(constraint);
-                    solved = solveHasTraitConstraint(hasTraitConstraint);
+                case Constraint::Kind::HAS_TRAIT:
+                    solved = solveHasTraitConstraint(constraint.as<const HasTraitConstraint>());
                     break;
-                }
-                case Constraint::Kind::STORABLE: {
-                    const auto& storableConstraint =
-                        static_cast<const StorableConstraint&>(constraint);
-                    solved = solveStorableConstraint(storableConstraint);
+                case Constraint::Kind::STORABLE:
+                    solved = solveStorableConstraint(constraint.as<const StorableConstraint>());
                     break;
-                }
             }
 
             if (!solved) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -8,6 +9,8 @@
 #include "ast/AST.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "source/FileID.hpp"
+#include "type/Trait.hpp"
+#include "type/Type.hpp"
 #include "type/TypeID.hpp"
 
 class TypeManager;
@@ -65,6 +68,16 @@ class TypeSolver {
 
     std::vector<Node> nodes_;
 
+    // ------------------------------
+    // --- Error handling methods ---
+    // ------------------------------
+
+    [[noreturn]] void equalityConstraintError(TypeID a, TypeID b,
+                                              const AST::Node& sourceNode) const;
+    [[noreturn]] void hasTraitConstraintError(const Type& type, Trait trait,
+                                              const AST::Node& sourceNode) const;
+    [[noreturn]] void storableConstraintError(const Type& type, const AST::Node& sourceNode) const;
+
     /**
      * @brief Registers a new type constraint to the collection of constraints.
      *
@@ -81,7 +94,7 @@ class TypeSolver {
     [[nodiscard]] TypeID findRoot(TypeID x);
     [[nodiscard]] bool unify(TypeID dst, TypeID src, const AST::Node& sourceNode);
     void prepareUnionFind();
-    bool solveEqualityConstraint(const EqualityConstraint& equalityConstraint);
+    std::true_type solveEqualityConstraint(const EqualityConstraint& equalityConstraint);
 
     [[nodiscard]] bool solveSubscriptConstraint(
         const SubscriptConstraint& subscriptConstraint) const;
