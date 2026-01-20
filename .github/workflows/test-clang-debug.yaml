@@ -1,4 +1,4 @@
-name: Run tests (Clang)
+name: Run tests in Debug (Clang)
 permissions:
   contents: read
 
@@ -25,7 +25,7 @@ jobs:
         run: chmod +x ./configure-cmake.sh
 
       - name: Run build
-        run: ./configure-cmake.sh RelWithDebInfo && cmake --build build
+        run: ./configure-cmake.sh Debug && cmake --build build
         shell: bash
         env:
           CC: clang

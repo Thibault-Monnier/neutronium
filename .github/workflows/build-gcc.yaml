@@ -27,7 +27,7 @@ jobs:
 
       - name: Run build
         id: build_run
-        run: ./configure-cmake.sh && cmake --build build
+        run: ./configure-cmake.sh RelWithDebInfo && cmake --build build
         shell: bash
         env:
           CXX: g++-14
