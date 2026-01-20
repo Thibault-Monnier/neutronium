@@ -3,7 +3,7 @@
 <details><summary>Formal EBNF Grammar</summary>
 
 ```
-program ::= { external-function-declaration } { function-definition } EOF
+compilation-unit ::= { external-function-declaration } { function-definition } EOF
 
 function-signature ::= identifier '(' parameter-list ')' [ '->' type-specifier ]
 

@@ -4,6 +4,6 @@
 
 namespace AST {
 
-void logAst(const Program& programNode);
+void logAst(const CompilationUnit& compilationUnit);
 
 }  // namespace AST

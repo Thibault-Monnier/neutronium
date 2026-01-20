@@ -165,7 +165,7 @@ TEST(CliNonErrorTest, LogArguments) {
 
     status = runAndCapture(baseCompileCommand + " --log-ast", output);
     EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("Program")) << output;
+    EXPECT_TRUE(output.contains("Compilation Unit")) << output;
 
     status = runAndCapture(baseCompileCommand + " --log-assembly", output);
     EXPECT_EQ(status, 0) << output;
@@ -173,13 +173,13 @@ TEST(CliNonErrorTest, LogArguments) {
 
     status = runAndCapture(baseCompileCommand + " -d", output);
     EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("fn main():") && output.contains("Program") &&
+    EXPECT_TRUE(output.contains("fn main():") && output.contains("Compilation Unit") &&
                 output.contains("_start:"))
         << output;
 
     status = runAndCapture(baseCompileCommand + " --log=code,ast", output);
     EXPECT_EQ(status, 0) << output;
-    EXPECT_TRUE(output.contains("fn main():") && output.contains("Program")) << output;
+    EXPECT_TRUE(output.contains("fn main():") && output.contains("Compilation Unit")) << output;
 
     status = runAndCapture(baseCompileCommand + " --log=code,assembly", output);
     EXPECT_EQ(status, 0) << output;

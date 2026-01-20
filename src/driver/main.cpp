@@ -120,7 +120,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
     ASTArena astArena;
     TypeManager typeManager(diagnosticsEngine);
 
-    AST::Program* const ast = [&] {
+    AST::CompilationUnit* const ast = [&] {
         const Stage stage("Parsing", verbose);
 
         Parser parser(diagnosticsEngine, fileID, fileContents, astArena, typeManager);

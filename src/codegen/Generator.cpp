@@ -25,12 +25,12 @@ std::stringstream Generator::generate() {
     output_ << ".intel_syntax noprefix\n\n";
 
     // Declare external functions
-    for (const auto& externalFuncDecl : program_.externalFunctions_) {
+    for (const auto& externalFuncDecl : compilationUnit_.externalFunctions_) {
         output_ << ".extern " << functionNameWithPrefix(externalFuncDecl->identifier_->name_)
                 << "\n";
     }
 
-    if (!program_.externalFunctions_.empty()) output_ << "\n";
+    if (!compilationUnit_.externalFunctions_.empty()) output_ << "\n";
 
     // Write the header
     output_ << ".text\n";
@@ -45,7 +45,7 @@ std::stringstream Generator::generate() {
         generateExit("0");
     }
 
-    for (const auto& funcDef : program_.functions_) {
+    for (const auto& funcDef : compilationUnit_.functions_) {
         generateFunctionDefinition(*funcDef);
     }
 

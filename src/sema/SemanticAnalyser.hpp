@@ -17,7 +17,7 @@
 
 class SemanticAnalyser {
    public:
-    explicit SemanticAnalyser(const AST::Program& ast, const TargetType targetType,
+    explicit SemanticAnalyser(const AST::CompilationUnit& ast, const TargetType targetType,
                               DiagnosticsEngine& diagnosticsEngine, const FileID fileID,
                               TypeManager& typeManager)
         : ast_(&ast),
@@ -29,7 +29,7 @@ class SemanticAnalyser {
     void analyse();
 
    private:
-    const AST::Program* ast_;
+    const AST::CompilationUnit* ast_;
     const TargetType targetType_;
 
     DiagnosticsEngine& diagnosticsEngine_;

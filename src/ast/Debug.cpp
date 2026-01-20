@@ -213,8 +213,8 @@ void logStatement(const Statement& stmt, const std::string& prefix, const bool i
 
 }  // namespace
 
-void logAst(const Program& programNode) {
-    std::cout << "Program\n";
+void logAst(const CompilationUnit& compilationUnit) {
+    std::cout << "Compilation Unit\n";
 
     const std::string prefix = "    ";
 
@@ -241,13 +241,13 @@ void logAst(const Program& programNode) {
             }
         };
 
-    for (size_t i = 0; i < programNode.externalFunctions_.size(); ++i) {
-        const bool isLast =
-            i == programNode.externalFunctions_.size() - 1 && programNode.functions_.empty();
+    for (size_t i = 0; i < compilationUnit.externalFunctions_.size(); ++i) {
+        const bool isLast = i == compilationUnit.externalFunctions_.size() - 1 &&
+                            compilationUnit.functions_.empty();
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
         const auto& externFunc =
-            *programNode.externalFunctions_[i]->as<ExternalFunctionDeclaration>();
+            *compilationUnit.externalFunctions_[i]->as<ExternalFunctionDeclaration>();
 
         std::cout << prefix << branch << "ExternalFunctionDeclaration\n";
         functionSignature(*externFunc.identifier_, externFunc.parameters_, externFunc.returnTypeID_,
@@ -258,11 +258,11 @@ void logAst(const Program& programNode) {
         }
     }
 
-    for (size_t i = 0; i < programNode.functions_.size(); ++i) {
-        const bool isLast = i == programNode.functions_.size() - 1;
+    for (size_t i = 0; i < compilationUnit.functions_.size(); ++i) {
+        const bool isLast = i == compilationUnit.functions_.size() - 1;
         const std::string branch = isLast ? "└── " : "├── ";
         const std::string newPrefix = prefix + (isLast ? "    " : "│   ");
-        const auto& funcDef = *programNode.functions_[i]->as<FunctionDefinition>();
+        const auto& funcDef = *compilationUnit.functions_[i]->as<FunctionDefinition>();
 
         std::cout << prefix << branch << "FunctionDefinition\n";
         functionSignature(*funcDef.identifier_, funcDef.parameters_, funcDef.returnTypeID_,

@@ -31,8 +31,8 @@
 #error "EXPECT_OR_RETURN_NULLPTR is not supported by your compiler."
 #endif
 
-AST::Program* Parser::parse() {
-    const auto ast = parseProgram();
+AST::CompilationUnit* Parser::parse() {
+    const auto ast = parseCompilationUnit();
 
     if (diagnosticsEngine_.hasErrors()) {
         diagnosticsEngine_.emit();
@@ -584,7 +584,7 @@ AST::FunctionDefinition* Parser::parseFunctionDefinition() {
         signature->returnTypeID_, isExported, body, sourceStartIndex, endIndex, fileID_);
 }
 
-AST::Program* Parser::parseProgram() {
+AST::CompilationUnit* Parser::parseCompilationUnit() {
     std::vector<AST::ExternalFunctionDeclaration*> externalFunctions;
     std::vector<AST::FunctionDefinition*> functions;
 
@@ -613,7 +613,7 @@ AST::Program* Parser::parseProgram() {
         }
     }
 
-    return astArena_.insert<AST::Program>(insertVector(std::move(externalFunctions)),
-                                          insertVector(std::move(functions)), fileID_,
-                                          sourceCode_.size());
+    return astArena_.insert<AST::CompilationUnit>(insertVector(std::move(externalFunctions)),
+                                                  insertVector(std::move(functions)), fileID_,
+                                                  sourceCode_.size());
 }

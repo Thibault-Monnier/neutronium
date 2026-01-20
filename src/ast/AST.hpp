@@ -32,7 +32,7 @@ enum class NodeKind : uint8_t {
     BLOCK_STATEMENT,
     EXTERNAL_FUNCTION_DECLARATION,
     FUNCTION_DEFINITION,
-    PROGRAM,
+    COMPILATION_UNIT,
 };
 
 struct Node {
@@ -147,8 +147,8 @@ struct BinaryExpression final : Expression {
                      const uint32_t start, const uint32_t end, const FileID fileID,
                      const TypeID typeID)
         : Expression{NodeKind::BINARY_EXPRESSION, start, end, fileID, typeID},
-          left_(left),
           operator_(op),
+          left_(left),
           right_(right) {}
 
     const Operator operator_;
@@ -306,11 +306,11 @@ struct FunctionDefinition final : Node {
     static constexpr uint8_t FlagIsExported = 1 << 0;
 };
 
-struct Program final : Node {
-    explicit Program(const std::span<ExternalFunctionDeclaration*> externalFunctions,
-                     const std::span<FunctionDefinition*> functions, const FileID fileID,
-                     const uint32_t sourceEndIndex)
-        : Node{NodeKind::PROGRAM, 0, sourceEndIndex, fileID},
+struct CompilationUnit final : Node {
+    explicit CompilationUnit(const std::span<ExternalFunctionDeclaration*> externalFunctions,
+                             const std::span<FunctionDefinition*> functions, const FileID fileID,
+                             const uint32_t sourceEndIndex)
+        : Node{NodeKind::COMPILATION_UNIT, 0, sourceEndIndex, fileID},
           externalFunctions_(externalFunctions),
           functions_(functions) {}
 

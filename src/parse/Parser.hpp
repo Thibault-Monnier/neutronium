@@ -41,7 +41,7 @@ class Parser {
         token_ = lexer_.lex();
     }
 
-    [[nodiscard]] AST::Program* parse();
+    [[nodiscard]] AST::CompilationUnit* parse();
 
    private:
     Lexer lexer_;
@@ -174,5 +174,5 @@ class Parser {
     AST::ExternalFunctionDeclaration* parseExternalFunctionDeclaration();
 
     AST::FunctionDefinition* parseFunctionDefinition();
-    AST::Program* parseProgram();
+    AST::CompilationUnit* parseCompilationUnit();
 };

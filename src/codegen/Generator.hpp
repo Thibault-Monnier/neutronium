@@ -18,14 +18,14 @@ namespace CodeGen {
 
 class Generator {
    public:
-    explicit Generator(const AST::Program& ast, const TypeManager& typeManager,
+    explicit Generator(const AST::CompilationUnit& ast, const TypeManager& typeManager,
                        const TargetType targetType)
-        : program_(ast), typeManager_(typeManager), targetType_(targetType) {}
+        : compilationUnit_(ast), typeManager_(typeManager), targetType_(targetType) {}
 
     [[nodiscard]] std::stringstream generate();
 
    private:
-    const AST::Program& program_;
+    const AST::CompilationUnit& compilationUnit_;
     std::stringstream output_;
 
     const TypeManager& typeManager_;
