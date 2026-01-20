@@ -1,5 +1,6 @@
 #include "Type.hpp"
 
+#include <cstdint>
 #include <magic_enum/magic_enum.hpp>
 #include <string>
 #include <string_view>
@@ -8,7 +9,7 @@
 #include "TypeID.hpp"
 #include "TypeManager.hpp"
 
-int Type::sizeBits(const TypeManager& typeManager) const {
+uint32_t Type::sizeBits(const TypeManager& typeManager) const {
     switch (kind_) {
         case TypeKind::PRIMITIVE: {
             switch (primitive_) {
@@ -24,13 +25,15 @@ int Type::sizeBits(const TypeManager& typeManager) const {
                     return 64;
                 case Primitive::Kind::VOID:
                     return 0;
+                case Primitive::Kind::UNKNOWN:
+                    std::unreachable();
             }
             break;
         }
 
         case TypeKind::ARRAY: {
             const Type& arrayElement = typeManager.getType(arrayElementTypeID_);
-            return arrayElement.sizeBits(typeManager) * static_cast<int>(arrayLength_);
+            return arrayElement.sizeBits(typeManager) * arrayLength_;
         }
 
         case TypeKind::UNKNOWN:
@@ -65,6 +68,9 @@ std::string Type::toString(const TypeManager& typeManager) const {
                 case Primitive::Kind::VOID:
                     result += "void";
                     break;
+                case Primitive::Kind::UNKNOWN:
+                    result += "unknown";
+                    break;
             }
             break;
         }
@@ -81,8 +87,8 @@ std::string Type::toString(const TypeManager& typeManager) const {
             break;
     }
 
-    if (family_->kind() != PrimitiveTypeFamily::Kind::NONE) {
-        const std::string_view familyKind = magic_enum::enum_name(family_->kind());
+    if (family()->kind() != PrimitiveTypeFamily::Kind::NONE) {
+        const std::string_view familyKind = magic_enum::enum_name(family()->kind());
         result += " ( " + std::string(familyKind) + " family )";
     }
 
@@ -102,11 +108,10 @@ bool Type::mergeWith(const Type& other, const TypeManager& typeManager) {
     if (!matches(other, typeManager)) return false;
 
     // We only need to modify `this`
-    if (family_->kind() == PrimitiveTypeFamily::Kind::NONE || other.family_->isInFamily(primitive_))
-        return true;
+    if (!isInFamily_ || other.family()->isInFamily(primitive_)) return true;
 
-    if (kind_ == TypeKind::UNKNOWN || other.family_->kind() == PrimitiveTypeFamily::Kind::NONE ||
-        family_->isInFamily(other.primitive_)) {
+    if (kind_ == TypeKind::UNKNOWN || !other.isInFamily_ ||
+        family()->isInFamily(other.primitive_)) {
         *this = other;
         return true;
     }
@@ -115,7 +120,7 @@ bool Type::mergeWith(const Type& other, const TypeManager& typeManager) {
 }
 
 bool Type::matches(const Type& other, const TypeManager& typeManager) const {
-    if (family_->isInFamily(other.primitive_) || other.family_->isInFamily(primitive_)) {
+    if (family()->isInFamily(other.primitive_) || other.family()->isInFamily(primitive_)) {
         return true;
     }
 
@@ -126,8 +131,7 @@ bool Type::matches(const Type& other, const TypeManager& typeManager) const {
         case TypeKind::PRIMITIVE:
             // If one of the types has no family, it is fully determined, so we just need to make
             // sure the other type is compatible.
-            if (family_->kind() == PrimitiveTypeFamily::Kind::NONE &&
-                other.family_->kind() == PrimitiveTypeFamily::Kind::NONE) {
+            if (!isInFamily_ && !other.isInFamily_) {
                 return primitive_ == other.primitive_;
             }
             // Otherwise, we checked that the families are not compatible above.

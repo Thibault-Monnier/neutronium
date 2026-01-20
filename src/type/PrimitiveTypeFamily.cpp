@@ -9,12 +9,13 @@ const PrimitiveTypeFamily* PrimitiveTypeFamily::familyForType(const Primitive::K
         case Primitive::Kind::INT16:
         case Primitive::Kind::INT32:
         case Primitive::Kind::INT64: {
-            static const IntegerTypeFamily family{};
-            return &family;
+            return &IntegerTypeFamily::getInstance();
+        }
+        case Primitive::Kind::UNKNOWN: {
+            return &AnyTypeFamily::getInstance();
         }
         default: {
-            static const NoTypeFamily noFamily{};
-            return &noFamily;
+            return &NoTypeFamily::getInstance();
         }
     }
 }

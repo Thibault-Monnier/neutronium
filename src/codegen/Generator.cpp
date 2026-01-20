@@ -1,6 +1,8 @@
 #include "Generator.hpp"
 
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <format>
 #include <optional>
 #include <ranges>
@@ -56,7 +58,7 @@ void Generator::insertSymbol(const std::string_view name, const TypeID typeID) {
     const Type& type = typeManager_.getType(typeID);
     assert(!type.isVoid() && "Void type cannot be stored in a variable");
 
-    const int sizeBits = typeSizeBits(type);
+    const uint32_t sizeBits = typeSizeBits(type);
 
     currentStackOffset_ += sizeBits / 8;
 
@@ -67,8 +69,8 @@ void Generator::insertSymbol(const std::string_view name, const TypeID typeID) {
     symbolTable_.emplace(name, info);
 }
 
-int Generator::getScopeFrameSize(const AST::BlockStatement& blockStmt) const {
-    int frameSize = 0;
+uint32_t Generator::getScopeFrameSize(const AST::BlockStatement& blockStmt) const {
+    uint32_t frameSize = 0;
     for (const auto& stmt : blockStmt.body_) {
         if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
             const auto& varDef = *stmt->as<AST::VariableDefinition>();
@@ -86,7 +88,7 @@ void Generator::enterScope(const AST::BlockStatement& blockStmt) {
         }
     }
 
-    const int frameSize = getScopeFrameSize(blockStmt);
+    const uint32_t frameSize = getScopeFrameSize(blockStmt);
     if (frameSize > 0) {
         // No need to update currentStackOffset_ here, as it has already been updated in
         // insert_symbol
@@ -95,23 +97,23 @@ void Generator::enterScope(const AST::BlockStatement& blockStmt) {
 }
 
 void Generator::exitScope(const AST::BlockStatement& blockStmt) {
-    const int frameSize = getScopeFrameSize(blockStmt);
+    const uint32_t frameSize = getScopeFrameSize(blockStmt);
     if (frameSize > 0) {
         freeStackSpace(frameSize * 8);
     }
 }
 
-int Generator::getVariableSizeBits(const std::string_view name) const {
+uint32_t Generator::getVariableSizeBits(const std::string_view name) const {
     return symbolTable_.at(name).stackSizeBits_;
 }
 
-int Generator::getVariableStackOffset(const std::string_view name) const {
+uint32_t Generator::getVariableStackOffset(const std::string_view name) const {
     assert(symbolTable_.contains(name) && "Variable not found in stack offset map");
 
     return symbolTable_.at(name).stackOffset_;
 }
 
-std::string_view Generator::sizeDirective(const int bitSize) {
+std::string_view Generator::sizeDirective(const uint32_t bitSize) {
     switch (bitSize) {
         case 8:
             return "byte";
@@ -126,7 +128,7 @@ std::string_view Generator::sizeDirective(const int bitSize) {
     }
 }
 
-std::string_view Generator::registerAForSize(const int bitSize) {
+std::string_view Generator::registerAForSize(const uint32_t bitSize) {
     switch (bitSize) {
         case 8:
             return "al";
@@ -141,9 +143,9 @@ std::string_view Generator::registerAForSize(const int bitSize) {
     }
 }
 
-std::string Generator::label(const int labelID) { return std::format(".L{}", labelID); }
+std::string Generator::label(const uint32_t labelID) { return std::format(".L{}", labelID); }
 
-void Generator::cleanRax(const int raxValueSizeBits) {
+void Generator::cleanRax(const uint32_t raxValueSizeBits) {
     switch (raxValueSizeBits) {
         case 8:
         case 16:
@@ -154,27 +156,27 @@ void Generator::cleanRax(const int raxValueSizeBits) {
     }
 }
 
-void Generator::loadValueFromRax(const int bitSize) {
+void Generator::loadValueFromRax(const uint32_t bitSize) {
     output_ << "    mov " << registerAForSize(bitSize) << ", [rax]\n";
     cleanRax(bitSize);
 }
 
-void Generator::push(const std::string_view reg, const int sizeBits) {
+void Generator::push(const std::string_view reg, const uint32_t sizeBits) {
     output_ << "    push " << reg << "\n";
     currentStackOffset_ += sizeBits / 8;
 }
 
-void Generator::pop(const std::string_view reg, const int sizeBits) {
+void Generator::pop(const std::string_view reg, const uint32_t sizeBits) {
     output_ << "    pop " << reg << "\n";
     currentStackOffset_ -= sizeBits / 8;
 }
 
-void Generator::allocateStackSpace(const int sizeBits) {
+void Generator::allocateStackSpace(const uint32_t sizeBits) {
     output_ << "    sub rsp, " << (sizeBits / 8) << "\n";
     currentStackOffset_ += sizeBits / 8;
 }
 
-void Generator::freeStackSpace(const int sizeBits) {
+void Generator::freeStackSpace(const uint32_t sizeBits) {
     output_ << "    add rsp, " << (sizeBits / 8) << "\n";
     currentStackOffset_ -= sizeBits / 8;
 }
@@ -185,8 +187,8 @@ std::string Generator::stackTopMemoryOperand() const {
 
 void Generator::writeToVariableFromRax(const std::string_view name) {
     const Type& type = typeManager_.getType(symbolTable_.at(name).typeID_);
-    const int size = getVariableSizeBits(name);
-    const int stackOffset = getVariableStackOffset(name);
+    const uint32_t size = getVariableSizeBits(name);
+    const uint32_t stackOffset = getVariableStackOffset(name);
 
     switch (type.kind()) {
         case TypeKind::PRIMITIVE:
@@ -203,20 +205,20 @@ void Generator::writeToVariableFromRax(const std::string_view name) {
 }
 
 void Generator::moveVariableToRax(const std::string_view name) {
-    const int sizeBits = getVariableSizeBits(name);
-    const int stackOffset = getVariableStackOffset(name);
+    const uint32_t sizeBits = getVariableSizeBits(name);
+    const uint32_t stackOffset = getVariableStackOffset(name);
     output_ << "    mov " << registerAForSize(sizeBits) << ", [rbp - " << stackOffset << "]\n";
     cleanRax(sizeBits);
 }
 
 void Generator::moveNumberLitToRax(const AST::NumberLiteral& numberLit) {
-    const int sizeBits = exprSizeBits(numberLit);
+    const uint32_t sizeBits = exprSizeBits(numberLit);
     output_ << "    mov " << registerAForSize(sizeBits) << ", " << numberLit.value_ << "\n";
     cleanRax(sizeBits);
 }
 
 void Generator::moveBooleanLitToRax(const AST::BooleanLiteral& booleanLit) {
-    const int sizeBits = exprSizeBits(booleanLit);
+    const uint32_t sizeBits = exprSizeBits(booleanLit);
     output_ << "    mov " << registerAForSize(sizeBits) << ", " << (booleanLit.value_ ? "1" : "0")
             << "\n";
     cleanRax(sizeBits);
@@ -236,7 +238,7 @@ void Generator::evaluatePlaceExpressionAddressToRax(const AST::Expression& place
         evaluateExpressionToRax(*arrayAccess.index_);
         pop("rbx");
 
-        const int sizeBits = exprSizeBits(arrayAccess);
+        const uint32_t sizeBits = exprSizeBits(arrayAccess);
         output_ << "    imul rax, " << (sizeBits / 8) << "\n";  // Multiply index by element size
         output_ << "    add rax, rbx\n";                        // Add the base address
 
@@ -290,7 +292,7 @@ void Generator::generateFunctionCall(const AST::FunctionCall& funcCall,
     }
 
     const Type& returnType = typeManager_.getType(funcCall.typeID_);
-    const int sizeBits = typeSizeBits(returnType);
+    const uint32_t sizeBits = typeSizeBits(returnType);
     switch (returnType.kind()) {
         case TypeKind::PRIMITIVE:
             cleanRax(sizeBits);
@@ -317,7 +319,7 @@ void Generator::allocateAndGenerateFunctionCall(const AST::FunctionCall& funcCal
 void Generator::evaluateUnaryExpressionToRax(const AST::UnaryExpression& unaryExpr) {
     evaluateExpressionToRax(*unaryExpr.operand_);
 
-    const int operandSizeBits = exprSizeBits(*unaryExpr.operand_);
+    const uint32_t operandSizeBits = exprSizeBits(*unaryExpr.operand_);
     const std::string_view reg = registerAForSize(operandSizeBits);
     if (unaryExpr.operator_ == AST::Operator::SUBTRACT) {
         output_ << "    neg " << reg << "\n";
@@ -345,12 +347,12 @@ void Generator::evaluateBinaryExpressionToRax(const AST::BinaryExpression& binar
     // First evaluate right side to prevent an additional move in case of division, because the
     // numerator has to be in rax
     evaluateExpressionToRax(*binaryExpr.right_);
-    const int rightSizeBits = exprSizeBits(*binaryExpr.right_);
+    const uint32_t rightSizeBits = exprSizeBits(*binaryExpr.right_);
     cleanRax(rightSizeBits);
     push("rax");
 
     evaluateExpressionToRax(*binaryExpr.left_);
-    const int leftSizeBits = exprSizeBits(*binaryExpr.left_);
+    const uint32_t leftSizeBits = exprSizeBits(*binaryExpr.left_);
     cleanRax(leftSizeBits);
 
     pop("rbx");
@@ -417,7 +419,7 @@ void Generator::generatePrimitiveExpression(
     }
 
     if (destinationAddress.has_value()) {
-        const int sizeBits = exprSizeBits(expr);
+        const uint32_t sizeBits = exprSizeBits(expr);
         output_ << "    mov rbx, " << destinationAddress.value() << "\n";
         output_ << "    mov [rbx], " << registerAForSize(sizeBits) << "\n";
     }
@@ -470,7 +472,7 @@ void Generator::generateExpression(const AST::Expression& expr,
 
 void Generator::copyArrayContents(const std::string_view sourceAddress,
                                   const std::string_view destinationAddress,
-                                  const int arraySizeBits) {
+                                  const uint32_t arraySizeBits) {
     output_ << "    mov rsi, " << sourceAddress << "\n";
     output_ << "    mov rdi, " << destinationAddress << "\n";
     output_ << "    mov rcx, " << (arraySizeBits / 8) << "\n";
@@ -515,7 +517,7 @@ void Generator::generateVariableAssignment(const AST::Assignment& assignment) {
         generateExpression(*value, stackTopMemoryOperand());
         pop("rcx");
     } else {
-        const int sizeBits = exprSizeBits(*place);
+        const uint32_t sizeBits = exprSizeBits(*place);
         assert(sizeBits <= 64 && "Compound assignment must have <= 64-bit size");
 
         evaluateExpressionToRax(*value);
@@ -663,7 +665,7 @@ void Generator::generateFunctionDefinition(const AST::FunctionDefinition& funcDe
         insertSymbol(param->identifier_->name_, param->typeID_);
     }
 
-    int paramsSizeBits = 0;
+    uint32_t paramsSizeBits = 0;
     for (const auto& param : funcDef.parameters_)
         paramsSizeBits += getVariableSizeBits(param->identifier_->name_);
 

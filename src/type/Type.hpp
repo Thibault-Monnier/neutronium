@@ -28,15 +28,15 @@ enum class TypeKind : uint8_t {
  */
 class Type {
    public:
-    Type(const Primitive::Kind t, const PrimitiveTypeFamily* family, const TypeKind kind)
-        : kind_(kind), primitive_(t), family_(family) {
-        assert(family_->isInFamily(t) && "Type must be in its own family");
+    Type(const Primitive::Kind t, const bool inFamily, const TypeKind kind)
+        : kind_(kind), primitive_(t), isInFamily_(inFamily) {
         initializeTraits();
     }
 
     Type(const TypeID elementTypeID, const std::size_t arrayLength)
         : kind_(TypeKind::ARRAY),
           primitive_(Primitive::Kind::VOID),
+          isInFamily_(false),
           arrayElementTypeID_(elementTypeID),
           arrayLength_(arrayLength) {
         initializeTraits();
@@ -81,8 +81,7 @@ class Type {
      * @return A constant reference to the singleton instance of the "any" family type.
      */
     static const Type& anyFamilyType() {
-        static const Type instance(Primitive::Kind::VOID, &AnyTypeFamily::getInstance(),
-                                   TypeKind::UNKNOWN);
+        static const Type instance(Primitive::Kind::UNKNOWN, true, TypeKind::UNKNOWN);
         return instance;
     }
 
@@ -182,7 +181,12 @@ class Type {
      *
      * @return A const pointer to the `PrimitiveTypeFamily` associated with this type.
      */
-    [[nodiscard]] const PrimitiveTypeFamily* family() const { return family_; }
+    [[nodiscard]] const PrimitiveTypeFamily* family() const {
+        if (isInFamily_) {
+            return PrimitiveTypeFamily::familyForType(primitive_);
+        }
+        return &NoTypeFamily::getInstance();
+    }
 
     [[nodiscard]] Primitive::Kind primitive() const { return primitive_; }
 
@@ -206,7 +210,7 @@ class Type {
 
     [[nodiscard]] bool isPrimitive() const { return kind_ == TypeKind::PRIMITIVE; }
 
-    [[nodiscard]] int sizeBits(const TypeManager& typeManager) const;
+    [[nodiscard]] uint32_t sizeBits(const TypeManager& typeManager) const;
 
     /**
      * @brief Converts the type information into a string representation.
@@ -274,23 +278,18 @@ class Type {
 
    private:
     explicit Type(const Primitive::Kind t, const bool inFamily = false)
-        : kind_(TypeKind::PRIMITIVE), primitive_(t) {
-        if (inFamily) {
-            family_ = PrimitiveTypeFamily::familyForType(t);
-            assert(family_->isInFamily(t) && "Type must be in its own family");
-        }
+        : kind_(TypeKind::PRIMITIVE), primitive_(t), isInFamily_(inFamily) {
         initializeTraits();
     }
 
     TypeKind kind_;
     Primitive::Kind primitive_;
 
-    uint16_t traits_;
+    uint16_t traits_ : 15;
+    uint16_t isInFamily_ : 1;
 
     TypeID arrayElementTypeID_{0};
-
-    const PrimitiveTypeFamily* family_ = &NoTypeFamily::getInstance();
-    std::size_t arrayLength_{0};
+    uint32_t arrayLength_{0};
 
     /**
      * @brief Initializes the traits of the type based on its kind and primitive kind.
@@ -317,7 +316,7 @@ class Type {
     // All members must be copied here when adding new ones.
     void copyFrom(const Type& other) {
         kind_ = other.kind_;
-        family_ = other.family_;
+        isInFamily_ = other.isInFamily_;
         primitive_ = other.primitive_;
         arrayElementTypeID_ = other.arrayElementTypeID_;
         arrayLength_ = other.arrayLength_;

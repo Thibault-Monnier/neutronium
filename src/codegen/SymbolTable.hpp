@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string_view>
 #include <unordered_map>
 
@@ -9,8 +10,8 @@ namespace CodeGen {
 
 struct SymbolInfo {
     const std::string_view name_;
-    const int stackOffset_;
-    const int stackSizeBits_;
+    const uint32_t stackOffset_;
+    const uint32_t stackSizeBits_;
     const TypeID typeID_;
 };
 
