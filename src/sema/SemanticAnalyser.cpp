@@ -164,7 +164,7 @@ SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
     for (const auto* param : params) {
         const TypeID paramType = param->typeID_;
         parameterSymbols.emplace_back(handleVariableDeclaration(param, param->identifier_->name_,
-                                                                param->isMutable_, paramType));
+                                                                param->isMutable(), paramType));
     }
 
     return declareSymbol(declNode, name, SymbolKind::FUNCTION, false, returnTypeID, false,
@@ -329,7 +329,7 @@ void SemanticAnalyser::analyseVariableDefinition(const AST::VariableDefinition& 
     equalityConstraint(definition.typeID_, assignedType, definition);
     storableConstraint(definition.typeID_, definition);
 
-    handleVariableDeclaration(&definition, name, definition.isMutable_, definition.typeID_);
+    handleVariableDeclaration(&definition, name, definition.isMutable(), definition.typeID_);
 }
 
 bool SemanticAnalyser::verifyIsAssignable(const AST::Expression& expr) {

@@ -37,8 +37,9 @@ enum class NodeKind : uint8_t {
 
 struct Node {
     Node(const NodeKind kind, const uint32_t sourceStartIndex, const uint32_t sourceEndIndex,
-         const FileID fileID)
+         const FileID fileID, const uint8_t flags = 0)
         : kind_(kind),
+          flags_(flags),
           fileID_(fileID),
           sourceStartIndex_(sourceStartIndex),
           sourceEndIndex_(sourceEndIndex) {}
@@ -59,6 +60,8 @@ struct Node {
     const NodeKind kind_;
 
    protected:
+    const uint8_t flags_;
+
     const FileID fileID_;
 
     uint32_t sourceStartIndex_;
@@ -67,8 +70,8 @@ struct Node {
 
 struct Expression : Node {
     Expression(const NodeKind kind, const uint32_t sourceStartIndex, const uint32_t sourceEndIndex,
-               const FileID fileID, const TypeID typeID)
-        : Node{kind, sourceStartIndex, sourceEndIndex, fileID}, typeID_(typeID) {}
+               const FileID fileID, const TypeID typeID, const uint8_t flags = 0)
+        : Node{kind, sourceStartIndex, sourceEndIndex, fileID, flags}, typeID_(typeID) {}
 
     const TypeID typeID_;
 };
@@ -84,9 +87,10 @@ struct NumberLiteral final : Expression {
 struct BooleanLiteral final : Expression {
     BooleanLiteral(const bool value, const uint32_t start, const uint32_t end, const FileID fileID,
                    const TypeID typeID)
-        : Expression{NodeKind::BOOLEAN_LITERAL, start, end, fileID, typeID}, value_(value) {}
+        : Expression{NodeKind::BOOLEAN_LITERAL,  start, end, fileID, typeID,
+                     static_cast<uint8_t>(value)} {}
 
-    const bool value_;
+    [[nodiscard]] bool value() const { return flags_; }
 };
 
 struct ArrayLiteral final : Expression {
@@ -147,8 +151,8 @@ struct BinaryExpression final : Expression {
           operator_(op),
           right_(right) {}
 
-    const Expression* left_;
     const Operator operator_;
+    const Expression* left_;
     const Expression* right_;
 };
 
@@ -167,37 +171,41 @@ struct BlockStatement final : Statement {
 struct VariableDefinition final : Statement {
     VariableDefinition(const Identifier* identifier, const TypeID typeID, const bool isMutable,
                        const uint32_t start, const uint32_t end, const FileID fileID)
-        : Statement{NodeKind::VARIABLE_DEFINITION, start, end, fileID},
-          identifier_(identifier),
+        : Statement{NodeKind::VARIABLE_DEFINITION, start, end, fileID,
+                    isMutable ? FlagIsMutable : static_cast<uint8_t>(0)},
           typeID_(typeID),
-          isMutable_(isMutable),
+          identifier_(identifier),
           value_(nullptr) {}
 
     VariableDefinition(const Identifier* identifier, const TypeID typeID, const bool isMutable,
                        const Expression* value, const uint32_t start, const uint32_t end,
                        const FileID fileID)
-        : Statement{NodeKind::VARIABLE_DEFINITION, start, end, fileID},
-          identifier_(identifier),
+        : Statement{NodeKind::VARIABLE_DEFINITION, start, end, fileID,
+                    isMutable ? FlagIsMutable : static_cast<uint8_t>(0)},
           typeID_(typeID),
-          isMutable_(isMutable),
+          identifier_(identifier),
           value_(value) {}
 
-    const Identifier* identifier_;
     const TypeID typeID_;
-    const bool isMutable_;
+    const Identifier* identifier_;
     const Expression* value_;
+
+    [[nodiscard]] bool isMutable() const { return (flags_ & FlagIsMutable) != 0; }
+
+   private:
+    static constexpr uint8_t FlagIsMutable = 1 << 0;
 };
 
 struct Assignment final : Statement {
     Assignment(const Expression* place, const Operator op, const Expression* value,
                const uint32_t start, const uint32_t end, const FileID fileID)
         : Statement{NodeKind::ASSIGNMENT, start, end, fileID},
-          place_(place),
           operator_(op),
+          place_(place),
           value_(value) {}
 
-    const Expression* place_;
     const Operator operator_;
+    const Expression* place_;
     const Expression* value_;
 };
 
@@ -266,13 +274,13 @@ struct ExternalFunctionDeclaration final : Node {
                                 const TypeID returnTypeID, const uint32_t start, const uint32_t end,
                                 const FileID fileID)
         : Node{NodeKind::EXTERNAL_FUNCTION_DECLARATION, start, end, fileID},
+          returnTypeID_(returnTypeID),
           identifier_(identifier),
-          parameters_(parameters),
-          returnTypeID_(returnTypeID) {}
+          parameters_(parameters) {}
 
+    const TypeID returnTypeID_;
     const Identifier* identifier_;
     const std::span<VariableDefinition*> parameters_;
-    const TypeID returnTypeID_;
 };
 
 struct FunctionDefinition final : Node {
@@ -280,18 +288,22 @@ struct FunctionDefinition final : Node {
                        const std::span<VariableDefinition*> parameters, const TypeID returnTypeID,
                        const bool isExported, const BlockStatement* body, const uint32_t start,
                        const uint32_t end, const FileID fileID)
-        : Node{NodeKind::FUNCTION_DEFINITION, start, end, fileID},
+        : Node{NodeKind::FUNCTION_DEFINITION, start, end, fileID,
+               isExported ? FlagIsExported : static_cast<uint8_t>(0)},
+          returnTypeID_(returnTypeID),
           identifier_(identifier),
           parameters_(parameters),
-          returnTypeID_(returnTypeID),
-          isExported_(isExported),
           body_(body) {}
 
+    const TypeID returnTypeID_;
     const Identifier* identifier_;
     const std::span<VariableDefinition*> parameters_;
-    const TypeID returnTypeID_;
-    const bool isExported_;
     const BlockStatement* body_;
+
+    [[nodiscard]] bool isExported() const { return (flags_ & FlagIsExported) != 0; }
+
+   private:
+    static constexpr uint8_t FlagIsExported = 1 << 0;
 };
 
 struct Program final : Node {

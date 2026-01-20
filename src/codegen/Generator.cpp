@@ -219,7 +219,7 @@ void Generator::moveNumberLitToRax(const AST::NumberLiteral& numberLit) {
 
 void Generator::moveBooleanLitToRax(const AST::BooleanLiteral& booleanLit) {
     const uint32_t sizeBits = exprSizeBits(booleanLit);
-    output_ << "    mov " << registerAForSize(sizeBits) << ", " << (booleanLit.value_ ? "1" : "0")
+    output_ << "    mov " << registerAForSize(sizeBits) << ", " << (booleanLit.value() ? "1" : "0")
             << "\n";
     cleanRax(sizeBits);
 }
@@ -649,7 +649,7 @@ void Generator::generateFunctionDefinition(const AST::FunctionDefinition& funcDe
     output_ << "\n";
 
     const std::string& funcName = functionNameWithPrefix(funcDef.identifier_->name_);
-    if (funcDef.isExported_) {
+    if (funcDef.isExported()) {
         output_ << ".globl " << funcName << "\n";
         output_ << ".type " << funcName << ", @function\n";
     }

@@ -54,7 +54,7 @@ void logExpression(const Expression& expr, const std::string& prefix, const bool
     } else if (expr.kind_ == NodeKind::BOOLEAN_LITERAL) {
         const auto& booleanLit = *expr.as<BooleanLiteral>();
         std::cout << prefix << branch
-                  << "BooleanLiteral: " << (booleanLit.value_ ? "true" : "false") << "\n";
+                  << "BooleanLiteral: " << (booleanLit.value() ? "true" : "false") << "\n";
     } else if (expr.kind_ == NodeKind::IDENTIFIER) {
         const auto& identifier = *expr.as<Identifier>();
         std::cout << prefix << branch << "Identifier: " << identifier.name_ << "\n";
@@ -124,7 +124,7 @@ void logStatement(const Statement& stmt, const std::string& prefix, const bool i
             std::cout << prefix << branch << "VariableDefinition\n";
             std::cout << newPrefix << "├── Identifier: " << varDecl.identifier_->name_ << "\n";
             std::cout << newPrefix << "├── TypeID: " << varDecl.typeID_ << "\n";
-            std::cout << newPrefix << "├── IsMutable: " << (varDecl.isMutable_ ? "true" : "false")
+            std::cout << newPrefix << "├── IsMutable: " << (varDecl.isMutable() ? "true" : "false")
                       << "\n";
             std::cout << newPrefix << "└── Value\n";
             logExpression(*varDecl.value_, nextPrefix(newPrefix, true), true);
@@ -237,7 +237,7 @@ void logAst(const Program& programNode) {
                 std::cout << nextPrefix(paramsPrefix, j == params.size() - 1)
                           << "├── TypeID: " << param->typeID_ << "\n";
                 std::cout << nextPrefix(paramsPrefix, j == params.size() - 1)
-                          << "└── IsMutable: " << (param->isMutable_ ? "true" : "false") << "\n";
+                          << "└── IsMutable: " << (param->isMutable() ? "true" : "false") << "\n";
             }
         };
 
@@ -267,7 +267,7 @@ void logAst(const Program& programNode) {
         std::cout << prefix << branch << "FunctionDefinition\n";
         functionSignature(*funcDef.identifier_, funcDef.parameters_, funcDef.returnTypeID_,
                           newPrefix, true);
-        std::cout << newPrefix << "├── IsExported: " << (funcDef.isExported_ ? "true" : "false")
+        std::cout << newPrefix << "├── IsExported: " << (funcDef.isExported() ? "true" : "false")
                   << "\n";
 
         std::cout << newPrefix << "└── Body\n";
