@@ -36,9 +36,9 @@ class TypeManager {
      * @param type The type object to be registered in the type manager.
      * @return The unique TypeID assigned to the newly registered type.
      */
-    [[nodiscard]] TypeID createType(const Type& type) {
-        const auto id = static_cast<TypeID>(typeArena_.size());
-        typeArena_.push(std::make_unique<Type>(type));
+    [[nodiscard]] TypeID createType(Type type) {
+        const auto id = static_cast<TypeID>(typeArena_.count());
+        typeArena_.push(std::move(type));
         linkingTable_.push_back(id);
         return id;
     }
@@ -93,7 +93,7 @@ class TypeManager {
      *
      * @return The number of types registered in the TypeManager.
      */
-    [[nodiscard]] size_t getTypeCount() const { return typeArena_.size(); }
+    [[nodiscard]] size_t getTypeCount() const { return typeArena_.count(); }
 
     /**
      * @brief Provides access to the TypeSolver instance within the TypeManager.
