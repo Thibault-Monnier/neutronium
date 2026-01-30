@@ -629,14 +629,16 @@ TEST_F(NeutroniumTester, ExpressionStatements) {
 }
 
 TEST_F(NeutroniumTester, Arrays) {
-    const std::string code = R"(
-        fn main(): {
-            # initialize with literal and read an element
-            let arr = [10, 20, 30, 40, 50];
-            exit arr[2];   # should be 30
-        }
-    )";
-    EXPECT_EQ(run(code), 30);
+    {
+        const std::string code = R"(
+            fn main(): {
+                # initialize with literal and read an element
+                let arr = [10, 20, 30, 40, 50];
+                exit arr[2];   # should be 30
+            }
+        )";
+        EXPECT_EQ(run(code), 30);
+    }
 
     const std::string code2 = R"(
         fn main(): {
@@ -648,6 +650,17 @@ TEST_F(NeutroniumTester, Arrays) {
         }
     )";
     EXPECT_EQ(run(code2), 8);
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                # array literal access in expression
+                let sum = 1 + [0,1,2][0] + 2;
+                exit sum;
+            }
+        )";
+        EXPECT_EQ(run(code), 3);
+    }
 
     const std::string code3 = R"(
         fn sum(arr: [int; 3]) -> int: {
@@ -743,20 +756,36 @@ TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {
 }
 
 TEST_F(NeutroniumTester, ArrayIndexFunctionCall) {
-    const std::string code = R"(
-        fn getArray() -> [[int; 3]; 2]: {
-            return [[14, 42, 7], [21, 28, 39]];
-        }
+    {
+        const std::string code = R"(
+            fn getArray() -> [int; 1]: {
+                let unused_ = true;
+                return [5];
+            }
 
-        fn main(): {
-            let mut arr1 = getArray()[0];
-            let arr2 = getArray()[1];
-            let elem = getArray()[1][2];
-            arr1[1] += elem; # 42 + 39 = 81
-            exit arr1[1] - arr2[0];  # 81 - 21 = 60
-        }
-    )";
-    EXPECT_EQ(run(code), 60);
+            fn main(): {
+                exit getArray()[0];
+            }
+        )";
+        EXPECT_EQ(run(code), 5);
+    }
+
+    {
+        const std::string code = R"(
+            fn getArray() -> [[int; 3]; 2]: {
+                return [[14, 42, 7], [21, 28, 39]];
+            }
+
+            fn main(): {
+                let mut arr1 = getArray()[0];
+                let arr2 = getArray()[1];
+                let elem = getArray()[1][2];
+                arr1[1] += elem; # 42 + 39 = 81
+                exit arr1[1] - arr2[0];  # 81 - 21 = 60
+            }
+        )";
+        EXPECT_EQ(run(code), 60);
+    }
 }
 
 TEST_F(NeutroniumTester, ArrayIndexWithInt16) {
