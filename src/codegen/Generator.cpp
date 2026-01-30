@@ -106,21 +106,6 @@ uint32_t Generator::getVariableStackOffset(const std::string_view name) const {
     return symbolTable_.at(name).stackOffset_;
 }
 
-std::string_view Generator::sizeDirective(const uint32_t bitSize) {
-    switch (bitSize) {
-        case 8:
-            return "byte";
-        case 16:
-            return "word";
-        case 32:
-            return "dword";
-        case 64:
-            return "qword";
-        default:
-            std::unreachable();
-    }
-}
-
 std::string_view Generator::registerAForSize(const uint32_t bitSize) {
     switch (bitSize) {
         case 8:
@@ -167,10 +152,6 @@ void Generator::pop(const std::string_view reg, const uint32_t offsetBits) {
 
 void Generator::allocateStackSpace(const uint32_t sizeBits) {
     currentSpillStackOffset_ += sizeBits / 8;
-}
-
-void Generator::freeStackSpace(const uint32_t sizeBits) {
-    currentSpillStackOffset_ -= sizeBits / 8;
 }
 
 void Generator::setStackOffset(const uint32_t offsetBits) {

@@ -72,7 +72,6 @@ class Generator {
 
     uint32_t getVariableSizeBits(std::string_view name) const;
     uint32_t getVariableStackOffset(std::string_view name) const;
-    static std::string_view sizeDirective(uint32_t bitSize);
     static std::string_view registerAForSize(uint32_t bitSize);
 
     static std::string label(uint32_t labelID);
@@ -86,7 +85,6 @@ class Generator {
     uint32_t push(std::string_view reg, uint32_t sizeBits = 64);
     void pop(std::string_view reg, uint32_t offsetBits);
     void allocateStackSpace(uint32_t sizeBits);
-    void freeStackSpace(uint32_t sizeBits);
     void setStackOffset(uint32_t offsetBits);
     void updateRsp();
     /** @brief Gets a persistent memory operand string representing the current top of the stack.
