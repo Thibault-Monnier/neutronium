@@ -25,7 +25,9 @@ class SemanticAnalyser {
           targetType_(targetType),
           diagnosticsEngine_(diagnosticsEngine),
           fileID_(fileID),
-          typeManager_(typeManager) {}
+          typeManager_(typeManager) {
+        typeManager_.getTypeSolver().prepareForConstraints();
+    }
 
     void analyse();
 

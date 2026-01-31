@@ -54,6 +54,14 @@ class TypeSolver {
      */
     void solve();
 
+    /**
+     * @brief Prepares the TypeSolver for receiving constraints.
+     *
+     * This method initializes and reserves necessary data structures to efficiently handle
+     * incoming type constraints.
+     */
+    void prepareForConstraints();
+
    private:
     neutro::PolymorphicArenaAllocator constraintArena_;
     std::vector<Constraint*> pendingConstraints_;

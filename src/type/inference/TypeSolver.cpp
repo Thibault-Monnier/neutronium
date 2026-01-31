@@ -1,8 +1,7 @@
 #include "TypeSolver.hpp"
 
 #include <cassert>
-#include <cstdlib>
-#include <memory>
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -187,4 +186,9 @@ void TypeSolver::solve() {
         pendingConstraints_.swap(nextConstraints);
         nextConstraints.clear();
     }
+}
+
+void TypeSolver::prepareForConstraints() {
+    const size_t typeCount = typeManager_.getTypeCount();
+    pendingConstraints_.reserve(2 * typeCount);  // Rough estimate
 }
