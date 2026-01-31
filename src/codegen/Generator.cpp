@@ -1,5 +1,6 @@
 #include "Generator.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -60,10 +61,10 @@ void Generator::insertSymbol(const std::string_view name, const TypeID typeID) {
 
     const uint32_t sizeBits = typeSizeBits(type);
 
-    currentStackOffset_ += sizeBits / 8;
+    currentSymbolsStackOffset_ += sizeBits / 8;
 
     const SymbolInfo info = {.name_ = name,
-                             .stackOffset_ = currentStackOffset_,
+                             .stackOffset_ = currentSymbolsStackOffset_,
                              .stackSizeBits_ = sizeBits,
                              .typeID_ = typeID};
     symbolTable_.emplace(name, info);
@@ -71,12 +72,27 @@ void Generator::insertSymbol(const std::string_view name, const TypeID typeID) {
 
 uint32_t Generator::getScopeFrameSize(const AST::BlockStatement& blockStmt) const {
     uint32_t frameSize = 0;
+    uint32_t maxBlockFrameSize = 0;
     for (const auto& stmt : blockStmt.body_) {
         if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
             const auto& varDef = *stmt->as<AST::VariableDefinition>();
-            frameSize += getVariableSizeBits(varDef.identifier_->name_) / 8;
+            frameSize += varDefSizeBits(varDef) / 8;
+        } else if (stmt->kind_ == AST::NodeKind::BLOCK_STATEMENT) {
+            const auto& innerBlock = *stmt->as<AST::BlockStatement>();
+            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(innerBlock));
+        } else if (stmt->kind_ == AST::NodeKind::IF_STATEMENT) {
+            const auto& ifStmt = *stmt->as<AST::IfStatement>();
+            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(*ifStmt.body_));
+            if (const auto elseClause = ifStmt.elseClause_) {
+                maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(*elseClause));
+            }
+        } else if (stmt->kind_ == AST::NodeKind::WHILE_STATEMENT) {
+            const auto& innerBlock = *stmt->as<AST::WhileStatement>()->body_;
+            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(innerBlock));
         }
     }
+
+    frameSize += maxBlockFrameSize;
     return frameSize;
 }
 
@@ -86,20 +102,6 @@ void Generator::enterScope(const AST::BlockStatement& blockStmt) {
             const auto& varDef = *stmt->as<AST::VariableDefinition>();
             insertSymbol(varDef.identifier_->name_, varDef.typeID_);
         }
-    }
-
-    const uint32_t frameSize = getScopeFrameSize(blockStmt);
-    if (frameSize > 0) {
-        // No need to update currentStackOffset_ here, as it has already been updated in
-        // insert_symbol
-        output_ << "    sub rsp, " << frameSize << "\n";
-    }
-}
-
-void Generator::exitScope(const AST::BlockStatement& blockStmt) {
-    const uint32_t frameSize = getScopeFrameSize(blockStmt);
-    if (frameSize > 0) {
-        freeStackSpace(frameSize * 8);
     }
 }
 
@@ -111,21 +113,6 @@ uint32_t Generator::getVariableStackOffset(const std::string_view name) const {
     assert(symbolTable_.contains(name) && "Variable not found in stack offset map");
 
     return symbolTable_.at(name).stackOffset_;
-}
-
-std::string_view Generator::sizeDirective(const uint32_t bitSize) {
-    switch (bitSize) {
-        case 8:
-            return "byte";
-        case 16:
-            return "word";
-        case 32:
-            return "dword";
-        case 64:
-            return "qword";
-        default:
-            std::unreachable();
-    }
 }
 
 std::string_view Generator::registerAForSize(const uint32_t bitSize) {
@@ -161,28 +148,31 @@ void Generator::loadValueFromRax(const uint32_t bitSize) {
     cleanRax(bitSize);
 }
 
-void Generator::push(const std::string_view reg, const uint32_t sizeBits) {
-    output_ << "    push " << reg << "\n";
-    currentStackOffset_ += sizeBits / 8;
+uint32_t Generator::push(const std::string_view reg, const uint32_t sizeBits) {
+    currentSpillStackOffset_ += sizeBits / 8;
+    output_ << "    mov " << stackTopMemoryOperand() << ", " << reg << "\n";
+    return currentSpillStackOffset_ * 8;
 }
 
-void Generator::pop(const std::string_view reg, const uint32_t sizeBits) {
-    output_ << "    pop " << reg << "\n";
-    currentStackOffset_ -= sizeBits / 8;
+void Generator::pop(const std::string_view reg, const uint32_t offsetBits) {
+    output_ << "    mov " << reg << ", [rbp - " << (offsetBits / 8) << "]\n";
+    currentSpillStackOffset_ = offsetBits / 8 - 8;  // Pop the value at offsetBits as well
 }
 
 void Generator::allocateStackSpace(const uint32_t sizeBits) {
-    output_ << "    sub rsp, " << (sizeBits / 8) << "\n";
-    currentStackOffset_ += sizeBits / 8;
+    currentSpillStackOffset_ += sizeBits / 8;
 }
 
-void Generator::freeStackSpace(const uint32_t sizeBits) {
-    output_ << "    add rsp, " << (sizeBits / 8) << "\n";
-    currentStackOffset_ -= sizeBits / 8;
+void Generator::setStackOffset(const uint32_t offsetBits) {
+    currentSpillStackOffset_ = offsetBits / 8;
+}
+
+void Generator::updateRsp() {
+    output_ << "    lea rsp, [rbp - " << currentSpillStackOffset_ << "]\n";
 }
 
 std::string Generator::stackTopMemoryOperand() const {
-    return "[rbp - " + std::to_string(currentStackOffset_) + "]";
+    return "[rbp - " + std::to_string(currentSpillStackOffset_) + "]";
 }
 
 void Generator::writeToVariableFromRax(const std::string_view name) {
@@ -234,9 +224,9 @@ void Generator::evaluatePlaceExpressionAddressToRax(const AST::Expression& place
         const auto& arrayAccess = *place.as<const AST::ArrayAccess>();
 
         evaluateExpressionToRax(*arrayAccess.base_);
-        push("rax");
+        const uint32_t loc = push("rax");
         evaluateExpressionToRax(*arrayAccess.index_);
-        pop("rbx");
+        pop("rbx", loc);
 
         const uint32_t sizeBits = exprSizeBits(arrayAccess);
         output_ << "    imul rax, " << (sizeBits / 8) << "\n";  // Multiply index by element size
@@ -254,9 +244,9 @@ void Generator::generateArrayLit(const AST::ArrayLiteral& arrayLit,
     const size_t elementSizeBits = exprSizeBits(arrayLit) / arrayLit.elements_.size();
     for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
         if (i != 0) output_ << "    add rbx, " << elementSizeBits / 8 << "\n";
-        push("rbx");
+        const uint32_t loc = push("rbx");
         generateExpression(*arrayLit.elements_[i], stackTopMemoryOperand());
-        pop("rbx");
+        pop("rbx", loc);
     }
 
     output_ << "    mov rax, " << destinationAddress << "\n";
@@ -264,9 +254,10 @@ void Generator::generateArrayLit(const AST::ArrayLiteral& arrayLit,
 
 void Generator::allocateAndGenerateArrayLiteral(const AST::ArrayLiteral& arrayLit) {
     allocateStackSpace(exprSizeBits(arrayLit));
-    push("rsp");
+    output_ << "    lea rax, " << stackTopMemoryOperand() << "\n";
+    const uint32_t loc = push("rax");
     generateArrayLit(arrayLit, stackTopMemoryOperand());
-    pop("rbx");
+    pop("rbx", loc);
 }
 
 std::string Generator::functionNameWithPrefix(const std::string_view name) {
@@ -275,17 +266,18 @@ std::string Generator::functionNameWithPrefix(const std::string_view name) {
 
 void Generator::generateFunctionCall(const AST::FunctionCall& funcCall,
                                      const std::optional<std::string_view>& destinationAddress) {
+    const uint32_t initialStackOffsetBits = currentSpillStackOffset_ * 8;
+
     for (const auto& argument : funcCall.arguments_) {
         evaluateExpressionToRax(*argument);
         push("rax", FUNCTION_ARGUMENT_SIZE_BITS);
     }
 
+    updateRsp();
+
     output_ << "    call " << functionNameWithPrefix(funcCall.callee_->name_) << "\n";
 
-    // Clean up the stack
-    if (funcCall.arguments_.size() > 0) {
-        freeStackSpace(funcCall.arguments_.size() * FUNCTION_ARGUMENT_SIZE_BITS);
-    }
+    setStackOffset(initialStackOffsetBits);
 
     if (!destinationAddress.has_value()) {
         return;
@@ -311,9 +303,10 @@ void Generator::allocateAndGenerateFunctionCall(const AST::FunctionCall& funcCal
     assert(typeManager_.getType(funcCall.typeID_).kind() == TypeKind::ARRAY &&
            "Only function calls returning arrays require allocation");
     allocateStackSpace(exprSizeBits(funcCall));
-    push("rsp");
+    output_ << "    lea rax, " << stackTopMemoryOperand() << "\n";
+    const uint32_t loc = push("rax");
     generateFunctionCall(funcCall, stackTopMemoryOperand());
-    pop("rbx");
+    pop("rbx", loc);
 }
 
 void Generator::evaluateUnaryExpressionToRax(const AST::UnaryExpression& unaryExpr) {
@@ -349,13 +342,13 @@ void Generator::evaluateBinaryExpressionToRax(const AST::BinaryExpression& binar
     evaluateExpressionToRax(*binaryExpr.right_);
     const uint32_t rightSizeBits = exprSizeBits(*binaryExpr.right_);
     cleanRax(rightSizeBits);
-    push("rax");
+    const uint32_t loc = push("rax");
 
     evaluateExpressionToRax(*binaryExpr.left_);
     const uint32_t leftSizeBits = exprSizeBits(*binaryExpr.left_);
     cleanRax(leftSizeBits);
 
-    pop("rbx");
+    pop("rbx", loc);
 
     const AST::Operator op = binaryExpr.operator_;
 
@@ -453,6 +446,12 @@ void Generator::generateArrayExpression(const AST::Expression& expr,
     }
 }
 
+void Generator::evaluateExpressionToRax(const AST::Expression& expr) {
+    const uint32_t initialStackOffsetBits = currentSpillStackOffset_ * 8;
+    generateExpression(expr, std::nullopt);
+    setStackOffset(initialStackOffsetBits);
+}
+
 void Generator::generateExpression(const AST::Expression& expr,
                                    const std::optional<std::string_view>& destinationAddress) {
     const Type& exprType = typeManager_.getType(expr.typeID_);
@@ -488,9 +487,9 @@ void Generator::copyArrayContents(const std::string_view sourceAddress,
 
 void Generator::generateVariableDefinition(const AST::VariableDefinition& varDecl) {
     evaluatePlaceExpressionAddressToRax(*varDecl.identifier_);
-    push("rax");
+    const uint32_t loc = push("rax");
     generateExpression(*varDecl.value_, stackTopMemoryOperand());
-    pop("rbx");
+    pop("rbx", loc);
 }
 
 void Generator::generateVariableAssignment(const AST::Assignment& assignment) {
@@ -511,11 +510,11 @@ void Generator::generateVariableAssignment(const AST::Assignment& assignment) {
         std::unreachable();
 
     evaluatePlaceExpressionAddressToRax(*place);
-    push("rax");
+    const uint32_t loc = push("rax");
 
     if (assignment.operator_ == AST::Operator::ASSIGN) {
         generateExpression(*value, stackTopMemoryOperand());
-        pop("rcx");
+        pop("rcx", loc);
     } else {
         const uint32_t sizeBits = exprSizeBits(*place);
         assert(sizeBits <= 64 && "Compound assignment must have <= 64-bit size");
@@ -523,7 +522,7 @@ void Generator::generateVariableAssignment(const AST::Assignment& assignment) {
         evaluateExpressionToRax(*value);
 
         output_ << "    mov rbx, rax\n";
-        pop("rcx");
+        pop("rcx", loc);
         output_ << "    mov rax, [rcx]\n";
 
         applyArithmeticOperatorToRax(op, "rbx");
@@ -637,7 +636,6 @@ void Generator::generateStmt(const AST::Statement& stmt) {
             for (const auto& innerStmt : blockStmt.body_) {
                 generateStmt(*innerStmt);
             }
-            exitScope(blockStmt);
             break;
         }
         default:
@@ -656,7 +654,8 @@ void Generator::generateFunctionDefinition(const AST::FunctionDefinition& funcDe
 
     output_ << funcName << ":\n";
 
-    currentStackOffset_ = INITIAL_STACK_OFFSET;
+    currentSymbolsStackOffset_ = 0;
+    currentSpillStackOffset_ = 0;
 
     output_ << "    push rbp\n";        // Save the old base pointer
     output_ << "    mov rbp, rsp\n\n";  // Set the new base pointer
@@ -683,6 +682,10 @@ void Generator::generateFunctionDefinition(const AST::FunctionDefinition& funcDe
     if (funcDef.parameters_.size() > 0) {
         output_ << "\n";
     }
+
+    // Reserve stack space
+    const uint32_t frameSize = getScopeFrameSize(*funcDef.body_);
+    currentSpillStackOffset_ = currentSymbolsStackOffset_ + frameSize;  // Parameters + variables
 
     generateStmt(*funcDef.body_);
 

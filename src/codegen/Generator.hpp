@@ -36,34 +36,40 @@ class Generator {
     std::string innerLoopStartLabel_;
     std::string innerLoopEndLabel_;
 
-    static constexpr uint32_t INITIAL_STACK_OFFSET = 0;
-    uint32_t currentStackOffset_ = INITIAL_STACK_OFFSET;
+    uint32_t currentSpillStackOffset_ = 0;
+    uint32_t currentSymbolsStackOffset_ = 0;
 
     static constexpr uint32_t FUNCTION_ARGUMENT_SIZE_BITS = 64;
 
     SymbolTable symbolTable_;
 
     /**
-     * @brief Computes the size in bits of the provided type.
+     * @brief Computes the size of the provided type in bits.
      */
     uint32_t typeSizeBits(const Type& type) const { return type.sizeBits(typeManager_); }
 
     /**
-     * @brief Computes the size in bits of the provided expression.
+     * @brief Computes the size of the provided expression in bits.
      */
     uint32_t exprSizeBits(const AST::Expression& expr) const {
         const Type& type = typeManager_.getType(expr.typeID_);
         return typeSizeBits(type);
     }
 
+    /**
+     * @brief Computes the size of the provided variable definition in bits.
+     */
+    uint32_t varDefSizeBits(const AST::VariableDefinition& varDef) const {
+        const Type& type = typeManager_.getType(varDef.typeID_);
+        return typeSizeBits(type);
+    }
+
     void insertSymbol(std::string_view name, TypeID typeID);
     uint32_t getScopeFrameSize(const AST::BlockStatement& blockStmt) const;
     void enterScope(const AST::BlockStatement& blockStmt);
-    void exitScope(const AST::BlockStatement& blockStmt);
 
     uint32_t getVariableSizeBits(std::string_view name) const;
     uint32_t getVariableStackOffset(std::string_view name) const;
-    static std::string_view sizeDirective(uint32_t bitSize);
     static std::string_view registerAForSize(uint32_t bitSize);
 
     static std::string label(uint32_t labelID);
@@ -74,10 +80,11 @@ class Generator {
     void cleanRax(uint32_t raxValueSizeBits);
     void loadValueFromRax(uint32_t bitSize);
 
-    void push(std::string_view reg, uint32_t sizeBits = 64);
-    void pop(std::string_view reg, uint32_t sizeBits = 64);
+    uint32_t push(std::string_view reg, uint32_t sizeBits = 64);
+    void pop(std::string_view reg, uint32_t offsetBits);
     void allocateStackSpace(uint32_t sizeBits);
-    void freeStackSpace(uint32_t sizeBits);
+    void setStackOffset(uint32_t offsetBits);
+    void updateRsp();
     /** @brief Gets a persistent memory operand string representing the current top of the stack.
      *
      * @return A string providing persistent access to the current
@@ -108,9 +115,7 @@ class Generator {
     void generateArrayExpression(const AST::Expression& expr,
                                  const std::optional<std::string_view>& destinationAddress);
 
-    void evaluateExpressionToRax(const AST::Expression& expr) {
-        generateExpression(expr, std::nullopt);
-    }
+    void evaluateExpressionToRax(const AST::Expression& expr);
     void generateExpression(const AST::Expression& expr,
                             const std::optional<std::string_view>& destinationAddress);
     void copyArrayContents(std::string_view sourceAddress, std::string_view destinationAddress,
