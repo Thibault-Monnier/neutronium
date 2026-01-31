@@ -1,6 +1,6 @@
 #pragma once
 
-#include <memory>
+#include <concepts>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -8,6 +8,7 @@
 #include "Constraint.hpp"
 #include "ast/AST.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
+#include "lib/PolymorphicArenaAllocator.hpp"
 #include "type/Trait.hpp"
 #include "type/Type.hpp"
 #include "type/TypeID.hpp"
@@ -38,10 +39,9 @@ class TypeSolver {
      * @param args Arguments forwarded to the constructor of the constraint.
      */
     template <typename ConstraintT, typename... Args>
+        requires std::derived_from<ConstraintT, Constraint>
     void addConstraint(Args&&... args) {
-        static_assert(std::is_base_of_v<Constraint, ConstraintT>,
-                      "ConstraintT must derive from Constraint");
-        addConstraint(std::make_unique<ConstraintT>(std::forward<Args>(args)...));
+        addConstraint(ConstraintT(std::forward<Args>(args)...));
     }
 
     /**
@@ -55,7 +55,8 @@ class TypeSolver {
     void solve();
 
    private:
-    std::vector<std::unique_ptr<Constraint>> pendingConstraints_;
+    neutro::PolymorphicArenaAllocator constraintArena_;
+    std::vector<Constraint*> pendingConstraints_;
 
     TypeManager& typeManager_;
     DiagnosticsEngine& diagnosticsEngine_;
@@ -78,16 +79,19 @@ class TypeSolver {
     [[noreturn]] void storableConstraintError(const Type& type, const AST::Node& sourceNode) const;
 
     /**
-     * @brief Registers a new type constraint to the collection of constraints.
+     * @brief Adds a type constraint to the pending constraints list.
      *
-     * This method appends a new type constraint to the internal list of constraints. Type
-     * constraints are used for ensuring type consistency and resolving type relationships during
-     * semantic analysis.
+     * This method takes a constraint object, allocates it in the internal arena allocator,
+     * and appends a pointer to it in the list of pending constraints to be solved.
      *
-     * @param constraint A unique pointer to the Constraint object to be added.
+     * @tparam ConstraintT The type of the constraint being added, which must derive from
+     * `Constraint`.
+     * @param constraint The constraint object to be added.
      */
-    void addConstraint(std::unique_ptr<Constraint> constraint) {
-        pendingConstraints_.push_back(std::move(constraint));
+    template <typename ConstraintT>
+    void addConstraint(ConstraintT&& constraint) {
+        Constraint* ptr = constraintArena_.insert(std::forward<ConstraintT>(constraint));
+        pendingConstraints_.push_back(ptr);
     }
 
     [[nodiscard]] TypeID findRoot(TypeID x);
@@ -95,8 +99,7 @@ class TypeSolver {
     void prepareUnionFind();
     std::true_type solveEqualityConstraint(const EqualityConstraint& equalityConstraint);
 
-    [[nodiscard]] bool solveSubscriptConstraint(
-        const SubscriptConstraint& subscriptConstraint) const;
+    [[nodiscard]] bool solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint);
     [[nodiscard]] bool solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint) const;
-    [[nodiscard]] bool solveStorableConstraint(const StorableConstraint& storableConstraint) const;
+    [[nodiscard]] bool solveStorableConstraint(const StorableConstraint& storableConstraint);
 };

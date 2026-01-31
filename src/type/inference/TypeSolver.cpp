@@ -49,8 +49,8 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sour
             return dstType.mergeWith(srcType);
         case TypeKind::ARRAY: {
             if (!dstType.matches(srcType)) return false;
-            typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(
-                dstType.arrayElementTypeId(), srcType.arrayElementTypeId(), sourceNode);
+            addConstraint<EqualityConstraint>(dstType.arrayElementTypeId(),
+                                              srcType.arrayElementTypeId(), sourceNode);
             return true;
         }
         default:
@@ -88,7 +88,7 @@ std::true_type TypeSolver::solveEqualityConstraint(const EqualityConstraint& equ
     return std::true_type{};
 }
 
-bool TypeSolver::solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint) const {
+bool TypeSolver::solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint) {
     assert(subscriptConstraint.kind() == Constraint::Kind::SUBSCRIPT);
 
     const Type& type = typeManager_.getType(subscriptConstraint.container());
@@ -97,8 +97,8 @@ bool TypeSolver::solveSubscriptConstraint(const SubscriptConstraint& subscriptCo
         const TypeID expectedElementTypeID = type.arrayElementTypeId();
         const TypeID actualElementTypeID = subscriptConstraint.element();
 
-        typeManager_.getTypeSolver().addConstraint(std::make_unique<EqualityConstraint>(
-            expectedElementTypeID, actualElementTypeID, subscriptConstraint.sourceNode()));
+        addConstraint(EqualityConstraint(expectedElementTypeID, actualElementTypeID,
+                                         subscriptConstraint.sourceNode()));
 
         return true;
     }
@@ -121,7 +121,7 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
     return true;
 }
 
-bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConstraint) const {
+bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConstraint) {
     assert(storableConstraint.kind() == Constraint::Kind::STORABLE);
 
     const Type& type = typeManager_.getType(storableConstraint.type());
@@ -138,8 +138,7 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
 
         case TypeKind::ARRAY: {
             const TypeID elementTypeID = type.arrayElementTypeId();
-            typeManager_.getTypeSolver().addConstraint(std::make_unique<StorableConstraint>(
-                elementTypeID, storableConstraint.sourceNode()));
+            addConstraint(StorableConstraint(elementTypeID, storableConstraint.sourceNode()));
             return true;
         }
 
@@ -151,7 +150,7 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
 void TypeSolver::solve() {
     prepareUnionFind();
 
-    std::vector<std::unique_ptr<Constraint>> nextConstraints;
+    std::vector<Constraint*> nextConstraints;
 
     while (!pendingConstraints_.empty()) {
         for (size_t i = 0; i < pendingConstraints_.size(); ++i) {
@@ -174,7 +173,7 @@ void TypeSolver::solve() {
             }
 
             if (!solved) {
-                nextConstraints.push_back(std::move(pendingConstraints_[i]));
+                nextConstraints.push_back(pendingConstraints_[i]);
             }
         }
 

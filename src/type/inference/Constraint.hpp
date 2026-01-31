@@ -17,8 +17,6 @@ class Constraint {
    public:
     enum class Kind : uint8_t { EQUALITY, SUBSCRIPT, HAS_TRAIT, STORABLE };
 
-    virtual ~Constraint() = default;
-
     [[nodiscard]] virtual Kind kind() const = 0;
     [[nodiscard]] const AST::Node& sourceNode() const { return sourceNode_; }
 
@@ -33,6 +31,7 @@ class Constraint {
 
    protected:
     explicit Constraint(const AST::Node& sourceNode) : sourceNode_(sourceNode) {}
+    ~Constraint() = default;
 
    private:
     const AST::Node& sourceNode_;

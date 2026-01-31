@@ -11,12 +11,12 @@
 #include <vector>
 
 #include "ast/AST.hpp"
-#include "ast/ASTArena.hpp"
 #include "ast/Operator.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "lex/Lexer.hpp"
 #include "lex/Token.hpp"
 #include "lex/TokenKind.hpp"
+#include "lib/PolymorphicArenaAllocator.hpp"
 #include "source/FileID.hpp"
 #include "type/Type.hpp"
 #include "type/TypeID.hpp"
@@ -31,7 +31,8 @@ struct ParsedFunctionSignature {
 class Parser {
    public:
     explicit Parser(DiagnosticsEngine& diagnosticsEngine, const FileID fileID,
-                    const std::string_view sourceCode, ASTArena& astArena, TypeManager& typeManager)
+                    const std::string_view sourceCode, neutro::PolymorphicArenaAllocator& astArena,
+                    TypeManager& typeManager)
         : lexer_(sourceCode, diagnosticsEngine, fileID),
           diagnosticsEngine_(diagnosticsEngine),
           fileID_(fileID),
@@ -50,7 +51,7 @@ class Parser {
     FileID fileID_;
     std::string_view sourceCode_;
 
-    ASTArena& astArena_;
+    neutro::PolymorphicArenaAllocator& astArena_;
 
     TypeManager& typeManager_;
 

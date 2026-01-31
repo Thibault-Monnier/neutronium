@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <new>
@@ -10,38 +9,53 @@
 #include <utility>
 #include <vector>
 
-#include "AST.hpp"
+namespace neutro {
 
-/// An arena allocator for holding AST data. This allows for fast bulk allocation and deallocation.
-class ASTArena {
+/** Arena allocator for storing elements of several trivially destructible types at once.
+ *
+ * Allocates elements in large blocks to reduce allocation overhead.
+ * Does not call destructors on elements. Elements cannot be freed
+ * individually; all memory is freed when the allocator is destroyed.
+ */
+class PolymorphicArenaAllocator {
    public:
-    ASTArena() = default;
+    PolymorphicArenaAllocator() = default;
 
-    ASTArena(const ASTArena&) = delete;
-    ASTArena& operator=(const ASTArena&) = delete;
+    PolymorphicArenaAllocator(const PolymorphicArenaAllocator&) = delete;
+    PolymorphicArenaAllocator& operator=(const PolymorphicArenaAllocator&) = delete;
 
-    ASTArena(ASTArena&&) = delete;
-    ASTArena& operator=(ASTArena&&) = delete;
+    PolymorphicArenaAllocator(PolymorphicArenaAllocator&&) = delete;
+    PolymorphicArenaAllocator& operator=(PolymorphicArenaAllocator&&) = delete;
 
-    ~ASTArena() {
+    ~PolymorphicArenaAllocator() {
         for (void* block : blocks_) {
             ::operator delete(block, static_cast<std::align_val_t>(MAX_ALIGNMENT));
         }
     }
 
-    /** Insert a new AST node into the arena.
+    /** Insert a new element into the arena.
      *
-     * @tparam T The type of AST node to insert. Must derive from AST::Node and be trivially
-     * destructible.
-     * @tparam Args The types of the constructor arguments for T.
-     * @param args The constructor arguments for T.
-     * @return A pointer to the newly inserted AST node.
+     * @tparam T The type of the element to insert. Must be trivially destructible.
+     * @param elem The element to insert.
+     * @return A pointer to the newly inserted element.
+     */
+    template <typename T>
+        requires std::is_trivially_destructible_v<T>
+    T* insert(T&& elem) {
+        void* mem = reinterpret_cast<void*>(allocate(sizeof(T), alignof(T)));
+        return new (mem) T(std::forward<T>(elem));
+    }
+
+    /** Construct and insert a new element into the arena.
+     *
+     * @tparam T The type of the element to insert. Must be trivially destructible.
+     * @tparam Args The types of the constructor arguments.
+     * @param args The constructor arguments.
+     * @return A pointer to the newly inserted element.
      */
     template <typename T, typename... Args>
-        requires std::derived_from<T, AST::Node> && std::is_trivially_destructible_v<T>
     T* insert(Args&&... args) {
-        void* mem = reinterpret_cast<void*>(allocate(sizeof(T), alignof(T)));
-        return new (mem) T(std::forward<Args>(args)...);
+        return insert<T>(T(std::forward<Args>(args)...));
     }
 
     /** Insert an array of trivially constructible and destructible objects into the arena.
@@ -94,3 +108,5 @@ class ASTArena {
     uintptr_t currentBlockPos_ = 0;
     uintptr_t currentBlockEnd_ = 0;
 };
+
+};  // namespace neutro

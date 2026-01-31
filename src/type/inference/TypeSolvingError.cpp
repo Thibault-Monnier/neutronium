@@ -1,5 +1,7 @@
 #include "TypeSolver.hpp"
+#include "ast/AST.hpp"
 #include "type/Type.hpp"
+#include "type/TypeID.hpp"
 #include "type/TypeManager.hpp"
 
 __attribute__((cold, noinline)) void TypeSolver::equalityConstraintError(

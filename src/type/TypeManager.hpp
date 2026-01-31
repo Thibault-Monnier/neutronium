@@ -37,7 +37,7 @@ class TypeManager {
      * @return The unique TypeID assigned to the newly registered type.
      */
     [[nodiscard]] TypeID createType(Type type) {
-        const auto id = typeArena_.push(std::move(type));
+        const auto id = typeArena_.insert(std::move(type));
         linkingTable_.push_back(id);
         return id;
     }

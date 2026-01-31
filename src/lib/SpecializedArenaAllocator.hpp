@@ -37,11 +37,12 @@ class SpecializedArenaAllocator {
         }
     }
 
-    /** Push a new element into the arena.
+    /** Insert a new element into the arena.
      *
-     * @param elem The element to push.
+     * @param elem The element to insert.
+     * @return The index of the newly inserted element.
      */
-    uint32_t push(T&& elem) {
+    uint32_t insert(T&& elem) {
         void* pos = reinterpret_cast<void*>(allocate());
         std::construct_at(static_cast<T*>(pos), std::move(elem));
         return static_cast<uint32_t>(count_ - 1);

@@ -17,13 +17,13 @@
 
 #include "Cli.hpp"
 #include "ast/AST.hpp"
-#include "ast/ASTArena.hpp"
 #include "ast/Debug.hpp"
 #include "codegen/Generator.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "lex/Lexer.hpp"
 #include "lex/Token.hpp"
 #include "lex/TokenKind.hpp"
+#include "lib/PolymorphicArenaAllocator.hpp"
 #include "parse/Parser.hpp"
 #include "sema/SemanticAnalyser.hpp"
 #include "source/FileID.hpp"
@@ -117,7 +117,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         return;
     }
 
-    ASTArena astArena;
+    neutro::PolymorphicArenaAllocator astArena;
     TypeManager typeManager(diagnosticsEngine);
 
     AST::CompilationUnit* const ast = [&] {
