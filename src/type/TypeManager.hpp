@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "Type.hpp"
-#include "TypeArena.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
 #include "inference/TypeSolver.hpp"
+#include "lib/SpecializedArenaAllocator.hpp"
 #include "type/TypeID.hpp"
 
 /**
@@ -37,8 +37,7 @@ class TypeManager {
      * @return The unique TypeID assigned to the newly registered type.
      */
     [[nodiscard]] TypeID createType(Type type) {
-        const auto id = static_cast<TypeID>(typeArena_.count());
-        typeArena_.push(std::move(type));
+        const auto id = typeArena_.push(std::move(type));
         linkingTable_.push_back(id);
         return id;
     }
@@ -116,7 +115,7 @@ class TypeManager {
     void linkTypes(const TypeID dst, const TypeID src) { linkingTable_[src] = dst; }
 
    private:
-    TypeArena typeArena_;
+    neutro::SpecializedArenaAllocator<Type> typeArena_;
     TypeSolver typeSolver_;
 
     /** @brief A mapping of TypeIDs to their linked TypeIDs.

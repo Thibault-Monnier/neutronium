@@ -8,7 +8,6 @@
 #include "Constraint.hpp"
 #include "ast/AST.hpp"
 #include "diagnostics/DiagnosticsEngine.hpp"
-#include "source/FileID.hpp"
 #include "type/Trait.hpp"
 #include "type/Type.hpp"
 #include "type/TypeID.hpp"
