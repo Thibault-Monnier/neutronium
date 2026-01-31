@@ -80,6 +80,15 @@ uint32_t Generator::getScopeFrameSize(const AST::BlockStatement& blockStmt) cons
         } else if (stmt->kind_ == AST::NodeKind::BLOCK_STATEMENT) {
             const auto& innerBlock = *stmt->as<AST::BlockStatement>();
             maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(innerBlock));
+        } else if (stmt->kind_ == AST::NodeKind::IF_STATEMENT) {
+            const auto& ifStmt = *stmt->as<AST::IfStatement>();
+            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(*ifStmt.body_));
+            if (const auto elseClause = ifStmt.elseClause_) {
+                maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(*elseClause));
+            }
+        } else if (stmt->kind_ == AST::NodeKind::WHILE_STATEMENT) {
+            const auto& innerBlock = *stmt->as<AST::WhileStatement>()->body_;
+            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(innerBlock));
         }
     }
 
@@ -147,7 +156,7 @@ uint32_t Generator::push(const std::string_view reg, const uint32_t sizeBits) {
 
 void Generator::pop(const std::string_view reg, const uint32_t offsetBits) {
     output_ << "    mov " << reg << ", [rbp - " << (offsetBits / 8) << "]\n";
-    currentSpillStackOffset_ = offsetBits / 8;
+    currentSpillStackOffset_ = offsetBits / 8 - 8;  // Pop the value at offsetBits as well
 }
 
 void Generator::allocateStackSpace(const uint32_t sizeBits) {

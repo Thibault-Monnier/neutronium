@@ -3,10 +3,8 @@
 #include <cstdint>
 #include <optional>
 #include <sstream>
-#include <stack>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include "SymbolTable.hpp"
 #include "ast/AST.hpp"
