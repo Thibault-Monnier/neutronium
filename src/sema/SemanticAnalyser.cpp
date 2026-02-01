@@ -171,8 +171,8 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getVariableSymbolInfoOrError(
     return info;
 }
 
-void SemanticAnalyser::symbolUndeclaredOrError(const AST::Node* declarationNode,
-                                               const std::string_view name) const {
+void SemanticAnalyser::ensureSymbolUndeclaredOrError(const AST::Node* declarationNode,
+                                                     const std::string_view name) const {
     if (getSymbolInfo(name).has_value()) {
         fatalError(std::format("Redeclaration of symbol: `{}`", name), *declarationNode);
     }
@@ -188,7 +188,7 @@ SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
         handleVariableDeclaration(param, param->identifier_->name_);
     }
 
-    symbolUndeclaredOrError(declNode, name);
+    ensureSymbolUndeclaredOrError(declNode, name);
 
     const SymbolInfo info(declNode);
     auto [it, _] = functionsTable_.emplace(name, info);
@@ -197,7 +197,7 @@ SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
 
 SymbolInfo& SemanticAnalyser::handleVariableDeclaration(const AST::VariableDefinition* declNode,
                                                         const std::string_view name) {
-    symbolUndeclaredOrError(declNode, name);
+    ensureSymbolUndeclaredOrError(declNode, name);
 
     const SymbolInfo info(declNode);
     auto [it, _] = scopes_.back().emplace(name, info);

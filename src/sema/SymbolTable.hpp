@@ -41,16 +41,38 @@ class SymbolInfo {
     /// Get the parameters of the function. Only valid for function symbols.
     [[nodiscard]] std::span<AST::VariableDefinition*> parameters() const {
         assert(kind() == SymbolKind::FUNCTION && "Only function symbols have parameters");
-        const auto* funcDef = declarationNode_->as<const AST::FunctionDefinition>();
-        return funcDef->parameters_;
+        switch (declarationNode_->kind_) {
+            case AST::NodeKind::FUNCTION_DEFINITION: {
+                const auto* funcDef = declarationNode_->as<const AST::FunctionDefinition>();
+                return funcDef->parameters_;
+            }
+            case AST::NodeKind::EXTERNAL_FUNCTION_DECLARATION: {
+                const auto* extFuncDecl =
+                    declarationNode_->as<const AST::ExternalFunctionDeclaration>();
+                return extFuncDecl->parameters_;
+            }
+            default:
+                std::unreachable();
+        }
     }
 
     /// Get the TypeID of the symbol.
     [[nodiscard]] TypeID typeID() const {
         switch (kind()) {
             case SymbolKind::FUNCTION: {
-                const auto* funcDef = declarationNode_->as<const AST::FunctionDefinition>();
-                return funcDef->returnTypeID_;
+                switch (declarationNode_->kind_) {
+                    case AST::NodeKind::FUNCTION_DEFINITION: {
+                        const auto* funcDef = declarationNode_->as<const AST::FunctionDefinition>();
+                        return funcDef->returnTypeID_;
+                    }
+                    case AST::NodeKind::EXTERNAL_FUNCTION_DECLARATION: {
+                        const auto* extFuncDecl =
+                            declarationNode_->as<const AST::ExternalFunctionDeclaration>();
+                        return extFuncDecl->returnTypeID_;
+                    }
+                    default:
+                        std::unreachable();
+                }
             }
             case SymbolKind::VARIABLE: {
                 const auto* varDef = declarationNode_->as<const AST::VariableDefinition>();

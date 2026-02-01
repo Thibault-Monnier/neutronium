@@ -116,7 +116,8 @@ class SemanticAnalyser {
     [[nodiscard]] std::optional<const SymbolInfo*> getVariableSymbolInfoOrError(
         std::string_view name, const AST::Node& node) const;
 
-    void symbolUndeclaredOrError(const AST::Node* declarationNode, std::string_view name) const;
+    void ensureSymbolUndeclaredOrError(const AST::Node* declarationNode,
+                                       std::string_view name) const;
 
     SymbolInfo& handleFunctionDeclaration(const AST::Node* declNode, std::string_view name,
                                           std::span<AST::VariableDefinition*> params);
