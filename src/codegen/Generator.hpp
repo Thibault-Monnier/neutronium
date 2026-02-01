@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -10,6 +9,7 @@
 #include "ast/AST.hpp"
 #include "ast/Operator.hpp"
 #include "driver/Cli.hpp"
+#include "lib/FastStringStream.hpp"
 #include "type/Type.hpp"
 #include "type/TypeID.hpp"
 #include "type/TypeManager.hpp"
@@ -22,11 +22,11 @@ class Generator {
                        const TargetType targetType)
         : compilationUnit_(ast), typeManager_(typeManager), targetType_(targetType) {}
 
-    [[nodiscard]] std::stringstream generate();
+    [[nodiscard]] neutro::FastStringStream generate();
 
    private:
     const AST::CompilationUnit& compilationUnit_;
-    std::stringstream output_;
+    neutro::FastStringStream output_;
 
     const TypeManager& typeManager_;
 
@@ -46,12 +46,14 @@ class Generator {
     /**
      * @brief Computes the size of the provided type in bits.
      */
-    uint32_t typeSizeBits(const Type& type) const { return type.sizeBits(typeManager_); }
+    [[nodiscard]] uint32_t typeSizeBits(const Type& type) const {
+        return type.sizeBits(typeManager_);
+    }
 
     /**
      * @brief Computes the size of the provided expression in bits.
      */
-    uint32_t exprSizeBits(const AST::Expression& expr) const {
+    [[nodiscard]] uint32_t exprSizeBits(const AST::Expression& expr) const {
         const Type& type = typeManager_.getType(expr.typeID_);
         return typeSizeBits(type);
     }
@@ -59,17 +61,17 @@ class Generator {
     /**
      * @brief Computes the size of the provided variable definition in bits.
      */
-    uint32_t varDefSizeBits(const AST::VariableDefinition& varDef) const {
+    [[nodiscard]] uint32_t varDefSizeBits(const AST::VariableDefinition& varDef) const {
         const Type& type = typeManager_.getType(varDef.typeID_);
         return typeSizeBits(type);
     }
 
     void insertSymbol(std::string_view name, TypeID typeID);
-    uint32_t getScopeFrameSize(const AST::BlockStatement& blockStmt) const;
+    [[nodiscard]] uint32_t getScopeFrameSize(const AST::BlockStatement& blockStmt) const;
     void enterScope(const AST::BlockStatement& blockStmt);
 
-    uint32_t getVariableSizeBits(std::string_view name) const;
-    uint32_t getVariableStackOffset(std::string_view name) const;
+    [[nodiscard]] uint32_t getVariableSizeBits(std::string_view name) const;
+    [[nodiscard]] uint32_t getVariableStackOffset(std::string_view name) const;
     static std::string_view registerAForSize(uint32_t bitSize);
 
     static std::string label(uint32_t labelID);
