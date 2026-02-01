@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <string_view>
 #include <type_traits>
@@ -25,6 +26,14 @@ enum class Trait : uint16_t {
     GTE = 1 << 9,
 
     SUBSCRIPT = 1 << 10,
+};
+
+template <>
+struct magic_enum::customize::enum_range<Trait> {
+    static constexpr int min = 0;
+    static constexpr int max = static_cast<int>(Trait::SUBSCRIPT);
+
+    static_assert(min < max && (max - min) <= UINT16_MAX);  // Magic enum requirement
 };
 
 inline uint16_t operator|(Trait a, Trait b) {

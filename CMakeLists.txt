@@ -85,7 +85,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(magic_enum)
 
-target_link_libraries(neutronium_lib PRIVATE cxxopts magic_enum)
+target_link_libraries(neutronium_lib PUBLIC cxxopts magic_enum)
 
 # --- Tests ---
 FetchContent_Declare(
