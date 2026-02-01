@@ -59,18 +59,18 @@ void SemanticAnalyser::analyse() {
 
     const auto mainIt = functionsTable_.find(std::string(ENTRY_POINT_NAME));
     if (targetType_ == TargetType::EXECUTABLE) {
-        if (mainIt == functionsTable_.end() || mainIt->second.kind_ != SymbolKind::FUNCTION) {
+        if (mainIt == functionsTable_.end() || mainIt->second.kind() != SymbolKind::FUNCTION) {
             error(std::format("No `{}` function found in executable target", ENTRY_POINT_NAME),
                   *ast_);
         } else {
             assert(mainDef && "mainDef should not be null here");
 
-            if (mainIt->second.parameters_.size() != 0) {
+            if (mainIt->second.parameters().size() != 0) {
                 error(std::format("`{}` function must not take any parameters", ENTRY_POINT_NAME),
                       *mainDef);
             }
 
-            equalityConstraint(mainIt->second.typeID_, registerVoidType(), *mainDef);
+            equalityConstraint(mainIt->second.typeID(), registerVoidType(), *mainDef);
         }
     } else {
         if (mainIt != functionsTable_.end()) {
@@ -107,14 +107,36 @@ void SemanticAnalyser::enterScope() { scopes_.emplace_back(); }
 
 void SemanticAnalyser::exitScope() { scopes_.pop_back(); }
 
-std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(
-    const std::string_view name) const {
-    {
-        const auto it = functionsTable_.find(name);
-        if (it != functionsTable_.end()) return &it->second;
-    }
+__attribute__((cold)) void SemanticAnalyser::handleUndeclaredSymbolError(
+    std::string_view name, const AST::Node& node, [[maybe_unused]] const SymbolKind kind) const {
+    const auto info = getSymbolInfo(name);
+    if (info.has_value()) {
+        assert(info.value()->kind() != kind);
+        switch (info.value()->kind()) {
+            case SymbolKind::FUNCTION:
+                error(std::format("Function `{}` used as variable", name), node);
+                break;
+            case SymbolKind::VARIABLE:
+                error(std::format("Attempted to call a non-function: `{}`", name), node);
+                break;
+        }
 
-    for (auto const& scope : scopes_) {
+    } else {
+        error(std::format("Undeclared symbol: `{}`", name), node);
+    }
+}
+
+std::optional<const SymbolInfo*> SemanticAnalyser::getFunctionSymbolInfo(
+    const std::string_view name) const {
+    const auto it = functionsTable_.find(name);
+    if (it != functionsTable_.end()) return &it->second;
+    return std::nullopt;
+}
+
+std::optional<const SymbolInfo*> SemanticAnalyser::getVariableSymbolInfo(
+    const std::string_view name) const {
+    // Innermost scopes have the highest chance of containing the symbol
+    for (const auto& scope : std::ranges::reverse_view(scopes_)) {
         const auto it = scope.find(name);
         if (it != scope.end()) return &it->second;
     }
@@ -122,75 +144,80 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(
     return std::nullopt;
 }
 
-std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfoOrError(
+std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(
+    const std::string_view name) const {
+    const auto varInfo = getVariableSymbolInfo(name);
+    if (varInfo.has_value()) return varInfo;
+
+    const auto funcInfo = getFunctionSymbolInfo(name);
+    if (funcInfo.has_value()) return funcInfo;
+
+    return std::nullopt;
+}
+
+std::optional<const SymbolInfo*> SemanticAnalyser::getFunctionSymbolInfoOrError(
     const std::string_view name, const AST::Node& node) const {
-    const auto info = getSymbolInfo(name);
-    if (!info.has_value()) {
-        error(std::format("Undeclared symbol: `{}`", name), node);
-    }
+    const auto info = getFunctionSymbolInfo(name);
+
+    if (!info.has_value()) handleUndeclaredSymbolError(name, node, SymbolKind::FUNCTION);
     return info;
 }
 
-SymbolInfo& SemanticAnalyser::declareSymbol(const AST::Node* declarationNode,
-                                            const std::string_view name, const SymbolKind kind,
-                                            const bool isMutable, const TypeID typeID,
-                                            const bool isScoped,
-                                            std::vector<SymbolInfo> parameters) {
+std::optional<const SymbolInfo*> SemanticAnalyser::getVariableSymbolInfoOrError(
+    const std::string_view name, const AST::Node& node) const {
+    const auto info = getVariableSymbolInfo(name);
+
+    if (!info.has_value()) handleUndeclaredSymbolError(name, node, SymbolKind::VARIABLE);
+    return info;
+}
+
+void SemanticAnalyser::symbolUndeclaredOrError(const AST::Node* declarationNode,
+                                               const std::string_view name) const {
     if (getSymbolInfo(name).has_value()) {
         fatalError(std::format("Redeclaration of symbol: `{}`", name), *declarationNode);
-    }
-
-    SymbolInfo info{.name_ = name,
-                    .kind_ = kind,
-                    .isMutable_ = isMutable,
-                    .typeID_ = typeID,
-                    .parameters_ = std::move(parameters)};
-
-    if (isScoped) {
-        auto [it, _] = scopes_.back().emplace(name, std::move(info));
-        return it->second;
-    } else {
-        assert(kind == SymbolKind::FUNCTION &&
-               "Only functions can be declared in the global scope");
-        auto [it, _] = functionsTable_.emplace(name, std::move(info));
-        return it->second;
     }
 }
 
 SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
-    const AST::Node* declNode, const std::string_view name, const TypeID returnTypeID,
+    const AST::Node* declNode, const std::string_view name,
     const std::span<AST::VariableDefinition*> params) {
-    std::vector<SymbolInfo> parameterSymbols;
+    assert(declNode->kind_ == AST::NodeKind::FUNCTION_DEFINITION ||
+           declNode->kind_ == AST::NodeKind::EXTERNAL_FUNCTION_DECLARATION);
+
     for (const auto* param : params) {
-        const TypeID paramType = param->typeID_;
-        parameterSymbols.emplace_back(handleVariableDeclaration(param, param->identifier_->name_,
-                                                                param->isMutable(), paramType));
+        handleVariableDeclaration(param, param->identifier_->name_);
     }
 
-    return declareSymbol(declNode, name, SymbolKind::FUNCTION, false, returnTypeID, false,
-                         parameterSymbols);
+    symbolUndeclaredOrError(declNode, name);
+
+    const SymbolInfo info(declNode);
+    auto [it, _] = functionsTable_.emplace(name, info);
+    return it->second;
 }
 
 SymbolInfo& SemanticAnalyser::handleVariableDeclaration(const AST::VariableDefinition* declNode,
-                                                        const std::string_view name,
-                                                        const bool isMutable, const TypeID typeID) {
-    return declareSymbol(declNode, name, SymbolKind::VARIABLE, isMutable, typeID, true, {});
+                                                        const std::string_view name) {
+    symbolUndeclaredOrError(declNode, name);
+
+    const SymbolInfo info(declNode);
+    auto [it, _] = scopes_.back().emplace(name, info);
+    return it->second;
 }
 
 TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
     const std::string_view name = funcCall.callee_->name_;
 
-    const auto info = getSymbolInfoOrError(name, *funcCall.callee_);
+    const auto info = getFunctionSymbolInfoOrError(name, *funcCall.callee_);
     if (!info.has_value()) {
         return registerAnyType();
     }
 
-    if (info.value()->kind_ != SymbolKind::FUNCTION) {
-        error(std::format("Attempted to call a non-function: `{}`", name), funcCall);
+    if (info.value()->kind() != SymbolKind::FUNCTION) {
+        std::unreachable();
         return registerAnyType();
     }
 
-    const auto& params = info.value()->parameters_;
+    const auto& params = info.value()->parameters();
 
     if (funcCall.arguments_.size() != params.size()) {
         error(std::format("Function `{}` called with incorrect number of arguments: expected {}, "
@@ -201,12 +228,12 @@ TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
 
     for (std::size_t i = 0; i < funcCall.arguments_.size() && i < params.size(); i++) {
         const TypeID argType = checkExpression(*funcCall.arguments_[i]);
-        const TypeID paramType = params[i].typeID_;
+        const TypeID paramType = params[i]->typeID_;
 
         equalityConstraint(argType, paramType, *funcCall.arguments_[i]);
     }
 
-    return info.value()->typeID_;
+    return info.value()->typeID();
 }
 
 TypeID SemanticAnalyser::checkUnaryExpression(const AST::UnaryExpression& unaryExpr) {
@@ -266,17 +293,15 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
         }
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = *expr.as<AST::Identifier>();
-            const auto info = getSymbolInfoOrError(identifier.name_, identifier);
+            const auto info = getVariableSymbolInfoOrError(identifier.name_, identifier);
             if (!info.has_value()) {
                 verifier = registerAnyType();
                 break;
-            } else if (info.value()->kind_ != SymbolKind::VARIABLE) {
-                error(std::format("`{}` is not a variable", identifier.name_), identifier);
-                verifier = registerAnyType();
-                break;
+            } else if (info.value()->kind() != SymbolKind::VARIABLE) {
+                std::unreachable();
             }
 
-            verifier = info.value()->typeID_;
+            verifier = info.value()->typeID();
             break;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
@@ -329,20 +354,18 @@ void SemanticAnalyser::analyseVariableDefinition(const AST::VariableDefinition& 
     equalityConstraint(definition.typeID_, assignedType, definition);
     storableConstraint(definition.typeID_, definition);
 
-    handleVariableDeclaration(&definition, name, definition.isMutable(), definition.typeID_);
+    handleVariableDeclaration(&definition, name);
 }
 
 bool SemanticAnalyser::verifyIsAssignable(const AST::Expression& expr) {
     switch (expr.kind_) {
         case AST::NodeKind::IDENTIFIER: {
             const std::string_view varName = expr.as<const AST::Identifier>()->name_;
-            const auto& declarationInfo = getSymbolInfoOrError(varName, expr);
-            if (!declarationInfo.has_value()) {
-                return false;
-            } else if (declarationInfo.value()->kind_ != SymbolKind::VARIABLE) {
-                error(std::format("Assignment to non-variable: `{}`", varName), expr);
-                return false;
-            } else if (!declarationInfo.value()->isMutable_) {
+            const auto& declarationInfo = getVariableSymbolInfoOrError(varName, expr);
+            if (!declarationInfo.has_value()) return false;
+
+            assert(declarationInfo.value()->kind() == SymbolKind::VARIABLE);
+            if (!declarationInfo.value()->isMutable()) {
                 error(std::format("Assignment to immutable: `{}`", varName), expr);
                 return false;
             }
@@ -506,8 +529,7 @@ bool SemanticAnalyser::verifyStatementReturns(const AST::Statement& stmt) {
 void SemanticAnalyser::analyseExternalFunctionDeclaration(
     const AST::ExternalFunctionDeclaration& funcDecl) {
     const ScopeGuard guard(*this);
-    handleFunctionDeclaration(&funcDecl, funcDecl.identifier_->name_, funcDecl.returnTypeID_,
-                              funcDecl.parameters_);
+    handleFunctionDeclaration(&funcDecl, funcDecl.identifier_->name_, funcDecl.parameters_);
 }
 
 void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& funcDef) {
@@ -517,8 +539,7 @@ void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& 
 
     const TypeID returnTypeID = currentFunctionReturnTypeID_;
     const Type& returnType = typeManager_.getType(returnTypeID);
-    handleFunctionDeclaration(&funcDef, funcDef.identifier_->name_, returnTypeID,
-                              funcDef.parameters_);
+    handleFunctionDeclaration(&funcDef, funcDef.identifier_->name_, funcDef.parameters_);
 
     analyseStatement(*funcDef.body_);
 

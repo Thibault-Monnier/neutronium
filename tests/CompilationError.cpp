@@ -617,7 +617,8 @@ TEST_F(NeutroniumTester, AttemptToSubscriptANonArray) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("not") && error2.contains("variable") && error2.contains("`a`"));
+    EXPECT_TRUE(error2.contains("Function") && error2.contains("as variable") &&
+                error2.contains("`a`"));
 
     const std::string code3dArray = R"(
         fn getArray(a: int8, b: int8, c: int8, d: int8) -> [[int8; 2]; 2]: {
@@ -646,7 +647,7 @@ TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {
     )";
     auto [status, error] = compile(code);
     EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("Assignment") && error.contains("variable") && error.contains("x"));
+    EXPECT_TRUE(error.contains("Function") && error.contains("as variable") && error.contains("x"));
 
     const std::string code2 = R"(
         fn x(): {
@@ -659,7 +660,8 @@ TEST_F(NeutroniumTester, AttemptToAssignToAFunctionError) {
     )";
     auto [status2, error2] = compile(code2);
     EXPECT_NE(status2, 0);
-    EXPECT_TRUE(error2.contains("variable") && error2.contains("not") && error2.contains("x"));
+    EXPECT_TRUE(error2.contains("Function") && error2.contains("as variable") &&
+                error2.contains("x"));
 }
 
 TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
