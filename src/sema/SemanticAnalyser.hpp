@@ -103,19 +103,26 @@ class SemanticAnalyser {
         SemanticAnalyser& analyser_;
     };
 
+    void handleUndeclaredSymbolError(std::string_view name, const AST::Node& node,
+                                     SymbolKind kind) const;
+
+    [[nodiscard]] std::optional<const SymbolInfo*> getFunctionSymbolInfo(
+        std::string_view name) const;
+    [[nodiscard]] std::optional<const SymbolInfo*> getVariableSymbolInfo(
+        std::string_view name) const;
     [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(std::string_view name) const;
-    [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfoOrError(
+    [[nodiscard]] std::optional<const SymbolInfo*> getFunctionSymbolInfoOrError(
+        std::string_view name, const AST::Node& node) const;
+    [[nodiscard]] std::optional<const SymbolInfo*> getVariableSymbolInfoOrError(
         std::string_view name, const AST::Node& node) const;
 
-    SymbolInfo& declareSymbol(const AST::Node* declarationNode, std::string_view name,
-                              SymbolKind kind, bool isMutable, TypeID typeID, bool isScoped,
-                              std::vector<SymbolInfo> parameters);
+    void ensureSymbolUndeclaredOrError(const AST::Node* declarationNode,
+                                       std::string_view name) const;
 
     SymbolInfo& handleFunctionDeclaration(const AST::Node* declNode, std::string_view name,
-                                          TypeID returnTypeID,
                                           std::span<AST::VariableDefinition*> params);
     SymbolInfo& handleVariableDeclaration(const AST::VariableDefinition* declNode,
-                                          std::string_view name, bool isMutable, TypeID typeID);
+                                          std::string_view name);
 
     TypeID checkFunctionCall(const AST::FunctionCall& funcCall);
     TypeID checkUnaryExpression(const AST::UnaryExpression& unaryExpr);
