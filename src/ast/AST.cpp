@@ -39,6 +39,10 @@ Operator tokenKindToOperator(const TokenKind tokenKind) {
             return Operator::GREATER_THAN;
         case TokenKind::GREATER_THAN_EQUAL:
             return Operator::GREATER_THAN_OR_EQUAL;
+        case TokenKind::AMPER_AMPER:
+            return Operator::LOGICAL_AND;
+        case TokenKind::PIPE_PIPE:
+            return Operator::LOGICAL_OR;
         default:
             return Operator::UNDEFINED_OPERATOR;
     }
@@ -47,6 +51,10 @@ Operator tokenKindToOperator(const TokenKind tokenKind) {
 bool isArithmeticOperator(const Operator op) {
     return op == Operator::ADD || op == Operator::SUBTRACT || op == Operator::MULTIPLY ||
            op == Operator::DIVIDE;
+}
+
+bool isLogicalOperator(const Operator op) {
+    return op == Operator::LOGICAL_OR || op == Operator::LOGICAL_AND;
 }
 
 bool isEqualityOperator(const Operator op) {

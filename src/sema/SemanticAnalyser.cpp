@@ -259,7 +259,8 @@ TypeID SemanticAnalyser::checkBinaryExpression(const AST::BinaryExpression& bina
     }
 
     if (AST::isArithmeticOperator(op)) return leftType;
-    if (AST::isEqualityOperator(op) || AST::isRelationalOperator(op)) return registerBoolType();
+    if (AST::isComparisonOperator(op)) return registerBoolType();
+    if (AST::isLogicalOperator(op)) return registerBoolType();
     std::unreachable();
 }
 

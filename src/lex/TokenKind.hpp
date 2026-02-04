@@ -16,6 +16,8 @@ enum class TokenKind : uint8_t {
     STAR,
     SLASH,
     BANG,
+    AMPER,
+    PIPE,
     EQUAL,
     PLUS_EQUAL,
     MINUS_EQUAL,
@@ -27,6 +29,8 @@ enum class TokenKind : uint8_t {
     LESS_THAN_EQUAL,
     GREATER_THAN,
     GREATER_THAN_EQUAL,
+    AMPER_AMPER,
+    PIPE_PIPE,
 
     // Delimiters
     LEFT_PAREN,

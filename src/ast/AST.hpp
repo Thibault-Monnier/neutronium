@@ -321,6 +321,7 @@ struct CompilationUnit final : Node {
 Operator tokenKindToOperator(TokenKind tokenKind);
 
 bool isArithmeticOperator(Operator op);
+bool isLogicalOperator(Operator op);
 bool isEqualityOperator(Operator op);
 bool isRelationalOperator(Operator op);
 bool isComparisonOperator(Operator op);

@@ -1043,6 +1043,17 @@ TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
     EXPECT_NE(status4, 0);
     EXPECT_TRUE(error4.contains("Type") && error4.contains("trait") &&
                 error4.contains(traitToString(Trait::GTE)) && error4.contains("void"));
+
+    const std::string code5 = R"(
+        fn main(): {
+            let a: int16 = 3;
+            let x = a && 5;
+        }
+    )";
+    auto [status5, error5] = compile(code5);
+    EXPECT_NE(status5, 0);
+    EXPECT_TRUE(error5.contains("Type") && error5.contains("trait") &&
+                error5.contains(traitToString(Trait::AND)) && error5.contains("int16"));
 }
 
 TEST_F(NeutroniumTester, BreakWhenNotInLoopFails) {
@@ -1196,4 +1207,16 @@ TEST_F(NeutroniumTester, FailureWithTabsInSource) {
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("main") && error.contains("function") &&
                 error.contains("executable target"));
+}
+
+TEST_F(NeutroniumTester, CantHaveAndOrInSameExpression) {
+    const std::string code = R"(
+        fn main(): {
+            let x = true && false || true;
+        }
+    )";
+    auto [status, error] = compile(code);
+    EXPECT_NE(status, 0);
+    EXPECT_TRUE(error.contains("token") && error.contains("expected") &&
+                error.contains("SEMICOLON"));
 }

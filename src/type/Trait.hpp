@@ -17,15 +17,17 @@ enum class Trait : uint16_t {
 
     // Logical traits
     NOT = 1 << 4,
+    OR = 1 << 5,
+    AND = 1 << 6,
 
     // Comparison traits
-    EQ = 1 << 5,
-    LT = 1 << 6,
-    LTE = 1 << 7,
-    GT = 1 << 8,
-    GTE = 1 << 9,
+    EQ = 1 << 7,
+    LT = 1 << 8,
+    LTE = 1 << 9,
+    GT = 1 << 10,
+    GTE = 1 << 11,
 
-    SUBSCRIPT = 1 << 10,
+    SUBSCRIPT = 1 << 12,
 };
 
 template <>

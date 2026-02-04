@@ -23,15 +23,15 @@ All of the following is subject to change.
 
 ### 3) Operators
 
-- [ ] Logical operators: `&&` and `||`
+- [X] Logical operators: `&&` and `||`
 - [ ] Increment/decrement: `++` and `--` (postfix) as syntactic sugar for `+= 1` and `-= 1`. They are statements, not
   expressions.
 
 ### 4) Control flow
 
 - [ ] `for` loops:
-  - [ ] Range-based: `for i in 0..n:`
-  - [ ] Iterator-based: `for x in collection:`
+    - [ ] Range-based: `for i in 0..n:`
+    - [ ] Iterator-based: `for x in collection:`
 
 ### 5) Functions & declarations
 
@@ -46,9 +46,9 @@ All of the following is subject to change.
 ### 1) Modules
 
 - [ ] `import` statements:
-  - [ ] `import Foo;`: all symbols from module Foo
-  - [ ] `import Foo::bar;`: specific symbol
-  - [ ] `import Foo::{bar, baz};`: multiple symbols
+    - [ ] `import Foo;`: all symbols from module Foo
+    - [ ] `import Foo::bar;`: specific symbol
+    - [ ] `import Foo::{bar, baz};`: multiple symbols
 - [ ] All files are modules; maybe support specific module declaration
 
 ### 2) Data structures

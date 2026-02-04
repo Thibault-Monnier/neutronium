@@ -34,6 +34,8 @@ std::string operatorToString(const Operator op) {
         {Operator::LESS_THAN_OR_EQUAL, "<="},
         {Operator::GREATER_THAN, ">"},
         {Operator::GREATER_THAN_OR_EQUAL, ">="},
+        {Operator::LOGICAL_AND, "&&"},
+        {Operator::LOGICAL_OR, "||"},
     };
 
     const auto it = table.find(op);

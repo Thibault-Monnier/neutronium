@@ -152,6 +152,7 @@ class Parser {
     AST::Expression* parseMultiplicativeExpression();
     AST::Expression* parseAdditiveExpression();
     AST::Expression* parseComparisonExpression();
+    AST::Expression* parseLogicalExpression();
     AST::Expression* parseExpression();
 
     AST::VariableDefinition* parseVariableDefinition();

@@ -971,3 +971,101 @@ TEST_F(NeutroniumTester, EmptyReturnStatement) {
     )";
     EXPECT_EQ(run(code), 0);
 }
+
+TEST_F(NeutroniumTester, LogicalOperators) {
+    {
+        const std::string code = R"(
+            fn main(): {
+                let a = true;
+                let b = {val};
+                let c = true;
+
+                if (a && b) || (c && !b) || false: {
+                    exit 1;  # should be true
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        auto testWithB = [&](const bool b, const int expectedExit) {
+            std::string codeWithB = code;
+            codeWithB.replace(codeWithB.find("{val}"), 5, b ? "true" : "false");
+            EXPECT_EQ(run(codeWithB), expectedExit);
+        };
+        testWithB(true, 1);   // (true && true) || (true && false) || false = true
+        testWithB(false, 1);  // (true && false) || (true && true) || false = true
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let a = false;
+                let b = {val};
+                let c = false;
+
+                if (a || b) && true && (c || !b): {
+                    exit 1;  # should be false
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        auto testWithB = [&](const bool b, const int expectedExit) {
+            std::string codeWithB = code;
+            codeWithB.replace(codeWithB.find("{val}"), 5, b ? "true" : "false");
+            EXPECT_EQ(run(codeWithB), expectedExit);
+        };
+        testWithB(true, 0);   // (false || true) && true && (false || false) = false
+        testWithB(false, 0);  // (false || false) && true && (false || true) = false
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let a = {val1};
+                let b = {val2};
+
+                if a && b: {
+                    exit 1;
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        auto testWithAB = [&](const bool val1, const bool val2, const int expectedExit) {
+            std::string codeWithAB = code;
+            codeWithAB.replace(codeWithAB.find("{val1}"), 6, val1 ? "true" : "false");
+            codeWithAB.replace(codeWithAB.find("{val2}"), 6, val2 ? "true" : "false");
+            EXPECT_EQ(run(codeWithAB), expectedExit);
+        };
+        testWithAB(true, true, 1);    // true && true = true
+        testWithAB(true, false, 0);   // true && false = false
+        testWithAB(false, true, 0);   // false && true = false
+        testWithAB(false, false, 0);  // false && false = false
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let a = {val1};
+                let b = {val2};
+
+                if a || b: {
+                    exit 1;
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        auto testWithAB = [&](const bool val1, const bool val2, const int expectedExit) {
+            std::string codeWithAB = code;
+            codeWithAB.replace(codeWithAB.find("{val1}"), 6, val1 ? "true" : "false");
+            codeWithAB.replace(codeWithAB.find("{val2}"), 6, val2 ? "true" : "false");
+            EXPECT_EQ(run(codeWithAB), expectedExit);
+        };
+        testWithAB(true, true, 1);    // true || true = true
+        testWithAB(true, false, 1);   // true || false = true
+        testWithAB(false, true, 1);   // false || true = true
+        testWithAB(false, false, 0);  // false || false = false
+    }
+}

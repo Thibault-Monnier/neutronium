@@ -3,7 +3,6 @@
 #include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <string_view>
-#include <utility>
 
 #include "ast/Operator.hpp"
 
@@ -23,6 +22,10 @@
             return Trait::DIV;
         case AST::Operator::LOGICAL_NOT:
             return Trait::NOT;
+        case AST::Operator::LOGICAL_OR:
+            return Trait::OR;
+        case AST::Operator::LOGICAL_AND:
+            return Trait::AND;
         case AST::Operator::EQUALS:
         case AST::Operator::NOT_EQUALS:
             return Trait::EQ;

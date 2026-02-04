@@ -2,7 +2,7 @@
 
 <details><summary>Formal EBNF Grammar</summary>
 
-```
+```sh
 compilation-unit ::= { external-function-declaration } { function-definition } EOF
 
 function-signature ::= identifier '(' parameter-list ')' [ '->' type-specifier ]
@@ -60,7 +60,15 @@ expression-statement ::= expression ';'
 
 comment ::= '#' { any-character-except-newline }
 
-expression ::= comparison-expression
+expression ::= logical-expression
+
+logical-expression ::= comparison-expression
+                     | or-chain-expression
+                     | and-chain-expression
+
+or-chain-expression ::= or-chain-expression '||' comparison-expression
+
+and-chain-expression ::= and-chain-expression '&&' comparison-expression
 
 comparison-expression ::= additive-expression
                         | additive-expression ('==' | '!=' | '<' | '<=' | '>' | '>=') additive-expression

@@ -161,7 +161,7 @@ INSTANTIATE_TEST_SUITE_P(
     EverythingOnce, LexerTokenKindTest,
     ::testing::Values(LexCase{
         "true false int bool let mut if elif else continue break while fn extern return exit "
-        "+ - * / = += -= *= /= == != < <= > >= ( ) { } [ ] : ; , 0 foo_1Bar2_",
+        "+ - * / & | && || = += -= *= /= == != < <= > >= ( ) { } [ ] : ; , 0 foo_1Bar2_",
         {TokenKind::TRUE,
          TokenKind::FALSE,
          TokenKind::INT,
@@ -182,6 +182,10 @@ INSTANTIATE_TEST_SUITE_P(
          TokenKind::MINUS,
          TokenKind::STAR,
          TokenKind::SLASH,
+         TokenKind::AMPER,
+         TokenKind::PIPE,
+         TokenKind::AMPER_AMPER,
+         TokenKind::PIPE_PIPE,
          TokenKind::EQUAL,
          TokenKind::PLUS_EQUAL,
          TokenKind::MINUS_EQUAL,

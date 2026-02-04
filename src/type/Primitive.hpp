@@ -32,7 +32,7 @@ inline uint16_t defaultTraits(const Kind kind) {
             return Trait::ADD | Trait::SUB | Trait::MUL | Trait::DIV | Trait::EQ | Trait::LT |
                    Trait::LTE | Trait::GT | Trait::GTE;
         case Kind::BOOL:
-            return Trait::EQ | Trait::NOT;
+            return Trait::EQ | Trait::NOT | Trait::OR | Trait::AND;
         case Kind::VOID:
         case Kind::UNKNOWN:
             return 0;

@@ -363,6 +363,15 @@ void Generator::evaluateBinaryExpressionToRax(const AST::BinaryExpression& binar
         output_ << "    cmp rax, rbx\n";
         output_ << "    set" << comparisonSuffixes.at(op) << " al\n";
         output_ << "    movzx rax, al\n";
+    } else if (AST::isLogicalOperator(op)) {
+        // TODO: Make this short-circuiting
+        if (op == AST::Operator::LOGICAL_AND) {
+            output_ << "    and rax, rbx\n";
+        } else if (op == AST::Operator::LOGICAL_OR) {
+            output_ << "    or rax, rbx\n";
+        } else {
+            std::unreachable();
+        }
     } else {
         std::unreachable();
     }

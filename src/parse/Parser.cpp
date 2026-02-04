@@ -315,7 +315,32 @@ AST::Expression* Parser::parseComparisonExpression() {
         false);
 }
 
-AST::Expression* Parser::parseExpression() { return parseComparisonExpression(); }
+AST::Expression* Parser::parseLogicalExpression() {
+    auto left = parseComparisonExpression();
+    if (!left) return nullptr;
+
+    const AST::Operator exprOp = AST::tokenKindToOperator(peek().kind());
+    if (exprOp != AST::Operator::LOGICAL_OR && exprOp != AST::Operator::LOGICAL_AND) {
+        return left;
+    }
+
+    while (true) {
+        if (AST::tokenKindToOperator(peek().kind()) != exprOp) break;
+
+        advance();
+        auto right = parseComparisonExpression();
+        if (!right) return nullptr;
+
+        const uint32_t startIndex = left->sourceStartIndex();
+        const uint32_t endIndex = right->sourceEndIndex();
+        left = astArena_.insert<AST::BinaryExpression>(left, exprOp, right, startIndex, endIndex,
+                                                       fileID_, generateAnyType());
+    }
+
+    return left;
+}
+
+AST::Expression* Parser::parseExpression() { return parseLogicalExpression(); }
 
 AST::VariableDefinition* Parser::parseVariableDefinition() {
     const Token let = EXPECT_OR_RETURN_NULLPTR(TokenKind::LET);

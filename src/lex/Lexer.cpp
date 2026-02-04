@@ -253,6 +253,12 @@ __attribute__((always_inline)) bool Lexer::lexNextChar(const char c) {
             kind =
                 lexOpMaybeTwoChars<TokenKind::GREATER_THAN, TokenKind::GREATER_THAN_EQUAL, '='>();
             break;
+        case '&':
+            kind = lexOpMaybeTwoChars<TokenKind::AMPER, TokenKind::AMPER_AMPER, '&'>();
+            break;
+        case '|':
+            kind = lexOpMaybeTwoChars<TokenKind::PIPE, TokenKind::PIPE_PIPE, '|'>();
+            break;
         case '(':
             kind = TokenKind::LEFT_PAREN;
             break;
