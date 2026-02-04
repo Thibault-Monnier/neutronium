@@ -11,33 +11,33 @@ All of the following is subject to change.
 
 ### 1) Literals
 
-- Floating-point numbers: `float32` and `float64`
-- Characters and strings: `'a'`, `"hello world"`
-- Unsigned integers: `uint8/16/32/64`
-- Numeric literals improvements: `_` digit separator (`1_000_000`), hex `0x`, bin `0b`, oct `0o`
+- [ ] Floating-point numbers: `float32` and `float64`
+- [ ] Characters and strings: `'a'`, `"hello world"`
+- [ ] Unsigned integers: `uint8/16/32/64`
+- [ ] Numeric literals improvements: `_` digit separator (`1_000_000`), hex `0x`, bin `0b`, oct `0o`
 
 ### 2) Arrays
 
-- Sized array literal shorthand: `[expr; N]` for an array containing `N` copies of `expr`
-- Length inference: `let a: [int] = [1,2,3];` instead of `let a: [int; 3] = [1,2,3];`
+- [ ] Sized array literal shorthand: `[expr; N]` for an array containing `N` copies of `expr`
+- [ ] Length inference: `let a: [int] = [1,2,3];` instead of `let a: [int; 3] = [1,2,3];`
 
 ### 3) Operators
 
-- Logical operators: `&&` and `||`
-- Increment/decrement: `++` and `--` (postfix) as syntactic sugar for `+= 1` and `-= 1`. They are statements, not
+- [ ] Logical operators: `&&` and `||`
+- [ ] Increment/decrement: `++` and `--` (postfix) as syntactic sugar for `+= 1` and `-= 1`. They are statements, not
   expressions.
 
 ### 4) Control flow
 
-- `for` loops:
-  - Range-based: `for i in 0..n:`
-  - Iterator-based: `for x in collection:`
+- [ ] `for` loops:
+  - [ ] Range-based: `for i in 0..n:`
+  - [ ] Iterator-based: `for x in collection:`
 
 ### 5) Functions & declarations
 
-- Declaration without initialization: `let x: [int; 500];`
-- Function pointer types: enables passing functions as arguments and returning them from functions `fn(int)->int`
-- `const` for compile-time constants: `const PI: float64 = 3.14159;`. Only in global scope.
+- [ ] Declaration without initialization: `let x: [int; 500];`
+- [ ] Function pointer types: enables passing functions as arguments and returning them from functions `fn(int)->int`
+- [ ] `const` for compile-time constants: `const PI: float64 = 3.14159;`. Only in global scope.
 
 ---
 
@@ -45,30 +45,30 @@ All of the following is subject to change.
 
 ### 1) Modules
 
-- `import` statements:
-  - `import Foo;`: all symbols from module Foo
-  - `import Foo::bar;`: specific symbol
-  - `import Foo::{bar, baz};`: multiple symbols
-- All files are modules; maybe support specific module declaration
+- [ ] `import` statements:
+  - [ ] `import Foo;`: all symbols from module Foo
+  - [ ] `import Foo::bar;`: specific symbol
+  - [ ] `import Foo::{bar, baz};`: multiple symbols
+- [ ] All files are modules; maybe support specific module declaration
 
 ### 2) Data structures
 
-- Structs: only contains data fields, no methods` struct Point { x:int; y:int; };`
-- Classes: data fields + methods + constructors + inheritance
-- Enums with variants: `enum Result { Ok(int), Err(string) };`
-- Pattern matching with match or switch: `match/switch value: { case Pattern1: ...; case Pattern2: ...; }`
+- [ ] Structs: only contains data fields, no methods` struct Point { x:int; y:int; };`
+- [ ] Classes: data fields + methods + constructors + inheritance
+- [ ] Enums with variants: `enum Result { Ok(int), Err(string) };`
+- [ ] Pattern matching with match or switch: `match/switch value: { case Pattern1: ...; case Pattern2: ...; }`
 
 ### 3) Functional programming
 
-- Lambdas/anonymous functions: `let add = fn(a:int, b:int) -> int: { a + b };`. Revise this syntax.
+- [ ] Lambdas/anonymous functions: `let add = fn(a:int, b:int) -> int: { a + b };`. Revise this syntax.
 
 ### 4) Generics
 
-- Generics: `fn foo<T>(bar: T) -> T: {}`
-- Trait definitions and implementations
+- [ ] Generics: `fn foo<T>(bar: T) -> T: {}`
+- [ ] Trait definitions and implementations
 
 ### 5) Memory & runtime
 
-- Garbage collector or ARC for automatic memory management
-- Pointer/reference types but not pointer arithmetic
-- Concurrency support: `async` and `await` keywords
+- [ ] Garbage collector or ARC for automatic memory management
+- [ ] Pointer/reference types but not pointer arithmetic
+- [ ] Concurrency support: `async` and `await` keywords
