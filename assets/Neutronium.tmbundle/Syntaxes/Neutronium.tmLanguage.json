@@ -57,18 +57,36 @@
           "name": "meta.function.neutronium",
           "begin": "\\b(fn)\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
           "beginCaptures": {
-            "1": { "name": "keyword.control.neutronium" },
-            "2": { "name": "entity.name.function.neutronium" }
+            "1": {
+              "name": "keyword.control.neutronium"
+            },
+            "2": {
+              "name": "entity.name.function.neutronium"
+            }
           },
           "end": ":",
           "patterns": [
-            { "include": "#keywords" },
-            { "include": "#types" },
-            { "include": "#booleans" },
-            { "include": "#numbers" },
-            { "include": "#identifiers" },
-            { "include": "#operators" },
-            { "include": "#punctuation" }
+            {
+              "include": "#keywords"
+            },
+            {
+              "include": "#types"
+            },
+            {
+              "include": "#booleans"
+            },
+            {
+              "include": "#numbers"
+            },
+            {
+              "include": "#identifiers"
+            },
+            {
+              "include": "#operators"
+            },
+            {
+              "include": "#punctuation"
+            }
           ]
         }
       ]
@@ -109,7 +127,7 @@
       "patterns": [
         {
           "name": "keyword.operator.neutronium",
-          "match": "(==|!=|<=|>=|[+\\-*/<>!=])"
+          "match": "(==|!=|<=|>=|&&|\\|\\||[+\\-*/<>!=&|])"
         }
       ]
     },
