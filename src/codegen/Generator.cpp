@@ -324,13 +324,17 @@ void Generator::applyArithmeticOperatorToRax(const AST::Operator op, const std::
         output_ << "    cqo\n";
         output_ << "    idiv " << other << "\n";
     } else {
-        const std::unordered_map<AST::Operator, std::string> arithmeticOperatorPrefixes = {
-            {AST::Operator::ADD, "add"},
-            {AST::Operator::SUBTRACT, "sub"},
-            {AST::Operator::MULTIPLY, "imul"},
-        };
-        assert(arithmeticOperatorPrefixes.contains(op) && "Unsupported arithmetic operator");
-        output_ << "    " << arithmeticOperatorPrefixes.at(op) << " rax, " << other << "\n";
+        std::string_view prefix;
+        if (op == AST::Operator::ADD)
+            prefix = "add";
+        else if (op == AST::Operator::SUBTRACT)
+            prefix = "sub";
+        else if (op == AST::Operator::MULTIPLY)
+            prefix = "imul";
+        else
+            std::unreachable();
+
+        output_ << "    " << prefix << " rax, " << other << "\n";
     }
 }
 
@@ -349,13 +353,24 @@ void Generator::evaluateBinaryExpressionToRax(const AST::BinaryExpression& binar
     if (AST::isArithmeticOperator(op)) {
         applyArithmeticOperatorToRax(op, "rbx");
     } else if (AST::isComparisonOperator(op)) {
-        const std::unordered_map<AST::Operator, std::string_view> comparisonSuffixes = {
-            {AST::Operator::EQUALS, "e"},       {AST::Operator::NOT_EQUALS, "ne"},
-            {AST::Operator::LESS_THAN, "l"},    {AST::Operator::LESS_THAN_OR_EQUAL, "le"},
-            {AST::Operator::GREATER_THAN, "g"}, {AST::Operator::GREATER_THAN_OR_EQUAL, "ge"},
-        };
+        std::string_view suffix;
+        if (op == AST::Operator::EQUALS)
+            suffix = "e";
+        else if (op == AST::Operator::NOT_EQUALS)
+            suffix = "ne";
+        else if (op == AST::Operator::LESS_THAN)
+            suffix = "l";
+        else if (op == AST::Operator::LESS_THAN_OR_EQUAL)
+            suffix = "le";
+        else if (op == AST::Operator::GREATER_THAN)
+            suffix = "g";
+        else if (op == AST::Operator::GREATER_THAN_OR_EQUAL)
+            suffix = "ge";
+        else
+            std::unreachable();
+
         output_ << "    cmp rax, rbx\n";
-        output_ << "    set" << comparisonSuffixes.at(op) << " al\n";
+        output_ << "    set" << suffix << " al\n";
         output_ << "    movzx rax, al\n";
     } else if (AST::isLogicalOperator(op)) {
         // TODO: Make this short-circuiting
