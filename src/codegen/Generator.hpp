@@ -54,6 +54,11 @@ class Generator {
         return type.sizeBits(typeManager_) / 8;
     }
 
+    [[nodiscard]] uint32_t typeSize(const TypeID typeID) const {
+        const Type& type = typeManager_.getType(typeID);
+        return typeSize(type);
+    }
+
     /**
      * @brief Computes the size of the provided expression in bytes.
      */
@@ -70,14 +75,22 @@ class Generator {
         return typeSize(type);
     }
 
-    void insertSymbol(std::string_view name, TypeID typeID);
-    [[nodiscard]] uint32_t getScopeFrameSize(const AST::BlockStatement& blockStmt) const;
-    void enterScope(const AST::BlockStatement& blockStmt);
-
+    /**
+     * @brief Computes the size of the variable with the provided name in bytes.
+     */
     [[nodiscard]] uint32_t getVariableSize(const std::string_view name) const {
-        return symbolTable_.at(name).stackSize_;
+        const TypeID typeID = symbolTable_.at(name).typeID_;
+        const Type& type = typeManager_.getType(typeID);
+        return typeSize(type);
     }
 
+    /**
+     * @brief Gets the stack offset in bytes of the variable with the provided name.
+     *
+     * @param name The name of the variable to get the stack offset for.
+     * @return The stack offset in bytes for the variable with the provided name. This offset is
+     * relative to the base pointer (rbp) and can be used to access the variable on the stack.
+     */
     [[nodiscard]] uint32_t getVariableStackOffset(const std::string_view name) const {
         assert(symbolTable_.contains(name) && "Variable not found in stack offset map");
         return symbolTable_.at(name).stackOffset_;
@@ -131,6 +144,10 @@ class Generator {
      * operand, according to the type of the value.
      */
     void copyTo(TypeID typeID, std::string_view to);
+
+    void insertSymbol(std::string_view name, TypeID typeID);
+    [[nodiscard]] uint32_t getScopeFrameSize(const AST::BlockStatement& blockStmt) const;
+    void enterScope(const AST::BlockStatement& blockStmt);
 
     void writeToVariableFromRax(std::string_view name);
     void moveVariableToRax(std::string_view name);

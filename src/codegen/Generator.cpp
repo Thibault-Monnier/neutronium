@@ -53,58 +53,6 @@ neutro::FastStringStream Generator::generate() {
     return std::move(output_);
 }
 
-void Generator::insertSymbol(const std::string_view name, const TypeID typeID) {
-    symbolTable_.erase(name);
-
-    const Type& type = typeManager_.getType(typeID);
-    assert(!type.isVoid() && "Void type cannot be stored in a variable");
-
-    const uint32_t size = typeSize(type);
-
-    currentSymbolsStackOffset_ += size;
-
-    const SymbolInfo info = {.name_ = name,
-                             .stackOffset_ = currentSymbolsStackOffset_,
-                             .stackSize_ = size,
-                             .typeID_ = typeID};
-    symbolTable_.emplace(name, info);
-}
-
-uint32_t Generator::getScopeFrameSize(const AST::BlockStatement& blockStmt) const {
-    uint32_t frameSize = 0;
-    uint32_t maxBlockFrameSize = 0;
-    for (const auto& stmt : blockStmt.body_) {
-        if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
-            const auto& varDef = *stmt->as<AST::VariableDefinition>();
-            frameSize += varDefSize(varDef);
-        } else if (stmt->kind_ == AST::NodeKind::BLOCK_STATEMENT) {
-            const auto& innerBlock = *stmt->as<AST::BlockStatement>();
-            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(innerBlock));
-        } else if (stmt->kind_ == AST::NodeKind::IF_STATEMENT) {
-            const auto& ifStmt = *stmt->as<AST::IfStatement>();
-            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(*ifStmt.body_));
-            if (const auto elseClause = ifStmt.elseClause_) {
-                maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(*elseClause));
-            }
-        } else if (stmt->kind_ == AST::NodeKind::WHILE_STATEMENT) {
-            const auto& innerBlock = *stmt->as<AST::WhileStatement>()->body_;
-            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(innerBlock));
-        }
-    }
-
-    frameSize += maxBlockFrameSize;
-    return frameSize;
-}
-
-void Generator::enterScope(const AST::BlockStatement& blockStmt) {
-    for (const auto& stmt : blockStmt.body_) {
-        if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
-            const auto& varDef = *stmt->as<AST::VariableDefinition>();
-            insertSymbol(varDef.identifier_->name_, varDef.typeID_);
-        }
-    }
-}
-
 std::string Generator::stackOffsetMemoryOperand(const uint32_t offset) {
     return "[rbp - " + std::to_string(offset) + "]";
 }
@@ -183,6 +131,51 @@ void Generator::copyTo(const TypeID typeID, const std::string_view to) {
             break;
         default:
             std::unreachable();
+    }
+}
+
+void Generator::insertSymbol(const std::string_view name, const TypeID typeID) {
+    assert(!typeManager_.getType(typeID).isVoid() && "Void type cannot be stored in a variable");
+
+    symbolTable_.erase(name);
+    currentSymbolsStackOffset_ += typeSize(typeID);
+
+    const SymbolInfo info = {.stackOffset_ = currentSymbolsStackOffset_, .typeID_ = typeID};
+    symbolTable_.emplace(name, info);
+}
+
+uint32_t Generator::getScopeFrameSize(const AST::BlockStatement& blockStmt) const {
+    uint32_t frameSize = 0;
+    uint32_t maxBlockFrameSize = 0;
+    for (const auto& stmt : blockStmt.body_) {
+        if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
+            const auto& varDef = *stmt->as<AST::VariableDefinition>();
+            frameSize += varDefSize(varDef);
+        } else if (stmt->kind_ == AST::NodeKind::BLOCK_STATEMENT) {
+            const auto& innerBlock = *stmt->as<AST::BlockStatement>();
+            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(innerBlock));
+        } else if (stmt->kind_ == AST::NodeKind::IF_STATEMENT) {
+            const auto& ifStmt = *stmt->as<AST::IfStatement>();
+            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(*ifStmt.body_));
+            if (const auto elseClause = ifStmt.elseClause_) {
+                maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(*elseClause));
+            }
+        } else if (stmt->kind_ == AST::NodeKind::WHILE_STATEMENT) {
+            const auto& innerBlock = *stmt->as<AST::WhileStatement>()->body_;
+            maxBlockFrameSize = std::max(maxBlockFrameSize, getScopeFrameSize(innerBlock));
+        }
+    }
+
+    frameSize += maxBlockFrameSize;
+    return frameSize;
+}
+
+void Generator::enterScope(const AST::BlockStatement& blockStmt) {
+    for (const auto& stmt : blockStmt.body_) {
+        if (stmt->kind_ == AST::NodeKind::VARIABLE_DEFINITION) {
+            const auto& varDef = *stmt->as<AST::VariableDefinition>();
+            insertSymbol(varDef.identifier_->name_, varDef.typeID_);
+        }
     }
 }
 
