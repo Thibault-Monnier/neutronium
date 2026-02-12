@@ -11,7 +11,7 @@ namespace CodeGen {
 struct SymbolInfo {
     const std::string_view name_;
     const uint32_t stackOffset_;
-    const uint32_t stackSizeBits_;
+    const uint32_t stackSize_;
     const TypeID typeID_;
 };
 
