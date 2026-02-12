@@ -722,6 +722,17 @@ TEST_F(NeutroniumTester, Arrays) {
         }
     )";
     EXPECT_EQ(run(codeTestTypeInference), 14);
+
+    {
+        // Array access with array access as index
+        const std::string code = R"(
+            fn main(): {
+                let v = [5, 6, 7, 8][[0, 3, 2][1]];
+                exit v;
+            }
+        )";
+        EXPECT_EQ(run(code), 8);
+    }
 }
 
 TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {

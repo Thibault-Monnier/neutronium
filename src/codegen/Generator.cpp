@@ -468,9 +468,7 @@ void Generator::generateArrayExpression(const AST::Expression& expr,
 }
 
 void Generator::evaluateExpressionToRax(const AST::Expression& expr) {
-    const uint32_t initialStackOffsetBits = currentSpillStackOffset_ * 8;
     generateExpression(expr, std::nullopt);
-    setStackOffset(initialStackOffsetBits);
 }
 
 void Generator::generateExpression(const AST::Expression& expr,
@@ -559,8 +557,9 @@ void Generator::generateVariableAssignment(const AST::Assignment& assignment) {
 }
 
 void Generator::generateExpressionStmt(const AST::ExpressionStatement& exprStmt) {
-    const auto& expr = *exprStmt.expression_;
-    evaluateExpressionToRax(expr);
+    const uint32_t initialStackOffsetBits = currentSpillStackOffset_ * 8;
+    evaluateExpressionToRax(*exprStmt.expression_);
+    setStackOffset(initialStackOffsetBits);
 }
 
 void Generator::generateIfStmt(const AST::IfStatement& ifStmt) {
