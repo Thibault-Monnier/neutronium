@@ -16,6 +16,10 @@
 
 namespace CodeGen {
 
+/**
+ * @brief Responsible for generating code based on the abstract syntax tree (AST) and other
+ * contextual information, like type management and target architecture.
+ */
 class Generator {
    public:
     explicit Generator(const AST::CompilationUnit& ast, const TypeManager& typeManager,
@@ -72,6 +76,26 @@ class Generator {
 
     [[nodiscard]] uint32_t getVariableSizeBits(std::string_view name) const;
     [[nodiscard]] uint32_t getVariableStackOffset(std::string_view name) const;
+
+    /**
+     * @brief Gets a persistent memory operand string for a specific stack offset.
+     *
+     * @param offset The offset from the base pointer (rbp) in bits.
+     * @return A string representing a memory operand in the form of "[rbp - offset]" that
+     * provides persistent access to the stack location at the given offset. This will not be
+     * affected by later rsp changes, so it is safe to use across multiple pushes/allocations.
+     */
+    [[nodiscard]] static std::string stackOffsetMemoryOperand(uint32_t offset);
+    /**
+     * @brief Gets a persistent memory operand string representing the current top of the stack.
+     *
+     * @return A string providing persistent access to the current
+     * top of the stack, in the form of "[rbp - offset]". This will not be affected by later rsp
+     * changes, so it is safe to use across multiple pushes/allocations.
+     */
+    [[nodiscard]] std::string stackTopMemoryOperand() const;
+    [[nodiscard]] std::string getVariableStackMemoryOperand(std::string_view name) const;
+
     static std::string_view registerAForSize(uint32_t bitSize);
 
     static std::string label(uint32_t labelID);
@@ -82,18 +106,25 @@ class Generator {
     void cleanRax(uint32_t raxValueSizeBits);
     void loadValueFromRax(uint32_t bitSize);
 
+    /**
+     * @brief Pushes the provided register onto the stack and returns the stack offset in bits where
+     * it was pushed.
+     */
     uint32_t push(std::string_view reg, uint32_t sizeBits = 64);
+    /**
+     * @brief Pops a value from the stack at the provided stack offset in bits into the provided
+     * register. The offset should usually be the one returned by a previous call to push.
+     */
     void pop(std::string_view reg, uint32_t offsetBits);
+
     void allocateStackSpace(uint32_t sizeBits);
     void setStackOffset(uint32_t offsetBits);
     void updateRsp();
-    /** @brief Gets a persistent memory operand string representing the current top of the stack.
-     *
-     * @return A string providing persistent access to the current
-     * top of the stack, in the form of "[rbp - offset]". This will not be affected by later rsp
-     * changes, so it is safe to use across multiple pushes/allocations.
+
+    /** @brief Copies the value in rax to the provided destination operand, which should be a memory
+     * operand, according to the type of the value.
      */
-    std::string stackTopMemoryOperand() const;
+    void copyTo(TypeID typeID, std::string_view to);
 
     void writeToVariableFromRax(std::string_view name);
     void moveVariableToRax(std::string_view name);
@@ -102,25 +133,27 @@ class Generator {
 
     void evaluatePlaceExpressionAddressToRax(const AST::Expression& place);
 
-    void generateArrayLit(const AST::ArrayLiteral& arrayLit, std::string_view destinationAddress);
+    void generateArrayLit(const AST::ArrayLiteral& arrayLit, uint32_t destinationStackOffset);
     void allocateAndGenerateArrayLiteral(const AST::ArrayLiteral& arrayLit);
 
     static std::string functionNameWithPrefix(std::string_view name);
     void generateFunctionCall(const AST::FunctionCall& funcCall,
-                              const std::optional<std::string_view>& destinationAddress);
+                              const std::optional<uint32_t>& destinationStackOffset);
     void allocateAndGenerateFunctionCall(const AST::FunctionCall& funcCall);
     void evaluateUnaryExpressionToRax(const AST::UnaryExpression& unaryExpr);
     void applyArithmeticOperatorToRax(AST::Operator op, const std::string& other);
     void evaluateBinaryExpressionToRax(const AST::BinaryExpression& binaryExpr);
     void generatePrimitiveExpression(const AST::Expression& expr,
-                                     const std::optional<std::string_view>& destinationAddress);
+                                     const std::optional<uint32_t>& destinationStackOffset);
     void generateArrayExpression(const AST::Expression& expr,
-                                 const std::optional<std::string_view>& destinationAddress);
+                                 const std::optional<uint32_t>& destinationStackOffset);
 
     void evaluateExpressionToRax(const AST::Expression& expr);
     void generateExpression(const AST::Expression& expr,
-                            const std::optional<std::string_view>& destinationAddress);
+                            const std::optional<uint32_t>& destinationStackOffset);
     void copyArrayContents(std::string_view sourceAddress, std::string_view destinationAddress,
+                           uint32_t arraySizeBits);
+    void copyArrayContents(std::string_view sourceAddress, uint32_t destinationStackOffset,
                            uint32_t arraySizeBits);
 
     int generateCondition(const AST::Expression& condition);

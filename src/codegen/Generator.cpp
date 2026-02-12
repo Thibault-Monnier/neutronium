@@ -111,10 +111,21 @@ uint32_t Generator::getVariableSizeBits(const std::string_view name) const {
 
 uint32_t Generator::getVariableStackOffset(const std::string_view name) const {
     assert(symbolTable_.contains(name) && "Variable not found in stack offset map");
-
     return symbolTable_.at(name).stackOffset_;
 }
 
+std::string Generator::stackOffsetMemoryOperand(const uint32_t offset) {
+    return "[rbp - " + std::to_string(offset) + "]";
+}
+
+std::string Generator::stackTopMemoryOperand() const {
+    return stackOffsetMemoryOperand(currentSpillStackOffset_);
+}
+
+std::string Generator::getVariableStackMemoryOperand(const std::string_view name) const {
+    const uint32_t offset = getVariableStackOffset(name);
+    return stackOffsetMemoryOperand(offset);
+}
 std::string_view Generator::registerAForSize(const uint32_t bitSize) {
     switch (bitSize) {
         case 8:
@@ -171,27 +182,24 @@ void Generator::updateRsp() {
     output_ << "    lea rsp, [rbp - " << currentSpillStackOffset_ << "]\n";
 }
 
-std::string Generator::stackTopMemoryOperand() const {
-    return "[rbp - " + std::to_string(currentSpillStackOffset_) + "]";
-}
-
-void Generator::writeToVariableFromRax(const std::string_view name) {
-    const Type& type = typeManager_.getType(symbolTable_.at(name).typeID_);
-    const uint32_t size = getVariableSizeBits(name);
-    const uint32_t stackOffset = getVariableStackOffset(name);
-
+void Generator::copyTo(const TypeID typeID, const std::string_view to) {
+    const Type& type = typeManager_.getType(typeID);
+    const uint32_t size = type.sizeBits(typeManager_);
     switch (type.kind()) {
         case TypeKind::PRIMITIVE:
-            output_ << "    mov [rbp - " << stackOffset << "], " << registerAForSize(size) << "\n";
+            output_ << "    mov " << to << ", " << registerAForSize(size) << "\n";
             break;
         case TypeKind::ARRAY:
-            output_ << "    mov rbx, rbp\n";
-            output_ << "    sub rbx, " << stackOffset << "\n";
+            output_ << "    lea rbx, " << to << "\n";
             copyArrayContents("rax", "rbx", size);
             break;
         default:
             std::unreachable();
     }
+}
+
+void Generator::writeToVariableFromRax(const std::string_view name) {
+    copyTo(symbolTable_.at(name).typeID_, getVariableStackMemoryOperand(name));
 }
 
 void Generator::moveVariableToRax(const std::string_view name) {
@@ -238,14 +246,15 @@ void Generator::evaluatePlaceExpressionAddressToRax(const AST::Expression& place
 }
 
 void Generator::generateArrayLit(const AST::ArrayLiteral& arrayLit,
-                                 const std::string_view destinationAddress) {
+                                 const uint32_t destinationStackOffset) {
+    const std::string destinationAddress = stackOffsetMemoryOperand(destinationStackOffset);
     output_ << "    mov rbx, " << destinationAddress << "\n";
 
     const size_t elementSizeBits = exprSizeBits(arrayLit) / arrayLit.elements_.size();
     for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
         if (i != 0) output_ << "    add rbx, " << elementSizeBits / 8 << "\n";
         const uint32_t loc = push("rbx");
-        generateExpression(*arrayLit.elements_[i], stackTopMemoryOperand());
+        generateExpression(*arrayLit.elements_[i], currentSpillStackOffset_);
         pop("rbx", loc);
     }
 
@@ -256,7 +265,7 @@ void Generator::allocateAndGenerateArrayLiteral(const AST::ArrayLiteral& arrayLi
     allocateStackSpace(exprSizeBits(arrayLit));
     output_ << "    lea rax, " << stackTopMemoryOperand() << "\n";
     const uint32_t loc = push("rax");
-    generateArrayLit(arrayLit, stackTopMemoryOperand());
+    generateArrayLit(arrayLit, currentSpillStackOffset_);
     pop("rbx", loc);
 }
 
@@ -265,7 +274,7 @@ std::string Generator::functionNameWithPrefix(const std::string_view name) {
 }
 
 void Generator::generateFunctionCall(const AST::FunctionCall& funcCall,
-                                     const std::optional<std::string_view>& destinationAddress) {
+                                     const std::optional<uint32_t>& destinationStackOffset) {
     const uint32_t initialStackOffsetBits = currentSpillStackOffset_ * 8;
 
     for (const auto& argument : funcCall.arguments_) {
@@ -279,20 +288,21 @@ void Generator::generateFunctionCall(const AST::FunctionCall& funcCall,
 
     setStackOffset(initialStackOffsetBits);
 
-    if (!destinationAddress.has_value()) {
-        return;
-    }
+    if (!destinationStackOffset.has_value()) return;
 
     const Type& returnType = typeManager_.getType(funcCall.typeID_);
     const uint32_t sizeBits = typeSizeBits(returnType);
     switch (returnType.kind()) {
-        case TypeKind::PRIMITIVE:
+        case TypeKind::PRIMITIVE: {
+            const std::string destinationAddress =
+                stackOffsetMemoryOperand(destinationStackOffset.value());
             cleanRax(sizeBits);
-            output_ << "    mov rbx, " << destinationAddress.value() << "\n";
+            output_ << "    mov rbx, " << destinationAddress << "\n";
             output_ << "    mov [rbx], " << registerAForSize(sizeBits) << "\n";
             break;
+        }
         case TypeKind::ARRAY:
-            copyArrayContents("rax", destinationAddress.value(), sizeBits);
+            copyArrayContents("rax", destinationStackOffset.value(), sizeBits);
             break;
         default:
             std::unreachable();
@@ -305,7 +315,7 @@ void Generator::allocateAndGenerateFunctionCall(const AST::FunctionCall& funcCal
     allocateStackSpace(exprSizeBits(funcCall));
     output_ << "    lea rax, " << stackTopMemoryOperand() << "\n";
     const uint32_t loc = push("rax");
-    generateFunctionCall(funcCall, stackTopMemoryOperand());
+    generateFunctionCall(funcCall, currentSpillStackOffset_);
     pop("rbx", loc);
 }
 
@@ -377,8 +387,8 @@ void Generator::evaluateBinaryExpressionToRax(const AST::BinaryExpression& binar
     }
 }
 
-void Generator::generatePrimitiveExpression(
-    const AST::Expression& expr, const std::optional<std::string_view>& destinationAddress) {
+void Generator::generatePrimitiveExpression(const AST::Expression& expr,
+                                            const std::optional<uint32_t>& destinationStackOffset) {
     switch (expr.kind_) {
         case AST::NodeKind::NUMBER_LITERAL: {
             const auto& numberLit = *expr.as<AST::NumberLiteral>();
@@ -403,7 +413,7 @@ void Generator::generatePrimitiveExpression(
         }
         case AST::NodeKind::FUNCTION_CALL: {
             const auto& funcCall = *expr.as<AST::FunctionCall>();
-            generateFunctionCall(funcCall, destinationAddress);
+            generateFunctionCall(funcCall, destinationStackOffset);
             return;
         }
         case AST::NodeKind::UNARY_EXPRESSION: {
@@ -420,35 +430,37 @@ void Generator::generatePrimitiveExpression(
             std::unreachable();
     }
 
-    if (destinationAddress.has_value()) {
+    if (destinationStackOffset.has_value()) {
         const uint32_t sizeBits = exprSizeBits(expr);
-        output_ << "    mov rbx, " << destinationAddress.value() << "\n";
+        const std::string destinationAddress =
+            stackOffsetMemoryOperand(destinationStackOffset.value());
+        output_ << "    mov rbx, " << destinationAddress << "\n";
         output_ << "    mov [rbx], " << registerAForSize(sizeBits) << "\n";
     }
 }
 
 void Generator::generateArrayExpression(const AST::Expression& expr,
-                                        const std::optional<std::string_view>& destinationAddress) {
+                                        const std::optional<uint32_t>& destinationStackOffset) {
     if (expr.kind_ == AST::NodeKind::ARRAY_LITERAL) {
         const auto& arrayLit = *expr.as<AST::ArrayLiteral>();
-        if (destinationAddress.has_value()) {
-            generateArrayLit(arrayLit, destinationAddress.value());
+        if (destinationStackOffset.has_value()) {
+            generateArrayLit(arrayLit, destinationStackOffset.value());
         } else {
             allocateAndGenerateArrayLiteral(arrayLit);
         }
 
     } else if (expr.kind_ == AST::NodeKind::FUNCTION_CALL) {
         const auto& funcCall = *expr.as<AST::FunctionCall>();
-        if (destinationAddress.has_value()) {
-            generateFunctionCall(funcCall, destinationAddress);
+        if (destinationStackOffset.has_value()) {
+            generateFunctionCall(funcCall, destinationStackOffset);
         } else {
             allocateAndGenerateFunctionCall(funcCall);
         }
 
     } else {
         evaluatePlaceExpressionAddressToRax(expr);
-        if (destinationAddress.has_value()) {
-            copyArrayContents("rax", destinationAddress.value(), exprSizeBits(expr));
+        if (destinationStackOffset.has_value()) {
+            copyArrayContents("rax", destinationStackOffset.value(), exprSizeBits(expr));
         } else {
             // Do nothing: the result is already in rax
         }
@@ -462,15 +474,15 @@ void Generator::evaluateExpressionToRax(const AST::Expression& expr) {
 }
 
 void Generator::generateExpression(const AST::Expression& expr,
-                                   const std::optional<std::string_view>& destinationAddress) {
+                                   const std::optional<uint32_t>& destinationStackOffset) {
     const Type& exprType = typeManager_.getType(expr.typeID_);
     switch (exprType.kind()) {
         case TypeKind::PRIMITIVE:
-            generatePrimitiveExpression(expr, destinationAddress);
+            generatePrimitiveExpression(expr, destinationStackOffset);
             break;
 
         case TypeKind::ARRAY:
-            generateArrayExpression(expr, destinationAddress);
+            generateArrayExpression(expr, destinationStackOffset);
             break;
 
         default:
@@ -487,6 +499,13 @@ void Generator::copyArrayContents(const std::string_view sourceAddress,
     output_ << "    rep movsb\n";
 }
 
+void Generator::copyArrayContents(const std::string_view sourceAddress,
+                                  const uint32_t destinationStackOffset,
+                                  const uint32_t arraySizeBits) {
+    const std::string destinationAddress = stackOffsetMemoryOperand(destinationStackOffset);
+    copyArrayContents(sourceAddress, destinationAddress, arraySizeBits);
+}
+
 [[nodiscard]] int Generator::generateCondition(const AST::Expression& condition) {
     evaluateExpressionToRax(condition);
     output_ << "    cmp rax, 0\n";
@@ -497,7 +516,7 @@ void Generator::copyArrayContents(const std::string_view sourceAddress,
 void Generator::generateVariableDefinition(const AST::VariableDefinition& varDecl) {
     evaluatePlaceExpressionAddressToRax(*varDecl.identifier_);
     const uint32_t loc = push("rax");
-    generateExpression(*varDecl.value_, stackTopMemoryOperand());
+    generateExpression(*varDecl.value_, currentSpillStackOffset_);
     pop("rbx", loc);
 }
 
@@ -522,7 +541,7 @@ void Generator::generateVariableAssignment(const AST::Assignment& assignment) {
     const uint32_t loc = push("rax");
 
     if (assignment.operator_ == AST::Operator::ASSIGN) {
-        generateExpression(*value, stackTopMemoryOperand());
+        generateExpression(*value, currentSpillStackOffset_);
         pop("rcx", loc);
     } else {
         const uint32_t sizeBits = exprSizeBits(*place);
