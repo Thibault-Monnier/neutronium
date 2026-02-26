@@ -1102,3 +1102,67 @@ TEST_F(NeutroniumTester, LogicalOperators) {
         testWithAB(false, false, 0);  // false || false = false
     }
 }
+
+TEST_F(NeutroniumTester, PrimeNumbersSieve) {
+    const std::string code = R"(
+        extern fn print_num(n: int);
+        extern fn print_c(c: int);
+
+        fn sieve(n: int): {
+            let mut isPrime: [bool; 1000] = [false; 1000];
+
+            let mut i = 0;
+            while i < n: {
+                isPrime[i] = true;
+                i += 1;
+            }
+
+            let mut p = 2;
+            while p * p < n: {
+                if isPrime[p]: {
+                    let mut multiple = p * p;
+                    while multiple < n: {
+                        isPrime[multiple] = false;
+                        multiple += p;
+                    }
+                }
+                p += 1;
+            }
+
+            let mut isFirst = true;
+            let mut k = 2;
+            while k < n: {
+                if isPrime[k]: {
+                    if !isFirst: {
+                        print_c(44); # Comma
+                        print_c(9); # Tab
+                    }
+                    isFirst = false;
+                    print_num(k);
+                }
+                k += 1;
+            }
+        }
+
+        fn main(): {
+            sieve(1000);
+
+            print_c(10); # Newline
+        }
+    )";
+    const std::string expectedOutput =
+        "2,\t3,\t5,\t7,\t11,\t13,\t17,\t19,\t23,\t29,\t31,\t37,\t41,\t43,\t47,\t53,\t59,\t61,\t67,"
+        "\t71,\t73,\t79,\t83,\t89,\t97,\t101,\t103,\t107,\t109,\t113,\t127,\t131,\t137,\t139,\t149,"
+        "\t151,\t157,\t163,\t167,\t173,\t179,\t181,\t191,\t193,\t197,\t199,\t211,\t223,\t227,\t229,"
+        "\t233,\t239,\t241,\t251,\t257,\t263,\t269,\t271,\t277,\t281,\t283,\t293,\t307,\t311,\t313,"
+        "\t317,\t331,\t337,\t347,\t349,\t353,\t359,\t367,\t373,\t379,\t383,\t389,\t397,\t401,\t409,"
+        "\t419,\t421,\t431,\t433,\t439,\t443,\t449,\t457,\t461,\t463,\t467,\t479,\t487,\t491,\t499,"
+        "\t503,\t509,\t521,\t523,\t541,\t547,\t557,\t563,\t569,\t571,\t577,\t587,\t593,\t599,\t601,"
+        "\t607,\t613,\t617,\t619,\t631,\t641,\t643,\t647,\t653,\t659,\t661,\t673,\t677,\t683,\t691,"
+        "\t701,\t709,\t719,\t727,\t733,\t739,\t743,\t751,\t757,\t761,\t769,\t773,\t787,\t797,\t809,"
+        "\t811,\t821,\t823,\t827,\t829,\t839,\t853,\t857,\t859,\t863,\t877,\t881,\t883,\t887,\t907,"
+        "\t911,\t919,\t929,\t937,\t941,\t947,\t953,\t967,\t971,\t977,\t983,\t991,\t997\n";
+    const auto [exit, output] = runWithOutput(code);
+    EXPECT_EQ(exit, 0);
+    EXPECT_EQ(output, expectedOutput);
+}
