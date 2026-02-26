@@ -967,6 +967,28 @@ TEST_F(NeutroniumTester, ArraysSpecificElementSize) {
     }
 }
 
+TEST_F(NeutroniumTester, RepeatArrayLiteral) {
+    {
+        const std::string code = R"(
+            fn main(): {
+                let arr = [2; 10];  # should create an array of size 10 with all elements initialized to 2
+                exit arr[7] + arr[0] + arr[9];  # should be 2 + 2 + 2 = 6
+            }
+        )";
+        EXPECT_EQ(run(code), 6);
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let v = [2; 3][2];
+                exit v;
+            }
+        )";
+        EXPECT_EQ(run(code), 2);
+    }
+}
+
 TEST_F(NeutroniumTester, EmptyReturnStatement) {
     const std::string code = R"(
         fn main(): {

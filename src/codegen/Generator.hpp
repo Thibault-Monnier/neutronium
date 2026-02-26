@@ -157,7 +157,9 @@ class Generator {
     void evaluatePlaceExpressionAddressToRax(const AST::Expression& place);
 
     void generateArrayLit(const AST::ArrayLiteral& arrayLit, uint32_t destinationStackOffset);
-    void allocateAndGenerateArrayLiteral(const AST::ArrayLiteral& arrayLit);
+    void generateRepeatArrayLit(const AST::RepeatArrayLiteral& repeatArrayLit,
+                                uint32_t destinationStackOffset);
+    void allocateAndGenerateArrayLiteral(const AST::Expression& arrayLit);
 
     static std::string functionNameWithPrefix(std::string_view name);
     void generateFunctionCall(const AST::FunctionCall& funcCall,

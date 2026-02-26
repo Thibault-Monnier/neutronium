@@ -210,6 +210,13 @@ class Type {
 
     [[nodiscard]] bool isPrimitive() const { return kind_ == TypeKind::PRIMITIVE; }
 
+    /**
+     * @brief Calculates the size of the type in bits.
+     *
+     * @param typeManager The `TypeManager` instance used to retrieve type information for array
+     * element types.
+     * @return The size of the type in bits.
+     */
     [[nodiscard]] uint32_t sizeBits(const TypeManager& typeManager) const;
 
     /**

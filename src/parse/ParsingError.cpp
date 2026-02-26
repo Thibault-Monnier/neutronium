@@ -6,7 +6,7 @@
 #include "lex/Token.hpp"
 #include "lex/TokenKind.hpp"
 
-void Parser::emitError(const std::string& errorMessage, const Token token) const {
+void Parser::emitError(const std::string& errorMessage, const Token& token) const {
     diagnosticsEngine_.reportError(errorMessage, token.byteOffsetStart(), token.byteOffsetEnd(),
                                    fileID_);
 }

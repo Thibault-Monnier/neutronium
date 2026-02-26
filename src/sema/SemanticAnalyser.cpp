@@ -211,11 +211,7 @@ TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
     if (!info.has_value()) {
         return registerAnyType();
     }
-
-    if (info.value()->kind() != SymbolKind::FUNCTION) {
-        std::unreachable();
-        return registerAnyType();
-    }
+    assert(info.value()->kind() == SymbolKind::FUNCTION);
 
     const auto& params = info.value()->parameters();
 
@@ -264,6 +260,10 @@ TypeID SemanticAnalyser::checkBinaryExpression(const AST::BinaryExpression& bina
     std::unreachable();
 }
 
+void SemanticAnalyser::emptyArrayLiteralError(const AST::Expression& arrayLit) const {
+    error("Array literal cannot be empty", arrayLit);
+}
+
 TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
     TypeID verifier;
 
@@ -279,7 +279,7 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
         case AST::NodeKind::ARRAY_LITERAL: {
             const auto& arrayLiteral = *expr.as<AST::ArrayLiteral>();
             if (arrayLiteral.elements_.empty()) {
-                error("Array literal cannot be empty", arrayLiteral);
+                emptyArrayLiteralError(arrayLiteral);
                 verifier = registerAnyType();
                 break;
             }
@@ -290,6 +290,21 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
             }
 
             verifier = typeManager_.createType(elementTypeID, arrayLiteral.elements_.size());
+            break;
+        }
+        case AST::NodeKind::REPEAT_ARRAY_LITERAL: {
+            const auto& repeatArrayLit = *expr.as<AST::RepeatArrayLiteral>();
+
+            const auto elementCount = repeatArrayLit.count_->value_;
+            if (elementCount == 0) {
+                emptyArrayLiteralError(repeatArrayLit);
+                verifier = registerAnyType();
+                break;
+            }
+
+            const TypeID elementTypeID = checkExpression(*repeatArrayLit.element_);
+
+            verifier = typeManager_.createType(elementTypeID, elementCount);
             break;
         }
         case AST::NodeKind::IDENTIFIER: {

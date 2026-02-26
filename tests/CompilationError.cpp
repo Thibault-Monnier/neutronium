@@ -424,14 +424,27 @@ TEST_F(NeutroniumTester, DifferentElementTypesInArrayFails) {
 }
 
 TEST_F(NeutroniumTester, EmptyArrayFails) {
-    const std::string code = R"(
-        fn main(): {
-            let arr: [bool; 0] = [];  # illegal: empty array
-        }
-    )";
-    auto [status, error] = compile(code);
-    EXPECT_NE(status, 0);
-    EXPECT_TRUE(error.contains("empty") && error.contains("Array literal"));
+    {
+        const std::string code = R"(
+            fn main(): {
+                let arr: [bool; 0] = [];  # illegal: empty array
+            }
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("empty") && error.contains("Array literal"));
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let arr = [-1; 0];  # illegal: empty array
+            }
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("empty") && error.contains("Array literal"));
+    }
 }
 
 TEST_F(NeutroniumTester, ExitWithBooleanExpressionFails) {
@@ -1219,4 +1232,18 @@ TEST_F(NeutroniumTester, CantHaveAndOrInSameExpression) {
     EXPECT_NE(status, 0);
     EXPECT_TRUE(error.contains("token") && error.contains("expected") &&
                 error.contains("SEMICOLON"));
+}
+
+TEST_F(NeutroniumTester, InvalidRepeatArrayLiteral) {
+    {
+        const std::string code = R"(
+            fn main(): {
+                let arr = [1, 2; 2];
+            }
+        )";
+        auto [status, error] = compile(code);
+        EXPECT_NE(status, 0);
+        EXPECT_TRUE(error.contains("token") && error.contains("expected") &&
+                    error.contains("RIGHT_BRACKET"));
+    }
 }

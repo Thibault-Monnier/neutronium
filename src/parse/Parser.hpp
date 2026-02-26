@@ -63,7 +63,8 @@ class Parser {
      * @param errorMessage The error message to emit.
      * @param token The token where the error occurred.
      */
-    void emitError(const std::string& errorMessage, Token token) const;
+    void emitError(const std::string& errorMessage, const Token& token) const;
+
     /** Emits an error and returns nullptr of the template type.
      * @param errorMessage The error message to emit.
      * @param token The token where the error occurred.
@@ -71,7 +72,7 @@ class Parser {
      * @return nullptr of type T.
      */
     template <class T>
-    [[nodiscard]] T* emitError(const std::string& errorMessage, const Token token) const {
+    [[nodiscard]] T* emitError(const std::string& errorMessage, const Token& token) const {
         emitError(errorMessage, token);
         return nullptr;
     }
@@ -138,7 +139,7 @@ class Parser {
                                                  Type defaultType);
 
     AST::NumberLiteral* parseNumberLiteral();
-    AST::ArrayLiteral* parseArrayLiteral();
+    AST::Expression* parseArrayLiteral();
 
     AST::Identifier* parseIdentifier();
     AST::Expression* parseIdentifierOrFunctionCall();

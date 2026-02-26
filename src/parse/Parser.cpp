@@ -161,15 +161,28 @@ AST::NumberLiteral* Parser::parseNumberLiteral() {
                                                 token.byteOffsetEnd(), fileID_, generateAnyType());
 }
 
-AST::ArrayLiteral* Parser::parseArrayLiteral() {
+AST::Expression* Parser::parseArrayLiteral() {
     const Token lBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::LEFT_BRACKET);
     auto elements = parseExpressionList(TokenKind::RIGHT_BRACKET);
     if (!elements) return nullptr;
-    const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
-    return astArena_.insert<AST::ArrayLiteral>(insertVector(std::move(elements.value())),
-                                               lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
-                                               fileID_, generateAnyType());
+    if (elements->size() == 1 && advanceIf(TokenKind::SEMICOLON)) {
+        // Repeat array literal syntax
+        auto countLiteral = parseNumberLiteral();
+        if (!countLiteral) return nullptr;
+        const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
+
+        return astArena_.insert<AST::RepeatArrayLiteral>(
+            elements.value()[0], countLiteral, lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
+            fileID_, generateAnyType());
+    } else {
+        // Regular array literal
+        const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
+
+        return astArena_.insert<AST::ArrayLiteral>(
+            insertVector(std::move(elements.value())), lBracket.byteOffsetStart(),
+            rBracket.byteOffsetEnd(), fileID_, generateAnyType());
+    }
 }
 
 AST::Expression* Parser::parseIdentifierOrFunctionCall() {

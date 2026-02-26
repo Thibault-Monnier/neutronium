@@ -15,6 +15,7 @@ enum class NodeKind : uint8_t {
     NUMBER_LITERAL,
     BOOLEAN_LITERAL,
     ARRAY_LITERAL,
+    REPEAT_ARRAY_LITERAL,
     IDENTIFIER,
     ARRAY_ACCESS,
     UNARY_EXPRESSION,
@@ -99,6 +100,17 @@ struct ArrayLiteral final : Expression {
         : Expression{NodeKind::ARRAY_LITERAL, start, end, fileID, typeID}, elements_(elements) {}
 
     const std::span<Expression*> elements_;
+};
+
+struct RepeatArrayLiteral final : Expression {
+    RepeatArrayLiteral(const Expression* element, const NumberLiteral* count, const uint32_t start,
+                       const uint32_t end, const FileID fileID, const TypeID typeID)
+        : Expression{NodeKind::REPEAT_ARRAY_LITERAL, start, end, fileID, typeID},
+          element_(element),
+          count_(count) {}
+
+    const Expression* element_;
+    const NumberLiteral* count_;
 };
 
 struct Identifier final : Expression {

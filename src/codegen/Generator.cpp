@@ -242,16 +242,52 @@ void Generator::generateArrayLit(const AST::ArrayLiteral& arrayLit,
     output_ << "    mov rax, " << destinationAddress << "\n";
 }
 
-void Generator::allocateAndGenerateArrayLiteral(const AST::ArrayLiteral& arrayLit) {
+void Generator::generateRepeatArrayLit(const AST::RepeatArrayLiteral& repeatArrayLit,
+                                       const uint32_t destinationStackOffset) {
+    generateExpression(*repeatArrayLit.element_, std::nullopt);
+    const auto valueLoc = push("rax");
+
+    const std::string destinationAddress = stackOffsetMemoryOperand(destinationStackOffset);
+    output_ << "    mov rbx, " << destinationAddress << "\n";
+
+    const size_t elementSize = exprSize(*repeatArrayLit.element_);
+    assert(repeatArrayLit.count_->value_ > 0 && "Repeat array literal count should be > 0");
+    for (size_t i = 0; i < static_cast<size_t>(repeatArrayLit.count_->value_); ++i) {
+        if (i != 0) output_ << "    add rbx, " << elementSize << "\n";
+
+        output_ << "    mov rax, [rbp - " << valueLoc
+                << "]\n";  // Load the element value from the stack
+
+        const uint32_t loc = push("rbx");
+        copyTo(repeatArrayLit.element_->typeID_, "[rbx]");
+        pop("rbx", loc);
+    }
+
+    pop("rbx", valueLoc);
+
+    output_ << "    mov rax, " << destinationAddress << "\n";
+}
+
+void Generator::allocateAndGenerateArrayLiteral(const AST::Expression& arrayLit) {
+    const AST::NodeKind kind = arrayLit.kind_;
+    assert(kind == AST::NodeKind::ARRAY_LITERAL || kind == AST::NodeKind::REPEAT_ARRAY_LITERAL);
+
     allocateStackSpace(exprSize(arrayLit));
     output_ << "    lea rax, " << stackTopMemoryOperand() << "\n";
     const uint32_t loc = push("rax");
-    generateArrayLit(arrayLit, currentSpillStackOffset_);
+
+    if (kind == AST::NodeKind::ARRAY_LITERAL)
+        generateArrayLit(*arrayLit.as<AST::ArrayLiteral>(), currentSpillStackOffset_);
+    else if (kind == AST::NodeKind::REPEAT_ARRAY_LITERAL)
+        generateRepeatArrayLit(*arrayLit.as<AST::RepeatArrayLiteral>(), currentSpillStackOffset_);
+    else
+        std::unreachable();
+
     pop("rbx", loc);
 }
 
 std::string Generator::functionNameWithPrefix(const std::string_view name) {
-    return "__" + std::string(name);  // Prefix with "__" to avoid conflicts with NASM keywords
+    return "__" + std::string(name);  // Prefix with "__" to avoid conflicts with keywords
 }
 
 void Generator::generateFunctionCall(const AST::FunctionCall& funcCall,
@@ -433,29 +469,36 @@ void Generator::generatePrimitiveExpression(const AST::Expression& expr,
 
 void Generator::generateArrayExpression(const AST::Expression& expr,
                                         const std::optional<uint32_t>& destinationStackOffset) {
-    if (expr.kind_ == AST::NodeKind::ARRAY_LITERAL) {
-        const auto& arrayLit = *expr.as<AST::ArrayLiteral>();
-        if (destinationStackOffset.has_value()) {
-            generateArrayLit(arrayLit, destinationStackOffset.value());
-        } else {
-            allocateAndGenerateArrayLiteral(arrayLit);
+    switch (expr.kind_) {
+        case AST::NodeKind::ARRAY_LITERAL: {
+            const auto& arrayLit = *expr.as<AST::ArrayLiteral>();
+            if (destinationStackOffset.has_value())
+                generateArrayLit(arrayLit, destinationStackOffset.value());
+            else
+                allocateAndGenerateArrayLiteral(arrayLit);
+            break;
         }
-
-    } else if (expr.kind_ == AST::NodeKind::FUNCTION_CALL) {
-        const auto& funcCall = *expr.as<AST::FunctionCall>();
-        if (destinationStackOffset.has_value()) {
-            generateFunctionCall(funcCall, destinationStackOffset);
-        } else {
-            allocateAndGenerateFunctionCall(funcCall);
+        case AST::NodeKind::REPEAT_ARRAY_LITERAL: {
+            const auto& repeatArrayLit = *expr.as<AST::RepeatArrayLiteral>();
+            if (destinationStackOffset.has_value())
+                generateRepeatArrayLit(repeatArrayLit, destinationStackOffset.value());
+            else
+                allocateAndGenerateArrayLiteral(repeatArrayLit);
+            break;
         }
-
-    } else {
-        evaluatePlaceExpressionAddressToRax(expr);
-        if (destinationStackOffset.has_value()) {
-            copyArrayContents("rax", destinationStackOffset.value(), exprSize(expr));
-        } else {
-            // Do nothing: the result is already in rax
+        case AST::NodeKind::FUNCTION_CALL: {
+            const auto& funcCall = *expr.as<AST::FunctionCall>();
+            if (destinationStackOffset.has_value())
+                generateFunctionCall(funcCall, destinationStackOffset);
+            else
+                allocateAndGenerateFunctionCall(funcCall);
+            break;
         }
+        default:
+            evaluatePlaceExpressionAddressToRax(expr);
+            if (destinationStackOffset.has_value())
+                copyArrayContents("rax", destinationStackOffset.value(), exprSize(expr));
+            break;
     }
 }
 

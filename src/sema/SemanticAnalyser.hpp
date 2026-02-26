@@ -127,6 +127,7 @@ class SemanticAnalyser {
     TypeID checkFunctionCall(const AST::FunctionCall& funcCall);
     TypeID checkUnaryExpression(const AST::UnaryExpression& unaryExpr);
     TypeID checkBinaryExpression(const AST::BinaryExpression& binaryExpr);
+    void emptyArrayLiteralError(const AST::Expression& arrayLit) const;
     TypeID checkExpression(const AST::Expression& expr);
     void checkExpression(const AST::Expression& expr, TypeID expected);
 
