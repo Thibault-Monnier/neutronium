@@ -90,7 +90,7 @@ __attribute__((always_inline)) void Lexer::skipWhitespace() {
 
 __attribute__((always_inline)) void Lexer::lexNumberLiteralContinuation() {
     static constexpr auto IS_NUMBER_CHAR = [](const unsigned char c) {
-        return c >= '0' && c <= '9';
+        return (c >= '0' && c <= '9') || c == '_';
     };
     skipWhile(IS_NUMBER_CHAR);
 }

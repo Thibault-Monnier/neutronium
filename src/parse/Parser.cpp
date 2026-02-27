@@ -149,12 +149,18 @@ AST::NumberLiteral* Parser::parseNumberLiteral() {
     const Token token = EXPECT_OR_RETURN_NULLPTR(TokenKind::NUMBER_LITERAL);
     const std::string_view lexeme = token.lexeme(sourceCode_);
 
-    int64_t value;
-    const std::from_chars_result res =
-        std::from_chars(lexeme.data(), lexeme.data() + lexeme.size(), value);
+    int64_t value = 0;
+    for (const char* p = lexeme.data(); p < lexeme.data() + lexeme.size(); p++) {
+        const char c = *p;
+        if (c == '_') [[unlikely]]
+            continue;
 
-    if (res.ec != std::errc{}) [[unlikely]] {
-        return invalidNumberLiteralError(token);
+        value *= 10;
+        value += c - '0';
+
+        if (value < 0) [[unlikely]] {
+            return invalidNumberLiteralError(token);
+        }
     }
 
     return astArena_.insert<AST::NumberLiteral>(value, token.byteOffsetStart(),

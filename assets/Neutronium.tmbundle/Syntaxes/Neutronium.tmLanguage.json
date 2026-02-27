@@ -103,7 +103,7 @@
       "patterns": [
         {
           "name": "constant.numeric.integer.decimal.neutronium",
-          "match": "\\b\\d+\\b"
+          "match": "\\b\\d[\\d_]*\\b"
         }
       ]
     },

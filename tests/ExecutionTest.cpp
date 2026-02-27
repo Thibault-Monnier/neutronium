@@ -1109,7 +1109,7 @@ TEST_F(NeutroniumTester, PrimeNumbersSieve) {
         extern fn print_c(c: int);
 
         fn sieve(n: int): {
-            let mut isPrime: [bool; 1000] = [false; 1000];
+            let mut isPrime: [bool; 1_000] = [false; 1_000];
 
             let mut i = 0;
             while i < n: {
@@ -1165,4 +1165,48 @@ TEST_F(NeutroniumTester, PrimeNumbersSieve) {
     const auto [exit, output] = runWithOutput(code);
     EXPECT_EQ(exit, 0);
     EXPECT_EQ(output, expectedOutput);
+}
+
+TEST_F(NeutroniumTester, MaxIntValue) {
+    const std::string code = R"(
+        extern fn print_num(n: int64);
+
+        fn main(): {
+            let maxInt: int64 = 9223372036854775807; # 2^63 - 1
+            print_num(maxInt);
+        }
+    )";
+    const auto [exit, output] = runWithOutput(code);
+    EXPECT_EQ(exit, 0);
+    EXPECT_EQ(output, "9223372036854775807");
+}
+
+TEST_F(NeutroniumTester, UnderscoresInNumberLiteral) {
+    {
+        const std::string code = R"(
+            extern fn print_num(n: int64);
+
+            fn main(): {
+                let num: int64 = (-4_294_967_296) / 65536_ + 3_2_7_6_8 + 2; # (-2^32) / 2^16 + 2^15 + 2 = -2^15 + 2 = -32766
+                print_num(num);
+            }
+        )";
+        const auto [exit, output] = runWithOutput(code);
+        EXPECT_EQ(exit, 0);
+        EXPECT_EQ(output, "-32766");
+    }
+
+    {
+        const std::string code = R"(
+            extern fn print_num(n: int64);
+
+            fn main(): {
+                let num: int64 = 9_223_372_036_854_775_807; # 2^63 - 1
+                print_num(num);
+            }
+        )";
+        const auto [exit, output] = runWithOutput(code);
+        EXPECT_EQ(exit, 0);
+        EXPECT_EQ(output, "9223372036854775807");
+    }
 }

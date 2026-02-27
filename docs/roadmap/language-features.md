@@ -14,7 +14,11 @@ All of the following is subject to change.
 - [ ] Floating-point numbers: `float32` and `float64`
 - [ ] Characters and strings: `'a'`, `"hello world"`
 - [ ] Unsigned integers: `uint8/16/32/64`
-- [ ] Numeric literals improvements: `_` digit separator (`1_000_000`), hex `0x`, bin `0b`, oct `0o`
+- [ ] Numeric literals improvements:
+    - [X] `_` digit separator (`1_000_000`)
+    - [ ] hex `0x`
+    - [ ] bin `0b`
+    - [ ] oct `0o`
 
 ### 2) Arrays
 
