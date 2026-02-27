@@ -22,7 +22,7 @@ All of the following is subject to change.
 
 ### 2) Arrays
 
-- [ ] Sized array literal shorthand: `[expr; N]` for an array containing `N` copies of `expr`
+- [X] Sized array literal shorthand: `[expr; N]` for an array containing `N` copies of `expr`
 - [ ] Length inference: `let a: [int] = [1,2,3];` instead of `let a: [int; 3] = [1,2,3];`
 
 ### 3) Operators
