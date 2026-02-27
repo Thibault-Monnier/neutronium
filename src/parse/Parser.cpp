@@ -149,7 +149,7 @@ AST::NumberLiteral* Parser::parseNumberLiteral() {
     const Token token = EXPECT_OR_RETURN_NULLPTR(TokenKind::NUMBER_LITERAL);
     const std::string_view lexeme = token.lexeme(sourceCode_);
 
-    int64_t value = 0;
+    uint64_t value = 0;
     for (const char* p = lexeme.data(); p < lexeme.data() + lexeme.size(); p++) {
         const char c = *p;
         if (c == '_') [[unlikely]]
@@ -158,7 +158,7 @@ AST::NumberLiteral* Parser::parseNumberLiteral() {
         value *= 10;
         value += c - '0';
 
-        if (value < 0) [[unlikely]] {
+        if (value > std::numeric_limits<int64_t>::max()) [[unlikely]] {
             return invalidNumberLiteralError(token);
         }
     }
