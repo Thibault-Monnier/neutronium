@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-#include "source/FileID.hpp"
+#include "frontend/source/FileID.hpp"
 
 struct Diagnostic {
     enum class Level : uint8_t { ERROR };

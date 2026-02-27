@@ -13,15 +13,15 @@
 #include <vector>
 
 #include "SymbolTable.hpp"
-#include "ast/AST.hpp"
-#include "ast/Operator.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/ast/Operator.hpp"
 #include "driver/Cli.hpp"
-#include "type/Trait.hpp"
-#include "type/Type.hpp"
-#include "type/TypeID.hpp"
-#include "type/TypeManager.hpp"
-#include "type/inference/Constraint.hpp"
-#include "type/inference/TypeSolver.hpp"
+#include "frontend/type/Trait.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
+#include "frontend/type/TypeManager.hpp"
+#include "frontend/type/inference/Constraint.hpp"
+#include "frontend/type/inference/TypeSolver.hpp"
 
 void SemanticAnalyser::equalityConstraint(TypeID a, TypeID b, const AST::Node& node) const {
     typeManager_.getTypeSolver().addConstraint<EqualityConstraint>(a, b, node);

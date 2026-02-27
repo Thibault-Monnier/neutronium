@@ -10,17 +10,17 @@
 #include <string_view>
 #include <vector>
 
-#include "ast/AST.hpp"
-#include "ast/Operator.hpp"
-#include "diagnostics/DiagnosticsEngine.hpp"
-#include "lex/Lexer.hpp"
-#include "lex/Token.hpp"
-#include "lex/TokenKind.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/ast/Operator.hpp"
+#include "frontend/diagnostics/DiagnosticsEngine.hpp"
+#include "frontend/lex/Lexer.hpp"
+#include "frontend/lex/Token.hpp"
+#include "frontend/lex/TokenKind.hpp"
 #include "lib/PolymorphicArenaAllocator.hpp"
-#include "source/FileID.hpp"
-#include "type/Type.hpp"
-#include "type/TypeID.hpp"
-#include "type/TypeManager.hpp"
+#include "frontend/source/FileID.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
+#include "frontend/type/TypeManager.hpp"
 
 struct ParsedFunctionSignature {
     AST::Identifier* identifier_;

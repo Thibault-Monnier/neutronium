@@ -5,9 +5,9 @@
 #include <string_view>
 
 #include "Operator.hpp"
-#include "lex/TokenKind.hpp"
-#include "source/FileID.hpp"
-#include "type/TypeID.hpp"
+#include "frontend/lex/TokenKind.hpp"
+#include "frontend/source/FileID.hpp"
+#include "frontend/type/TypeID.hpp"
 
 namespace AST {
 

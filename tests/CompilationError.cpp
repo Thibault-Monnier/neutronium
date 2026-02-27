@@ -3,8 +3,8 @@
 #include <string>
 
 #include "common/Tester.hpp"
-#include "lex/TokenKind.hpp"
-#include "type/Trait.hpp"
+#include "frontend/lex/TokenKind.hpp"
+#include "frontend/type/Trait.hpp"
 
 TEST_F(NeutroniumTester, StatementOusideOfFunctionFails) {
     const std::string code = R"(

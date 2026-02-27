@@ -11,12 +11,12 @@
 #include <utility>
 #include <vector>
 
-#include "ast/AST.hpp"
-#include "ast/Operator.hpp"
-#include "lex/Token.hpp"
-#include "lex/TokenKind.hpp"
-#include "type/Type.hpp"
-#include "type/TypeID.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/ast/Operator.hpp"
+#include "frontend/lex/Token.hpp"
+#include "frontend/lex/TokenKind.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
 
 #if defined(__GNUC__) || defined(__clang__)
 #define EXPECT_OR_RETURN_NULLPTR(tokenKind)            \

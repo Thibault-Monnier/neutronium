@@ -5,8 +5,8 @@
 
 #include "Token.hpp"
 #include "TokenKind.hpp"
-#include "diagnostics/DiagnosticsEngine.hpp"
-#include "source/FileID.hpp"
+#include "frontend/diagnostics/DiagnosticsEngine.hpp"
+#include "frontend/source/FileID.hpp"
 
 class Lexer {
    public:

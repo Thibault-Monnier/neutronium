@@ -6,12 +6,12 @@
 #include <vector>
 
 #include "Constraint.hpp"
-#include "ast/AST.hpp"
-#include "diagnostics/DiagnosticsEngine.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/diagnostics/DiagnosticsEngine.hpp"
 #include "lib/PolymorphicArenaAllocator.hpp"
-#include "type/Trait.hpp"
-#include "type/Type.hpp"
-#include "type/TypeID.hpp"
+#include "frontend/type/Trait.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
 
 class TypeManager;
 

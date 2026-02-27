@@ -1,7 +1,7 @@
 #include "AST.hpp"
 
 #include "Operator.hpp"
-#include "lex/TokenKind.hpp"
+#include "frontend/lex/TokenKind.hpp"
 
 namespace AST {
 

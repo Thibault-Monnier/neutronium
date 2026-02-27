@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
-#include "diagnostics/DiagnosticsEngine.hpp"
-#include "lex/Lexer.hpp"
-#include "lex/Token.hpp"
-#include "lex/TokenKind.hpp"
-#include "source/SourceManager.hpp"
+#include "frontend/diagnostics/DiagnosticsEngine.hpp"
+#include "frontend/lex/Lexer.hpp"
+#include "frontend/lex/Token.hpp"
+#include "frontend/lex/TokenKind.hpp"
+#include "frontend/source/SourceManager.hpp"
 
 struct LexCase {
     std::string src;

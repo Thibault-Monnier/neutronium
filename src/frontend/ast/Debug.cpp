@@ -9,7 +9,7 @@
 
 #include "AST.hpp"
 #include "Operator.hpp"
-#include "type/TypeID.hpp"
+#include "frontend/type/TypeID.hpp"
 
 namespace AST {
 

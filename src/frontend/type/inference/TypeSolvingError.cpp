@@ -1,8 +1,8 @@
 #include "TypeSolver.hpp"
-#include "ast/AST.hpp"
-#include "type/Type.hpp"
-#include "type/TypeID.hpp"
-#include "type/TypeManager.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
+#include "frontend/type/TypeManager.hpp"
 
 __attribute__((cold, noinline)) void TypeSolver::equalityConstraintError(
     const TypeID a, const TypeID b, const AST::Node& sourceNode) const {
