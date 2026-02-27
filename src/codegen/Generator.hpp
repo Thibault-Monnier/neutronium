@@ -6,13 +6,13 @@
 #include <string_view>
 
 #include "SymbolTable.hpp"
-#include "ast/AST.hpp"
-#include "ast/Operator.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/ast/Operator.hpp"
 #include "driver/Cli.hpp"
 #include "lib/FastStringStream.hpp"
-#include "type/Type.hpp"
-#include "type/TypeID.hpp"
-#include "type/TypeManager.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
+#include "frontend/type/TypeManager.hpp"
 
 namespace CodeGen {
 

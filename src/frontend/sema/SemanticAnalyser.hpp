@@ -7,14 +7,14 @@
 #include <vector>
 
 #include "SymbolTable.hpp"
-#include "ast/AST.hpp"
-#include "diagnostics/DiagnosticsEngine.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/diagnostics/DiagnosticsEngine.hpp"
 #include "driver/Cli.hpp"
-#include "source/FileID.hpp"
-#include "type/Trait.hpp"
-#include "type/Type.hpp"
-#include "type/TypeID.hpp"
-#include "type/TypeManager.hpp"
+#include "frontend/source/FileID.hpp"
+#include "frontend/type/Trait.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
+#include "frontend/type/TypeManager.hpp"
 
 class SemanticAnalyser {
    public:

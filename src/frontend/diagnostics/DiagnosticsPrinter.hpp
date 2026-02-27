@@ -10,8 +10,8 @@
 #include <utility>
 
 #include "Diagnostic.hpp"
-#include "source/FileID.hpp"
-#include "source/SourceManager.hpp"
+#include "frontend/source/FileID.hpp"
+#include "frontend/source/SourceManager.hpp"
 
 class DiagnosticsPrinter {
    public:

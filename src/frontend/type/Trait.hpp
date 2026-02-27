@@ -6,7 +6,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include "ast/Operator.hpp"
+#include "frontend/ast/Operator.hpp"
 
 enum class Trait : uint16_t {
     // Arithmetic traits

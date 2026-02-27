@@ -7,12 +7,12 @@
 #include <vector>
 
 #include "Constraint.hpp"
-#include "ast/AST.hpp"
-#include "type/Primitive.hpp"
-#include "type/Trait.hpp"
-#include "type/Type.hpp"
-#include "type/TypeID.hpp"
-#include "type/TypeManager.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/type/Primitive.hpp"
+#include "frontend/type/Trait.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
+#include "frontend/type/TypeManager.hpp"
 
 TypeID TypeSolver::findRoot(TypeID x) {
     // Find the root of the set containing x

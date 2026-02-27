@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "Type.hpp"
-#include "diagnostics/DiagnosticsEngine.hpp"
+#include "frontend/diagnostics/DiagnosticsEngine.hpp"
 #include "inference/TypeSolver.hpp"
 #include "lib/SpecializedArenaAllocator.hpp"
-#include "type/TypeID.hpp"
+#include "frontend/type/TypeID.hpp"
 
 /**
  * @class TypeManager

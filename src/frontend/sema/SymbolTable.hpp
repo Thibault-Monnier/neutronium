@@ -7,8 +7,8 @@
 #include <unordered_map>
 #include <utility>
 
-#include "ast/AST.hpp"
-#include "type/TypeID.hpp"
+#include "frontend/ast/AST.hpp"
+#include "frontend/type/TypeID.hpp"
 
 enum class SymbolKind : uint8_t { FUNCTION, VARIABLE };
 

@@ -4,7 +4,7 @@
 
 #include "../Trait.hpp"
 #include "../TypeID.hpp"
-#include "ast/AST.hpp"
+#include "frontend/ast/AST.hpp"
 
 /**
  * @brief Represents a type constraint for the TypeSolver.

@@ -8,8 +8,8 @@
 
 #include "Diagnostic.hpp"
 #include "DiagnosticsPrinter.hpp"
-#include "source/FileID.hpp"
-#include "source/SourceManager.hpp"
+#include "frontend/source/FileID.hpp"
+#include "frontend/source/SourceManager.hpp"
 
 class DiagnosticsEngine {
    public:

@@ -4,7 +4,7 @@
 #include <optional>
 #include <string_view>
 
-#include "ast/Operator.hpp"
+#include "frontend/ast/Operator.hpp"
 
 [[nodiscard]] std::optional<Trait> traitFromOperator(const AST::Operator op) {
     switch (op) {
