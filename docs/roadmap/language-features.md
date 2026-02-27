@@ -30,6 +30,7 @@ All of the following is subject to change.
 - [X] Logical operators: `&&` and `||`
 - [ ] Increment/decrement: `++` and `--` (postfix) as syntactic sugar for `+= 1` and `-= 1`. They are statements, not
   expressions.
+- [ ] Bitwise operators: `&`, `|`, `^`, `~`, `<<`, `>>`
 
 ### 4) Control flow
 
