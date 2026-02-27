@@ -92,9 +92,11 @@ primary-expression ::= literal
                      | function-call
                      | '(' expression ')'
 
-literal ::= integer-literal | boolean-literal | array-literal
+literal ::= integer-literal | boolean-literal | array-literal | repeat-array-literal
 
 array-literal ::= '[' expression-list ']'
+
+repeat-array-literal ::= '[' expression ';' integer-literal ']' 
 
 function-call ::= identifier '(' expression-list ')'
 
