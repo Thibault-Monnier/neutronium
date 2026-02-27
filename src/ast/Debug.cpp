@@ -6,7 +6,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
-#include <vector>
 
 #include "AST.hpp"
 #include "Operator.hpp"
@@ -63,52 +62,73 @@ void logExpression(const Expression& expr, const std::string& prefix, const bool
     } else {
         const std::string newPrefix = prefix + "│   ";
 
-        if (expr.kind_ == NodeKind::ARRAY_LITERAL) {
-            const auto& arrayLit = *expr.as<ArrayLiteral>();
-            std::cout << prefix << branch << "ArrayLiteral\n";
-            for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
-                const auto& element = arrayLit.elements_[i];
-                const bool isLastElement = i == arrayLit.elements_.size() - 1;
-                const std::string elementBranch = isLastElement ? "└── " : "├── ";
-                std::cout << newPrefix << elementBranch << "Element" << i + 1 << "\n";
-                logExpression(*element, nextPrefix(newPrefix, isLastElement), true);
+        switch (expr.kind_) {
+            case NodeKind::ARRAY_LITERAL: {
+                const auto& arrayLit = *expr.as<ArrayLiteral>();
+                std::cout << prefix << branch << "ArrayLiteral\n";
+                for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
+                    const auto& element = arrayLit.elements_[i];
+                    const bool isLastElement = i == arrayLit.elements_.size() - 1;
+                    const std::string elementBranch = isLastElement ? "└── " : "├── ";
+                    std::cout << newPrefix << elementBranch << "Element" << i + 1 << "\n";
+                    logExpression(*element, nextPrefix(newPrefix, isLastElement), true);
+                }
+                break;
             }
+            case NodeKind::REPEAT_ARRAY_LITERAL: {
+                const auto& arrayLit = *expr.as<RepeatArrayLiteral>();
+                std::cout << prefix << branch << "RepeatArrayLiteral\n";
 
-        } else if (expr.kind_ == NodeKind::ARRAY_ACCESS) {
-            const auto& arrayAccess = *expr.as<ArrayAccess>();
-            std::cout << prefix << branch << "ArrayAccess\n";
-            std::cout << newPrefix << "├── Base\n";
-            logExpression(*arrayAccess.base_, nextPrefix(newPrefix, false), true);
-            std::cout << newPrefix << "└── Index\n";
-            logExpression(*arrayAccess.index_, nextPrefix(newPrefix, true), true);
-
-        } else if (expr.kind_ == NodeKind::FUNCTION_CALL) {
-            const auto& funcCall = *expr.as<FunctionCall>();
-            std::cout << prefix << branch << "FunctionCall\n";
-            std::cout << newPrefix << "├── Callee\n";
-            logExpression(*funcCall.callee_, nextPrefix(newPrefix, false), true);
-            std::cout << newPrefix << "└── Arguments\n";
-            for (size_t i = 0; i < funcCall.arguments_.size(); ++i) {
-                const auto& arg = funcCall.arguments_[i];
-                const bool isLastArg = i == funcCall.arguments_.size() - 1;
-                const std::string argPrefix = nextPrefix(newPrefix, true);
-                const std::string argBranch = isLastArg ? "└── " : "├── ";
-                std::cout << argPrefix << argBranch << "Argument" << i + 1 << "\n";
-                logExpression(*arg, nextPrefix(argPrefix, isLastArg), true);
+                std::cout << newPrefix << "├── Elements\n";
+                logExpression(*arrayLit.element_, nextPrefix(newPrefix, false), true);
+                std::cout << newPrefix << "└── Count\n";
+                logExpression(*arrayLit.count_, nextPrefix(newPrefix, true), true);
+                break;
             }
-        } else if (expr.kind_ == NodeKind::BINARY_EXPRESSION) {
-            const auto& binaryExpr = *expr.as<BinaryExpression>();
-            std::cout << prefix << branch << "BinaryExpression\n";
-            logExpression(*binaryExpr.left_, newPrefix, false);
-            std::cout << newPrefix << "├── Operator: " << operatorToString(binaryExpr.operator_)
-                      << "\n";
-            logExpression(*binaryExpr.right_, newPrefix, true);
-        } else if (expr.kind_ == NodeKind::UNARY_EXPRESSION) {
-            const auto& unaryExpr = *expr.as<UnaryExpression>();
-            std::cout << prefix << branch << "UnaryExpression\n";
-            std::cout << newPrefix << "├── Operator: " << operatorToString(unaryExpr.operator_)
-                      << "\n";
-            logExpression(*unaryExpr.operand_, newPrefix, true);
+            case NodeKind::ARRAY_ACCESS: {
+                const auto& arrayAccess = *expr.as<ArrayAccess>();
+                std::cout << prefix << branch << "ArrayAccess\n";
+                std::cout << newPrefix << "├── Base\n";
+                logExpression(*arrayAccess.base_, nextPrefix(newPrefix, false), true);
+                std::cout << newPrefix << "└── Index\n";
+                logExpression(*arrayAccess.index_, nextPrefix(newPrefix, true), true);
+                break;
+            }
+            case NodeKind::FUNCTION_CALL: {
+                const auto& funcCall = *expr.as<FunctionCall>();
+                std::cout << prefix << branch << "FunctionCall\n";
+                std::cout << newPrefix << "├── Callee\n";
+                logExpression(*funcCall.callee_, nextPrefix(newPrefix, false), true);
+                std::cout << newPrefix << "└── Arguments\n";
+                for (size_t i = 0; i < funcCall.arguments_.size(); ++i) {
+                    const auto& arg = funcCall.arguments_[i];
+                    const bool isLastArg = i == funcCall.arguments_.size() - 1;
+                    const std::string argPrefix = nextPrefix(newPrefix, true);
+                    const std::string argBranch = isLastArg ? "└── " : "├── ";
+                    std::cout << argPrefix << argBranch << "Argument" << i + 1 << "\n";
+                    logExpression(*arg, nextPrefix(argPrefix, isLastArg), true);
+                }
+                break;
+            }
+            case NodeKind::BINARY_EXPRESSION: {
+                const auto& binaryExpr = *expr.as<BinaryExpression>();
+                std::cout << prefix << branch << "BinaryExpression\n";
+                logExpression(*binaryExpr.left_, newPrefix, false);
+                std::cout << newPrefix << "├── Operator: " << operatorToString(binaryExpr.operator_)
+                          << "\n";
+                logExpression(*binaryExpr.right_, newPrefix, true);
+                break;
+            }
+            case NodeKind::UNARY_EXPRESSION: {
+                const auto& unaryExpr = *expr.as<UnaryExpression>();
+                std::cout << prefix << branch << "UnaryExpression\n";
+                std::cout << newPrefix << "├── Operator: " << operatorToString(unaryExpr.operator_)
+                          << "\n";
+                logExpression(*unaryExpr.operand_, newPrefix, true);
+                break;
+            }
+            default:
+                std::unreachable();
         }
     }
 
