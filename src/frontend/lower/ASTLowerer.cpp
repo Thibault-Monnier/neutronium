@@ -62,26 +62,17 @@ void ASTLowerer::declareFunction(const std::string_view name,
                                  const std::span<AST::VariableDefinition*> parameters,
                                  const TypeID returnTypeID) {
     std::vector<const IR::Type*> parameterTypes;
-    parameterTypes.reserve(parameters.size());
+    std::vector<std::string_view> parameterNames;
+    parameterTypes.reserve(parameters.size()), parameterNames.reserve(parameters.size());
     for (const auto* param : parameters) {
         parameterTypes.push_back(&convertType(param->typeID_));
+        parameterNames.push_back(param->identifier_->name_);
     }
 
-    builder_.beginFunction(name, std::move(parameterTypes), convertType(returnTypeID));
+    builder_.beginFunction(name, std::move(parameterTypes), std::move(parameterNames),
+                           convertType(returnTypeID));
 }
 
-void ASTLowerer::lowerFunction(const AST::FunctionDefinition& funcDef) {
-    declareFunction(funcDef.identifier_->name_, funcDef.parameters_, funcDef.returnTypeID_);
-
-    for (const auto& param : funcDef.parameters_) {
-        const IR::Type& paramType = convertType(param->typeID_);
-        builder_.createAllocaInstr(param->identifier_->name_, paramType);
-    }
-
-    for (const auto* stmt : funcDef.body_->body_) {
-        lowerStatement(*stmt);
-    }
-}
 
 void ASTLowerer::lowerStatement(const AST::Statement& stmt) {
     switch (stmt.kind_) {

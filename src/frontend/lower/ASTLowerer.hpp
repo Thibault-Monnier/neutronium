@@ -31,7 +31,14 @@ class ASTLowerer {
     void lowerExternalFunction(const AST::ExternalFunctionDeclaration& funcDecl) {
         declareFunction(funcDecl.identifier_->name_, funcDecl.parameters_, funcDecl.returnTypeID_);
     }
-    void lowerFunction(const AST::FunctionDefinition& funcDef);
+
+    void lowerFunction(const AST::FunctionDefinition& funcDef) {
+        declareFunction(funcDef.identifier_->name_, funcDef.parameters_, funcDef.returnTypeID_);
+
+        for (const auto* stmt : funcDef.body_->body_) {
+            lowerStatement(*stmt);
+        }
+    }
 
     void lowerStatement(const AST::Statement& stmt);
 

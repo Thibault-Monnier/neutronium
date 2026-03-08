@@ -23,7 +23,7 @@ class Builder {
     const Type& registerType(const Type type) { return module_.registerType(type); }
 
     void beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                       const Type& returnType);
+                       std::vector<std::string_view>&& parameterNames, const Type& returnType);
 
     Value& createIntegerConstant(const Type& type, const int64_t value) {
         return registerValue(IntegerConstant{type, value});

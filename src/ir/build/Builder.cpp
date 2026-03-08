@@ -7,8 +7,22 @@
 namespace IR {
 
 void Builder::beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
+                            std::vector<std::string_view>&& parameterNames,
                             const Type& returnType) {
-    Function& func = module_.addFunction(Function{std::move(parameterTypes), returnType});
+    allocated_.clear();
+
+    std::vector<Value*> parameters;
+    parameters.reserve(parameterTypes.size());
+    for (size_t i = 0; i < parameterTypes.size(); ++i) {
+        const Type& parameterType = ptrType(*parameterTypes[i]);
+        parameters.push_back(&registerValue(Value{parameterType}));
+
+        [[maybe_unused]] auto [_, inserted] =
+            allocated_.emplace(parameterNames[i], parameters.back());
+        assert(inserted);
+    }
+
+    Function& func = module_.addFunction(Function{std::move(parameters), returnType});
     functionTable_.emplace(name, func);
     currentFunction_ = &func;
     setInsertionPoint(createBasicBlock());
@@ -64,10 +78,6 @@ Value& Builder::createGetElementPtrInstr(Value& basePtr, Value& index) {
 Value& Builder::createCallInstr(const std::string_view calleeName,
                                 std::vector<Value*>&& arguments) {
     Function& callee = functionTable_.at(calleeName);
-
-    // Assert the types from parameters and arguments are the same
-    assert(std::ranges::equal(arguments, callee.getParameterTypes(), {}, &Value::getType,
-                              [](const Type* t) -> const Type& { return *t; }));
 
     std::vector<Value*> operands{&callee};
     operands.append_range(arguments);
