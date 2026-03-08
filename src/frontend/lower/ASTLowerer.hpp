@@ -28,16 +28,10 @@ class ASTLowerer {
 
     void declareFunction(std::string_view name, std::span<AST::VariableDefinition*> parameters,
                          TypeID returnTypeID);
-
     void lowerExternalFunction(const AST::ExternalFunctionDeclaration& funcDecl) {
         declareFunction(funcDecl.identifier_->name_, funcDecl.parameters_, funcDecl.returnTypeID_);
     }
-
-    void lowerFunction(const AST::FunctionDefinition& funcDef) {
-        declareFunction(funcDef.identifier_->name_, funcDef.parameters_, funcDef.returnTypeID_);
-
-        for (const auto* stmt : funcDef.body_->body_) lowerStatement(*stmt);
-    }
+    void lowerFunction(const AST::FunctionDefinition& funcDef);
 
     void lowerStatement(const AST::Statement& stmt);
 
@@ -56,7 +50,7 @@ class ASTLowerer {
 
     IR::Value& lowerNumberLiteral(const AST::NumberLiteral& numberLit);
     IR::Value& lowerBooleanLiteral(const AST::BooleanLiteral& boolLit);
-    IR::Value& lowerIdentifierAddress(const AST::Identifier& identifier) const;
+    [[nodiscard]] IR::Value& lowerIdentifierAddress(const AST::Identifier& identifier) const;
     IR::Value& lowerFunctionCall(const AST::FunctionCall& funcCall);
     IR::Value& lowerArrayAccessAddress(const AST::ArrayAccess& arrayAccess);
     IR::Value& lowerArrayLiteral(const AST::ArrayLiteral& arrayLit);

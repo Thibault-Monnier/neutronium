@@ -70,6 +70,19 @@ void ASTLowerer::declareFunction(const std::string_view name,
     builder_.beginFunction(name, std::move(parameterTypes), convertType(returnTypeID));
 }
 
+void ASTLowerer::lowerFunction(const AST::FunctionDefinition& funcDef) {
+    declareFunction(funcDef.identifier_->name_, funcDef.parameters_, funcDef.returnTypeID_);
+
+    for (const auto& param : funcDef.parameters_) {
+        const IR::Type& paramType = convertType(param->typeID_);
+        builder_.createAllocaInstr(param->identifier_->name_, paramType);
+    }
+
+    for (const auto* stmt : funcDef.body_->body_) {
+        lowerStatement(*stmt);
+    }
+}
+
 void ASTLowerer::lowerStatement(const AST::Statement& stmt) {
     switch (stmt.kind_) {
         case AST::NodeKind::VARIABLE_DEFINITION:

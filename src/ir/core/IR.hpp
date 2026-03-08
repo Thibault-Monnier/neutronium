@@ -126,16 +126,15 @@ class Function : public Value {
 };
 
 class Module {
-    std::vector<Function> functions_;
+    std::vector<std::unique_ptr<Function>> functions_;
 
     std::vector<std::unique_ptr<Value>> values_;
-
     std::vector<std::unique_ptr<Type>> types_;
 
    public:
     Function& addFunction(Function&& func) {
-        functions_.push_back(std::move(func));
-        return functions_.back();
+        functions_.push_back(std::make_unique<Function>(std::move(func)));
+        return *functions_.back();
     }
 
     template <class T>
@@ -153,7 +152,9 @@ class Module {
         return *types_.back();
     }
 
-    [[nodiscard]] const std::vector<Function>& getFunctions() const { return functions_; }
+    [[nodiscard]] const std::vector<std::unique_ptr<Function>>& getFunctions() const {
+        return functions_;
+    }
 };
 
 }  // namespace IR
