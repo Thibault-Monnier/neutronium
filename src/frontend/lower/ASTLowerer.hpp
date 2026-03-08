@@ -56,7 +56,7 @@ class ASTLowerer {
 
     IR::Value& lowerNumberLiteral(const AST::NumberLiteral& numberLit);
     IR::Value& lowerBooleanLiteral(const AST::BooleanLiteral& boolLit);
-    IR::Value& lowerIdentifierAddress(const AST::Identifier& identifier);
+    IR::Value& lowerIdentifierAddress(const AST::Identifier& identifier) const;
     IR::Value& lowerFunctionCall(const AST::FunctionCall& funcCall);
     IR::Value& lowerArrayAccessAddress(const AST::ArrayAccess& arrayAccess);
     IR::Value& lowerArrayLiteral(const AST::ArrayLiteral& arrayLit);

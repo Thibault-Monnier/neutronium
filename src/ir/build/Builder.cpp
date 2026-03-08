@@ -7,7 +7,7 @@
 namespace IR {
 
 void Builder::beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                            const Type returnType) {
+                            const Type& returnType) {
     Function& func = module_.addFunction(Function{std::move(parameterTypes), returnType});
     functionTable_.emplace(name, func);
     currentFunction_ = &func;
@@ -26,13 +26,15 @@ Value& Builder::createNotInstr(Value& operand) {
     return createXorInstr(operand, trueVal);
 }
 
-Value& Builder::createAllocaInstr(std::string_view name, const Type elementType,
-                                  const uint32_t nbElements) {
+Value& Builder::createAllocaInstr(const Type& elementType, const uint32_t nbElements) {
     Value& nbElementsValue = registerValue(IntegerConstant{intType(32), nbElements});
     std::vector<Value*> operands = {&nbElementsValue};
-    Value& address =
-        addInstr(Instruction{OpCode::ALLOCA, ptrType(elementType), std::move(operands)});
+    return addInstr(Instruction{OpCode::ALLOCA, ptrType(elementType), std::move(operands)});
+}
 
+Value& Builder::createAllocaInstr(std::string_view name, const Type& elementType,
+                                  const uint32_t nbElements) {
+    Value& address = createAllocaInstr(elementType, nbElements);
     [[maybe_unused]] auto [_, inserted] = allocated_.emplace(name, &address);
     assert(inserted);
 

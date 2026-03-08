@@ -261,16 +261,15 @@ IR::Value& ASTLowerer::lowerPlaceExpression(const AST::Expression& expr) {
 
 IR::Value& ASTLowerer::lowerNumberLiteral(const AST::NumberLiteral& numberLit) {
     const IR::Type& type = convertType(numberLit.typeID_);
-    return builder_.registerValue(IR::IntegerConstant{type, numberLit.value_});
+    return builder_.createIntegerConstant(type, numberLit.value_);
 }
 
 IR::Value& ASTLowerer::lowerBooleanLiteral(const AST::BooleanLiteral& boolLit) {
-    const IR::Type& type = convertType(boolLit.typeID_);
-    return builder_.registerValue(IR::IntegerConstant{type, boolLit.value() ? 1 : 0});
+    return builder_.createBooleanConstant(boolLit.value());
 }
 
-IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier) {
-    return builder_.createLoadInstr(identifier.name_);
+IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier) const {
+    return builder_.getAllocatedAddress(identifier.name_);
 }
 
 IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
@@ -286,18 +285,43 @@ IR::Value& ASTLowerer::lowerArrayAccessAddress(const AST::ArrayAccess& arrayAcce
     IR::Value& base = lowerPlaceExpression(*arrayAccess.base_);
     IR::Value& index = lowerValueExpression(*arrayAccess.index_);
 
-    IR::Value& place = builder_.createGetElementPtrInstr(base, index);
-    return builder_.createLoadInstr(place);
+    return builder_.createGetElementPtrInstr(base, index);
 }
 
 IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit) {
-    // TODO: Implement this
-    std::unreachable();
+    const IR::Type& elementType = convertType(arrayLit.typeID_).getPointeeType();
+    IR::Value& arrayPtr = builder_.createAllocaInstr(elementType, arrayLit.elements_.size());
+
+    for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
+        IR::Value& elementValue = lowerValueExpression(*arrayLit.elements_[i]);
+
+        const IR::Type& indexType = builder_.registerType(IR::Type::intType(64));
+        IR::Value& indexValue = builder_.createIntegerConstant(indexType, static_cast<int64_t>(i));
+        IR::Value& elementPtr = builder_.createGetElementPtrInstr(arrayPtr, indexValue);
+
+        builder_.createStoreInstr(elementPtr, elementValue);
+    }
+
+    return arrayPtr;
 }
 
 IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit) {
-    // TODO: Implement this
-    std::unreachable();
+    const IR::Type& elementType = convertType(repeatArrayLit.typeID_).getPointeeType();
+
+    const int64_t count = repeatArrayLit.count_->value_;
+    assert(count > 0);
+
+    IR::Value& arrayPtr = builder_.createAllocaInstr(elementType, count);
+    IR::Value& elementValue = lowerValueExpression(*repeatArrayLit.element_);
+
+    for (size_t i = 0; i < static_cast<size_t>(count); ++i) {
+        const IR::Type& indexType = builder_.registerType(IR::Type::intType(64));
+        IR::Value& indexValue = builder_.createIntegerConstant(indexType, static_cast<int64_t>(i));
+        IR::Value& elementPtr = builder_.createGetElementPtrInstr(arrayPtr, indexValue);
+        builder_.createStoreInstr(elementPtr, elementValue);
+    }
+
+    return arrayPtr;
 }
 
 IR::Value& ASTLowerer::lowerUnaryExpression(const AST::UnaryExpression& unaryExpr) {

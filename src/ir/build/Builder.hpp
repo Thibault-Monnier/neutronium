@@ -20,15 +20,17 @@ class Builder {
    public:
     Builder() = default;
 
-    template <class T>
-        requires std::derived_from<T, Value>
-    T& registerValue(T&& value) {
-        return module_.registerValue(std::forward<T>(value));
-    }
     const Type& registerType(const Type type) { return module_.registerType(type); }
 
     void beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                       Type returnType);
+                       const Type& returnType);
+
+    Value& createIntegerConstant(const Type& type, const int64_t value) {
+        return registerValue(IntegerConstant{type, value});
+    }
+    Value& createBooleanConstant(const bool value) {
+        return registerValue(IntegerConstant{boolType(), value ? 1 : 0});
+    }
 
     Value& createAddInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::ADD); }
     Value& createSubInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::SUB); }
@@ -49,8 +51,9 @@ class Builder {
     Value& createNegInstr(Value& operand);
     Value& createNotInstr(Value& operand);
 
-    Value& createAllocaInstr(std::string_view name, Type elementType, uint32_t nbElements);
-    Value& createAllocaInstr(const std::string_view name, const Type type) {
+    Value& createAllocaInstr(const Type& elementType, uint32_t nbElements);
+    Value& createAllocaInstr(std::string_view name, const Type& elementType, uint32_t nbElements);
+    Value& createAllocaInstr(const std::string_view name, const Type& type) {
         return createAllocaInstr(name, type, 1);
     }
 
@@ -60,11 +63,10 @@ class Builder {
         return createStoreInstr(location, value);
     }
 
-    Value& createLoadInstr(Value& location);
-    Value& createLoadInstr(const std::string_view name) {
-        Value& location = *allocated_.at(name);
-        return createLoadInstr(location);
+    [[nodiscard]] Value& getAllocatedAddress(const std::string_view name) const {
+        return *allocated_.at(name);
     }
+    Value& createLoadInstr(Value& location);
 
     Value& createGetElementPtrInstr(Value& basePtr, Value& index);
 
@@ -81,6 +83,13 @@ class Builder {
     void setInsertionPoint(BasicBlock& block) { currentBlock_ = &block; }
 
    private:
+    /// Registers a value in the module and returns a reference to it.
+    template <class T>
+        requires std::derived_from<T, Value>
+    T& registerValue(T&& value) {
+        return module_.registerValue(std::forward<T>(value));
+    }
+
     /// Adds an instruction to the end of currentBlock_ and returns a reference to it.
     Value& addInstr(Instruction&& instr) {
         auto& stored = static_cast<Instruction&>(registerValue(std::move(instr)));
