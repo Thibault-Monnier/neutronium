@@ -1,5 +1,7 @@
 #pragma once
+
 #include <unordered_map>
+#include <vector>
 
 #include "ir/core/IR.hpp"
 
@@ -12,7 +14,7 @@ class Builder {
     std::unordered_map<std::string_view, Function&> functionTable_;
     Function* currentFunction_;
 
-    std::unordered_map<std::string_view, Value> allocated_;
+    std::unordered_map<std::string_view, Value*> allocated_;
 
    public:
     Builder() = default;
@@ -30,13 +32,13 @@ class Builder {
 
     Value& createStoreInstr(Value& location, Value& value);
     Value& createStoreInstr(const std::string_view name, Value&& value) {
-        Value& location = allocated_.at(name);
+        Value& location = *allocated_.at(name);
         return createStoreInstr(location, value);
     }
 
     Value& createLoadInstr(Value& location);
     Value& createLoadInstr(const std::string_view name) {
-        Value& location = allocated_.at(name);
+        Value& location = *allocated_.at(name);
         return createLoadInstr(location);
     }
 

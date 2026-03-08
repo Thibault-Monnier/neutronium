@@ -6,8 +6,9 @@
 
 namespace IR {
 
-void Builder::allocate(const std::string_view name, Type type) {
-    [[maybe_unused]] auto [_, inserted] = allocated_.emplace(name, type);
+void Builder::allocate(const std::string_view name, const Type type) {
+    Value& val = registerValue(Value{type});
+    [[maybe_unused]] auto [_, inserted] = allocated_.emplace(name, &val);
     assert(inserted);
 }
 
