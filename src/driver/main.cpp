@@ -15,19 +15,20 @@
 #include <utility>
 
 #include "Cli.hpp"
+#include "codegen/Generator.hpp"
 #include "frontend/ast/AST.hpp"
 #include "frontend/ast/Debug.hpp"
-#include "codegen/Generator.hpp"
 #include "frontend/diagnostics/DiagnosticsEngine.hpp"
 #include "frontend/lex/Lexer.hpp"
 #include "frontend/lex/Token.hpp"
 #include "frontend/lex/TokenKind.hpp"
-#include "lib/PolymorphicArenaAllocator.hpp"
+#include "frontend/lower/ASTLowerer.hpp"
 #include "frontend/parse/Parser.hpp"
 #include "frontend/sema/SemanticAnalyser.hpp"
 #include "frontend/source/FileID.hpp"
 #include "frontend/source/SourceManager.hpp"
 #include "frontend/type/TypeManager.hpp"
+#include "lib/PolymorphicArenaAllocator.hpp"
 #include "utils/Log.hpp"
 
 using Clock = std::chrono::high_resolution_clock;
@@ -138,15 +139,24 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
 
     if (opts.endStage_ == PipelineEndStage::SEMA) return;
 
-    const auto assembly = [&] {
-        const Stage stage("Code Generation", verbose);
+    neutro::FastStringStream assembly;
+    if (opts.useIrPipeline_) {
+        const IR::Module ir = [&] {
+            const Stage stage("Lowering to IR", verbose);
+            ASTLowerer lowerer(*ast, typeManager);
+            return lowerer.lower();
+        }();
+    } else {
+        assembly = [&] {
+            const Stage stage("Code Generation", verbose);
 
-        CodeGen::Generator generator(*ast, typeManager, opts.targetType_);
-        return generator.generate();
-    }();
+            CodeGen::Generator generator(*ast, typeManager, opts.targetType_);
+            return generator.generate();
+        }();
 
-    if (opts.logAssembly_) std::cout << assembly.str();
-    if (opts.endStage_ == PipelineEndStage::CODEGEN) return;
+        if (opts.logAssembly_) std::cout << assembly.str();
+        if (opts.endStage_ == PipelineEndStage::CODEGEN) return;
+    }
 
     std::filesystem::path outFilename;
     if (opts.targetType_ == TargetType::EXECUTABLE) {

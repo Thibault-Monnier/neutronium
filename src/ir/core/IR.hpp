@@ -103,18 +103,23 @@ class BasicBlock : public Value {
 
 class Function : public Value {
     std::vector<const Type*> parameterTypes_;
-    std::vector<BasicBlock*> basicBlocks_;
+    std::vector<std::unique_ptr<BasicBlock>> basicBlocks_;
 
    public:
     explicit Function(std::vector<const Type*>&& parameterTypes, const Type& returnType)
         : Value(returnType), parameterTypes_(std::move(parameterTypes)) {}
 
-    BasicBlock& newBlock() { return *basicBlocks_.emplace_back(); }
+    BasicBlock& newBlock(const Type& voidTypeInstance) {
+        return *basicBlocks_.emplace_back(std::make_unique<BasicBlock>(voidTypeInstance));
+    }
 
     [[nodiscard]] const std::vector<const Type*>& getParameterTypes() const {
         return parameterTypes_;
     }
-    [[nodiscard]] const std::vector<BasicBlock*>& getBasicBlocks() const { return basicBlocks_; }
+
+    [[nodiscard]] const std::vector<std::unique_ptr<BasicBlock>>& getBasicBlocks() const {
+        return basicBlocks_;
+    }
 };
 
 class Module {
@@ -122,7 +127,7 @@ class Module {
 
     std::vector<std::unique_ptr<Value>> values_;
 
-    std::vector<Type> types_;
+    std::vector<std::unique_ptr<Type>> types_;
 
    public:
     Function& addFunction(Function&& func) {
@@ -141,8 +146,8 @@ class Module {
     }
 
     const Type& registerType(const Type type) {
-        types_.push_back(type);
-        return types_.back();
+        types_.push_back(std::make_unique<Type>(type));
+        return *types_.back();
     }
 
     [[nodiscard]] const std::vector<Function>& getFunctions() const { return functions_; }

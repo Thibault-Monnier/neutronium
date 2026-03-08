@@ -20,7 +20,11 @@ class Builder {
    public:
     Builder() = default;
 
-    Value& registerValue(Value&& value) { return module_.registerValue(std::move(value)); }
+    template <class T>
+        requires std::derived_from<T, Value>
+    T& registerValue(T&& value) {
+        return module_.registerValue(std::forward<T>(value));
+    }
     const Type& registerType(const Type type) { return module_.registerType(type); }
 
     void allocate(std::string_view name, Type type);
@@ -70,7 +74,7 @@ class Builder {
                                         BasicBlock& falseBlock);
     Value& createUnconditionalBranchInstr(BasicBlock& targetBlock);
 
-    [[nodiscard]] BasicBlock& createBasicBlock() const { return currentFunction_->newBlock(); }
+    [[nodiscard]] BasicBlock& createBasicBlock() { return currentFunction_->newBlock(voidType()); }
     void setInsertionPoint(BasicBlock& block) { currentBlock_ = &block; }
 
    private:

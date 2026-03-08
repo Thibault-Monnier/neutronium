@@ -7,7 +7,7 @@
 namespace IR {
 
 void Builder::allocate(const std::string_view name, const Type type) {
-    Value& val = registerValue(Value{type});
+    Value& val = registerValue(Value{registerType(type)});
     [[maybe_unused]] auto [_, inserted] = allocated_.emplace(name, &val);
     assert(inserted);
 }
@@ -21,14 +21,14 @@ void Builder::beginFunction(std::string_view name, std::vector<const Type*>&& pa
 }
 
 Value& Builder::createNegInstr(Value& operand) {
-    const Type type = operand.getType();
+    const Type& type = operand.getType();
     Value& zero = registerValue(IntegerConstant{type, 0});
     return createSubInstr(zero, operand);
 }
 
 Value& Builder::createNotInstr(Value& operand) {
-    const Type type = operand.getType();
-    Value& trueVal = registerValue(BooleanConstant{type, true});
+    const Type& type = operand.getType();
+    Value& trueVal = registerValue(IntegerConstant{type, 1});
     return createXorInstr(operand, trueVal);
 }
 
@@ -95,7 +95,7 @@ Value& Builder::createUnconditionalBranchInstr(BasicBlock& targetBlock) {
 Value& Builder::createArithmeticExpr(Value& a, Value& b, const OpCode opCode) {
     std::vector<Value*> operands = {&a, &b};
 
-    const Type type = a.getType();
+    const Type& type = a.getType();
     assert(b.getType() == type);
     assert(type.isInteger());
 

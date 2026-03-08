@@ -23,7 +23,8 @@ CompilerOptions parseCli(const int argc, const char** argv) {
         "input", "Specify the source file", cxxopts::value<std::string>())(
         "only-lex", "Run the lexer, then stop")("only-parse", "Run the parser, then stop")(
         "only-sema", "Run semantic analysis, then stop")("only-codegen",
-                                                         "Run code generation, then stop");
+                                                         "Run code generation, then stop")(
+        "enable-ir", "Use the work-in-progress IR pipeline instead of the main codegen pipeline");
 
     options.parse_positional({"input"});
 
@@ -104,6 +105,13 @@ CompilerOptions parseCli(const int argc, const char** argv) {
 
     if (opts.logTokens_ && opts.endStage_ != PipelineEndStage::LEX) {
         printWarning("Token logging requires the --only-lex option");
+    }
+
+    if (result.count("enable-ir")) {
+        printWarning(
+            "IR pipeline is a work in progress and may produce incorrect codegen output, fail to "
+            "compile, or crash.");
+        opts.useIrPipeline_ = true;
     }
 
     return opts;
