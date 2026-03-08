@@ -48,6 +48,10 @@ Operator tokenKindToOperator(const TokenKind tokenKind) {
     }
 }
 
+bool isUnaryOperator(const Operator op) {
+    return op == Operator::ADD || op == Operator::SUBTRACT || op == Operator::LOGICAL_NOT;
+}
+
 bool isArithmeticOperator(const Operator op) {
     return op == Operator::ADD || op == Operator::SUBTRACT || op == Operator::MULTIPLY ||
            op == Operator::DIVIDE;

@@ -18,14 +18,36 @@ enum class OpCode : uint8_t {
     MUL,
     /// Divides the first operand by the second.
     DIV,
+
+    /// Performs a bitwise AND on two operands.
+    AND,
+    /// Performs a bitwise OR on two operands.
+    OR,
+    /// Performs a bitwise XOR on two operands.
+    XOR,
+
+    /// Checks whether two operands are equal. Returns a boolean.
+    EQ,
+    /// Checks whether the first operand is less than the second. Returns a boolean.
+    LT,
+    /// Checks whether the first operand is less than or equal to the second. Returns a boolean.
+    LTE,
+    // Note: NEQ doesn't get its own opcode and is implemented using EQ and NOT.
+    // Note: GT and GTE don't get their own opcodes and are implemented using LT and LTE.
+
     /// Loads the first operand from memory.
     LOAD,
     /// Stores the second operand to the first operand in memory.
     STORE,
+    /// Calculates the address of the i-th element in an array, where i is the second operand and
+    /// the array is the first operand.
+    GEP,
+
     /// Calls the function in the first operand with the rest of the operands as arguments.
     CALL,
     /// Returns the first operand from the current function.
     RET,
+
     /// If there is one operand, unconditionally jumps to the basic block in that operand. If there
     /// are three operands, jumps to the basic block in the second operand if the first operand is
     /// true, and to the basic block in the third operand otherwise.
@@ -33,13 +55,13 @@ enum class OpCode : uint8_t {
 };
 
 class Value {
-    const Type type_;
+    const Type* type_;
 
    public:
-    explicit Value(const Type type) : type_(type) {}
+    explicit Value(const Type& type) : type_(&type) {}
     virtual ~Value() = default;
 
-    [[nodiscard]] const Type& getType() const { return type_; }
+    [[nodiscard]] const Type& getType() const { return *type_; }
 };
 
 class ConstantValue : public Value {
@@ -49,27 +71,13 @@ class ConstantValue : public Value {
 class IntegerConstant : public ConstantValue {
     int64_t value_;
 
-    explicit IntegerConstant(const int64_t value, const Type type)
-        : ConstantValue(type), value_(value) {}
-
    public:
-    static IntegerConstant int8(int8_t value) { return IntegerConstant(value, Type::int8()); }
-    static IntegerConstant int16(int16_t value) { return IntegerConstant(value, Type::int16()); }
-    static IntegerConstant int32(int32_t value) { return IntegerConstant(value, Type::int32()); }
-    static IntegerConstant int64(int64_t value) { return IntegerConstant(value, Type::int64()); }
+    explicit IntegerConstant(const Type& type, const int64_t value)
+        : ConstantValue(type), value_(value) {
+        assert(type.isInteger());
+    }
 
     [[nodiscard]] int64_t getValue() const { return value_; }
-};
-
-class BooleanConstant : public ConstantValue {
-    bool value_;
-
-    explicit BooleanConstant(const bool value) : ConstantValue(Type::boolean()), value_(value) {}
-
-   public:
-    static BooleanConstant boolean(const bool value) { return BooleanConstant(value); }
-
-    [[nodiscard]] bool getValue() const { return value_; }
 };
 
 class Instruction : public Value {
@@ -77,7 +85,7 @@ class Instruction : public Value {
     std::vector<Value*> operands_;
 
    public:
-    Instruction(const OpCode opcode, const Type type, std::vector<Value*>&& operands)
+    explicit Instruction(const OpCode opcode, const Type& type, std::vector<Value*>&& operands)
         : Value(type), opcode_(opcode), operands_(std::move(operands)) {}
 
     [[nodiscard]] OpCode getOpcode() const { return opcode_; }
@@ -88,23 +96,24 @@ class BasicBlock : public Value {
     std::vector<Instruction*> instructions_;
 
    public:
-    BasicBlock() : Value(Type::voidType()) {}
+    explicit BasicBlock(const Type& type) : Value(type) {}
 
     void addInstruction(Instruction& instr) { instructions_.push_back(&instr); }
 };
 
 class Function : public Value {
-    std::vector<Type> parameterTypes_;
+    std::vector<const Type*> parameterTypes_;
     std::vector<BasicBlock*> basicBlocks_;
 
    public:
-    Function(std::vector<Type>&& parameterTypes, const Type returnType)
+    explicit Function(std::vector<const Type*>&& parameterTypes, const Type& returnType)
         : Value(returnType), parameterTypes_(std::move(parameterTypes)) {}
 
-    void newBlock() { basicBlocks_.emplace_back(); }
-    void addInstruction(Instruction& instr) const { basicBlocks_.back()->addInstruction(instr); }
+    BasicBlock& newBlock() { return *basicBlocks_.emplace_back(); }
 
-    [[nodiscard]] const std::vector<Type>& getParameterTypes() const { return parameterTypes_; }
+    [[nodiscard]] const std::vector<const Type*>& getParameterTypes() const {
+        return parameterTypes_;
+    }
     [[nodiscard]] const std::vector<BasicBlock*>& getBasicBlocks() const { return basicBlocks_; }
 };
 
@@ -112,6 +121,8 @@ class Module {
     std::vector<Function> functions_;
 
     std::vector<std::unique_ptr<Value>> values_;
+
+    std::vector<Type> types_;
 
    public:
     Function& addFunction(Function&& func) {
@@ -127,6 +138,11 @@ class Module {
     T& registerValue(T&& value) {
         values_.push_back(std::make_unique<T>(std::forward<T>(value)));
         return static_cast<T&>(*values_.back());
+    }
+
+    const Type& registerType(const Type type) {
+        types_.push_back(type);
+        return types_.back();
     }
 
     [[nodiscard]] const std::vector<Function>& getFunctions() const { return functions_; }

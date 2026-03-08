@@ -275,8 +275,7 @@ AST::Expression* Parser::parseUnaryExpression() {
     const Token token = peek();
 
     const AST::Operator op = AST::tokenKindToOperator(token.kind());
-    if (op == AST::Operator::ADD || op == AST::Operator::SUBTRACT ||
-        op == AST::Operator::LOGICAL_NOT) {
+    if (AST::isUnaryOperator(op)) {
         advance();
         auto operand = parsePostfixExpression();
         if (!operand) return nullptr;

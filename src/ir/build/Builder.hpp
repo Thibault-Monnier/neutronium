@@ -13,6 +13,7 @@ class Builder {
 
     std::unordered_map<std::string_view, Function&> functionTable_;
     Function* currentFunction_;
+    BasicBlock* currentBlock_;
 
     std::unordered_map<std::string_view, Value*> allocated_;
 
@@ -20,18 +21,34 @@ class Builder {
     Builder() = default;
 
     Value& registerValue(Value&& value) { return module_.registerValue(std::move(value)); }
+    const Type& registerType(const Type type) { return module_.registerType(type); }
 
     void allocate(std::string_view name, Type type);
 
-    void beginFunction(std::string_view name, std::vector<Type>&& parameterTypes, Type returnType);
+    void beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
+                       Type returnType);
 
     Value& createAddInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::ADD); }
     Value& createSubInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::SUB); }
     Value& createMulInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::MUL); }
     Value& createDivInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::DIV); }
 
+    Value& createAndInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::AND); }
+    Value& createOrInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::OR); }
+    Value& createXorInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::XOR); }
+
+    Value& createEqInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::EQ); }
+    Value& createNotEqInstr(Value& a, Value& b) { return createNotInstr(createEqInstr(a, b)); }
+    Value& createLtInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::LT); }
+    Value& createLteInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::LTE); }
+    Value& createGtInstr(Value& a, Value& b) { return createArithmeticExpr(b, a, OpCode::LT); }
+    Value& createGteInstr(Value& a, Value& b) { return createArithmeticExpr(b, a, OpCode::LTE); }
+
+    Value& createNegInstr(Value& operand);
+    Value& createNotInstr(Value& operand);
+
     Value& createStoreInstr(Value& location, Value& value);
-    Value& createStoreInstr(const std::string_view name, Value&& value) {
+    Value& createStoreInstr(const std::string_view name, Value& value) {
         Value& location = *allocated_.at(name);
         return createStoreInstr(location, value);
     }
@@ -42,23 +59,38 @@ class Builder {
         return createLoadInstr(location);
     }
 
+    Value& createGetElementPtrInstr(Value& basePtr, Value& index);
+
     Value& createCallInstr(std::string_view calleeName, std::vector<Value*>&& arguments);
 
     Value& createRetInstr(Value& value);
+    Value& createRetInstr();
 
     Value& createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,
                                         BasicBlock& falseBlock);
     Value& createUnconditionalBranchInstr(BasicBlock& targetBlock);
 
+    [[nodiscard]] BasicBlock& createBasicBlock() const { return currentFunction_->newBlock(); }
+    void setInsertionPoint(BasicBlock& block) { currentBlock_ = &block; }
+
    private:
-    /// Adds an instruction to the end of currentFunction_.
+    /// Adds an instruction to the end of currentBlock_ and returns a reference to it.
     Value& addInstr(Instruction&& instr) {
         auto& stored = static_cast<Instruction&>(registerValue(std::move(instr)));
-        currentFunction_->addInstruction(stored);
+        currentBlock_->addInstruction(stored);
         return stored;
     }
 
     Value& createArithmeticExpr(Value& a, Value& b, OpCode opCode);
+
+    const Type& intType(const uint32_t sizeBits) {
+        return module_.registerType(Type::intType(sizeBits));
+    }
+    const Type& boolType() { return module_.registerType(Type::boolean()); }
+    const Type& voidType() { return module_.registerType(Type::voidType()); }
+    const Type& ptrType(const Type& pointeeType) {
+        return module_.registerType(Type::pointer(&pointeeType));
+    }
 };
 
 }  // namespace IR
