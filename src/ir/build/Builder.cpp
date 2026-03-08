@@ -6,26 +6,21 @@
 
 namespace IR {
 
-void Builder::beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                            std::vector<std::string_view>&& parameterNames,
-                            const Type& returnType) {
-    allocated_.clear();
-
+Function& Builder::beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
+                                 const Type& returnType) {
     std::vector<Value*> parameters;
     parameters.reserve(parameterTypes.size());
-    for (size_t i = 0; i < parameterTypes.size(); ++i) {
-        const Type& parameterType = ptrType(*parameterTypes[i]);
+    for (const auto& param : parameterTypes) {
+        const Type& parameterType = ptrType(*param);
         parameters.push_back(&registerValue(Value{parameterType}));
-
-        [[maybe_unused]] auto [_, inserted] =
-            allocated_.emplace(parameterNames[i], parameters.back());
-        assert(inserted);
     }
 
     Function& func = module_.addFunction(Function{std::move(parameters), returnType});
     functionTable_.emplace(name, func);
     currentFunction_ = &func;
     setInsertionPoint(createBasicBlock());
+
+    return *currentFunction_;
 }
 
 Value& Builder::createNegInstr(Value& operand) {
@@ -44,15 +39,6 @@ Value& Builder::createAllocaInstr(const Type& elementType, const uint32_t nbElem
     Value& nbElementsValue = registerValue(IntegerConstant{intType(32), nbElements});
     std::vector<Value*> operands = {&nbElementsValue};
     return addInstr(Instruction{OpCode::ALLOCA, ptrType(elementType), std::move(operands)});
-}
-
-Value& Builder::createAllocaInstr(std::string_view name, const Type& elementType,
-                                  const uint32_t nbElements) {
-    Value& address = createAllocaInstr(elementType, nbElements);
-    [[maybe_unused]] auto [_, inserted] = allocated_.emplace(name, &address);
-    assert(inserted);
-
-    return address;
 }
 
 Value& Builder::createStoreInstr(Value& location, Value& value) {

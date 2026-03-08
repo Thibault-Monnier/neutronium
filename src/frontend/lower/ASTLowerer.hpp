@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ranges>
+#include <stack>
+
 #include "frontend/ast/AST.hpp"
 #include "frontend/type/TypeManager.hpp"
 #include "ir/build/Builder.hpp"
@@ -16,6 +19,8 @@ class ASTLowerer {
     IR::BasicBlock* currentBreakBlock_ = nullptr;
     IR::BasicBlock* currentContinueBlock_ = nullptr;
 
+    std::vector<std::unordered_map<std::string_view, IR::Value*>> scopedSymbolAdresses_;
+
    public:
     explicit ASTLowerer(const AST::CompilationUnit& ast, const TypeManager& typeManager)
         : ast_(ast), typeManager_(typeManager), builder_() {}
@@ -26,15 +31,34 @@ class ASTLowerer {
     [[nodiscard]] IR::Type convertPrimitiveType(const Type& type) const;
     const IR::Type& convertType(TypeID typeID);
 
+    /// RAII helper to manage entering and exiting scopes. Enters a new scope on construction and
+    /// exits it on destruction.
+    class ScopeGuard {
+        ASTLowerer& lowerer_;
+
+       public:
+        explicit ScopeGuard(ASTLowerer& lowerer) : lowerer_(lowerer) { lowerer.enterScope(); }
+        ~ScopeGuard() { lowerer_.exitScope(); }
+    };
+
+    void enterScope() { scopedSymbolAdresses_.emplace_back(); }
+    void exitScope() { scopedSymbolAdresses_.pop_back(); }
+
+    void declareSymbol(std::string_view name, IR::Value* value);
+    [[nodiscard]] IR::Value& lookupSymbolAddress(const std::string_view name) const;
+
     void declareFunction(std::string_view name, std::span<AST::VariableDefinition*> parameters,
                          TypeID returnTypeID);
+
     void lowerExternalFunction(const AST::ExternalFunctionDeclaration& funcDecl) {
+        const ScopeGuard scopeGuard(*this);  // For the parameters
         declareFunction(funcDecl.identifier_->name_, funcDecl.parameters_, funcDecl.returnTypeID_);
     }
 
     void lowerFunction(const AST::FunctionDefinition& funcDef) {
-        declareFunction(funcDef.identifier_->name_, funcDef.parameters_, funcDef.returnTypeID_);
+        const ScopeGuard scopeGuard(*this);  // For the parameters
 
+        declareFunction(funcDef.identifier_->name_, funcDef.parameters_, funcDef.returnTypeID_);
         for (const auto* stmt : funcDef.body_->body_) {
             lowerStatement(*stmt);
         }

@@ -15,15 +15,13 @@ class Builder {
     Function* currentFunction_;
     BasicBlock* currentBlock_;
 
-    std::unordered_map<std::string_view, Value*> allocated_;
-
    public:
     Builder() = default;
 
     const Type& registerType(const Type type) { return module_.registerType(type); }
 
-    void beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                       std::vector<std::string_view>&& parameterNames, const Type& returnType);
+    Function& beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
+                            const Type& returnType);
 
     Value& createIntegerConstant(const Type& type, const int64_t value) {
         return registerValue(IntegerConstant{type, value});
@@ -52,20 +50,9 @@ class Builder {
     Value& createNotInstr(Value& operand);
 
     Value& createAllocaInstr(const Type& elementType, uint32_t nbElements);
-    Value& createAllocaInstr(std::string_view name, const Type& elementType, uint32_t nbElements);
-    Value& createAllocaInstr(const std::string_view name, const Type& type) {
-        return createAllocaInstr(name, type, 1);
-    }
+    Value& createAllocaInstr(const Type& type) { return createAllocaInstr(type, 1); }
 
     Value& createStoreInstr(Value& location, Value& value);
-    Value& createStoreInstr(const std::string_view name, Value& value) {
-        Value& location = *allocated_.at(name);
-        return createStoreInstr(location, value);
-    }
-
-    [[nodiscard]] Value& getAllocatedAddress(const std::string_view name) const {
-        return *allocated_.at(name);
-    }
     Value& createLoadInstr(Value& location);
 
     Value& createGetElementPtrInstr(Value& basePtr, Value& index);

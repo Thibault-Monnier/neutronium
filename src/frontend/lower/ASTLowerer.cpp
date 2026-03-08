@@ -58,21 +58,39 @@ const IR::Type& ASTLowerer::convertType(const TypeID typeID) {
     std::unreachable();
 }
 
+void ASTLowerer::declareSymbol(std::string_view name, IR::Value* value) {
+    [[maybe_unused]] auto [_, inserted] = scopedSymbolAdresses_.back().emplace(name, value);
+    assert(inserted);
+}
+
+IR::Value& ASTLowerer::lookupSymbolAddress(const std::string_view name) const {
+    // Innermost scopes have a higher chance of containing the symbol
+    for (const auto& scope : std::ranges::reverse_view(scopedSymbolAdresses_)) {
+        const auto it = scope.find(name);
+        if (it != scope.end()) return *it->second;
+    }
+
+    std::unreachable();
+}
+
 void ASTLowerer::declareFunction(const std::string_view name,
                                  const std::span<AST::VariableDefinition*> parameters,
                                  const TypeID returnTypeID) {
     std::vector<const IR::Type*> parameterTypes;
-    std::vector<std::string_view> parameterNames;
-    parameterTypes.reserve(parameters.size()), parameterNames.reserve(parameters.size());
+    parameterTypes.reserve(parameters.size());
     for (const auto* param : parameters) {
         parameterTypes.push_back(&convertType(param->typeID_));
-        parameterNames.push_back(param->identifier_->name_);
     }
 
-    builder_.beginFunction(name, std::move(parameterTypes), std::move(parameterNames),
-                           convertType(returnTypeID));
-}
+    const IR::Function& func =
+        builder_.beginFunction(name, std::move(parameterTypes), convertType(returnTypeID));
 
+    for (int i = 0; i < parameters.size(); ++i) {
+        const auto* param = parameters[i];
+        IR::Value& paramAddress = *func.getParameters()[i];
+        declareSymbol(param->identifier_->name_, &paramAddress);
+    }
+}
 
 void ASTLowerer::lowerStatement(const AST::Statement& stmt) {
     switch (stmt.kind_) {
@@ -104,9 +122,11 @@ void ASTLowerer::lowerStatement(const AST::Statement& stmt) {
             lowerExitStatement(*stmt.as<AST::ExitStatement>());
             break;
         case AST::NodeKind::BLOCK_STATEMENT:
+            enterScope();
             for (const auto* innerStmt : stmt.as<AST::BlockStatement>()->body_) {
                 lowerStatement(*innerStmt);
             }
+            exitScope();
             break;
 
         default:
@@ -116,10 +136,11 @@ void ASTLowerer::lowerStatement(const AST::Statement& stmt) {
 
 void ASTLowerer::lowerVariableDefinition(const AST::VariableDefinition& varDef) {
     const IR::Type& varType = convertType(varDef.typeID_);
-    builder_.createAllocaInstr(varDef.identifier_->name_, varType);
+    IR::Value& address = builder_.createAllocaInstr(varType);
+    declareSymbol(varDef.identifier_->name_, &address);
 
     IR::Value& value = lowerValueExpression(*varDef.value_);
-    builder_.createStoreInstr(varDef.identifier_->name_, value);
+    builder_.createStoreInstr(lookupSymbolAddress(varDef.identifier_->name_), value);
 }
 
 void ASTLowerer::lowerAssignment(const AST::Assignment& assignment) {
@@ -273,7 +294,7 @@ IR::Value& ASTLowerer::lowerBooleanLiteral(const AST::BooleanLiteral& boolLit) {
 }
 
 IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier) const {
-    return builder_.getAllocatedAddress(identifier.name_);
+    return lookupSymbolAddress(identifier.name_);
 }
 
 IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
