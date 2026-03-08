@@ -112,15 +112,15 @@ void ASTLowerer::lowerStatement(const AST::Statement& stmt) {
 
 void ASTLowerer::lowerVariableDefinition(const AST::VariableDefinition& varDef) {
     const IR::Type& varType = convertType(varDef.typeID_);
-    builder_.allocate(varDef.identifier_->name_, varType);
+    builder_.createAllocaInstr(varDef.identifier_->name_, varType);
 
-    IR::Value& value = lowerExpression(*varDef.value_);
+    IR::Value& value = lowerValueExpression(*varDef.value_);
     builder_.createStoreInstr(varDef.identifier_->name_, value);
 }
 
 void ASTLowerer::lowerAssignment(const AST::Assignment& assignment) {
-    IR::Value& place = lowerExpression(*assignment.place_);
-    IR::Value& value = lowerExpression(*assignment.value_);
+    IR::Value& place = lowerPlaceExpression(*assignment.place_);
+    IR::Value& value = lowerValueExpression(*assignment.value_);
 
     if (assignment.operator_ != AST::Operator::ASSIGN) {
         AST::Operator compoundOp;
@@ -142,11 +142,11 @@ void ASTLowerer::lowerAssignment(const AST::Assignment& assignment) {
 }
 
 void ASTLowerer::lowerExpressionStatement(const AST::ExpressionStatement& exprStmt) {
-    lowerExpression(*exprStmt.expression_);
+    lowerValueExpression(*exprStmt.expression_);
 }
 
 void ASTLowerer::lowerIfStatement(const AST::IfStatement& ifStmt) {
-    IR::Value& condition = lowerExpression(*ifStmt.condition_);
+    IR::Value& condition = lowerValueExpression(*ifStmt.condition_);
 
     IR::BasicBlock& thenBlock = builder_.createBasicBlock();
     IR::BasicBlock& elseBlock = builder_.createBasicBlock();
@@ -181,7 +181,7 @@ void ASTLowerer::lowerWhileStatement(const AST::WhileStatement& whileStmt) {
     builder_.createUnconditionalBranchInstr(conditionBlock);
 
     builder_.setInsertionPoint(conditionBlock);
-    IR::Value& condition = lowerExpression(*whileStmt.condition_);
+    IR::Value& condition = lowerValueExpression(*whileStmt.condition_);
     builder_.createConditionalBranchInstr(condition, bodyBlock, mergeBlock);
 
     builder_.setInsertionPoint(bodyBlock);
@@ -205,7 +205,7 @@ void ASTLowerer::lowerContinueStatement() {
 
 void ASTLowerer::lowerReturnStatement(const AST::ReturnStatement& returnStmt) {
     if (returnStmt.returnValue_ != nullptr) {
-        IR::Value& returnValue = lowerExpression(*returnStmt.returnValue_);
+        IR::Value& returnValue = lowerValueExpression(*returnStmt.returnValue_);
         builder_.createRetInstr(returnValue);
     } else {
         builder_.createRetInstr();
@@ -213,22 +213,19 @@ void ASTLowerer::lowerReturnStatement(const AST::ReturnStatement& returnStmt) {
 }
 
 void ASTLowerer::lowerExitStatement(const AST::ExitStatement& exitStmt) {
-    IR::Value& exitCode = lowerExpression(*exitStmt.exitCode_);
+    IR::Value& exitCode = lowerValueExpression(*exitStmt.exitCode_);
     builder_.createCallInstr("exit", {&exitCode});
 }
 
-IR::Value& ASTLowerer::lowerExpression(const AST::Expression& expr) {
+IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr) {
     switch (expr.kind_) {
+        // Always values
         case AST::NodeKind::NUMBER_LITERAL:
             return lowerNumberLiteral(*expr.as<AST::NumberLiteral>());
         case AST::NodeKind::BOOLEAN_LITERAL:
             return lowerBooleanLiteral(*expr.as<AST::BooleanLiteral>());
-        case AST::NodeKind::IDENTIFIER:
-            return lowerIdentifier(*expr.as<AST::Identifier>());
         case AST::NodeKind::FUNCTION_CALL:
             return lowerFunctionCall(*expr.as<AST::FunctionCall>());
-        case AST::NodeKind::ARRAY_ACCESS:
-            return lowerArrayAccess(*expr.as<AST::ArrayAccess>());
         case AST::NodeKind::ARRAY_LITERAL:
             return lowerArrayLiteral(*expr.as<AST::ArrayLiteral>());
         case AST::NodeKind::REPEAT_ARRAY_LITERAL:
@@ -237,6 +234,25 @@ IR::Value& ASTLowerer::lowerExpression(const AST::Expression& expr) {
             return lowerUnaryExpression(*expr.as<AST::UnaryExpression>());
         case AST::NodeKind::BINARY_EXPRESSION:
             return lowerBinaryExpression(*expr.as<AST::BinaryExpression>());
+
+        // Places that need to be loaded
+        case AST::NodeKind::IDENTIFIER:
+        case AST::NodeKind::ARRAY_ACCESS: {
+            IR::Value& address = lowerPlaceExpression(expr);
+            return builder_.createLoadInstr(address);
+        }
+
+        default:
+            std::unreachable();
+    }
+}
+
+IR::Value& ASTLowerer::lowerPlaceExpression(const AST::Expression& expr) {
+    switch (expr.kind_) {
+        case AST::NodeKind::IDENTIFIER:
+            return lowerIdentifierAddress(*expr.as<AST::Identifier>());
+        case AST::NodeKind::ARRAY_ACCESS:
+            return lowerArrayAccessAddress(*expr.as<AST::ArrayAccess>());
 
         default:
             std::unreachable();
@@ -253,7 +269,7 @@ IR::Value& ASTLowerer::lowerBooleanLiteral(const AST::BooleanLiteral& boolLit) {
     return builder_.registerValue(IR::IntegerConstant{type, boolLit.value() ? 1 : 0});
 }
 
-IR::Value& ASTLowerer::lowerIdentifier(const AST::Identifier& identifier) {
+IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier) {
     return builder_.createLoadInstr(identifier.name_);
 }
 
@@ -261,14 +277,14 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     std::vector<IR::Value*> arguments;
     arguments.reserve(funcCall.arguments_.size());
     for (const auto* arg : funcCall.arguments_) {
-        arguments.push_back(&lowerExpression(*arg));
+        arguments.push_back(&lowerValueExpression(*arg));
     }
     return builder_.createCallInstr(funcCall.callee_->name_, std::move(arguments));
 }
 
-IR::Value& ASTLowerer::lowerArrayAccess(const AST::ArrayAccess& arrayAccess) {
-    IR::Value& base = lowerExpression(*arrayAccess.base_);
-    IR::Value& index = lowerExpression(*arrayAccess.index_);
+IR::Value& ASTLowerer::lowerArrayAccessAddress(const AST::ArrayAccess& arrayAccess) {
+    IR::Value& base = lowerPlaceExpression(*arrayAccess.base_);
+    IR::Value& index = lowerValueExpression(*arrayAccess.index_);
 
     IR::Value& place = builder_.createGetElementPtrInstr(base, index);
     return builder_.createLoadInstr(place);
@@ -287,7 +303,7 @@ IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& re
 IR::Value& ASTLowerer::lowerUnaryExpression(const AST::UnaryExpression& unaryExpr) {
     assert(AST::isUnaryOperator(unaryExpr.operator_));
 
-    IR::Value& operand = lowerExpression(*unaryExpr.operand_);
+    IR::Value& operand = lowerValueExpression(*unaryExpr.operand_);
 
     switch (unaryExpr.operator_) {
         case AST::Operator::ADD:
@@ -308,8 +324,8 @@ IR::Value& ASTLowerer::lowerBinaryExpression(const AST::Expression& left,
     if (op == AST::Operator::LOGICAL_AND) return lowerLogicalAndExpression(left, right);
     if (op == AST::Operator::LOGICAL_OR) return lowerLogicalOrExpression(left, right);
 
-    IR::Value& leftVal = lowerExpression(left);
-    IR::Value& rightVal = lowerExpression(right);
+    IR::Value& leftVal = lowerValueExpression(left);
+    IR::Value& rightVal = lowerValueExpression(right);
 
     switch (op) {
         case AST::Operator::ADD:
@@ -344,11 +360,11 @@ IR::Value& ASTLowerer::lowerLogicalAndExpression(const AST::Expression& left,
     IR::BasicBlock& rightBlock = builder_.createBasicBlock();
     IR::BasicBlock& mergeBlock = builder_.createBasicBlock();
 
-    IR::Value& leftVal = lowerExpression(left);
+    IR::Value& leftVal = lowerValueExpression(left);
     builder_.createConditionalBranchInstr(leftVal, rightBlock, mergeBlock);
 
     builder_.setInsertionPoint(rightBlock);
-    IR::Value& rightVal = lowerExpression(right);
+    IR::Value& rightVal = lowerValueExpression(right);
     builder_.createUnconditionalBranchInstr(mergeBlock);
 
     builder_.setInsertionPoint(mergeBlock);
@@ -360,11 +376,11 @@ IR::Value& ASTLowerer::lowerLogicalOrExpression(const AST::Expression& left,
     IR::BasicBlock& rightBlock = builder_.createBasicBlock();
     IR::BasicBlock& mergeBlock = builder_.createBasicBlock();
 
-    IR::Value& leftVal = lowerExpression(left);
+    IR::Value& leftVal = lowerValueExpression(left);
     builder_.createConditionalBranchInstr(leftVal, mergeBlock, rightBlock);
 
     builder_.setInsertionPoint(rightBlock);
-    IR::Value& rightVal = lowerExpression(right);
+    IR::Value& rightVal = lowerValueExpression(right);
     builder_.createUnconditionalBranchInstr(mergeBlock);
 
     builder_.setInsertionPoint(mergeBlock);

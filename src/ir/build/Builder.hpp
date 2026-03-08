@@ -27,8 +27,6 @@ class Builder {
     }
     const Type& registerType(const Type type) { return module_.registerType(type); }
 
-    void allocate(std::string_view name, Type type);
-
     void beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
                        Type returnType);
 
@@ -50,6 +48,11 @@ class Builder {
 
     Value& createNegInstr(Value& operand);
     Value& createNotInstr(Value& operand);
+
+    Value& createAllocaInstr(std::string_view name, Type elementType, uint32_t nbElements);
+    Value& createAllocaInstr(const std::string_view name, const Type type) {
+        return createAllocaInstr(name, type, 1);
+    }
 
     Value& createStoreInstr(Value& location, Value& value);
     Value& createStoreInstr(const std::string_view name, Value& value) {

@@ -35,6 +35,9 @@ enum class OpCode : uint8_t {
     // Note: NEQ doesn't get its own opcode and is implemented using EQ and NOT.
     // Note: GT and GTE don't get their own opcodes and are implemented using LT and LTE.
 
+    /// Allocates memory on the stack. The first operand specifies the number of the elements to
+    /// allocate. Returns a pointer to the beginning of the allocated memory.
+    ALLOCA,
     /// Loads the first operand from memory.
     LOAD,
     /// Stores the second operand to the first operand in memory.

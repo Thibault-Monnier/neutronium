@@ -51,13 +51,14 @@ class ASTLowerer {
     void lowerReturnStatement(const AST::ReturnStatement& returnStmt);
     void lowerExitStatement(const AST::ExitStatement& exitStmt);
 
-    IR::Value& lowerExpression(const AST::Expression& expr);
+    IR::Value& lowerValueExpression(const AST::Expression& expr);
+    IR::Value& lowerPlaceExpression(const AST::Expression& expr);
 
     IR::Value& lowerNumberLiteral(const AST::NumberLiteral& numberLit);
     IR::Value& lowerBooleanLiteral(const AST::BooleanLiteral& boolLit);
-    IR::Value& lowerIdentifier(const AST::Identifier& identifier);
+    IR::Value& lowerIdentifierAddress(const AST::Identifier& identifier);
     IR::Value& lowerFunctionCall(const AST::FunctionCall& funcCall);
-    IR::Value& lowerArrayAccess(const AST::ArrayAccess& arrayAccess);
+    IR::Value& lowerArrayAccessAddress(const AST::ArrayAccess& arrayAccess);
     IR::Value& lowerArrayLiteral(const AST::ArrayLiteral& arrayLit);
     IR::Value& lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit);
     IR::Value& lowerUnaryExpression(const AST::UnaryExpression& unaryExpr);

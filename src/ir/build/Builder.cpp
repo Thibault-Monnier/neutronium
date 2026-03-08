@@ -6,12 +6,6 @@
 
 namespace IR {
 
-void Builder::allocate(const std::string_view name, const Type type) {
-    Value& val = registerValue(Value{registerType(type)});
-    [[maybe_unused]] auto [_, inserted] = allocated_.emplace(name, &val);
-    assert(inserted);
-}
-
 void Builder::beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
                             const Type returnType) {
     Function& func = module_.addFunction(Function{std::move(parameterTypes), returnType});
@@ -30,6 +24,19 @@ Value& Builder::createNotInstr(Value& operand) {
     const Type& type = operand.getType();
     Value& trueVal = registerValue(IntegerConstant{type, 1});
     return createXorInstr(operand, trueVal);
+}
+
+Value& Builder::createAllocaInstr(std::string_view name, const Type elementType,
+                                  const uint32_t nbElements) {
+    Value& nbElementsValue = registerValue(IntegerConstant{intType(32), nbElements});
+    std::vector<Value*> operands = {&nbElementsValue};
+    Value& address =
+        addInstr(Instruction{OpCode::ALLOCA, ptrType(elementType), std::move(operands)});
+
+    [[maybe_unused]] auto [_, inserted] = allocated_.emplace(name, &address);
+    assert(inserted);
+
+    return address;
 }
 
 Value& Builder::createStoreInstr(Value& location, Value& value) {
