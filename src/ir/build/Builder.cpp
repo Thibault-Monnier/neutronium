@@ -24,15 +24,17 @@ Function& Builder::beginFunction(std::string_view name, std::vector<const Type*>
 }
 
 Value& Builder::createNegInstr(Value& operand) {
+    assert(operand.getType().isInteger());
     const Type& type = operand.getType();
     Value& zero = registerValue(IntegerConstant{type, 0});
     return createSubInstr(zero, operand);
 }
 
 Value& Builder::createNotInstr(Value& operand) {
+    assert(operand.getType().isBoolean());
     const Type& type = operand.getType();
-    Value& trueVal = registerValue(IntegerConstant{type, 1});
-    return createXorInstr(operand, trueVal);
+    Value& one = registerValue(IntegerConstant{type, 1});
+    return createXorInstr(operand, one);
 }
 
 Value& Builder::createAllocaInstr(const Type& elementType, const uint32_t nbElements) {
@@ -105,6 +107,15 @@ Value& Builder::createArithmeticExpr(Value& a, Value& b, const OpCode opCode) {
     assert(type.isInteger());
 
     return addInstr(Instruction{opCode, type, std::move(operands)});
+}
+
+Value& Builder::createComparisonExpr(Value& a, Value& b, const OpCode opCode) {
+    std::vector<Value*> operands = {&a, &b};
+
+    assert(a.getType() == b.getType());
+    assert(a.getType().isInteger());
+
+    return addInstr(Instruction{opCode, boolType(), std::move(operands)});
 }
 
 }  // namespace IR

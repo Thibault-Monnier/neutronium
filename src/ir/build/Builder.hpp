@@ -39,12 +39,12 @@ class Builder {
     Value& createOrInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::OR); }
     Value& createXorInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::XOR); }
 
-    Value& createEqInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::EQ); }
+    Value& createEqInstr(Value& a, Value& b) { return createComparisonExpr(a, b, OpCode::EQ); }
     Value& createNotEqInstr(Value& a, Value& b) { return createNotInstr(createEqInstr(a, b)); }
-    Value& createLtInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::LT); }
-    Value& createLteInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::LTE); }
-    Value& createGtInstr(Value& a, Value& b) { return createArithmeticExpr(b, a, OpCode::LT); }
-    Value& createGteInstr(Value& a, Value& b) { return createArithmeticExpr(b, a, OpCode::LTE); }
+    Value& createLtInstr(Value& a, Value& b) { return createComparisonExpr(a, b, OpCode::LT); }
+    Value& createLteInstr(Value& a, Value& b) { return createComparisonExpr(a, b, OpCode::LTE); }
+    Value& createGtInstr(Value& a, Value& b) { return createComparisonExpr(b, a, OpCode::LT); }
+    Value& createGteInstr(Value& a, Value& b) { return createComparisonExpr(b, a, OpCode::LTE); }
 
     Value& createNegInstr(Value& operand);
     Value& createNotInstr(Value& operand);
@@ -85,6 +85,7 @@ class Builder {
     }
 
     Value& createArithmeticExpr(Value& a, Value& b, OpCode opCode);
+    Value& createComparisonExpr(Value& a, Value& b, OpCode opCode);
 
     const Type& intType(const uint32_t sizeBits) {
         return module_.registerType(Type::intType(sizeBits));
