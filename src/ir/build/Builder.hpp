@@ -57,14 +57,16 @@ class Builder {
 
     Value& createGetElementPtrInstr(Value& basePtr, Value& index);
 
+    Value& createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,
+                                        BasicBlock& falseBlock);
+    Value& createUnconditionalBranchInstr(BasicBlock& targetBlock);
+
     Value& createCallInstr(std::string_view calleeName, std::vector<Value*>&& arguments);
 
     Value& createRetInstr(Value& value);
     Value& createRetInstr();
 
-    Value& createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,
-                                        BasicBlock& falseBlock);
-    Value& createUnconditionalBranchInstr(BasicBlock& targetBlock);
+    Value& createSyscallInstr(int64_t syscallNumber, std::vector<Value*>&& arguments);
 
     [[nodiscard]] BasicBlock& createBasicBlock() { return currentFunction_->newBlock(voidType()); }
     void setInsertionPoint(BasicBlock& block) { currentBlock_ = &block; }

@@ -85,7 +85,7 @@ void ASTLowerer::declareFunction(const std::string_view name,
     const IR::Function& func =
         builder_.beginFunction(name, std::move(parameterTypes), convertType(returnTypeID));
 
-    for (int i = 0; i < parameters.size(); ++i) {
+    for (size_t i = 0; i < parameters.size(); ++i) {
         const auto* param = parameters[i];
         IR::Value& paramAddress = *func.getParameters()[i];
         declareSymbol(param->identifier_->name_, &paramAddress);
@@ -239,7 +239,7 @@ void ASTLowerer::lowerReturnStatement(const AST::ReturnStatement& returnStmt) {
 
 void ASTLowerer::lowerExitStatement(const AST::ExitStatement& exitStmt) {
     IR::Value& exitCode = lowerValueExpression(*exitStmt.exitCode_);
-    builder_.createCallInstr("exit", {&exitCode});
+    builder_.createSyscallInstr(60, {&exitCode});
 }
 
 IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr) {

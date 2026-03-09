@@ -63,6 +63,17 @@ Value& Builder::createGetElementPtrInstr(Value& basePtr, Value& index) {
     return addInstr(Instruction{OpCode::GEP, ptrType(elementType), std::move(operands)});
 }
 
+Value& Builder::createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,
+                                             BasicBlock& falseBlock) {
+    std::vector<Value*> operands = {&condition, &trueBlock, &falseBlock};
+    return addInstr(Instruction{OpCode::BR, voidType(), std::move(operands)});
+}
+
+Value& Builder::createUnconditionalBranchInstr(BasicBlock& targetBlock) {
+    std::vector<Value*> operands = {&targetBlock};
+    return addInstr(Instruction{OpCode::BR, voidType(), std::move(operands)});
+}
+
 Value& Builder::createCallInstr(const std::string_view calleeName,
                                 std::vector<Value*>&& arguments) {
     Function& callee = functionTable_.at(calleeName);
@@ -88,15 +99,14 @@ Value& Builder::createRetInstr() {
     return addInstr(Instruction{OpCode::RET, voidType(), {}});
 }
 
-Value& Builder::createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,
-                                             BasicBlock& falseBlock) {
-    std::vector<Value*> operands = {&condition, &trueBlock, &falseBlock};
-    return addInstr(Instruction{OpCode::BR, voidType(), std::move(operands)});
-}
+Value& Builder::createSyscallInstr(const int64_t syscallNumber, std::vector<Value*>&& arguments) {
+    assert(syscallNumber == 60 && "Only the `exit` syscall is currently supported");
 
-Value& Builder::createUnconditionalBranchInstr(BasicBlock& targetBlock) {
-    std::vector<Value*> operands = {&targetBlock};
-    return addInstr(Instruction{OpCode::BR, voidType(), std::move(operands)});
+    Value& syscallNumberValue = registerValue(IntegerConstant{intType(64), syscallNumber});
+    std::vector<Value*> operands = {&syscallNumberValue};
+    operands.append_range(arguments);
+
+    return addInstr(Instruction{OpCode::SYSCALL, intType(64), std::move(operands)});
 }
 
 Value& Builder::createArithmeticExpr(Value& a, Value& b, const OpCode opCode) {

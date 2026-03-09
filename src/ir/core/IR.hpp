@@ -46,15 +46,19 @@ enum class OpCode : uint8_t {
     /// the array is the first operand.
     GEP,
 
+    /// If there is one operand, unconditionally jumps to the basic block in that operand. If there
+    /// are three operands, jumps to the basic block in the second operand if the first operand is
+    /// true, and to the basic block in the third operand otherwise.
+    BR,
+
     /// Calls the function in the first operand with the rest of the operands as arguments.
     CALL,
     /// Returns the first operand from the current function.
     RET,
 
-    /// If there is one operand, unconditionally jumps to the basic block in that operand. If there
-    /// are three operands, jumps to the basic block in the second operand if the first operand is
-    /// true, and to the basic block in the third operand otherwise.
-    BR
+    /// Performs a system call. The first operand is the syscall number, and the rest of the
+    /// operands are the arguments.
+    SYSCALL,
 };
 
 class Value {
