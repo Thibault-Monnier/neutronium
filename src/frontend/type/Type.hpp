@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -239,7 +238,15 @@ class Type {
      *
      * @return The `TypeID` of the array's element type.
      */
-    [[nodiscard]] TypeID arrayElementTypeId() const;
+    [[nodiscard]] TypeID arrayElementTypeId() const {
+        assert(isArray());
+        return arrayElementTypeID_;
+    }
+
+    [[nodiscard]] uint32_t arrayLength() const {
+        assert(isArray());
+        return arrayLength_;
+    }
 
     /**
      * @brief Attempts to merge the current type with another type.

@@ -44,23 +44,22 @@ Value& Builder::createAllocaInstr(const Type& elementType, const uint32_t nbElem
 }
 
 Value& Builder::createStoreInstr(Value& location, Value& value) {
-    assert(location.getType().getKind() == Type::Kind::PTR);
+    assert(location.getType().isPointer());
     std::vector<Value*> operands = {&location, &value};
     return addInstr(Instruction{OpCode::STORE, voidType(), std::move(operands)});
 }
 
 Value& Builder::createLoadInstr(Value& location) {
-    assert(location.getType().getKind() == Type::Kind::PTR);
+    assert(location.getType().isPointer());
     std::vector<Value*> operands = {&location};
     return addInstr(
         Instruction{OpCode::LOAD, location.getType().getPointeeType(), std::move(operands)});
 }
 
 Value& Builder::createGetElementPtrInstr(Value& basePtr, Value& index) {
-    assert(basePtr.getType().getKind() == Type::Kind::PTR);
-    const Type& elementType = basePtr.getType().getPointeeType();
+    assert(basePtr.getType().holdsPointee());
     std::vector<Value*> operands{&basePtr, &index};
-    return addInstr(Instruction{OpCode::GEP, ptrType(elementType), std::move(operands)});
+    return addInstr(Instruction{OpCode::GEP, basePtr.getType(), std::move(operands)});
 }
 
 Value& Builder::createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,

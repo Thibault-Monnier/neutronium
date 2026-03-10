@@ -97,13 +97,6 @@ std::string Type::toString(const TypeManager& typeManager) const {
     return result;
 }
 
-TypeID Type::arrayElementTypeId() const {
-    if (kind_ == TypeKind::ARRAY) {
-        return arrayElementTypeID_;
-    }
-    std::unreachable();
-}
-
 bool Type::mergeWith(const Type& other) {
     if (kind_ == TypeKind::ARRAY && other.kind_ == TypeKind::ARRAY) std::unreachable();
 

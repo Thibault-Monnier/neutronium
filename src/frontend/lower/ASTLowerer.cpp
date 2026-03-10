@@ -47,7 +47,8 @@ const IR::Type& ASTLowerer::convertType(const TypeID typeID) {
 
         case TypeKind::ARRAY: {
             const IR::Type& elementType = convertType(type.arrayElementTypeId());
-            const IR::Type irArrayType = IR::Type::pointer(&elementType);
+            const uint32_t elementCount = type.arrayLength();
+            const IR::Type irArrayType = IR::Type::array(&elementType, elementCount);
             return builder_.registerType(irArrayType);
         }
 
