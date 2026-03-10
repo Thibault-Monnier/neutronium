@@ -251,14 +251,15 @@ IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr) {
             return lowerBooleanLiteral(*expr.as<AST::BooleanLiteral>());
         case AST::NodeKind::FUNCTION_CALL:
             return lowerFunctionCall(*expr.as<AST::FunctionCall>());
-        case AST::NodeKind::ARRAY_LITERAL:
-            return lowerArrayLiteral(*expr.as<AST::ArrayLiteral>());
-        case AST::NodeKind::REPEAT_ARRAY_LITERAL:
-            return lowerRepeatArrayLiteral(*expr.as<AST::RepeatArrayLiteral>());
         case AST::NodeKind::UNARY_EXPRESSION:
             return lowerUnaryExpression(*expr.as<AST::UnaryExpression>());
         case AST::NodeKind::BINARY_EXPRESSION:
             return lowerBinaryExpression(*expr.as<AST::BinaryExpression>());
+
+        // Always addresses
+        case AST::NodeKind::ARRAY_LITERAL:
+        case AST::NodeKind::REPEAT_ARRAY_LITERAL:
+            return lowerPlaceExpression(expr);
 
         // Places that need to be loaded
         case AST::NodeKind::IDENTIFIER:
@@ -278,6 +279,18 @@ IR::Value& ASTLowerer::lowerPlaceExpression(const AST::Expression& expr) {
             return lowerIdentifierAddress(*expr.as<AST::Identifier>());
         case AST::NodeKind::ARRAY_ACCESS:
             return lowerArrayAccessAddress(*expr.as<AST::ArrayAccess>());
+
+        case AST::NodeKind::ARRAY_LITERAL:
+            return lowerArrayLiteral(*expr.as<AST::ArrayLiteral>());
+        case AST::NodeKind::REPEAT_ARRAY_LITERAL:
+            return lowerRepeatArrayLiteral(*expr.as<AST::RepeatArrayLiteral>());
+
+        case AST::NodeKind::FUNCTION_CALL: {
+            IR::Value& value = lowerValueExpression(expr);
+            IR::Value& address = builder_.createAllocaInstr(value.getType());
+            builder_.createStoreInstr(address, value);
+            return address;
+        }
 
         default:
             std::unreachable();
@@ -314,7 +327,8 @@ IR::Value& ASTLowerer::lowerArrayAccessAddress(const AST::ArrayAccess& arrayAcce
 }
 
 IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit) {
-    const IR::Type& elementType = convertType(arrayLit.typeID_).getPointeeType();
+    const IR::Type& type = convertType(arrayLit.typeID_);
+    const IR::Type& elementType = type.getPointeeType();
     IR::Value& arrayPtr = builder_.createAllocaInstr(elementType, arrayLit.elements_.size());
 
     for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
@@ -331,7 +345,8 @@ IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit) {
 }
 
 IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit) {
-    const IR::Type& elementType = convertType(repeatArrayLit.typeID_).getPointeeType();
+    const IR::Type& type = convertType(repeatArrayLit.typeID_);
+    const IR::Type& elementType = type.getPointeeType();
 
     const int64_t count = repeatArrayLit.count_->value_;
     assert(count > 0);
