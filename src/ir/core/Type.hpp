@@ -57,8 +57,9 @@ class Type {
     static Type pointer(const Type* pointeeType) { return Type(Kind::PTR, pointeeType); }
 
     bool operator==(const Type& other) const {
+        if (pointeeType_ == nullptr && other.pointeeType_ != nullptr) return false;
+        if (pointeeType_ != nullptr && other.pointeeType_ == nullptr) return false;
         return kind_ == other.kind_ && integerSizeBits_ == other.integerSizeBits_ &&
-               pointeeType_ == other.pointeeType_ &&
                (pointeeType_ == nullptr || *pointeeType_ == *other.pointeeType_);
     }
 };
