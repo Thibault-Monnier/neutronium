@@ -55,7 +55,7 @@ class Builder {
     Value& createStoreInstr(Value& location, Value& value);
     Value& createLoadInstr(Value& location);
 
-    Value& createGetElementPtrInstr(Value& basePtr, Value& index);
+    Value& createGetElementPtrInstr(Value& val, Value& index);
 
     Value& createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,
                                         BasicBlock& falseBlock);

@@ -321,10 +321,10 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
 }
 
 IR::Value& ASTLowerer::lowerArrayAccessAddress(const AST::ArrayAccess& arrayAccess) {
-    IR::Value& base = lowerPlaceExpression(*arrayAccess.base_);
+    IR::Value& array = lowerValueExpression(*arrayAccess.base_);
     IR::Value& index = lowerValueExpression(*arrayAccess.index_);
 
-    return builder_.createGetElementPtrInstr(base, index);
+    return builder_.createGetElementPtrInstr(array, index);
 }
 
 IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit) {

@@ -56,10 +56,11 @@ Value& Builder::createLoadInstr(Value& location) {
         Instruction{OpCode::LOAD, location.getType().getPointeeType(), std::move(operands)});
 }
 
-Value& Builder::createGetElementPtrInstr(Value& basePtr, Value& index) {
-    assert(basePtr.getType().holdsPointee());
-    std::vector<Value*> operands{&basePtr, &index};
-    return addInstr(Instruction{OpCode::GEP, basePtr.getType(), std::move(operands)});
+Value& Builder::createGetElementPtrInstr(Value& val, Value& index) {
+    assert(val.getType().holdsPointee());
+    const Type& pointeeType = val.getType().getPointeeType();
+    std::vector<Value*> operands{&val, &index};
+    return addInstr(Instruction{OpCode::GEP, ptrType(pointeeType), std::move(operands)});
 }
 
 Value& Builder::createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,
