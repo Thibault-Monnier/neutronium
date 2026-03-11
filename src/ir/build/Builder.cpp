@@ -43,6 +43,14 @@ Value& Builder::createAllocaInstr(const Type& elementType, const uint32_t nbElem
     return addInstr(Instruction{OpCode::ALLOCA, ptrType(elementType), std::move(operands)});
 }
 
+Value& Builder::createArrayAllocaInstr(const Type& arrayType) {
+    assert(arrayType.isArray());
+    Value& nbElementsValue =
+        registerValue(IntegerConstant{intType(32), arrayType.getArrayElementCount()});
+    std::vector<Value*> operands = {&nbElementsValue};
+    return addInstr(Instruction{OpCode::ALLOCA, arrayType, std::move(operands)});
+}
+
 Value& Builder::createStoreInstr(Value& location, Value& value) {
     assert(location.getType().isPointer());
     std::vector<Value*> operands = {&location, &value};

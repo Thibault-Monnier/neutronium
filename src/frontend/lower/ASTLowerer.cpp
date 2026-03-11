@@ -329,8 +329,8 @@ IR::Value& ASTLowerer::lowerArrayAccessAddress(const AST::ArrayAccess& arrayAcce
 
 IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit) {
     const IR::Type& type = convertType(arrayLit.typeID_);
-    const IR::Type& elementType = type.getPointeeType();
-    IR::Value& arrayPtr = builder_.createAllocaInstr(elementType, arrayLit.elements_.size());
+
+    IR::Value& arrayPtr = builder_.createArrayAllocaInstr(type);
 
     for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
         IR::Value& elementValue = lowerValueExpression(*arrayLit.elements_[i]);
@@ -347,13 +347,12 @@ IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit) {
 
 IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit) {
     const IR::Type& type = convertType(repeatArrayLit.typeID_);
-    const IR::Type& elementType = type.getPointeeType();
+
+    IR::Value& arrayPtr = builder_.createArrayAllocaInstr(type);
+    IR::Value& elementValue = lowerValueExpression(*repeatArrayLit.element_);
 
     const int64_t count = repeatArrayLit.count_->value_;
     assert(count > 0);
-
-    IR::Value& arrayPtr = builder_.createAllocaInstr(elementType, count);
-    IR::Value& elementValue = lowerValueExpression(*repeatArrayLit.element_);
 
     for (size_t i = 0; i < static_cast<size_t>(count); ++i) {
         const IR::Type& indexType = builder_.registerType(IR::Type::intType(64));
