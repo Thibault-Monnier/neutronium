@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "Cli.hpp"
+#include "backend/CodeGen.hpp"
 #include "codegen/Generator.hpp"
 #include "frontend/ast/AST.hpp"
 #include "frontend/ast/Debug.hpp"
@@ -146,6 +147,13 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
             ASTLowerer lowerer(*ast, typeManager);
             return lowerer.lower();
         }();
+
+        assembly = [&] {
+            const Stage stage("Code Generation", verbose);
+
+            Backend::CodeGen codegen(ir);
+            return codegen.generate();
+        }();
     } else {
         assembly = [&] {
             const Stage stage("Code Generation", verbose);
@@ -153,10 +161,10 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
             CodeGen::Generator generator(*ast, typeManager, opts.targetType_);
             return generator.generate();
         }();
-
-        if (opts.logAssembly_) std::cout << assembly.str();
-        if (opts.endStage_ == PipelineEndStage::CODEGEN) return;
     }
+
+    if (opts.logAssembly_) std::cout << assembly.str();
+    if (opts.endStage_ == PipelineEndStage::CODEGEN) return;
 
     std::filesystem::path outFilename;
     if (opts.targetType_ == TargetType::EXECUTABLE) {
