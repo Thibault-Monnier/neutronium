@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ranges>
-#include <stack>
 
 #include "frontend/ast/AST.hpp"
 #include "frontend/type/TypeManager.hpp"
