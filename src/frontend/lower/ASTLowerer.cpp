@@ -161,9 +161,11 @@ void ASTLowerer::lowerVariableDefinition(const AST::VariableDefinition& varDef) 
 
 void ASTLowerer::lowerAssignment(const AST::Assignment& assignment) {
     IR::Value& place = lowerPlaceExpression(*assignment.place_);
-    IR::Value& value = lowerValueExpression(*assignment.value_);
+    IR::Value* value;
 
-    if (assignment.operator_ != AST::Operator::ASSIGN) {
+    if (assignment.operator_ == AST::Operator::ASSIGN) {
+        value = &lowerValueExpression(*assignment.value_);
+    } else {
         AST::Operator compoundOp;
         if (assignment.operator_ == AST::Operator::ADD_ASSIGN)
             compoundOp = AST::Operator::ADD;
@@ -176,10 +178,10 @@ void ASTLowerer::lowerAssignment(const AST::Assignment& assignment) {
         else
             std::unreachable();
 
-        value = lowerBinaryExpression(*assignment.place_, *assignment.value_, compoundOp);
+        value = &lowerBinaryExpression(*assignment.place_, *assignment.value_, compoundOp);
     }
 
-    builder_.createStoreInstr(place, value);
+    builder_.createStoreInstr(place, *value);
 }
 
 void ASTLowerer::lowerExpressionStatement(const AST::ExpressionStatement& exprStmt) {
