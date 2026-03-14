@@ -29,6 +29,10 @@ void CodeGen::mov(const std::string& src, const std::string& dst) {
     output_ << "mov " << dst << ", " << src << "\n";
 }
 
+void CodeGen::lea(const std::string& loc, const std::string& dst) {
+    output_ << "lea " << dst << ", " << loc << "\n";
+}
+
 std::string CodeGen::stackOffsetOperand(const uint32_t stackOffsetBits) {
     return "[rbp - " + std::to_string(stackOffsetBits / 8) + "]";
 }
@@ -51,6 +55,11 @@ std::string CodeGen::stackAllocate(const IR::Value& value) {
 void CodeGen::loadToRax(const uint32_t stackOffset) {
     const std::string src = stackOffsetOperand(stackOffset);
     mov(src, rax());
+}
+
+void CodeGen::loadToRbx(const uint32_t stackOffset) {
+    const std::string src = stackOffsetOperand(stackOffset);
+    mov(src, rbx());
 }
 
 void CodeGen::loadToRdi(const uint32_t stackOffset) {
@@ -119,8 +128,14 @@ void CodeGen::generateInstruction(const IR::Instruction& instr) {
             break;
 
         case IR::OpCode::ALLOCA:
+            generateAlloca(instr);
+            break;
         case IR::OpCode::LOAD:
+            generateLoad(instr);
+            break;
         case IR::OpCode::STORE:
+            generateStore(instr);
+            break;
         case IR::OpCode::GEP:
         case IR::OpCode::BR:
         case IR::OpCode::CALL:
@@ -220,6 +235,52 @@ void CodeGen::generateBinaryOperation(const IR::Instruction& binOp) {
     mov(rax(), loc);
 }
 
+void CodeGen::generateAlloca(const IR::Instruction& alloca) {
+    assert(alloca.getOpcode() == IR::OpCode::ALLOCA);
+
+    const IR::Type& type = alloca.getType();
+    const uint32_t elementSize = type.getSubtype().computeSizeBits();
+
+    assert(alloca.getOperands().size() == 1);
+    const auto* nbElementsValue = dynamic_cast<const IR::IntegerConstant*>(alloca.getOperands()[0]);
+    assert(nbElementsValue);
+    const uint32_t nbElements = nbElementsValue->getValue();
+
+    const uint32_t allocateSize = elementSize * nbElements;
+    const std::string allocatedLoc = stackAllocate(allocateSize);
+
+    const std::string writeLoc = stackAllocate(alloca);
+    lea(allocatedLoc, rax());
+    mov(rax(), writeLoc);
+}
+
+void CodeGen::generateLoad(const IR::Instruction& load) {
+    assert(load.getOpcode() == IR::OpCode::LOAD);
+    assert(load.getOperands().size() == 1);
+
+    const IR::Value* address = load.getOperands()[0];
+    const uint32_t stackOffset = getStoredStackOffsetOrGenerate(address);
+    loadToRax(stackOffset);
+    mov(raxDeref(), rax());
+
+    const std::string writeLoc = stackAllocate(load);
+    mov(rax(), writeLoc);
+}
+
+void CodeGen::generateStore(const IR::Instruction& store) {
+    assert(store.getOpcode() == IR::OpCode::STORE);
+    assert(store.getOperands().size() == 2);
+
+    const IR::Value* address = store.getOperands()[0];
+    const IR::Value* value = store.getOperands()[1];
+
+    const uint32_t addressStackOffset = getStoredStackOffsetOrGenerate(address);
+    const uint32_t valueStackOffset = getStoredStackOffsetOrGenerate(value);
+    loadToRax(addressStackOffset);
+    loadToRbx(valueStackOffset);
+    mov(rbx(), raxDeref());
+}
+
 void CodeGen::generateRet(const IR::Instruction& ret) {
     assert(ret.getOpcode() == IR::OpCode::RET);
 
@@ -260,20 +321,3 @@ void CodeGen::generateExit() {
 }
 
 }  // namespace Backend
-
-//
-// void CodeGen::generateAlloca(const IR::Instruction& instr) {
-//     const IR::Type& type = instr.getType();
-//     const uint32_t elementSize = type.getSubtype().computeSizeBits();
-//
-//     assert(instr.getOperands().size() == 1);
-//     const auto* nbElementsValue = dynamic_cast<const
-//     IR::IntegerConstant*>(instr.getOperands()[0]); assert(nbElementsValue); const uint32_t
-//     nbElements = nbElementsValue->getValue();
-//
-//     const uint32_t allocateSize = elementSize * nbElements;
-//     const std::string loc = stackAllocate(allocateSize);
-//
-//     const std::string loc2 = stackAllocate(instr);
-//     mov(loc, rax());
-// }

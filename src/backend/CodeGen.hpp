@@ -30,8 +30,11 @@ class CodeGen {
    private:
     // --- Asm writing helpers
     void mov(const std::string& src, const std::string& dst);
+    void lea(const std::string& loc, const std::string& dst);
     static std::string rax() { return "rax"; }
+    static std::string rbx() { return "rbx"; }
     static std::string rdi() { return "rdi"; }
+    static std::string raxDeref() { return "[rax]"; }
 
     static std::string stackOffsetOperand(uint32_t stackOffsetBits);
     static std::string getNameWithPrefix(std::string_view name);
@@ -41,6 +44,7 @@ class CodeGen {
     std::string stackAllocate(const IR::Value& value);
 
     void loadToRax(uint32_t stackOffset);
+    void loadToRbx(uint32_t stackOffset);
     void loadToRdi(uint32_t stackOffset);
 
     uint32_t getStoredStackOffsetOrGenerate(const IR::Value* value);
@@ -53,6 +57,10 @@ class CodeGen {
     void generateConstant(const IR::ConstantValue& constant);
 
     void generateBinaryOperation(const IR::Instruction& binOp);
+
+    void generateAlloca(const IR::Instruction& alloca);
+    void generateLoad(const IR::Instruction& load);
+    void generateStore(const IR::Instruction& store);
 
     void generateRet(const IR::Instruction& ret);
 
