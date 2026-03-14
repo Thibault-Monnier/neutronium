@@ -20,6 +20,7 @@ class CodeGen {
     uint32_t stackOffset_ = 0;
 
     std::unordered_map<const IR::Value*, uint32_t> storedStackOffsets_;
+    std::unordered_map<const IR::BasicBlock*, std::string> labels_;
 
    public:
     explicit CodeGen(const IR::Module& ir, const TargetType targetType)
@@ -31,10 +32,11 @@ class CodeGen {
     // --- Asm writing helpers
     void mov(const std::string& src, const std::string& dst);
     void lea(const std::string& loc, const std::string& dst);
+
+    static std::string deref(const std::string& loc) { return '[' + loc + ']'; }
     static std::string rax() { return "rax"; }
     static std::string rbx() { return "rbx"; }
     static std::string rdi() { return "rdi"; }
-    static std::string raxDeref() { return "[rax]"; }
 
     static std::string stackOffsetOperand(uint32_t stackOffsetBits);
     static std::string getNameWithPrefix(std::string_view name);
@@ -61,6 +63,9 @@ class CodeGen {
     void generateAlloca(const IR::Instruction& alloca);
     void generateLoad(const IR::Instruction& load);
     void generateStore(const IR::Instruction& store);
+    void generateGep(const IR::Instruction& gep);
+
+    void generateBr(const IR::Instruction& br);
 
     void generateRet(const IR::Instruction& ret);
 

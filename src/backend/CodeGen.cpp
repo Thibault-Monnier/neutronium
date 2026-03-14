@@ -105,10 +105,20 @@ void CodeGen::generateFunction(const IR::Function& func) {
     output_ << "push rbp\n";
     output_ << "mov rbp, rsp\n";
 
+    // Assign labels
+    for (const auto& bb : func.getBasicBlocks()) {
+        const size_t nbLabels = labels_.size();
+        const std::string newLabel = ".L" + std::to_string(nbLabels);
+        labels_.emplace(bb.get(), newLabel);
+    }
+
+    // Generate
     for (const auto& bb : func.getBasicBlocks()) generateBasicBlock(*bb);
 }
 
 void CodeGen::generateBasicBlock(const IR::BasicBlock& bb) {
+    output_ << labels_.at(&bb) << ":\n";
+
     for (const auto* instr : bb.getInstructions()) generateInstruction(*instr);
 }
 
@@ -130,14 +140,23 @@ void CodeGen::generateInstruction(const IR::Instruction& instr) {
         case IR::OpCode::ALLOCA:
             generateAlloca(instr);
             break;
+
         case IR::OpCode::LOAD:
             generateLoad(instr);
             break;
+
         case IR::OpCode::STORE:
             generateStore(instr);
             break;
+
         case IR::OpCode::GEP:
+            generateGep(instr);
+            break;
+
         case IR::OpCode::BR:
+            generateBr(instr);
+            break;
+
         case IR::OpCode::CALL:
             // NYI
             std::unreachable();
@@ -220,14 +239,15 @@ void CodeGen::generateBinaryOperation(const IR::Instruction& binOp) {
     if (opcode == IR::OpCode::DIV) {
         loadToRax(stackOffsetA);
         output_ << "cqo\n";
-        output_ << prefix << " " << stackOffsetOperand(stackOffsetB) << "\n";
+        output_ << prefix << " qword ptr " << stackOffsetOperand(stackOffsetB) << "\n";
     } else {
         loadToRax(stackOffsetA);
         output_ << prefix << " " << rax() << ", " << stackOffsetOperand(stackOffsetB) << "\n";
 
         if (IR::isBinaryComparisonOp(opcode)) {
             const std::string_view suffix = computeBinaryComparisonAsmSuffix(opcode);
-            output_ << "set" << suffix << " " << rax() << "\n";
+            output_ << "set" << suffix << " al\n";
+            output_ << "movzx rax, al\n";
         }
     }
 
@@ -261,7 +281,7 @@ void CodeGen::generateLoad(const IR::Instruction& load) {
     const IR::Value* address = load.getOperands()[0];
     const uint32_t stackOffset = getStoredStackOffsetOrGenerate(address);
     loadToRax(stackOffset);
-    mov(raxDeref(), rax());
+    mov(deref(rax()), rax());
 
     const std::string writeLoc = stackAllocate(load);
     mov(rax(), writeLoc);
@@ -278,7 +298,57 @@ void CodeGen::generateStore(const IR::Instruction& store) {
     const uint32_t valueStackOffset = getStoredStackOffsetOrGenerate(value);
     loadToRax(addressStackOffset);
     loadToRbx(valueStackOffset);
-    mov(rbx(), raxDeref());
+    mov(rbx(), deref(rax()));
+}
+
+void CodeGen::generateGep(const IR::Instruction& gep) {
+    assert(gep.getOpcode() == IR::OpCode::GEP);
+    assert(gep.getOperands().size() == 2);
+
+    const uint32_t elemSize = gep.getType().getSubtype().computeSizeBits();
+
+    const IR::Value* base = gep.getOperands()[0];
+    const IR::Value* idx = gep.getOperands()[1];
+
+    const uint32_t baseStackOffset = getStoredStackOffsetOrGenerate(base);
+    const uint32_t idxStackOffset = getStoredStackOffsetOrGenerate(idx);
+
+    loadToRax(baseStackOffset);
+    loadToRbx(idxStackOffset);
+    const std::string calc = rax() + '+' + rbx() + '*' + std::to_string(elemSize / 8);
+    lea(deref(calc), rax());
+
+    const std::string writeLoc = stackAllocate(gep);
+    mov(rax(), writeLoc);
+}
+
+void CodeGen::generateBr(const IR::Instruction& br) {
+    assert(br.getOpcode() == IR::OpCode::BR);
+
+    const size_t nbOps = br.getOperands().size();
+    if (nbOps == 1) {  // Unconditional jump
+
+        const auto* bb = dynamic_cast<const IR::BasicBlock*>(br.getOperands()[0]);
+        assert(bb);
+        output_ << "jmp " << labels_.at(bb) << "\n";
+
+    } else if (nbOps == 3) {  // Conditional jump
+
+        const IR::Value* condition = br.getOperands()[0];
+        const auto* bbTrue = dynamic_cast<const IR::BasicBlock*>(br.getOperands()[1]);
+        const auto* bbFalse = dynamic_cast<const IR::BasicBlock*>(br.getOperands()[2]);
+        assert(condition->getType().isBoolean());
+        assert(bbTrue && bbFalse);
+
+        const uint32_t conditionStackOffset = getStoredStackOffsetOrGenerate(condition);
+        loadToRax(conditionStackOffset);
+        output_ << "test " << rax() << ", " << rax() << "\n";
+        output_ << "jne " << labels_.at(bbTrue) << "\n";
+        output_ << "jmp " << labels_.at(bbFalse) << "\n";
+
+    } else {
+        std::unreachable();
+    }
 }
 
 void CodeGen::generateRet(const IR::Instruction& ret) {
