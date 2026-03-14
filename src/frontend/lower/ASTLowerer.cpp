@@ -12,7 +12,7 @@ IR::Module&& ASTLowerer::lower() {
     return std::move(ir_);
 }
 
-IR::Type ASTLowerer::convertPrimitiveType(const Type& type) const {
+const IR::Type& ASTLowerer::convertPrimitiveType(const Type& type) const {
     assert(type.isPrimitive());
 
     switch (type.primitive()) {
@@ -21,13 +21,13 @@ IR::Type ASTLowerer::convertPrimitiveType(const Type& type) const {
         case Primitive::Kind::INT16:
         case Primitive::Kind::INT32:
         case Primitive::Kind::INT64:
-            return IR::Type::intType(type.sizeBits(typeManager_));
+            return builder_.intType(type.sizeBits(typeManager_));
 
         case Primitive::Kind::BOOL:
-            return IR::Type::boolean();
+            return builder_.boolType();
 
         case Primitive::Kind::VOID:
-            return IR::Type::voidType();
+            return builder_.voidType();
 
         case Primitive::Kind::UNKNOWN:
             break;
@@ -40,16 +40,13 @@ const IR::Type& ASTLowerer::convertType(const TypeID typeID) {
     const Type& type = typeManager_.getType(typeID);
 
     switch (type.kind()) {
-        case TypeKind::PRIMITIVE: {
-            const IR::Type irType = convertPrimitiveType(type);
-            return builder_.registerType(irType);
-        }
+        case TypeKind::PRIMITIVE:
+            return convertPrimitiveType(type);
 
         case TypeKind::ARRAY: {
             const IR::Type& elementType = convertType(type.arrayElementTypeId());
             const uint32_t elementCount = type.arrayLength();
-            const IR::Type irArrayType = IR::Type::array(&elementType, elementCount);
-            return builder_.registerType(irArrayType);
+            const IR::Type irArrayType = builder_.arrayType(elementType, elementCount);
         }
 
         case TypeKind::UNKNOWN:
@@ -76,20 +73,38 @@ IR::Value& ASTLowerer::lookupSymbolAddress(const std::string_view name) const {
 
 void ASTLowerer::declareFunction(const std::string_view name,
                                  const std::span<AST::VariableDefinition*> parameters,
-                                 const TypeID returnTypeID) {
+                                 const TypeID returnTypeID, const bool isExported) {
     std::vector<const IR::Type*> parameterTypes;
     parameterTypes.reserve(parameters.size());
     for (const auto* param : parameters) {
         parameterTypes.push_back(&convertType(param->typeID_));
     }
 
-    const IR::Function& func =
-        builder_.beginFunction(name, std::move(parameterTypes), convertType(returnTypeID));
+    const IR::Function& func = builder_.beginFunction(name, std::move(parameterTypes),
+                                                      convertType(returnTypeID), isExported);
 
     for (size_t i = 0; i < parameters.size(); ++i) {
         const auto* param = parameters[i];
         IR::Value& paramAddress = *func.getParameters()[i];
         declareSymbol(param->identifier_->name_, &paramAddress);
+    }
+}
+
+void ASTLowerer::lowerFunction(const AST::FunctionDefinition& funcDef) {
+    const ScopeGuard scopeGuard(*this);  // For the parameters
+
+    const TypeID returnTypeID = funcDef.returnTypeID_;
+    declareFunction(funcDef.identifier_->name_, funcDef.parameters_, returnTypeID,
+                    funcDef.isExported());
+
+    for (const auto* stmt : funcDef.body_->body_) {
+        lowerStatement(*stmt);
+    }
+
+    const Type& type = typeManager_.getType(returnTypeID);
+    if (type.isVoid()) {
+        // Add a trailing return in case there isn't one before
+        builder_.createRetInstr();
     }
 }
 
@@ -335,7 +350,7 @@ IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit) {
     for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
         IR::Value& elementValue = lowerValueExpression(*arrayLit.elements_[i]);
 
-        const IR::Type& indexType = builder_.registerType(IR::Type::intType(64));
+        const IR::Type& indexType = builder_.intType(64);
         IR::Value& indexValue = builder_.createIntegerConstant(indexType, static_cast<int64_t>(i));
         IR::Value& elementPtr = builder_.createGetElementPtrInstr(arrayPtr, indexValue);
 
@@ -355,7 +370,7 @@ IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& re
     assert(count > 0);
 
     for (size_t i = 0; i < static_cast<size_t>(count); ++i) {
-        const IR::Type& indexType = builder_.registerType(IR::Type::intType(64));
+        const IR::Type& indexType = builder_.intType(64);
         IR::Value& indexValue = builder_.createIntegerConstant(indexType, static_cast<int64_t>(i));
         IR::Value& elementPtr = builder_.createGetElementPtrInstr(arrayPtr, indexValue);
         builder_.createStoreInstr(elementPtr, elementValue);

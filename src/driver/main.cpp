@@ -151,7 +151,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
         assembly = [&] {
             const Stage stage("Code Generation", verbose);
 
-            Backend::CodeGen codegen(ir);
+            Backend::CodeGen codegen(ir, opts.targetType_);
             return codegen.generate();
         }();
     } else {

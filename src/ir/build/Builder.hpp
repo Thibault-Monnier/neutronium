@@ -9,19 +9,17 @@ namespace IR {
 
 /// Exposes helpers to build the IR.
 class Builder {
-    Module module_;
+    Module& module_;
 
     std::unordered_map<std::string_view, Function&> functionTable_;
-    Function* currentFunction_;
-    BasicBlock* currentBlock_;
+    Function* currentFunction_{};
+    BasicBlock* currentBlock_{};
 
    public:
-    Builder() = default;
-
-    const Type& registerType(const Type type) { return module_.registerType(type); }
+    explicit Builder(Module& ir) : module_(ir) {}
 
     Function& beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                            const Type& returnType);
+                            const Type& returnType, bool isExported);
 
     Value& createIntegerConstant(const Type& type, const int64_t value) {
         return registerValue(IntegerConstant{type, value});
@@ -69,10 +67,17 @@ class Builder {
 
     Value& createSyscallInstr(int64_t syscallNumber, std::vector<Value*>&& arguments);
 
-    [[nodiscard]] BasicBlock& createBasicBlock() { return currentFunction_->newBlock(voidType()); }
+    [[nodiscard]] BasicBlock& createBasicBlock() const {
+        return currentFunction_->newBlock(voidType());
+    }
     void setInsertionPoint(BasicBlock& block) { currentBlock_ = &block; }
 
    private:
+    /// Registers a type in the module and returns a reference to it.
+    [[nodiscard]] const Type& registerType(const Type type) const {
+        return module_.registerType(type);
+    }
+
     /// Registers a value in the module and returns a reference to it.
     template <class T>
         requires std::derived_from<T, Value>
@@ -90,13 +95,18 @@ class Builder {
     Value& createArithmeticExpr(Value& a, Value& b, OpCode opCode);
     Value& createComparisonExpr(Value& a, Value& b, OpCode opCode);
 
-    const Type& intType(const uint32_t sizeBits) {
+   public:
+    [[nodiscard]] const Type& intType(const uint32_t sizeBits) const {
         return module_.registerType(Type::intType(sizeBits));
     }
-    const Type& boolType() { return module_.registerType(Type::boolean()); }
-    const Type& voidType() { return module_.registerType(Type::voidType()); }
-    const Type& ptrType(const Type& pointeeType) {
+    [[nodiscard]] const Type& boolType() const { return module_.registerType(Type::boolean()); }
+    [[nodiscard]] const Type& voidType() const { return module_.registerType(Type::voidType()); }
+    [[nodiscard]] const Type& ptrType(const Type& pointeeType) const {
         return module_.registerType(Type::pointer(&pointeeType));
+    }
+    [[nodiscard]] const Type& arrayType(const Type& elementType,
+                                        const uint32_t elementCount) const {
+        return module_.registerType(Type::array(&elementType, elementCount));
     }
 };
 

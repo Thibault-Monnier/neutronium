@@ -7,7 +7,7 @@
 namespace IR {
 
 Function& Builder::beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                                 const Type& returnType) {
+                                 const Type& returnType, const bool isExported) {
     std::vector<Value*> parameters;
     parameters.reserve(parameterTypes.size());
     for (const auto& param : parameterTypes) {
@@ -15,7 +15,7 @@ Function& Builder::beginFunction(std::string_view name, std::vector<const Type*>
         parameters.push_back(&registerValue(Value{parameterType}));
     }
 
-    Function& func = module_.addFunction(Function{std::move(parameters), returnType});
+    Function& func = module_.addFunction(Function{name, std::move(parameters), returnType, isExported});
     functionTable_.emplace(name, func);
     currentFunction_ = &func;
     setInsertionPoint(createBasicBlock());
@@ -61,12 +61,12 @@ Value& Builder::createLoadInstr(Value& location) {
     assert(location.getType().isPointer());
     std::vector<Value*> operands = {&location};
     return addInstr(
-        Instruction{OpCode::LOAD, location.getType().getPointeeType(), std::move(operands)});
+        Instruction{OpCode::LOAD, location.getType().getSubtype(), std::move(operands)});
 }
 
 Value& Builder::createGetElementPtrInstr(Value& val, Value& index) {
-    assert(val.getType().holdsPointee());
-    const Type& pointeeType = val.getType().getPointeeType();
+    assert(val.getType().holdsSubtype());
+    const Type& pointeeType = val.getType().getSubtype();
     std::vector<Value*> operands{&val, &index};
     return addInstr(Instruction{OpCode::GEP, ptrType(pointeeType), std::move(operands)});
 }

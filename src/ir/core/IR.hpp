@@ -35,7 +35,7 @@ enum class OpCode : uint8_t {
     // Note: NEQ doesn't get its own opcode and is implemented using EQ and NOT.
     // Note: GT and GTE don't get their own opcodes and are implemented using LT and LTE.
 
-    /// Allocates memory on the stack. The first operand specifies the number of the elements to
+    /// Allocates memory on the stack. The first operand specifies the number of elements to
     /// allocate. Returns a pointer to the beginning of the allocated memory.
     ALLOCA,
     /// Loads the first operand from memory.
@@ -60,6 +60,36 @@ enum class OpCode : uint8_t {
     /// operands are the arguments.
     SYSCALL,
 };
+
+inline bool isBinaryArithmeticOp(const OpCode op) {
+    switch (op) {
+        case OpCode::ADD:
+        case OpCode::SUB:
+        case OpCode::MUL:
+        case OpCode::DIV:
+        case OpCode::AND:
+        case OpCode::OR:
+        case OpCode::XOR:
+            return true;
+        default:
+            return false;
+    }
+}
+
+inline bool isBinaryComparisonOp(const OpCode op) {
+    switch (op) {
+        case OpCode::EQ:
+        case OpCode::LT:
+        case OpCode::LTE:
+            return true;
+        default:
+            return false;
+    }
+}
+
+inline bool isBinaryOp(const OpCode op) {
+    return isBinaryArithmeticOp(op) || isBinaryComparisonOp(op);
+}
 
 class Value {
     const Type* type_;
@@ -106,25 +136,38 @@ class BasicBlock : public Value {
     explicit BasicBlock(const Type& type) : Value(type) {}
 
     void addInstruction(Instruction& instr) { instructions_.push_back(&instr); }
+
+    [[nodiscard]] const std::vector<Instruction*>& getInstructions() const { return instructions_; }
 };
 
 class Function : public Value {
+    std::string_view name_;
     std::vector<Value*> parameters_;
     std::vector<std::unique_ptr<BasicBlock>> basicBlocks_;
 
+    bool isExported_;
+
    public:
-    explicit Function(std::vector<Value*>&& parameters, const Type& returnType)
-        : Value(returnType), parameters_(std::move(parameters)) {}
+    explicit Function(const std::string_view name, std::vector<Value*>&& parameters,
+                      const Type& returnType, const bool isExported)
+        : Value(returnType),
+          name_(name),
+          parameters_(std::move(parameters)),
+          isExported_(isExported) {}
 
     BasicBlock& newBlock(const Type& voidTypeInstance) {
         return *basicBlocks_.emplace_back(std::make_unique<BasicBlock>(voidTypeInstance));
     }
+
+    [[nodiscard]] std::string_view getName() const { return name_; }
 
     [[nodiscard]] const std::vector<Value*>& getParameters() const { return parameters_; }
 
     [[nodiscard]] const std::vector<std::unique_ptr<BasicBlock>>& getBasicBlocks() const {
         return basicBlocks_;
     }
+
+    [[nodiscard]] bool isExported() const { return isExported_; }
 };
 
 class Module {

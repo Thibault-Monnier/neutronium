@@ -23,12 +23,12 @@ class ASTLowerer {
 
    public:
     explicit ASTLowerer(const AST::CompilationUnit& ast, const TypeManager& typeManager)
-        : ast_(ast), typeManager_(typeManager), builder_() {}
+        : ast_(ast), typeManager_(typeManager), builder_(ir_) {}
 
     [[nodiscard]] IR::Module&& lower();
 
    private:
-    [[nodiscard]] IR::Type convertPrimitiveType(const Type& type) const;
+    [[nodiscard]] const IR::Type& convertPrimitiveType(const Type& type) const;
     const IR::Type& convertType(TypeID typeID);
 
     /// RAII helper to manage entering and exiting scopes. Enters a new scope on construction and
@@ -48,21 +48,15 @@ class ASTLowerer {
     [[nodiscard]] IR::Value& lookupSymbolAddress(const std::string_view name) const;
 
     void declareFunction(std::string_view name, std::span<AST::VariableDefinition*> parameters,
-                         TypeID returnTypeID);
+                         TypeID returnTypeID, bool isExported);
 
     void lowerExternalFunction(const AST::ExternalFunctionDeclaration& funcDecl) {
         const ScopeGuard scopeGuard(*this);  // For the parameters
-        declareFunction(funcDecl.identifier_->name_, funcDecl.parameters_, funcDecl.returnTypeID_);
+        declareFunction(funcDecl.identifier_->name_, funcDecl.parameters_, funcDecl.returnTypeID_,
+                        false);
     }
 
-    void lowerFunction(const AST::FunctionDefinition& funcDef) {
-        const ScopeGuard scopeGuard(*this);  // For the parameters
-
-        declareFunction(funcDef.identifier_->name_, funcDef.parameters_, funcDef.returnTypeID_);
-        for (const auto* stmt : funcDef.body_->body_) {
-            lowerStatement(*stmt);
-        }
-    }
+    void lowerFunction(const AST::FunctionDefinition& funcDef);
 
     void lowerStatement(const AST::Statement& stmt);
 

@@ -3,12 +3,275 @@
 namespace Backend {
 
 neutro::FastStringStream CodeGen::generate() {
-    for (const std::unique_ptr<IR::Function>& func : ir_.getFunctions()) {
+    output_ << ".intel_syntax noprefix\n\n";
+    output_ << ".text\n\n";
+
+    if (targetType_ == TargetType::EXECUTABLE) {
+        output_ << ".globl _start\n";
+        output_ << ".type _start, @function\n";
+        output_ << "_start:\n";
+        output_ << "push rbp\n";
+        output_ << "mov rbp, rsp\n";
+        output_ << "call " << getNameWithPrefix("main") << "\n";
+        generateExit();
     }
 
-    output_ << "Hello, World!\n";
+    for (const std::unique_ptr<IR::Function>& func : ir_.getFunctions()) {
+        generateFunction(*func);
+    }
 
     return std::move(output_);
 }
 
+void CodeGen::mov(const std::string& src, const std::string& dst) {
+    output_ << "mov " << dst << ", " << src << "\n";
+}
+
+std::string CodeGen::stackOffsetOperand(const uint32_t stackOffsetBits) {
+    return "[rbp - " + std::to_string(stackOffsetBits / 8) + "]";
+}
+
+std::string CodeGen::getNameWithPrefix(const std::string_view name) {
+    return "__" + std::string(name);
+}
+
+std::string CodeGen::stackAllocate(const uint32_t sizeBits) {
+    stackOffset_ += sizeBits;
+    return stackOffsetOperand(stackOffset_);
+}
+
+std::string CodeGen::stackAllocate(const IR::Value& value) {
+    const std::string operand = stackAllocate(value.getType().computeSizeBits());
+    storedStackOffsets_.emplace(&value, stackOffset_);
+    return operand;
+}
+
+void CodeGen::loadToRax(const uint32_t stackOffset) {
+    const std::string src = stackOffsetOperand(stackOffset);
+    mov(src, rax());
+}
+
+void CodeGen::loadToRdi(const uint32_t stackOffset) {
+    const std::string src = stackOffsetOperand(stackOffset);
+    mov(src, rdi());
+}
+
+uint32_t CodeGen::getStoredStackOffsetOrGenerate(const IR::Value* value) {
+    const auto it = storedStackOffsets_.find(value);
+    if (it != storedStackOffsets_.end()) return it->second;
+
+    generateValue(*value);
+    return storedStackOffsets_.at(value);
+}
+
+void CodeGen::generateValue(const IR::Value& value) {
+    if (auto* func = dynamic_cast<const IR::Function*>(&value)) {
+        generateFunction(*func);
+    } else if (auto* bb = dynamic_cast<const IR::BasicBlock*>(&value)) {
+        generateBasicBlock(*bb);
+    } else if (auto* instr = dynamic_cast<const IR::Instruction*>(&value)) {
+        generateInstruction(*instr);
+    } else if (auto* constant = dynamic_cast<const IR::ConstantValue*>(&value)) {
+        generateConstant(*constant);
+    } else {
+        std::unreachable();
+    }
+}
+
+void CodeGen::generateFunction(const IR::Function& func) {
+    stackOffset_ = 0;
+    storedStackOffsets_.clear();
+
+    output_ << "\n";
+
+    const std::string& funcName = getNameWithPrefix(func.getName());
+    if (func.isExported()) {
+        output_ << ".globl " << funcName << "\n";
+        output_ << ".type " << funcName << ", @function\n";
+    }
+
+    output_ << funcName << ":\n";
+    output_ << "push rbp\n";
+    output_ << "mov rbp, rsp\n";
+
+    for (const auto& bb : func.getBasicBlocks()) generateBasicBlock(*bb);
+}
+
+void CodeGen::generateBasicBlock(const IR::BasicBlock& bb) {
+    for (const auto* instr : bb.getInstructions()) generateInstruction(*instr);
+}
+
+void CodeGen::generateInstruction(const IR::Instruction& instr) {
+    switch (instr.getOpcode()) {
+        case IR::OpCode::ADD:
+        case IR::OpCode::SUB:
+        case IR::OpCode::MUL:
+        case IR::OpCode::DIV:
+        case IR::OpCode::AND:
+        case IR::OpCode::OR:
+        case IR::OpCode::XOR:
+        case IR::OpCode::EQ:
+        case IR::OpCode::LT:
+        case IR::OpCode::LTE:
+            generateBinaryOperation(instr);
+            break;
+
+        case IR::OpCode::ALLOCA:
+        case IR::OpCode::LOAD:
+        case IR::OpCode::STORE:
+        case IR::OpCode::GEP:
+        case IR::OpCode::BR:
+        case IR::OpCode::CALL:
+            // NYI
+            std::unreachable();
+
+        case IR::OpCode::RET:
+            generateRet(instr);
+            break;
+
+        case IR::OpCode::SYSCALL:
+            generateSyscall(instr);
+            break;
+    }
+}
+
+void CodeGen::generateConstant(const IR::ConstantValue& constant) {
+    if (auto* integerConst = dynamic_cast<const IR::IntegerConstant*>(&constant)) {
+        const std::string loc = stackAllocate(constant);
+        const int64_t val = integerConst->getValue();
+        mov(std::to_string(val), rax());
+        mov(rax(), loc);
+    } else {
+        std::unreachable();
+    }
+}
+
+namespace {
+std::string_view computeBinaryOperationAsmCode(const IR::OpCode opcode) {
+    assert(IR::isBinaryOp(opcode));
+    switch (opcode) {
+        case IR::OpCode::ADD:
+            return "add";
+        case IR::OpCode::SUB:
+            return "sub";
+        case IR::OpCode::MUL:
+            return "imul";
+        case IR::OpCode::DIV:
+            return "idiv";
+        case IR::OpCode::AND:
+            return "and";
+        case IR::OpCode::OR:
+            return "or";
+        case IR::OpCode::XOR:
+            return "xor";
+        case IR::OpCode::EQ:
+        case IR::OpCode::LT:
+        case IR::OpCode::LTE:
+            return "cmp";
+        default:
+            std::unreachable();
+    }
+}
+
+std::string_view computeBinaryComparisonAsmSuffix(const IR::OpCode opcode) {
+    assert(IR::isBinaryComparisonOp(opcode));
+    switch (opcode) {
+        case IR::OpCode::EQ:
+            return "e";
+        case IR::OpCode::LT:
+            return "l";
+        case IR::OpCode::LTE:
+            return "le";
+        default:
+            std::unreachable();
+    }
+}
+}  // namespace
+
+void CodeGen::generateBinaryOperation(const IR::Instruction& binOp) {
+    const IR::OpCode opcode = binOp.getOpcode();
+    assert(IR::isBinaryOp(opcode));
+
+    assert(binOp.getOperands().size() == 2);
+    const IR::Value* a = binOp.getOperands()[0];
+    const IR::Value* b = binOp.getOperands()[1];
+
+    const uint32_t stackOffsetA = getStoredStackOffsetOrGenerate(a);
+    const uint32_t stackOffsetB = getStoredStackOffsetOrGenerate(b);
+
+    const std::string_view prefix = computeBinaryOperationAsmCode(opcode);
+    if (opcode == IR::OpCode::DIV) {
+        loadToRax(stackOffsetA);
+        output_ << "cqo\n";
+        output_ << prefix << " " << stackOffsetOperand(stackOffsetB) << "\n";
+    } else {
+        loadToRax(stackOffsetA);
+        output_ << prefix << " " << rax() << ", " << stackOffsetOperand(stackOffsetB) << "\n";
+
+        if (IR::isBinaryComparisonOp(opcode)) {
+            const std::string_view suffix = computeBinaryComparisonAsmSuffix(opcode);
+            output_ << "set" << suffix << " " << rax() << "\n";
+        }
+    }
+
+    const std::string loc = stackAllocate(binOp);
+    mov(rax(), loc);
+}
+
+void CodeGen::generateRet(const IR::Instruction& ret) {
+    assert(ret.getOpcode() == IR::OpCode::RET);
+
+    if (ret.getOperands().empty()) {
+        // Function is void, return whatever
+    } else {
+        assert(ret.getOperands().size() == 1);
+        const IR::Value* val = ret.getOperands()[0];
+        const uint32_t stackOffset = getStoredStackOffsetOrGenerate(val);
+        loadToRax(stackOffset);
+    }
+
+    output_ << "leave\n";
+    output_ << "ret\n";
+}
+
+void CodeGen::generateSyscall(const IR::Instruction& sysc) {
+    assert(sysc.getOpcode() == IR::OpCode::SYSCALL);
+    assert(sysc.getOperands().size() == 2);
+
+    const auto* syscNumberVal = dynamic_cast<const IR::IntegerConstant*>(sysc.getOperands()[0]);
+    assert(syscNumberVal);
+    const uint32_t syscNumber = syscNumberVal->getValue();
+    assert(syscNumber == 60);  // Only `exit` is supported for now
+
+    const IR::Value* val = sysc.getOperands()[1];
+    const uint32_t stackOffset = getStoredStackOffsetOrGenerate(val);
+
+    loadToRdi(stackOffset);
+    mov(std::to_string(syscNumber), rax());
+    output_ << "syscall\n";
+}
+
+void CodeGen::generateExit() {
+    output_ << "mov rdi, 0\n";   // exit code
+    output_ << "mov rax, 60\n";  // syscall: exit
+    output_ << "syscall\n";
+}
+
 }  // namespace Backend
+
+//
+// void CodeGen::generateAlloca(const IR::Instruction& instr) {
+//     const IR::Type& type = instr.getType();
+//     const uint32_t elementSize = type.getSubtype().computeSizeBits();
+//
+//     assert(instr.getOperands().size() == 1);
+//     const auto* nbElementsValue = dynamic_cast<const
+//     IR::IntegerConstant*>(instr.getOperands()[0]); assert(nbElementsValue); const uint32_t
+//     nbElements = nbElementsValue->getValue();
+//
+//     const uint32_t allocateSize = elementSize * nbElements;
+//     const std::string loc = stackAllocate(allocateSize);
+//
+//     const std::string loc2 = stackAllocate(instr);
+//     mov(loc, rax());
+// }

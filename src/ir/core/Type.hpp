@@ -19,17 +19,16 @@ class Type {
     const uint32_t data_ = 0;
 
     /// Used to represent a subtype of this type. For example, if this Type is a pointer, then
-    /// pointeeType_ is the type of the value it points to. If this Type is an array, then
-    /// pointeeType_ is the type of the elements of the array.
-    const Type* const pointeeType_ = nullptr;
+    /// subtype_ is the type of the value it points to. If this Type is an array, then
+    /// subtype_ is the type of the elements of the array.
+    const Type* const subtype_ = nullptr;
 
     explicit Type(const Kind kind) : kind_(kind) {}
-    explicit Type(const Kind kind, const Type* pointeeType)
-        : kind_(kind), pointeeType_(pointeeType) {
-        assert(holdsPointee());
+    explicit Type(const Kind kind, const Type* subtype) : kind_(kind), subtype_(subtype) {
+        assert(holdsSubtype());
     }
     explicit Type(const Kind kind, const Type* elementType, const uint32_t elementCount)
-        : kind_(kind), data_(elementCount), pointeeType_(elementType) {
+        : kind_(kind), data_(elementCount), subtype_(elementType) {
         assert(isArray());
     }
     explicit Type(const Kind kind, const uint8_t integerSizeBits)
@@ -47,12 +46,28 @@ class Type {
         assert(isArray());
         return data_;
     }
-    [[nodiscard]] const Type& getPointeeType() const {
-        assert(holdsPointee());
-        return *pointeeType_;
+    [[nodiscard]] const Type& getSubtype() const {
+        assert(holdsSubtype());
+        return *subtype_;
     }
 
-    [[nodiscard]] bool holdsPointee() const { return kind_ == Kind::PTR || kind_ == Kind::ARRAY; }
+    /// Calculates the total storage space required for this type, in bits.
+    [[nodiscard]] uint32_t computeSizeBits() const {
+        switch (kind_) {
+            case Kind::PTR:
+                return 64;
+            case Kind::INT:
+                return getIntegerSizeBits();
+            case Kind::ARRAY:
+                return getArrayElementCount() * subtype_->computeSizeBits();
+            case Kind::VOID:
+                break;
+        }
+
+        std::unreachable();
+    }
+
+    [[nodiscard]] bool holdsSubtype() const { return kind_ == Kind::PTR || kind_ == Kind::ARRAY; }
 
     [[nodiscard]] bool isVoid() const { return kind_ == Kind::VOID; }
     [[nodiscard]] bool isInteger() const { return kind_ == Kind::INT; }
@@ -76,8 +91,8 @@ class Type {
         if (kind_ != other.kind_) return false;
         if (data_ != other.data_) return false;
 
-        if (!pointeeType_ && !other.pointeeType_) return true;
-        if (pointeeType_ && other.pointeeType_) return *pointeeType_ == *other.pointeeType_;
+        if (!subtype_ && !other.subtype_) return true;
+        if (subtype_ && other.subtype_) return *subtype_ == *other.subtype_;
 
         return false;
     }
