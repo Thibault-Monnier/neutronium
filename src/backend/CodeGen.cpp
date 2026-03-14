@@ -42,7 +42,8 @@ std::string CodeGen::getNameWithPrefix(const std::string_view name) {
 }
 
 std::string CodeGen::stackAllocate(const uint32_t sizeBits) {
-    stackOffset_ += sizeBits;
+    // TODO: Handle non-multiples of 64 bits correctly
+    stackOffset_ += (sizeBits + 63) / 64 * 64;
     return stackOffsetOperand(stackOffset_);
 }
 
