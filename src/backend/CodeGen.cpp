@@ -225,25 +225,18 @@ std::string_view computeBinaryComparisonAsmSuffix(const IR::OpCode opcode) {
 }
 }  // namespace
 
-void CodeGen::generateBinaryOperation(const IR::Instruction& binOp) {
-    const IR::OpCode opcode = binOp.getOpcode();
+void CodeGen::generateBinaryOperation(const IR::OpCode opcode, const std::string& locA,
+                                      const std::string& locB) {
     assert(IR::isBinaryOp(opcode));
-
-    assert(binOp.getOperands().size() == 2);
-    const IR::Value* a = binOp.getOperands()[0];
-    const IR::Value* b = binOp.getOperands()[1];
-
-    const uint32_t stackOffsetA = getStoredStackOffsetOrGenerate(a);
-    const uint32_t stackOffsetB = getStoredStackOffsetOrGenerate(b);
 
     const std::string_view prefix = computeBinaryOperationAsmCode(opcode);
     if (opcode == IR::OpCode::DIV) {
-        loadToRax(stackOffsetA);
+        mov(locA, rax());
         output_ << "cqo\n";
-        output_ << prefix << " qword ptr " << stackOffsetOperand(stackOffsetB) << "\n";
+        output_ << prefix << " qword ptr " << locB << "\n";
     } else {
-        loadToRax(stackOffsetA);
-        output_ << prefix << " " << rax() << ", " << stackOffsetOperand(stackOffsetB) << "\n";
+        mov(locA, rax());
+        output_ << prefix << " " << rax() << ", " << locB << "\n";
 
         if (IR::isBinaryComparisonOp(opcode)) {
             const std::string_view suffix = computeBinaryComparisonAsmSuffix(opcode);
@@ -251,6 +244,19 @@ void CodeGen::generateBinaryOperation(const IR::Instruction& binOp) {
             output_ << "movzx rax, al\n";
         }
     }
+}
+
+void CodeGen::generateBinaryOperation(const IR::Instruction& binOp) {
+    assert(binOp.getOperands().size() == 2);
+
+    const IR::Value* operandA = binOp.getOperands()[0];
+    const IR::Value* operandB = binOp.getOperands()[1];
+
+    const int32_t stackOffsetA = getStoredStackOffsetOrGenerate(operandA);
+    const int32_t stackOffsetB = getStoredStackOffsetOrGenerate(operandB);
+
+    generateBinaryOperation(binOp.getOpcode(), stackOffsetOperand(stackOffsetA),
+                            stackOffsetOperand(stackOffsetB));
 
     const std::string loc = stackAllocate(binOp);
     mov(rax(), loc);
@@ -314,10 +320,9 @@ void CodeGen::generateGep(const IR::Instruction& gep) {
     const uint32_t baseStackOffset = getStoredStackOffsetOrGenerate(base);
     const uint32_t idxStackOffset = getStoredStackOffsetOrGenerate(idx);
 
-    loadToRax(baseStackOffset);
-    loadToRbx(idxStackOffset);
-    const std::string calc = rax() + '+' + rbx() + '*' + std::to_string(elemSize / 8);
-    lea(deref(calc), rax());
+    generateBinaryOperation(IR::OpCode::MUL, stackOffsetOperand(idxStackOffset),
+                            std::to_string(elemSize / 8));
+    generateBinaryOperation(IR::OpCode::ADD, rax(), stackOffsetOperand(baseStackOffset));
 
     const std::string writeLoc = stackAllocate(gep);
     mov(rax(), writeLoc);
