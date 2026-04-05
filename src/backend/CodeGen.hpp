@@ -19,7 +19,7 @@ class CodeGen {
     /// In bits.
     uint32_t stackOffset_ = 0;
 
-    std::unordered_map<const IR::Value*, uint32_t> storedStackOffsets_;
+    std::unordered_map<const IR::Value*, int32_t> storedStackOffsets_;
     std::unordered_map<const IR::BasicBlock*, std::string> labels_;
 
    public:
@@ -33,23 +33,28 @@ class CodeGen {
     void mov(const std::string& src, const std::string& dst);
     void lea(const std::string& loc, const std::string& dst);
 
-    static std::string deref(const std::string& loc) { return '[' + loc + ']'; }
-    static std::string rax() { return "rax"; }
-    static std::string rbx() { return "rbx"; }
-    static std::string rdi() { return "rdi"; }
+    void updateRsp();
 
-    static std::string stackOffsetOperand(uint32_t stackOffsetBits);
-    static std::string getNameWithPrefix(std::string_view name);
+    [[nodiscard]] static std::string deref(const std::string& loc) { return '[' + loc + ']'; }
+    [[nodiscard]] static std::string rax() { return "rax"; }
+    [[nodiscard]] static std::string rbx() { return "rbx"; }
+    [[nodiscard]] static std::string rdi() { return "rdi"; }
+
+    [[nodiscard]] static std::string stackOffsetOperand(int32_t stackOffsetBits);
+    [[nodiscard]] static std::string stackOffsetOperand(const uint32_t stackOffsetBits) {
+        return stackOffsetOperand(static_cast<int32_t>(stackOffsetBits));
+    }
+    [[nodiscard]] static std::string getNameWithPrefix(std::string_view name);
 
    private:
     std::string stackAllocate(uint32_t sizeBits);
     std::string stackAllocate(const IR::Value& value);
 
-    void loadToRax(uint32_t stackOffset);
-    void loadToRbx(uint32_t stackOffset);
-    void loadToRdi(uint32_t stackOffset);
+    void loadToRax(int32_t stackOffset);
+    void loadToRbx(int32_t stackOffset);
+    void loadToRdi(int32_t stackOffset);
 
-    uint32_t getStoredStackOffsetOrGenerate(const IR::Value* value);
+    int32_t getStoredStackOffsetOrGenerate(const IR::Value* value);
 
     void generateValue(const IR::Value& value);
 
@@ -58,6 +63,9 @@ class CodeGen {
     void generateInstruction(const IR::Instruction& instr);
     void generateConstant(const IR::ConstantValue& constant);
 
+    /// Stores the result in rax.
+    void generateBinaryOperation(IR::OpCode opcode, const std::string& locA,
+                                 const std::string& locB);
     void generateBinaryOperation(const IR::Instruction& binOp);
 
     void generateAlloca(const IR::Instruction& alloca);
@@ -69,6 +77,7 @@ class CodeGen {
 
     void generateRet(const IR::Instruction& ret);
 
+    void generateCall(const IR::Instruction& call);
     void generateSyscall(const IR::Instruction& sysc);
     void generateExit();
 };

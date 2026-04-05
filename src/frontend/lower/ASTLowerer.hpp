@@ -44,15 +44,14 @@ class ASTLowerer {
     void exitScope() { scopedSymbolAdresses_.pop_back(); }
 
     void declareSymbol(std::string_view name, IR::Value* value);
-    [[nodiscard]] IR::Value& lookupSymbolAddress(const std::string_view name) const;
+    [[nodiscard]] IR::Value& lookupSymbolAddress(std::string_view name) const;
 
     void declareFunction(std::string_view name, std::span<AST::VariableDefinition*> parameters,
-                         TypeID returnTypeID, bool isExported);
+                         TypeID returnTypeID, bool isExported, bool isExternal);
 
     void lowerExternalFunction(const AST::ExternalFunctionDeclaration& funcDecl) {
-        const ScopeGuard scopeGuard(*this);  // For the parameters
         declareFunction(funcDecl.identifier_->name_, funcDecl.parameters_, funcDecl.returnTypeID_,
-                        false);
+                        false, true);
     }
 
     void lowerFunction(const AST::FunctionDefinition& funcDef);

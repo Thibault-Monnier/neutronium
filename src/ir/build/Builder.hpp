@@ -18,8 +18,8 @@ class Builder {
    public:
     explicit Builder(Module& ir) : module_(ir) {}
 
-    Function& beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                            const Type& returnType, bool isExported);
+    Function& beginFunction(std::string_view name, std::vector<Argument*>&& arguments,
+                            const Type& returnType, bool isExported, bool isExternal);
 
     Value& createIntegerConstant(const Type& type, const int64_t value) {
         return registerValue(IntegerConstant{type, value});
@@ -27,6 +27,7 @@ class Builder {
     Value& createBooleanConstant(const bool value) {
         return registerValue(IntegerConstant{boolType(), value ? 1 : 0});
     }
+    Argument& createArgument(const Type& type) { return registerValue(Argument{type}); }
 
     Value& createAddInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::ADD); }
     Value& createSubInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::SUB); }

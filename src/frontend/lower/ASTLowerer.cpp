@@ -73,20 +73,27 @@ IR::Value& ASTLowerer::lookupSymbolAddress(const std::string_view name) const {
 
 void ASTLowerer::declareFunction(const std::string_view name,
                                  const std::span<AST::VariableDefinition*> parameters,
-                                 const TypeID returnTypeID, const bool isExported) {
-    std::vector<const IR::Type*> parameterTypes;
-    parameterTypes.reserve(parameters.size());
+                                 const TypeID returnTypeID, const bool isExported,
+                                 const bool isExternal) {
+    std::vector<IR::Argument*> args;
     for (const auto* param : parameters) {
-        parameterTypes.push_back(&convertType(param->typeID_));
+        IR::Argument& arg = builder_.createArgument(convertType(param->typeID_));
+        args.push_back(&arg);
     }
 
-    const IR::Function& func = builder_.beginFunction(name, std::move(parameterTypes),
-                                                      convertType(returnTypeID), isExported);
+    const IR::Function& func = builder_.beginFunction(
+        name, std::move(args), convertType(returnTypeID), isExported, isExternal);
+
+    if (isExternal) return;
 
     for (size_t i = 0; i < parameters.size(); ++i) {
         const auto* param = parameters[i];
-        IR::Value& paramAddress = *func.getParameters()[i];
-        declareSymbol(param->identifier_->name_, &paramAddress);
+        IR::Argument* arg = func.getArguments()[i];
+
+        IR::Value& address = builder_.createAllocaInstr(arg->getType());
+        builder_.createStoreInstr(address, *arg);
+
+        declareSymbol(param->identifier_->name_, &address);
     }
 }
 
@@ -95,11 +102,9 @@ void ASTLowerer::lowerFunction(const AST::FunctionDefinition& funcDef) {
 
     const TypeID returnTypeID = funcDef.returnTypeID_;
     declareFunction(funcDef.identifier_->name_, funcDef.parameters_, returnTypeID,
-                    funcDef.isExported());
+                    funcDef.isExported(), false);
 
-    for (const auto* stmt : funcDef.body_->body_) {
-        lowerStatement(*stmt);
-    }
+    lowerStatement(*funcDef.body_);
 
     const Type& type = typeManager_.getType(returnTypeID);
     if (type.isVoid()) {

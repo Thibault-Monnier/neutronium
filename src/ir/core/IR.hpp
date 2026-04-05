@@ -94,8 +94,10 @@ inline bool isBinaryOp(const OpCode op) {
 class Value {
     const Type* type_;
 
-   public:
+   protected:
     explicit Value(const Type& type) : type_(&type) {}
+
+   public:
     virtual ~Value() = default;
 
     [[nodiscard]] const Type& getType() const { return *type_; }
@@ -115,6 +117,11 @@ class IntegerConstant : public ConstantValue {
     }
 
     [[nodiscard]] int64_t getValue() const { return value_; }
+};
+
+class Argument : public Value {
+   public:
+    explicit Argument(const Type& type) : Value(type) {}
 };
 
 class Instruction : public Value {
@@ -142,18 +149,20 @@ class BasicBlock : public Value {
 
 class Function : public Value {
     std::string_view name_;
-    std::vector<Value*> parameters_;
+    std::vector<Argument*> arguments_;
     std::vector<std::unique_ptr<BasicBlock>> basicBlocks_;
 
     bool isExported_;
+    bool isExternal_;
 
    public:
-    explicit Function(const std::string_view name, std::vector<Value*>&& parameters,
-                      const Type& returnType, const bool isExported)
+    explicit Function(const std::string_view name, std::vector<Argument*>&& arguments,
+                      const Type& returnType, const bool isExported, const bool isExternal)
         : Value(returnType),
           name_(name),
-          parameters_(std::move(parameters)),
-          isExported_(isExported) {}
+          arguments_(std::move(arguments)),
+          isExported_(isExported),
+          isExternal_(isExternal) {}
 
     BasicBlock& newBlock(const Type& voidTypeInstance) {
         return *basicBlocks_.emplace_back(std::make_unique<BasicBlock>(voidTypeInstance));
@@ -161,13 +170,14 @@ class Function : public Value {
 
     [[nodiscard]] std::string_view getName() const { return name_; }
 
-    [[nodiscard]] const std::vector<Value*>& getParameters() const { return parameters_; }
+    [[nodiscard]] const std::vector<Argument*>& getArguments() const { return arguments_; }
 
     [[nodiscard]] const std::vector<std::unique_ptr<BasicBlock>>& getBasicBlocks() const {
         return basicBlocks_;
     }
 
     [[nodiscard]] bool isExported() const { return isExported_; }
+    [[nodiscard]] bool isExternal() const { return isExternal_; }
 };
 
 class Module {

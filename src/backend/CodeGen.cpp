@@ -1,5 +1,6 @@
 #include "CodeGen.hpp"
 
+#include <ranges>
 #include <utility>
 
 namespace Backend {
@@ -19,6 +20,7 @@ neutro::FastStringStream CodeGen::generate() {
     }
 
     for (const std::unique_ptr<IR::Function>& func : ir_.getFunctions()) {
+        if (func->isExternal()) continue;
         generateFunction(*func);
     }
 
@@ -33,8 +35,15 @@ void CodeGen::lea(const std::string& loc, const std::string& dst) {
     output_ << "lea " << dst << ", " << loc << "\n";
 }
 
-std::string CodeGen::stackOffsetOperand(const uint32_t stackOffsetBits) {
-    return "[rbp - " + std::to_string(stackOffsetBits / 8) + "]";
+void CodeGen::updateRsp() { lea(stackOffsetOperand(stackOffset_), "rsp"); }
+
+std::string CodeGen::stackOffsetOperand(const int32_t stackOffsetBits) {
+    const std::string val = std::to_string(std::abs(stackOffsetBits / 8));
+    if (stackOffsetBits >= 0) {
+        return "[rbp - " + val + "]";
+    } else {
+        return "[rbp + " + val + "]";
+    }
 }
 
 std::string CodeGen::getNameWithPrefix(const std::string_view name) {
@@ -53,22 +62,22 @@ std::string CodeGen::stackAllocate(const IR::Value& value) {
     return operand;
 }
 
-void CodeGen::loadToRax(const uint32_t stackOffset) {
+void CodeGen::loadToRax(const int32_t stackOffset) {
     const std::string src = stackOffsetOperand(stackOffset);
     mov(src, rax());
 }
 
-void CodeGen::loadToRbx(const uint32_t stackOffset) {
+void CodeGen::loadToRbx(const int32_t stackOffset) {
     const std::string src = stackOffsetOperand(stackOffset);
     mov(src, rbx());
 }
 
-void CodeGen::loadToRdi(const uint32_t stackOffset) {
+void CodeGen::loadToRdi(const int32_t stackOffset) {
     const std::string src = stackOffsetOperand(stackOffset);
     mov(src, rdi());
 }
 
-uint32_t CodeGen::getStoredStackOffsetOrGenerate(const IR::Value* value) {
+int32_t CodeGen::getStoredStackOffsetOrGenerate(const IR::Value* value) {
     const auto it = storedStackOffsets_.find(value);
     if (it != storedStackOffsets_.end()) return it->second;
 
@@ -85,6 +94,9 @@ void CodeGen::generateValue(const IR::Value& value) {
         generateInstruction(*instr);
     } else if (auto* constant = dynamic_cast<const IR::ConstantValue*>(&value)) {
         generateConstant(*constant);
+    } else if (auto* _ = dynamic_cast<const IR::Argument*>(&value)) {
+        // Should never have to generate an argument
+        std::unreachable();
     } else {
         std::unreachable();
     }
@@ -111,6 +123,13 @@ void CodeGen::generateFunction(const IR::Function& func) {
         const size_t nbLabels = labels_.size();
         const std::string newLabel = ".L" + std::to_string(nbLabels);
         labels_.emplace(bb.get(), newLabel);
+    }
+
+    // Register arguments stack offsets
+    int32_t currOffset = -16 * 8;  // [rbp] is the saved rbp, [rbp + 8] is the return address
+    for (const auto* arg : std::views::reverse(func.getArguments())) {
+        storedStackOffsets_.emplace(arg, currOffset);
+        currOffset -= static_cast<int32_t>(arg->getType().computeSizeBits());
     }
 
     // Generate
@@ -159,8 +178,8 @@ void CodeGen::generateInstruction(const IR::Instruction& instr) {
             break;
 
         case IR::OpCode::CALL:
-            // NYI
-            std::unreachable();
+            generateCall(instr);
+            break;
 
         case IR::OpCode::RET:
             generateRet(instr);
@@ -286,7 +305,7 @@ void CodeGen::generateLoad(const IR::Instruction& load) {
     assert(load.getOperands().size() == 1);
 
     const IR::Value* address = load.getOperands()[0];
-    const uint32_t stackOffset = getStoredStackOffsetOrGenerate(address);
+    const int32_t stackOffset = getStoredStackOffsetOrGenerate(address);
     loadToRax(stackOffset);
     mov(deref(rax()), rax());
 
@@ -301,8 +320,8 @@ void CodeGen::generateStore(const IR::Instruction& store) {
     const IR::Value* address = store.getOperands()[0];
     const IR::Value* value = store.getOperands()[1];
 
-    const uint32_t addressStackOffset = getStoredStackOffsetOrGenerate(address);
-    const uint32_t valueStackOffset = getStoredStackOffsetOrGenerate(value);
+    const int32_t addressStackOffset = getStoredStackOffsetOrGenerate(address);
+    const int32_t valueStackOffset = getStoredStackOffsetOrGenerate(value);
     loadToRax(addressStackOffset);
     loadToRbx(valueStackOffset);
     mov(rbx(), deref(rax()));
@@ -317,8 +336,8 @@ void CodeGen::generateGep(const IR::Instruction& gep) {
     const IR::Value* base = gep.getOperands()[0];
     const IR::Value* idx = gep.getOperands()[1];
 
-    const uint32_t baseStackOffset = getStoredStackOffsetOrGenerate(base);
-    const uint32_t idxStackOffset = getStoredStackOffsetOrGenerate(idx);
+    const int32_t baseStackOffset = getStoredStackOffsetOrGenerate(base);
+    const int32_t idxStackOffset = getStoredStackOffsetOrGenerate(idx);
 
     generateBinaryOperation(IR::OpCode::MUL, stackOffsetOperand(idxStackOffset),
                             std::to_string(elemSize / 8));
@@ -346,7 +365,7 @@ void CodeGen::generateBr(const IR::Instruction& br) {
         assert(condition->getType().isBoolean());
         assert(bbTrue && bbFalse);
 
-        const uint32_t conditionStackOffset = getStoredStackOffsetOrGenerate(condition);
+        const int32_t conditionStackOffset = getStoredStackOffsetOrGenerate(condition);
         loadToRax(conditionStackOffset);
         output_ << "test " << rax() << ", " << rax() << "\n";
         output_ << "jne " << labels_.at(bbTrue) << "\n";
@@ -365,12 +384,45 @@ void CodeGen::generateRet(const IR::Instruction& ret) {
     } else {
         assert(ret.getOperands().size() == 1);
         const IR::Value* val = ret.getOperands()[0];
-        const uint32_t stackOffset = getStoredStackOffsetOrGenerate(val);
+        const int32_t stackOffset = getStoredStackOffsetOrGenerate(val);
         loadToRax(stackOffset);
     }
 
     output_ << "leave\n";
     output_ << "ret\n";
+}
+
+void CodeGen::generateCall(const IR::Instruction& call) {
+    assert(call.getOpcode() == IR::OpCode::CALL);
+    assert(call.getOperands().size() >= 1);
+
+    const auto* callee = dynamic_cast<const IR::Function*>(call.getOperands()[0]);
+    assert(callee);
+    const std::string_view calleeName = callee->getName();
+
+    std::vector<int32_t> argumentStackOffsets;
+    for (const auto* arg : call.getOperands() | std::views::drop(1)) {
+        const int32_t stackOffset = getStoredStackOffsetOrGenerate(arg);
+        argumentStackOffsets.push_back(stackOffset);
+    }
+
+    for (size_t i = 0; i < argumentStackOffsets.size(); ++i) {
+        const IR::Value* arg = call.getOperands()[i + 1];
+        const int32_t stackOffset = argumentStackOffsets[i];
+
+        const std::string writeLoc = stackAllocate(*arg);
+        loadToRax(stackOffset);
+        mov(rax(), writeLoc);
+    }
+
+    updateRsp();
+
+    output_ << "call " << getNameWithPrefix(calleeName) << "\n";
+
+    if (call.getType().isVoid()) return;
+
+    const std::string writeLoc = stackAllocate(call);
+    mov(rax(), writeLoc);
 }
 
 void CodeGen::generateSyscall(const IR::Instruction& sysc) {
@@ -383,7 +435,9 @@ void CodeGen::generateSyscall(const IR::Instruction& sysc) {
     assert(syscNumber == 60);  // Only `exit` is supported for now
 
     const IR::Value* val = sysc.getOperands()[1];
-    const uint32_t stackOffset = getStoredStackOffsetOrGenerate(val);
+    const int32_t stackOffset = getStoredStackOffsetOrGenerate(val);
+
+    updateRsp();
 
     loadToRdi(stackOffset);
     mov(std::to_string(syscNumber), rax());

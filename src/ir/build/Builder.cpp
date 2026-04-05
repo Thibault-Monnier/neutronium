@@ -6,16 +6,11 @@
 
 namespace IR {
 
-Function& Builder::beginFunction(std::string_view name, std::vector<const Type*>&& parameterTypes,
-                                 const Type& returnType, const bool isExported) {
-    std::vector<Value*> parameters;
-    parameters.reserve(parameterTypes.size());
-    for (const auto& param : parameterTypes) {
-        const Type& parameterType = ptrType(*param);
-        parameters.push_back(&registerValue(Value{parameterType}));
-    }
-
-    Function& func = module_.addFunction(Function{name, std::move(parameters), returnType, isExported});
+Function& Builder::beginFunction(std::string_view name, std::vector<Argument*>&& arguments,
+                                 const Type& returnType, const bool isExported,
+                                 const bool isExternal) {
+    Function& func = module_.addFunction(
+        Function{name, std::move(arguments), returnType, isExported, isExternal});
     functionTable_.emplace(name, func);
     currentFunction_ = &func;
     setInsertionPoint(createBasicBlock());
