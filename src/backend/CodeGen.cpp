@@ -58,7 +58,8 @@ std::string CodeGen::stackAllocate(const uint32_t sizeBits) {
 
 std::string CodeGen::stackAllocate(const IR::Value& value) {
     const std::string operand = stackAllocate(value.getType().computeSizeBits());
-    storedStackOffsets_.emplace(&value, stackOffset_);
+    auto [it, inserted] = storedStackOffsets_.emplace(&value, stackOffset_);
+    assert(inserted);
     return operand;
 }
 
@@ -72,9 +73,19 @@ void CodeGen::loadToRbx(const int32_t stackOffset) {
     mov(src, rbx());
 }
 
+void CodeGen::loadToRcx(const int32_t stackOffset) {
+    const std::string src = stackOffsetOperand(stackOffset);
+    mov(src, rcx());
+}
+
 void CodeGen::loadToRdi(const int32_t stackOffset) {
     const std::string src = stackOffsetOperand(stackOffset);
     mov(src, rdi());
+}
+
+void CodeGen::loadToRsi(const int32_t stackOffset) {
+    const std::string src = stackOffsetOperand(stackOffset);
+    mov(src, rsi());
 }
 
 int32_t CodeGen::getStoredStackOffsetOrGenerate(const IR::Value* value) {
@@ -143,6 +154,8 @@ void CodeGen::generateBasicBlock(const IR::BasicBlock& bb) {
 }
 
 void CodeGen::generateInstruction(const IR::Instruction& instr) {
+    if (storedStackOffsets_.contains(&instr)) return;
+
     switch (instr.getOpcode()) {
         case IR::OpCode::ADD:
         case IR::OpCode::SUB:
@@ -173,6 +186,10 @@ void CodeGen::generateInstruction(const IR::Instruction& instr) {
             generateGep(instr);
             break;
 
+        case IR::OpCode::MEMCPY:
+            generateMemcpy(instr);
+            break;
+
         case IR::OpCode::BR:
             generateBr(instr);
             break;
@@ -192,6 +209,8 @@ void CodeGen::generateInstruction(const IR::Instruction& instr) {
 }
 
 void CodeGen::generateConstant(const IR::ConstantValue& constant) {
+    if (storedStackOffsets_.contains(&constant)) return;
+
     if (auto* integerConst = dynamic_cast<const IR::IntegerConstant*>(&constant)) {
         const std::string loc = stackAllocate(constant);
         const int64_t val = integerConst->getValue();
@@ -283,6 +302,7 @@ void CodeGen::generateBinaryOperation(const IR::Instruction& binOp) {
 
 void CodeGen::generateAlloca(const IR::Instruction& alloca) {
     assert(alloca.getOpcode() == IR::OpCode::ALLOCA);
+    assert(alloca.getType().isPointer());
 
     const IR::Type& type = alloca.getType();
     const uint32_t elementSize = type.getSubtype().computeSizeBits();
@@ -347,6 +367,26 @@ void CodeGen::generateGep(const IR::Instruction& gep) {
     mov(rax(), writeLoc);
 }
 
+void CodeGen::generateMemcpy(const IR::Instruction& memcpy) {
+    assert(memcpy.getOpcode() == IR::OpCode::MEMCPY);
+    assert(memcpy.getOperands().size() == 3);
+
+    const IR::Value* dest = memcpy.getOperands()[0];
+    const IR::Value* src = memcpy.getOperands()[1];
+    const IR::Value* size = memcpy.getOperands()[2];
+
+    const int32_t destStackOffset = getStoredStackOffsetOrGenerate(dest);
+    const int32_t srcStackOffset = getStoredStackOffsetOrGenerate(src);
+    const int32_t sizeStackOffset = getStoredStackOffsetOrGenerate(size);
+
+    loadToRdi(destStackOffset);
+    loadToRsi(srcStackOffset);
+    loadToRcx(sizeStackOffset);
+
+    output_ << "cld\n";
+    output_ << "rep movsb\n";
+}
+
 void CodeGen::generateBr(const IR::Instruction& br) {
     assert(br.getOpcode() == IR::OpCode::BR);
 
@@ -409,9 +449,15 @@ void CodeGen::generateCall(const IR::Instruction& call) {
     for (size_t i = 0; i < argumentStackOffsets.size(); ++i) {
         const IR::Value* arg = call.getOperands()[i + 1];
         const int32_t stackOffset = argumentStackOffsets[i];
-
-        const std::string writeLoc = stackAllocate(*arg);
         loadToRax(stackOffset);
+
+        if (arg->getType().holdsSubtype() && arg->getType().getSubtype().isArray()) {
+            // Arrays are passed as pointers, so we shouldn't dereference here
+        } else if (arg->getType().isPointer()) {
+            mov(deref(rax()), rax());
+        }
+
+        const std::string writeLoc = stackAllocate(arg->getType().computeSizeBits());
         mov(rax(), writeLoc);
     }
 

@@ -38,7 +38,9 @@ class CodeGen {
     [[nodiscard]] static std::string deref(const std::string& loc) { return '[' + loc + ']'; }
     [[nodiscard]] static std::string rax() { return "rax"; }
     [[nodiscard]] static std::string rbx() { return "rbx"; }
+    [[nodiscard]] static std::string rcx() { return "rcx"; }
     [[nodiscard]] static std::string rdi() { return "rdi"; }
+    [[nodiscard]] static std::string rsi() { return "rsi"; }
 
     [[nodiscard]] static std::string stackOffsetOperand(int32_t stackOffsetBits);
     [[nodiscard]] static std::string stackOffsetOperand(const uint32_t stackOffsetBits) {
@@ -52,7 +54,9 @@ class CodeGen {
 
     void loadToRax(int32_t stackOffset);
     void loadToRbx(int32_t stackOffset);
+    void loadToRcx(int32_t stackOffset);
     void loadToRdi(int32_t stackOffset);
+    void loadToRsi(int32_t stackOffset);
 
     int32_t getStoredStackOffsetOrGenerate(const IR::Value* value);
 
@@ -72,6 +76,8 @@ class CodeGen {
     void generateLoad(const IR::Instruction& load);
     void generateStore(const IR::Instruction& store);
     void generateGep(const IR::Instruction& gep);
+
+    void generateMemcpy(const IR::Instruction& memcpy);
 
     void generateBr(const IR::Instruction& br);
 

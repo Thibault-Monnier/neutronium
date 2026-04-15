@@ -48,14 +48,18 @@ class Builder {
     Value& createNegInstr(Value& operand);
     Value& createNotInstr(Value& operand);
 
-    Value& createAllocaInstr(const Type& elementType, uint32_t nbElements);
+    Value& createAllocaInstr(const Type& type, uint32_t nbElements);
     Value& createAllocaInstr(const Type& type) { return createAllocaInstr(type, 1); }
-    Value& createArrayAllocaInstr(const Type& arrayType);
+    Value& createArrayAllocaInstr(const Type& arrayType) {
+        return createAllocaInstr(arrayType, arrayType.getArrayElementCount());
+    }
 
     Value& createStoreInstr(Value& location, Value& value);
     Value& createLoadInstr(Value& location);
 
     Value& createGetElementPtrInstr(Value& val, Value& index);
+
+    Value& createMemcpyInstr(Value& dest, Value& src, Value& size);
 
     Value& createConditionalBranchInstr(Value& condition, BasicBlock& trueBlock,
                                         BasicBlock& falseBlock);

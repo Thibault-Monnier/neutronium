@@ -42,9 +42,14 @@ enum class OpCode : uint8_t {
     LOAD,
     /// Stores the second operand to the first operand in memory.
     STORE,
-    /// Calculates the address of the i-th element in an array, where i is the second operand and
-    /// the array is the first operand.
+    /// Calculates the address: base + index * elementSize. The first operand is a pointer to the
+    /// base, and the second operand is the index. Returns the calculated address as a pointer.
     GEP,
+
+    /// Copies a block of memory from a source address to a destination address. The first operand
+    /// is the destination address, the second operand is the source address, and the third operand
+    /// is the number of bytes to copy.
+    MEMCPY,
 
     /// If there is one operand, unconditionally jumps to the basic block in that operand. If there
     /// are three operands, jumps to the basic block in the second operand if the first operand is
@@ -53,7 +58,8 @@ enum class OpCode : uint8_t {
 
     /// Calls the function in the first operand with the rest of the operands as arguments.
     CALL,
-    /// Returns the first operand from the current function.
+    /// Returns the first operand from the current function if it isn't void or returns nothing if
+    /// the function is void.
     RET,
 
     /// Performs a system call. The first operand is the syscall number, and the rest of the

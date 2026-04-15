@@ -77,12 +77,25 @@ void ASTLowerer::declareFunction(const std::string_view name,
                                  const bool isExternal) {
     std::vector<IR::Argument*> args;
     for (const auto* param : parameters) {
-        IR::Argument& arg = builder_.createArgument(convertType(param->typeID_));
+        const IR::Type* paramType = &convertType(param->typeID_);
+
+        if (paramType->isArray()) {
+            // For arrays, we pass a pointer to the array.
+            paramType = &builder_.ptrType(*paramType);
+        }
+
+        IR::Argument& arg = builder_.createArgument(*paramType);
         args.push_back(&arg);
     }
 
-    const IR::Function& func = builder_.beginFunction(
-        name, std::move(args), convertType(returnTypeID), isExported, isExternal);
+    const IR::Type* returnType = &convertType(returnTypeID);
+    if (returnType->isArray()) {
+        // Return a pointer to the array.
+        returnType = &builder_.ptrType(*returnType);
+    }
+
+    const IR::Function& func =
+        builder_.beginFunction(name, std::move(args), *returnType, isExported, isExternal);
 
     if (isExternal) return;
 
@@ -160,16 +173,14 @@ void ASTLowerer::lowerVariableDefinition(const AST::VariableDefinition& varDef) 
     IR::Value& address = builder_.createAllocaInstr(varType);
     declareSymbol(varDef.identifier_->name_, &address);
 
-    IR::Value& value = lowerValueExpression(*varDef.value_);
-    builder_.createStoreInstr(lookupSymbolAddress(varDef.identifier_->name_), value);
+    lowerValueExpression(*varDef.value_, &address);
 }
 
 void ASTLowerer::lowerAssignment(const AST::Assignment& assignment) {
     IR::Value& place = lowerPlaceExpression(*assignment.place_);
-    IR::Value* value;
 
     if (assignment.operator_ == AST::Operator::ASSIGN) {
-        value = &lowerValueExpression(*assignment.value_);
+        lowerValueExpression(*assignment.value_, &place);
     } else {
         AST::Operator compoundOp;
         if (assignment.operator_ == AST::Operator::ADD_ASSIGN)
@@ -183,10 +194,10 @@ void ASTLowerer::lowerAssignment(const AST::Assignment& assignment) {
         else
             std::unreachable();
 
-        value = &lowerBinaryExpression(*assignment.place_, *assignment.value_, compoundOp);
+        IR::Value& value =
+            lowerBinaryExpression(*assignment.place_, *assignment.value_, compoundOp);
+        builder_.createStoreInstr(place, value);
     }
-
-    builder_.createStoreInstr(place, *value);
 }
 
 void ASTLowerer::lowerExpressionStatement(const AST::ExpressionStatement& exprStmt) {
@@ -265,35 +276,65 @@ void ASTLowerer::lowerExitStatement(const AST::ExitStatement& exitStmt) {
     builder_.createSyscallInstr(60, {&exitCode});
 }
 
-IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr) {
+IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr,
+                                            const std::optional<IR::Value*> place) {
+    IR::Value* value;
     switch (expr.kind_) {
         // Always values
         case AST::NodeKind::NUMBER_LITERAL:
-            return lowerNumberLiteral(*expr.as<AST::NumberLiteral>());
+            value = &lowerNumberLiteral(*expr.as<AST::NumberLiteral>());
+            break;
         case AST::NodeKind::BOOLEAN_LITERAL:
-            return lowerBooleanLiteral(*expr.as<AST::BooleanLiteral>());
+            value = &lowerBooleanLiteral(*expr.as<AST::BooleanLiteral>());
+            break;
         case AST::NodeKind::FUNCTION_CALL:
-            return lowerFunctionCall(*expr.as<AST::FunctionCall>());
+            value = &lowerFunctionCall(*expr.as<AST::FunctionCall>());
+            break;
         case AST::NodeKind::UNARY_EXPRESSION:
-            return lowerUnaryExpression(*expr.as<AST::UnaryExpression>());
+            value = &lowerUnaryExpression(*expr.as<AST::UnaryExpression>());
+            break;
         case AST::NodeKind::BINARY_EXPRESSION:
-            return lowerBinaryExpression(*expr.as<AST::BinaryExpression>());
+            value = &lowerBinaryExpression(*expr.as<AST::BinaryExpression>());
+            break;
 
-        // Always addresses
         case AST::NodeKind::ARRAY_LITERAL:
+            return lowerArrayLiteral(*expr.as<AST::ArrayLiteral>(), place);
         case AST::NodeKind::REPEAT_ARRAY_LITERAL:
-            return lowerPlaceExpression(expr);
+            return lowerRepeatArrayLiteral(*expr.as<AST::RepeatArrayLiteral>(), place);
 
         // Places that need to be loaded
         case AST::NodeKind::IDENTIFIER:
         case AST::NodeKind::ARRAY_ACCESS: {
             IR::Value& address = lowerPlaceExpression(expr);
-            return builder_.createLoadInstr(address);
+
+            if (address.getType().holdsSubtype() && address.getType().getSubtype().isArray()) {
+                // Don't load arrays
+                value = &address;
+            } else {
+                value = &builder_.createLoadInstr(address);
+            }
+
+            break;
         }
 
         default:
             std::unreachable();
     }
+
+    if (place) {
+        const IR::Type& type = value->getType();
+        if (type.holdsSubtype() && type.getSubtype().isArray()) {
+            // For arrays, we use memcpy.
+            const uint32_t arraySizeBits = type.getSubtype().computeSizeBits();
+            IR::Value& arraySizeBytes =
+                builder_.createIntegerConstant(builder_.intType(64), arraySizeBits / 8);
+            builder_.createMemcpyInstr(*place.value(), *value, arraySizeBytes);
+        } else {
+            builder_.createStoreInstr(*place.value(), *value);
+        }
+    }
+
+    return *value;
 }
 
 IR::Value& ASTLowerer::lowerPlaceExpression(const AST::Expression& expr) {
@@ -302,18 +343,6 @@ IR::Value& ASTLowerer::lowerPlaceExpression(const AST::Expression& expr) {
             return lowerIdentifierAddress(*expr.as<AST::Identifier>());
         case AST::NodeKind::ARRAY_ACCESS:
             return lowerArrayAccessAddress(*expr.as<AST::ArrayAccess>());
-
-        case AST::NodeKind::ARRAY_LITERAL:
-            return lowerArrayLiteral(*expr.as<AST::ArrayLiteral>());
-        case AST::NodeKind::REPEAT_ARRAY_LITERAL:
-            return lowerRepeatArrayLiteral(*expr.as<AST::RepeatArrayLiteral>());
-
-        case AST::NodeKind::FUNCTION_CALL: {
-            IR::Value& value = lowerValueExpression(expr);
-            IR::Value& address = builder_.createAllocaInstr(value.getType());
-            builder_.createStoreInstr(address, value);
-            return address;
-        }
 
         default:
             std::unreachable();
@@ -337,8 +366,13 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     std::vector<IR::Value*> arguments;
     arguments.reserve(funcCall.arguments_.size());
     for (const auto* arg : funcCall.arguments_) {
-        arguments.push_back(&lowerValueExpression(*arg));
+        const IR::Type& type = convertType(arg->typeID_);
+        IR::Value& address = builder_.createAllocaInstr(type);
+        lowerValueExpression(*arg, &address);
+
+        arguments.push_back(&address);
     }
+
     return builder_.createCallInstr(funcCall.callee_->name_, std::move(arguments));
 }
 
@@ -349,28 +383,28 @@ IR::Value& ASTLowerer::lowerArrayAccessAddress(const AST::ArrayAccess& arrayAcce
     return builder_.createGetElementPtrInstr(array, index);
 }
 
-IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit) {
+IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit,
+                                         const std::optional<IR::Value*> place) {
     const IR::Type& type = convertType(arrayLit.typeID_);
 
-    IR::Value& arrayPtr = builder_.createArrayAllocaInstr(type);
+    IR::Value& arrayPtr = place ? *place.value() : builder_.createArrayAllocaInstr(type);
 
     for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
-        IR::Value& elementValue = lowerValueExpression(*arrayLit.elements_[i]);
-
         const IR::Type& indexType = builder_.intType(64);
         IR::Value& indexValue = builder_.createIntegerConstant(indexType, static_cast<int64_t>(i));
         IR::Value& elementPtr = builder_.createGetElementPtrInstr(arrayPtr, indexValue);
 
-        builder_.createStoreInstr(elementPtr, elementValue);
+        lowerValueExpression(*arrayLit.elements_[i], &elementPtr);
     }
 
     return arrayPtr;
 }
 
-IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit) {
+IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit,
+                                               const std::optional<IR::Value*> place) {
     const IR::Type& type = convertType(repeatArrayLit.typeID_);
 
-    IR::Value& arrayPtr = builder_.createArrayAllocaInstr(type);
+    IR::Value& arrayPtr = place ? *place.value() : builder_.createArrayAllocaInstr(type);
     IR::Value& elementValue = lowerValueExpression(*repeatArrayLit.element_);
 
     const int64_t count = repeatArrayLit.count_->value_;
@@ -381,6 +415,7 @@ IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& re
         IR::Value& indexValue = builder_.createIntegerConstant(indexType, static_cast<int64_t>(i));
         IR::Value& elementPtr = builder_.createGetElementPtrInstr(arrayPtr, indexValue);
         builder_.createStoreInstr(elementPtr, elementValue);
+        // TODO: Handle non-scalar elements (e.g. for multidimensional arrays) by using memcpy.
     }
 
     return arrayPtr;

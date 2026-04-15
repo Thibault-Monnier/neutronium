@@ -58,8 +58,9 @@ class ASTLowerer {
 
     void lowerStatement(const AST::Statement& stmt);
 
-    void lowerVariableDefinition(const AST::VariableDefinition& varDef);
     void lowerAssignment(const AST::Assignment& assignment);
+    void lowerVariableDefinition(const AST::VariableDefinition& varDef);
+
     void lowerExpressionStatement(const AST::ExpressionStatement& exprStmt);
     void lowerIfStatement(const AST::IfStatement& ifStmt);
     void lowerWhileStatement(const AST::WhileStatement& whileStmt);
@@ -68,7 +69,10 @@ class ASTLowerer {
     void lowerReturnStatement(const AST::ReturnStatement& returnStmt);
     void lowerExitStatement(const AST::ExitStatement& exitStmt);
 
-    IR::Value& lowerValueExpression(const AST::Expression& expr);
+    IR::Value& lowerValueExpression(const AST::Expression& expr, std::optional<IR::Value*> place);
+    IR::Value& lowerValueExpression(const AST::Expression& expr) {
+        return lowerValueExpression(expr, std::nullopt);
+    }
     IR::Value& lowerPlaceExpression(const AST::Expression& expr);
 
     IR::Value& lowerNumberLiteral(const AST::NumberLiteral& numberLit);
@@ -76,8 +80,10 @@ class ASTLowerer {
     [[nodiscard]] IR::Value& lowerIdentifierAddress(const AST::Identifier& identifier) const;
     IR::Value& lowerFunctionCall(const AST::FunctionCall& funcCall);
     IR::Value& lowerArrayAccessAddress(const AST::ArrayAccess& arrayAccess);
-    IR::Value& lowerArrayLiteral(const AST::ArrayLiteral& arrayLit);
-    IR::Value& lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit);
+    IR::Value& lowerArrayLiteral(const AST::ArrayLiteral& arrayLit,
+                                 std::optional<IR::Value*> place);
+    IR::Value& lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit,
+                                       std::optional<IR::Value*> place);
     IR::Value& lowerUnaryExpression(const AST::UnaryExpression& unaryExpr);
 
     IR::Value& lowerBinaryExpression(const AST::Expression& left, const AST::Expression& right,

@@ -76,6 +76,9 @@ class Type {
     [[nodiscard]] bool isPointer() const { return kind_ == Kind::PTR; }
     [[nodiscard]] bool isArray() const { return kind_ == Kind::ARRAY; }
 
+    /// A scalar type is a type that can be stored in a single register.
+    [[nodiscard]] bool isScalar() const { return isInteger() || isPointer(); }
+
     static Type intType(const uint32_t sizeBits) {
         assert(sizeBits == 1 || sizeBits == 8 || sizeBits == 16 || sizeBits == 32 ||
                sizeBits == 64);
