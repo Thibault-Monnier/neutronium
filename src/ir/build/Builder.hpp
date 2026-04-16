@@ -18,6 +18,11 @@ class Builder {
    public:
     explicit Builder(Module& ir) : module_(ir) {}
 
+    [[nodiscard]] const Function& getCurrentFunction() const { return *currentFunction_; }
+    [[nodiscard]] const Function& getFunction(const std::string_view name) const {
+        return functionTable_.at(name);
+    }
+
     Function& beginFunction(std::string_view name, std::vector<Argument*>&& arguments,
                             const Type& returnType, bool isExported, bool isExternal);
 

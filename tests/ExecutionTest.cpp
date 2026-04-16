@@ -735,7 +735,7 @@ TEST_F(NeutroniumTester, Arrays) {
     }
 }
 
-TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {
+TEST_F(NeutroniumTester, ArrayCopied) {
     {
         const std::string code = R"(
             fn main(): {
@@ -769,16 +769,15 @@ TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {
 TEST_F(NeutroniumTester, ArrayIndexFunctionCall) {
     {
         const std::string code = R"(
-            fn getArray() -> [int; 1]: {
-                let unused_ = true;
-                return [5];
+            fn getArray() -> [int; 3]: {
+                return [5, 1, 2];
             }
 
             fn main(): {
-                exit getArray()[0];
+                exit getArray()[0] - getArray()[1] + getArray()[2];  # 5 - 1 + 2 = 6
             }
         )";
-        EXPECT_EQ(run(code), 5);
+        EXPECT_EQ(run(code), 6);
     }
 
     {

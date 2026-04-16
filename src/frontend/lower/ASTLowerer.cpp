@@ -76,6 +76,15 @@ void ASTLowerer::declareFunction(const std::string_view name,
                                  const TypeID returnTypeID, const bool isExported,
                                  const bool isExternal) {
     std::vector<IR::Argument*> args;
+
+    const IR::Type* returnType = &convertType(returnTypeID);
+    if (returnType->isArray()) {
+        // Pass the pointer as a hidden first argument, return type becomes void.
+        returnType = &builder_.voidType();
+        const IR::Type& argType = builder_.ptrType(convertType(returnTypeID));
+        args.push_back(&builder_.createArgument(argType));
+    }
+
     for (const auto* param : parameters) {
         const IR::Type* paramType = &convertType(param->typeID_);
 
@@ -86,12 +95,6 @@ void ASTLowerer::declareFunction(const std::string_view name,
 
         IR::Argument& arg = builder_.createArgument(*paramType);
         args.push_back(&arg);
-    }
-
-    const IR::Type* returnType = &convertType(returnTypeID);
-    if (returnType->isArray()) {
-        // Return a pointer to the array.
-        returnType = &builder_.ptrType(*returnType);
     }
 
     const IR::Function& func =
@@ -263,12 +266,22 @@ void ASTLowerer::lowerContinueStatement() {
 }
 
 void ASTLowerer::lowerReturnStatement(const AST::ReturnStatement& returnStmt) {
-    if (returnStmt.returnValue_ != nullptr) {
-        IR::Value& returnValue = lowerValueExpression(*returnStmt.returnValue_);
-        builder_.createRetInstr(returnValue);
-    } else {
+    if (!returnStmt.returnValue_) {
         builder_.createRetInstr();
+        return;
     }
+
+    const Type& returnType = typeManager_.getType(returnStmt.returnValue_->typeID_);
+    if (returnType.isArray()) {
+        // Arrays are returned via a hidden pointer argument, so we should write there.
+        IR::Value* returnValueAddress = builder_.getCurrentFunction().getArguments()[0];
+        lowerValueExpression(*returnStmt.returnValue_, returnValueAddress);
+        builder_.createRetInstr();
+        return;
+    }
+
+    IR::Value& returnValue = lowerValueExpression(*returnStmt.returnValue_);
+    builder_.createRetInstr(returnValue);
 }
 
 void ASTLowerer::lowerExitStatement(const AST::ExitStatement& exitStmt) {
@@ -364,7 +377,14 @@ IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier)
 
 IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     std::vector<IR::Value*> arguments;
-    arguments.reserve(funcCall.arguments_.size());
+
+    const Type& returnType = typeManager_.getType(funcCall.typeID_);
+    if (returnType.isArray()) {
+        // For arrays, allocate space and pass a pointer as a hidden first argument.
+        IR::Value& returnValueAddress = builder_.createAllocaInstr(convertType(funcCall.typeID_));
+        arguments.push_back(&returnValueAddress);
+    }
+
     for (const auto* arg : funcCall.arguments_) {
         const IR::Type& type = convertType(arg->typeID_);
         IR::Value& address = builder_.createAllocaInstr(type);
@@ -373,7 +393,13 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
         arguments.push_back(&address);
     }
 
-    return builder_.createCallInstr(funcCall.callee_->name_, std::move(arguments));
+    IR::Value& call = builder_.createCallInstr(funcCall.callee_->name_, std::move(arguments));
+
+    if (returnType.isArray()) {
+        return *arguments[0];
+    } else {
+        return call;
+    }
 }
 
 IR::Value& ASTLowerer::lowerArrayAccessAddress(const AST::ArrayAccess& arrayAccess) {
