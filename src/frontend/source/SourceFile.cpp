@@ -51,7 +51,7 @@ void SourceManager::SourceFile::scanFileLineStarts() const {
     }
 
     // Add a sentinel value for easier calculations later
-    lineStarts_.push_back(static_cast<int>(size) + 1);
+    lineStarts_.push_back(static_cast<uint32_t>(size));
 
     lineStarts_.shrink_to_fit();
 }

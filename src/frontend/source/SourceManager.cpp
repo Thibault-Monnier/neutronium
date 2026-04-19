@@ -64,6 +64,8 @@ std::string_view SourceManager::getLineContents(const FileID fileID,
     const auto lineStarts = sourceFiles_[fileID].linesStarts();
     const uint32_t lineStart = lineStarts[lineNumber];
     const uint32_t nextLineStart = lineStarts[lineNumber + 1];
+    assert(lineStart <= contents.size());
+    assert(nextLineStart <= contents.size());
 
     // Exclude the newline character at the end of the line
     uint32_t length = nextLineStart - lineStart;
