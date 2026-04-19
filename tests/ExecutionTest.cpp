@@ -800,6 +800,23 @@ TEST_F(NeutroniumTester, ArrayCopied) {
         )";
         EXPECT_EQ(run(code), 255);  // -1 in 8-bit unsigned (linux exit code)
     }
+
+    {
+        // Check that arrays with small bool elements are copied
+        const std::string code = R"(
+            fn main(): {
+                let mut arr = [true, false, true];
+                let copy = arr;
+                arr[0] = false;
+                if copy[0]: { # should be true
+                    exit 1;
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        EXPECT_EQ(run(code), 1);
+    }
 }
 
 TEST_F(NeutroniumTester, ArrayIndexFunctionCall) {

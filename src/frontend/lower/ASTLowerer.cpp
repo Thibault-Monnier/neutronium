@@ -340,9 +340,8 @@ IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr,
         const IR::Type& type = value->getType();
         if (type.holdsSubtype() && type.getSubtype().isArray()) {
             // For arrays, we use memcpy.
-            const uint32_t arraySizeBits = type.getSubtype().computeSizeBits();
-            IR::Value& arraySizeBytes =
-                builder_.createIntegerConstant(builder_.intType(64), arraySizeBits / 8);
+            const uint32_t size = type.getSubtype().computeSizeBytes();
+            IR::Value& arraySizeBytes = builder_.createIntegerConstant(builder_.intType(64), size);
             builder_.createMemcpyInstr(*place.value(), *value, arraySizeBytes);
         } else {
             builder_.createStoreInstr(*place.value(), *value);
