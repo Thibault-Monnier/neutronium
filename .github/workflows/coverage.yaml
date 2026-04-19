@@ -22,10 +22,10 @@ jobs:
           sudo apt update
           sudo apt install -y cmake ninja-build build-essential lcov
 
-      - name: Setup GCC 14
+      - name: Setup GCC 15
         uses: egor-tensin/setup-gcc@v1
         with:
-          version: 14
+          version: 15
 
       - name: Make config script executable
         run: chmod +x ./configure-cmake.sh
@@ -33,8 +33,8 @@ jobs:
       - name: Configure with coverage flags
         run: ./configure-cmake.sh -DCOVERAGE=ON .
         env:
-          CXX: g++-14
-          CC: gcc-14
+          CXX: g++-15
+          CC: gcc-15
 
       - name: Build
         run: cmake --build build
