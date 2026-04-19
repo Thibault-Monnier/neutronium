@@ -73,7 +73,7 @@ std::string CodeGen::stackAllocate(const uint32_t sizeBits) {
 
 std::string CodeGen::stackAllocate(const IR::Value& value) {
     const std::string operand = stackAllocate(value.getType().computeSizeBits());
-    auto [it, inserted] = storedStackOffsets_.emplace(&value, stackOffset_);
+    [[maybe_unused]] auto [_, inserted] = storedStackOffsets_.emplace(&value, stackOffset_);
     assert(inserted);
     return operand;
 }
