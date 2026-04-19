@@ -1153,6 +1153,80 @@ TEST_F(NeutroniumTester, LogicalOperators) {
         testWithAB(false, true, 1);   // false || true = true
         testWithAB(false, false, 0);  // false || false = false
     }
+
+    {
+        const std::string code = R"(
+            fn and(a: bool, b: bool, c: bool) -> bool: {
+                return a && b && c;
+            }
+
+            fn main(): {
+                let a = {valA};
+                let b = {valB};
+                let c = {valC};
+
+                let result = and(a, b, c);
+                if result: {
+                    exit 1;
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        auto testWithABC = [&](const bool valA, const bool valB, const bool valC,
+                               const int expectedExit) {
+            std::string codeWithABC = code;
+            codeWithABC.replace(codeWithABC.find("{valA}"), 6, valA ? "true" : "false");
+            codeWithABC.replace(codeWithABC.find("{valB}"), 6, valB ? "true" : "false");
+            codeWithABC.replace(codeWithABC.find("{valC}"), 6, valC ? "true" : "false");
+            EXPECT_EQ(run(codeWithABC), expectedExit);
+        };
+        testWithABC(true, true, true, 1);     // true && true && true = true
+        testWithABC(true, true, false, 0);    // true && true && false = false
+        testWithABC(true, false, true, 0);    // true && false && true = false
+        testWithABC(true, false, false, 0);   // true && false && false = false
+        testWithABC(false, true, true, 0);    // false && true && true = false
+        testWithABC(false, true, false, 0);   // false && true && false = false
+        testWithABC(false, false, true, 0);   // false && false && true = false
+        testWithABC(false, false, false, 0);  // false && false && false = false
+    }
+
+    {
+        const std::string code = R"(
+            fn or(a: bool, b: bool, c: bool) -> bool: {
+                return a || b || c;
+            }
+
+            fn main(): {
+                let a = {valA};
+                let b = {valB};
+                let c = {valC};
+
+                let result = or(a, b, c);
+                if result: {
+                    exit 1;
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        auto testWithABC = [&](const bool valA, const bool valB, const bool valC,
+                               const int expectedExit) {
+            std::string codeWithABC = code;
+            codeWithABC.replace(codeWithABC.find("{valA}"), 6, valA ? "true" : "false");
+            codeWithABC.replace(codeWithABC.find("{valB}"), 6, valB ? "true" : "false");
+            codeWithABC.replace(codeWithABC.find("{valC}"), 6, valC ? "true" : "false");
+            EXPECT_EQ(run(codeWithABC), expectedExit);
+        };
+        testWithABC(true, true, true, 1);     // true || true || true = true
+        testWithABC(true, true, false, 1);    // true || true || false = true
+        testWithABC(true, false, true, 1);    // true || false || true = true
+        testWithABC(true, false, false, 1);   // true || false || false = true
+        testWithABC(false, true, true, 1);    // false || true || true = true
+        testWithABC(false, true, false, 1);   // false || true || false = true
+        testWithABC(false, false, true, 1);   // false || false || true = true
+        testWithABC(false, false, false, 0);  // false || false || false = false
+    }
 }
 
 TEST_F(NeutroniumTester, PrimeNumbersSieve) {
