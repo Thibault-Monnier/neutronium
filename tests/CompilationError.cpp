@@ -644,7 +644,7 @@ TEST_F(NeutroniumTester, FunctionArgumentsAreInvalid) {
         }
     )";
     const std::string error2 = compileFail(code2);
-    EXPECT_TRUE((error.contains("function") || error.contains("Function")) &&
+    EXPECT_TRUE((error2.contains("function") || error2.contains("Function")) &&
                 error2.contains("argument") && error2.contains("x") && error2.contains("2") &&
                 error2.contains("3"));
 
