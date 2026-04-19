@@ -851,15 +851,31 @@ TEST_F(NeutroniumTester, ArrayIndexFunctionCall) {
     }
 }
 
-TEST_F(NeutroniumTester, ArrayIndexWithInt16) {
-    const std::string code = R"(
-        fn main(): {
-            let arr = [10, 20, 30, 40];
-            let idx: int16 = 2;
-            exit arr[idx];  # should be 30
-        }
-    )";
-    EXPECT_EQ(run(code), 30);
+TEST_F(NeutroniumTester, ArrayIndexWithIndexOfDifferentType) {
+    {
+        const std::string code = R"(
+           fn main(): {
+                let arr = [10, 20, 30, 40];
+                let idx: int16 = 2;
+                exit arr[idx];  # should be 30
+            }
+        )";
+        EXPECT_EQ(run(code), 30);
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let arr = [[1, 2], [3, 4]];
+                let idx1: int16 = 0;
+                let idx2: int8 = 1;
+                let idx3: int32 = 1;
+                let idx4: int8 = 0;
+                exit arr[idx1][idx2] + arr[idx3][idx4];  # should be 2 + 3 = 5
+            }
+        )";
+        EXPECT_EQ(run(code), 5);
+    }
 }
 
 TEST_F(NeutroniumTester, ArrayElementTypeBubblesUp) {
