@@ -135,7 +135,8 @@ void CodeGen::generateFunction(const IR::Function& func) {
     int32_t currOffset = -16 * 8;  // [rbp] is the saved rbp, [rbp + 8] is the return address
     for (const auto* arg : std::views::reverse(func.getArguments())) {
         storedStackOffsets_.emplace(arg, currOffset);
-        currOffset -= static_cast<int32_t>(arg->getType().computeSizeBits());
+        currOffset -=
+            static_cast<int32_t>(arg->getType().computeSizeBytes()) * 8;  // Align to bytes
     }
 
     // Generate
