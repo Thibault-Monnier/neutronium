@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <ranges>
+#include <vector>
 
 namespace IR {
 
