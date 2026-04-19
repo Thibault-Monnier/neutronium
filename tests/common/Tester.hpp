@@ -12,38 +12,13 @@ class NeutroniumTester : public testing::Test {
    public:
     NeutroniumTester() = default;
 
-    [[nodiscard]] std::pair<int, std::string> compile(const std::string& code) const {
-        // Write the source file
-        {
-            std::ofstream out(sourceFile_);
-            out << code;
-        }
-
-        auto _ = chdir(projectRoot_.c_str());
-
-        const std::string errorFile = (projectRoot_ / "compile_error.log").string();
-        const std::string cmd = compiler_.string() + " -d " + sourceFile_.filename().string() +
-                                " > /dev/null 2> " + errorFile;
-
-        const int status = WEXITSTATUS(std::system(cmd.c_str()));
-
-        std::ifstream err(errorFile);
-        const std::string errorMsg((std::istreambuf_iterator(err)),
-                                   std::istreambuf_iterator<char>());
-        std::filesystem::remove(errorFile);
-
-        if (!errorMsg.empty()) {
-            std::cerr << errorMsg;
-            std::cerr.flush();
-        }
-
-        return {status, errorMsg};
+    [[nodiscard]] std::string compileFail(const std::string& code) const {
+        return compile(code, false);
     }
 
     [[nodiscard]] int run(const std::string& code) const {
-        auto [compileStatus, compileErr] = compile(code);
-        EXPECT_EQ(compileStatus, 0) << "Compilation failed unexpectedly:\n" << compileErr;
-        auto _ = chdir(originalCwd_.c_str());
+        compile(code, true);
+        chdir(originalCwd_.c_str());
         return WEXITSTATUS(std::system(outputBinary_.c_str()));
     }
 
@@ -53,10 +28,9 @@ class NeutroniumTester : public testing::Test {
     };
 
     [[nodiscard]] Output runWithOutput(const std::string& code) const {
-        auto [compileStatus, compileErr] = compile(code);
-        EXPECT_EQ(compileStatus, 0) << "Compilation failed unexpectedly:\n" << compileErr;
+        compile(code, true);
 
-        auto _ = chdir(originalCwd_.c_str());
+        chdir(originalCwd_.c_str());
 
         const std::string cmd = outputBinary_.string() + " 2>&1";
         FILE* pipe = popen(cmd.c_str(), "r");
@@ -71,6 +45,55 @@ class NeutroniumTester : public testing::Test {
         const int exitCode = WEXITSTATUS(pclose(pipe));
 
         return {.exit = exitCode, .output = result};
+    }
+
+   private:
+    std::string compile(const std::string& code, bool shouldSucceed) const {
+        // Write the source file
+        {
+            std::ofstream out(sourceFile_);
+            out << code;
+        }
+
+        chdir(projectRoot_.c_str());
+
+        const std::string errorFile = (projectRoot_ / "compile_error.log").string();
+        const std::string errorFileIr = (projectRoot_ / "compile_error_ir.log").string();
+
+        const std::string cmdBase = compiler_.string() + " -d " + sourceFile_.filename().string();
+        const std::string cmd = cmdBase + " > /dev/null 2> " + errorFile;
+        const std::string cmdWithIr = cmdBase + " --enable-ir" + " > /dev/null 2> " + errorFileIr;
+
+        const int status = WEXITSTATUS(std::system(cmd.c_str()));
+        const int irStatus = WEXITSTATUS(std::system(cmdWithIr.c_str()));
+
+        std::ifstream err(errorFile);
+        const std::string errorMsg((std::istreambuf_iterator(err)),
+                                   std::istreambuf_iterator<char>());
+        std::filesystem::remove(errorFile);
+
+        std::ifstream errIr(errorFileIr);
+        const std::string errorMsgIr((std::istreambuf_iterator(errIr)),
+                                     std::istreambuf_iterator<char>());
+        std::filesystem::remove(errorFileIr);
+
+        if (shouldSucceed) {
+            EXPECT_EQ(status, 0) << formatError("Compilation failed unexpectedly", errorMsg);
+            EXPECT_EQ(irStatus, 0) << formatError("IR compilation failed unexpectedly", errorMsgIr);
+        } else {
+            EXPECT_NE(status, 0) << formatError("Compilation succeeded unexpectedly");
+            EXPECT_NE(irStatus, 0) << formatError("IR compilation succeeded unexpectedly");
+        }
+
+        return errorMsg;
+    }
+
+    static std::string formatError(const std::string& error, const std::string& msg) {
+        return "\033[1;31m" + error + ":" + "\033[0m\n" + msg;
+    }
+
+    static std::string formatError(const std::string& error) {
+        return "\033[1;31m" + error + "\033[0m\n";
     }
 
    private:
@@ -103,6 +126,6 @@ class NeutroniumTester : public testing::Test {
         }
 
         std::filesystem::remove(sourceFile_);
-        auto _ = chdir(originalCwd_.c_str());
+        chdir(originalCwd_.c_str());
     }
 };

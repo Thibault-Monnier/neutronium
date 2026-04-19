@@ -24,6 +24,7 @@ struct CompilerOptions {
     std::string sourceFilename_;
     TargetType targetType_ = TargetType::EXECUTABLE;
     PipelineEndStage endStage_ = PipelineEndStage::ALL;
+    bool useIrPipeline_ = false;
 };
 
 CompilerOptions parseCli(int argc, const char** argv);

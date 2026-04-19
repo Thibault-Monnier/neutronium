@@ -323,47 +323,83 @@ TEST_F(NeutroniumTester, ExpressionsEvaluation) {
 }
 
 TEST_F(NeutroniumTester, FunctionWithParameters) {
-    const std::string code = R"(
-        fn add(a: int, b: int): {
-            exit a + b;
-        }
-        fn main(): {
-            add(-2, 5);
-        }
-    )";
-    EXPECT_EQ(run(code), 3);
-
-    const std::string code2 = R"(
-        fn multiplyOrAdd(a: int, b: int, shouldAdd: bool): {
-            if shouldAdd: {
+    {
+        const std::string code = R"(
+            fn add(a: int, b: int): {
                 exit a + b;
-            } else: {
-                exit a * b;
             }
-        }
+            fn main(): {
+                add(-2, 5);
+            }
+        )";
+        EXPECT_EQ(run(code), 3);
+    }
 
-        fn main(): {
-            let shouldMultiply = {val};
-            multiplyOrAdd((1 + 2), 4 * 1 - 0, (!shouldMultiply));
-        }
-    )";
-    auto testWithShouldAdd = [&](const bool shouldMultiply, const int expectedResult) {
-        std::string codeWithShouldAdd = code2;
-        codeWithShouldAdd.replace(codeWithShouldAdd.find("{val}"), 5,
-                                  shouldMultiply ? "true" : "false");
-        EXPECT_EQ(run(codeWithShouldAdd), expectedResult);
-    };
-    testWithShouldAdd(false, 7);  // shouldAdd = true → 3 + 4 = 7
-    testWithShouldAdd(true, 12);  // shouldAdd = false → 3 * 4 = 12
+    {
+        const std::string code = R"(
+            fn multiplyOrAdd(a: int, b: int, shouldAdd: bool): {
+                if shouldAdd: {
+                    exit a + b;
+                } else: {
+                    exit a * b;
+                }
+            }
 
-    const std::string code3 = R"(
-        fn inc(mut x: int): {
-            x = x + 1;
-            exit x;
-        }
-        fn main(): { inc(5); }
-    )";
-    EXPECT_EQ(run(code3), 6);
+            fn main(): {
+                let shouldMultiply = {val};
+                multiplyOrAdd((1 + 2), 4 * 1 - 0, (!shouldMultiply));
+            }
+        )";
+        auto testWithShouldAdd = [&](const bool shouldMultiply, const int expectedResult) {
+            std::string codeWithShouldAdd = code;
+            codeWithShouldAdd.replace(codeWithShouldAdd.find("{val}"), 5,
+                                      shouldMultiply ? "true" : "false");
+            EXPECT_EQ(run(codeWithShouldAdd), expectedResult);
+        };
+        testWithShouldAdd(false, 7);  // shouldAdd = true → 3 + 4 = 7
+        testWithShouldAdd(true, 12);  // shouldAdd = false → 3 * 4 = 12
+    }
+
+    {
+        const std::string code = R"(
+            fn inc(mut x: int): {
+                x = x + 1;
+                exit x;
+            }
+            fn main(): { inc(5); }
+        )";
+        EXPECT_EQ(run(code), 6);
+    }
+
+    {
+        const std::string code = R"(
+            fn multiplyOrAdd(a: bool, arr: [int; 3], b: bool): {
+                let x = a && b;
+                let mut result = 0;
+                if x: {
+                    result = arr[0] * arr[1] * arr[2];
+                } else: {
+                    result = arr[0] + arr[1] + arr[2];
+                }
+                exit result;
+            }
+
+            fn main(): {
+                let arr = [0, 2, 3];
+                multiplyOrAdd({valA}, arr, {valB});
+            }
+        )";
+        auto testWithAB = [&](const bool a, const bool b, const int expectedResult) {
+            std::string codeWithAB = code;
+            codeWithAB.replace(codeWithAB.find("{valA}"), 6, a ? "true" : "false");
+            codeWithAB.replace(codeWithAB.find("{valB}"), 6, b ? "true" : "false");
+            EXPECT_EQ(run(codeWithAB), expectedResult);
+        };
+        testWithAB(false, false, 5);  // x = false → 0 + 2 + 3 = 5
+        testWithAB(false, true, 5);   // x = false → 0 + 2 + 3 = 5
+        testWithAB(true, false, 5);   // x = false → 0 + 2 + 3 = 5
+        testWithAB(true, true, 0);    // x = true → 0 * 2 * 3 = 0
+    }
 }
 
 TEST_F(NeutroniumTester, FunctionCalls) {
@@ -735,7 +771,7 @@ TEST_F(NeutroniumTester, Arrays) {
     }
 }
 
-TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {
+TEST_F(NeutroniumTester, ArrayCopied) {
     {
         const std::string code = R"(
             fn main(): {
@@ -764,21 +800,37 @@ TEST_F(NeutroniumTester, ArrayCopiedOnAssignment) {
         )";
         EXPECT_EQ(run(code), 255);  // -1 in 8-bit unsigned (linux exit code)
     }
+
+    {
+        // Check that arrays with small bool elements are copied
+        const std::string code = R"(
+            fn main(): {
+                let mut arr = [true, false, true];
+                let copy = arr;
+                arr[0] = false;
+                if copy[0]: { # should be true
+                    exit 1;
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        EXPECT_EQ(run(code), 1);
+    }
 }
 
 TEST_F(NeutroniumTester, ArrayIndexFunctionCall) {
     {
         const std::string code = R"(
-            fn getArray() -> [int; 1]: {
-                let unused_ = true;
-                return [5];
+            fn getArray() -> [int; 3]: {
+                return [5, 1, 2];
             }
 
             fn main(): {
-                exit getArray()[0];
+                exit getArray()[0] - getArray()[1] + getArray()[2];  # 5 - 1 + 2 = 6
             }
         )";
-        EXPECT_EQ(run(code), 5);
+        EXPECT_EQ(run(code), 6);
     }
 
     {
@@ -799,15 +851,31 @@ TEST_F(NeutroniumTester, ArrayIndexFunctionCall) {
     }
 }
 
-TEST_F(NeutroniumTester, ArrayIndexWithInt16) {
-    const std::string code = R"(
-        fn main(): {
-            let arr = [10, 20, 30, 40];
-            let idx: int16 = 2;
-            exit arr[idx];  # should be 30
-        }
-    )";
-    EXPECT_EQ(run(code), 30);
+TEST_F(NeutroniumTester, ArrayIndexWithIndexOfDifferentType) {
+    {
+        const std::string code = R"(
+           fn main(): {
+                let arr = [10, 20, 30, 40];
+                let idx: int16 = 2;
+                exit arr[idx];  # should be 30
+            }
+        )";
+        EXPECT_EQ(run(code), 30);
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let arr = [[1, 2], [3, 4]];
+                let idx1: int16 = 0;
+                let idx2: int8 = 1;
+                let idx3: int32 = 1;
+                let idx4: int8 = 0;
+                exit arr[idx1][idx2] + arr[idx3][idx4];  # should be 2 + 3 = 5
+            }
+        )";
+        EXPECT_EQ(run(code), 5);
+    }
 }
 
 TEST_F(NeutroniumTester, ArrayElementTypeBubblesUp) {
@@ -1100,6 +1168,80 @@ TEST_F(NeutroniumTester, LogicalOperators) {
         testWithAB(true, false, 1);   // true || false = true
         testWithAB(false, true, 1);   // false || true = true
         testWithAB(false, false, 0);  // false || false = false
+    }
+
+    {
+        const std::string code = R"(
+            fn and(a: bool, b: bool, c: bool) -> bool: {
+                return a && b && c;
+            }
+
+            fn main(): {
+                let a = {valA};
+                let b = {valB};
+                let c = {valC};
+
+                let result = and(a, b, c);
+                if result: {
+                    exit 1;
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        auto testWithABC = [&](const bool valA, const bool valB, const bool valC,
+                               const int expectedExit) {
+            std::string codeWithABC = code;
+            codeWithABC.replace(codeWithABC.find("{valA}"), 6, valA ? "true" : "false");
+            codeWithABC.replace(codeWithABC.find("{valB}"), 6, valB ? "true" : "false");
+            codeWithABC.replace(codeWithABC.find("{valC}"), 6, valC ? "true" : "false");
+            EXPECT_EQ(run(codeWithABC), expectedExit);
+        };
+        testWithABC(true, true, true, 1);     // true && true && true = true
+        testWithABC(true, true, false, 0);    // true && true && false = false
+        testWithABC(true, false, true, 0);    // true && false && true = false
+        testWithABC(true, false, false, 0);   // true && false && false = false
+        testWithABC(false, true, true, 0);    // false && true && true = false
+        testWithABC(false, true, false, 0);   // false && true && false = false
+        testWithABC(false, false, true, 0);   // false && false && true = false
+        testWithABC(false, false, false, 0);  // false && false && false = false
+    }
+
+    {
+        const std::string code = R"(
+            fn or(a: bool, b: bool, c: bool) -> bool: {
+                return a || b || c;
+            }
+
+            fn main(): {
+                let a = {valA};
+                let b = {valB};
+                let c = {valC};
+
+                let result = or(a, b, c);
+                if result: {
+                    exit 1;
+                } else: {
+                    exit 0;
+                }
+            }
+        )";
+        auto testWithABC = [&](const bool valA, const bool valB, const bool valC,
+                               const int expectedExit) {
+            std::string codeWithABC = code;
+            codeWithABC.replace(codeWithABC.find("{valA}"), 6, valA ? "true" : "false");
+            codeWithABC.replace(codeWithABC.find("{valB}"), 6, valB ? "true" : "false");
+            codeWithABC.replace(codeWithABC.find("{valC}"), 6, valC ? "true" : "false");
+            EXPECT_EQ(run(codeWithABC), expectedExit);
+        };
+        testWithABC(true, true, true, 1);     // true || true || true = true
+        testWithABC(true, true, false, 1);    // true || true || false = true
+        testWithABC(true, false, true, 1);    // true || false || true = true
+        testWithABC(true, false, false, 1);   // true || false || false = true
+        testWithABC(false, true, true, 1);    // false || true || true = true
+        testWithABC(false, true, false, 1);   // false || true || false = true
+        testWithABC(false, false, true, 1);   // false || false || true = true
+        testWithABC(false, false, false, 0);  // false || false || false = false
     }
 }
 

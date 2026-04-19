@@ -4,7 +4,7 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "type/TypeID.hpp"
+#include "frontend/type/TypeID.hpp"
 
 namespace CodeGen {
 
