@@ -18,7 +18,7 @@ class NeutroniumTester : public testing::Test {
 
     [[nodiscard]] int run(const std::string& code) const {
         compile(code, true);
-        auto _ = chdir(originalCwd_.c_str());
+        chdir(originalCwd_.c_str());
         return WEXITSTATUS(std::system(outputBinary_.c_str()));
     }
 
@@ -30,7 +30,7 @@ class NeutroniumTester : public testing::Test {
     [[nodiscard]] Output runWithOutput(const std::string& code) const {
         compile(code, true);
 
-        auto _ = chdir(originalCwd_.c_str());
+        chdir(originalCwd_.c_str());
 
         const std::string cmd = outputBinary_.string() + " 2>&1";
         FILE* pipe = popen(cmd.c_str(), "r");
@@ -55,12 +55,14 @@ class NeutroniumTester : public testing::Test {
             out << code;
         }
 
-        auto _ = chdir(projectRoot_.c_str());
+        chdir(projectRoot_.c_str());
 
         const std::string errorFile = (projectRoot_ / "compile_error.log").string();
-        const std::string cmd = compiler_.string() + " -d " + sourceFile_.filename().string() +
-                                " > /dev/null 2> " + errorFile;
-        const std::string cmdWithIr = cmd + " --enable-ir";
+        const std::string errorFileIr = (projectRoot_ / "compile_error_ir.log").string();
+
+        const std::string cmdBase = compiler_.string() + " -d " + sourceFile_.filename().string();
+        const std::string cmd = cmdBase + " > /dev/null 2> " + errorFile;
+        const std::string cmdWithIr = cmdBase + " --enable-ir" + " > /dev/null 2> " + errorFileIr;
 
         const int status = WEXITSTATUS(std::system(cmd.c_str()));
         const int irStatus = WEXITSTATUS(std::system(cmdWithIr.c_str()));
@@ -70,14 +72,14 @@ class NeutroniumTester : public testing::Test {
                                    std::istreambuf_iterator<char>());
         std::filesystem::remove(errorFile);
 
-        if (!errorMsg.empty()) {
-            std::cerr << errorMsg;
-            std::cerr.flush();
-        }
+        std::ifstream errIr(errorFileIr);
+        const std::string errorMsgIr((std::istreambuf_iterator(errIr)),
+                                     std::istreambuf_iterator<char>());
+        std::filesystem::remove(errorFileIr);
 
         if (shouldSucceed) {
             EXPECT_EQ(status, 0) << formatError("Compilation failed unexpectedly", errorMsg);
-            EXPECT_EQ(irStatus, 0) << formatError("IR compilation failed unexpectedly", errorMsg);
+            EXPECT_EQ(irStatus, 0) << formatError("IR compilation failed unexpectedly", errorMsgIr);
         } else {
             EXPECT_NE(status, 0) << formatError("Compilation succeeded unexpectedly");
             EXPECT_NE(irStatus, 0) << formatError("IR compilation succeeded unexpectedly");
@@ -124,6 +126,6 @@ class NeutroniumTester : public testing::Test {
         }
 
         std::filesystem::remove(sourceFile_);
-        auto _ = chdir(originalCwd_.c_str());
+        chdir(originalCwd_.c_str());
     }
 };
