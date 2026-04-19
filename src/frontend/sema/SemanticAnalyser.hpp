@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "SymbolTable.hpp"
+#include "driver/Cli.hpp"
 #include "frontend/ast/AST.hpp"
 #include "frontend/diagnostics/DiagnosticsEngine.hpp"
-#include "driver/Cli.hpp"
 #include "frontend/source/FileID.hpp"
 #include "frontend/type/Trait.hpp"
 #include "frontend/type/Type.hpp"
@@ -55,7 +55,7 @@ class SemanticAnalyser {
     void subscriptConstraint(TypeID arrayType, TypeID elementType, const AST::Node& node) const;
     void storableConstraint(TypeID type, const AST::Node& node) const;
 
-    // Reg new type helpers
+    // Register new type helpers
     [[nodiscard]] TypeID registerAnyType() const {
         return typeManager_.createType(Type::anyFamilyType());
     }
