@@ -55,9 +55,6 @@ class Builder {
 
     Value& createAllocaInstr(const Type& type, uint32_t nbElements);
     Value& createAllocaInstr(const Type& type) { return createAllocaInstr(type, 1); }
-    Value& createArrayAllocaInstr(const Type& arrayType) {
-        return createAllocaInstr(arrayType, arrayType.getArrayElementCount());
-    }
 
     Value& createStoreInstr(Value& location, Value& value);
     Value& createLoadInstr(Value& location);

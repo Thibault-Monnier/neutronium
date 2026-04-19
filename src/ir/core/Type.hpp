@@ -68,6 +68,20 @@ class Type {
         std::unreachable();
     }
 
+    [[nodiscard]] uint32_t computeSizeBytes() const {
+        switch (kind_) {
+            case Kind::PTR:
+            case Kind::INT:
+                return (computeSizeBits() + 7) / 8;  // Align to bytes
+            case Kind::ARRAY:
+                return getArrayElementCount() * subtype_->computeSizeBytes();
+            case Kind::VOID:
+                break;
+        }
+
+        std::unreachable();
+    }
+
     [[nodiscard]] bool holdsSubtype() const { return kind_ == Kind::PTR || kind_ == Kind::ARRAY; }
 
     [[nodiscard]] bool isVoid() const { return kind_ == Kind::VOID; }

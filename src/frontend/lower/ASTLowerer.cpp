@@ -413,7 +413,7 @@ IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit,
                                          const std::optional<IR::Value*> place) {
     const IR::Type& type = convertType(arrayLit.typeID_);
 
-    IR::Value& arrayPtr = place ? *place.value() : builder_.createArrayAllocaInstr(type);
+    IR::Value& arrayPtr = place ? *place.value() : builder_.createAllocaInstr(type);
 
     for (size_t i = 0; i < arrayLit.elements_.size(); ++i) {
         const IR::Type& indexType = builder_.intType(64);
@@ -430,7 +430,7 @@ IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& re
                                                const std::optional<IR::Value*> place) {
     const IR::Type& type = convertType(repeatArrayLit.typeID_);
 
-    IR::Value& arrayPtr = place ? *place.value() : builder_.createArrayAllocaInstr(type);
+    IR::Value& arrayPtr = place ? *place.value() : builder_.createAllocaInstr(type);
     IR::Value& elementValue = lowerValueExpression(*repeatArrayLit.element_);
 
     const int64_t count = repeatArrayLit.count_->value_;

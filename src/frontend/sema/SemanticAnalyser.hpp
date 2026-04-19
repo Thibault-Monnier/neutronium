@@ -55,7 +55,7 @@ class SemanticAnalyser {
     void subscriptConstraint(TypeID arrayType, TypeID elementType, const AST::Node& node) const;
     void storableConstraint(TypeID type, const AST::Node& node) const;
 
-    // Register new type helpers
+    // Reg new type helpers
     [[nodiscard]] TypeID registerAnyType() const {
         return typeManager_.createType(Type::anyFamilyType());
     }
