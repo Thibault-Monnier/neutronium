@@ -2,6 +2,7 @@
 
 #include <emmintrin.h>
 #include <smmintrin.h>
+#include <stdio.h>
 
 #include <cstdint>
 #include <cstdio>
@@ -10,6 +11,7 @@
 #include <format>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "Token.hpp"
 #include "TokenKind.hpp"

@@ -1,5 +1,23 @@
 #include "ASTLowerer.hpp"
 
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <ranges>
+#include <span>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "frontend/ast/AST.hpp"
+#include "frontend/ast/Operator.hpp"
+#include "frontend/type/Primitive.hpp"
+#include "frontend/type/Type.hpp"
+#include "frontend/type/TypeID.hpp"
+#include "ir/core/IR.hpp"
+#include "ir/core/Type.hpp"
+
 IR::Module&& ASTLowerer::lower() {
     for (const auto& externalFuncDecl : ast_.externalFunctions_) {
         lowerExternalFunction(*externalFuncDecl);

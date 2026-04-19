@@ -1,5 +1,9 @@
+#include <cstdlib>
+#include <format>
+
 #include "TypeSolver.hpp"
 #include "frontend/ast/AST.hpp"
+#include "frontend/type/Trait.hpp"
 #include "frontend/type/Type.hpp"
 #include "frontend/type/TypeID.hpp"
 #include "frontend/type/TypeManager.hpp"

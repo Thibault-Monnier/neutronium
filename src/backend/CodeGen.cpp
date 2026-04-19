@@ -1,7 +1,18 @@
 #include "CodeGen.hpp"
 
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
 #include <ranges>
+#include <string>
 #include <utility>
+#include <vector>
+
+#include "backend/Reg.hpp"
+#include "driver/Cli.hpp"
+#include "ir/core/IR.hpp"
+#include "lib/FastStringStream.hpp"
 
 namespace Backend {
 

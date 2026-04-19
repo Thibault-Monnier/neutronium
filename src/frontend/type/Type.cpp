@@ -8,7 +8,6 @@
 #include <utility>
 
 #include "Primitive.hpp"
-#include "TypeID.hpp"
 #include "TypeManager.hpp"
 
 uint32_t Type::sizeBits(const TypeManager& typeManager) const {

@@ -1,7 +1,9 @@
 #include "Debug.hpp"
 
 #include <cassert>
+#include <cstddef>
 #include <iostream>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>

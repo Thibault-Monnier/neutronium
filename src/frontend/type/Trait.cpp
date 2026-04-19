@@ -3,6 +3,7 @@
 #include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <string_view>
+#include <utility>
 
 #include "frontend/ast/Operator.hpp"
 

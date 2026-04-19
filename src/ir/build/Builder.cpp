@@ -1,9 +1,13 @@
 #include "Builder.hpp"
 
-#include <algorithm>
 #include <cassert>
-#include <ranges>
+#include <cstdint>
+#include <string_view>
+#include <utility>
 #include <vector>
+
+#include "ir/core/IR.hpp"
+#include "ir/core/Type.hpp"
 
 namespace IR {
 

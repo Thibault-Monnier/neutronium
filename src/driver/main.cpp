@@ -1,5 +1,3 @@
-#include <sched.h>
-
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -29,6 +27,8 @@
 #include "frontend/source/FileID.hpp"
 #include "frontend/source/SourceManager.hpp"
 #include "frontend/type/TypeManager.hpp"
+#include "ir/core/IR.hpp"
+#include "lib/FastStringStream.hpp"
 #include "lib/PolymorphicArenaAllocator.hpp"
 #include "utils/Log.hpp"
 
