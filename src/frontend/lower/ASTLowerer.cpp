@@ -506,17 +506,25 @@ IR::Value& ASTLowerer::lowerBinaryExpression(const AST::Expression& left,
 IR::Value& ASTLowerer::lowerLogicalAndExpression(const AST::Expression& left,
                                                  const AST::Expression& right) {
     IR::BasicBlock& rightBlock = builder_.createBasicBlock();
+    IR::BasicBlock& shortCircuitBlock = builder_.createBasicBlock();
     IR::BasicBlock& mergeBlock = builder_.createBasicBlock();
 
+    IR::Value& resultAddress = builder_.createAllocaInstr(builder_.boolType());
+
     IR::Value& leftVal = lowerValueExpression(left);
-    builder_.createConditionalBranchInstr(leftVal, rightBlock, mergeBlock);
+    builder_.createConditionalBranchInstr(leftVal, rightBlock, shortCircuitBlock);
 
     builder_.setInsertionPoint(rightBlock);
     IR::Value& rightVal = lowerValueExpression(right);
+    builder_.createStoreInstr(resultAddress, rightVal);
+    builder_.createUnconditionalBranchInstr(mergeBlock);
+
+    builder_.setInsertionPoint(shortCircuitBlock);
+    builder_.createStoreInstr(resultAddress, builder_.createBooleanConstant(false));
     builder_.createUnconditionalBranchInstr(mergeBlock);
 
     builder_.setInsertionPoint(mergeBlock);
-    return builder_.createAndInstr(leftVal, rightVal);
+    return builder_.createLoadInstr(resultAddress);
 }
 
 IR::Value& ASTLowerer::lowerLogicalOrExpression(const AST::Expression& left,
