@@ -76,6 +76,7 @@ void ASTLowerer::declareFunction(const std::string_view name,
                                  const TypeID returnTypeID, const bool isExported,
                                  const bool isExternal) {
     std::vector<IR::Argument*> args;
+    bool usingHiddenReturnPointer = false;
 
     const IR::Type* returnType = &convertType(returnTypeID);
     if (returnType->isArray()) {
@@ -83,6 +84,7 @@ void ASTLowerer::declareFunction(const std::string_view name,
         returnType = &builder_.voidType();
         const IR::Type& argType = builder_.ptrType(convertType(returnTypeID));
         args.push_back(&builder_.createArgument(argType));
+        usingHiddenReturnPointer = true;
     }
 
     for (const auto* param : parameters) {
@@ -104,7 +106,7 @@ void ASTLowerer::declareFunction(const std::string_view name,
 
     for (size_t i = 0; i < parameters.size(); ++i) {
         const auto* param = parameters[i];
-        IR::Argument* arg = func.getArguments()[i];
+        IR::Argument* arg = func.getArguments()[i + (usingHiddenReturnPointer ? 1 : 0)];
 
         IR::Value& address = builder_.createAllocaInstr(arg->getType());
         builder_.createStoreInstr(address, *arg);
