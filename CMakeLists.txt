@@ -98,6 +98,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+if (TARGET gtest)
+    target_compile_options(gtest PRIVATE "-w") # Suppress warnings
+endif ()
+
 enable_testing()
 
 file(GLOB_RECURSE TEST_SOURCES "tests/*.cpp")
