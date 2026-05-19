@@ -148,6 +148,8 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
             return lowerer.lower();
         }();
 
+        if (opts.endStage_ == PipelineEndStage::LOWER) return;
+
         assembly = [&] {
             const Stage stage("Code Generation", verbose);
 

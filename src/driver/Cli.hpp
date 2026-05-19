@@ -12,6 +12,7 @@ enum class PipelineEndStage : uint8_t {
     LEX,
     PARSE,
     SEMA,
+    LOWER,
     CODEGEN,
     ALL,
 };
@@ -27,4 +28,4 @@ struct CompilerOptions {
     bool useIrPipeline_ = false;
 };
 
-CompilerOptions parseCli(int argc, const char** argv);
+CompilerOptions parseCli(int argc, const char* const* argv);
