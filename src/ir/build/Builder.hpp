@@ -4,19 +4,22 @@
 #include <vector>
 
 #include "ir/core/IR.hpp"
+#include "lib/PolymorphicArenaAllocator.hpp"
 
 namespace IR {
 
 /// Exposes helpers to build the IR.
 class Builder {
     Module& module_;
+    neutro::PolymorphicArenaAllocator& arena_;
 
     std::unordered_map<std::string_view, Function&> functionTable_;
     Function* currentFunction_{};
     BasicBlock* currentBlock_{};
 
    public:
-    explicit Builder(Module& ir) : module_(ir) {}
+    explicit Builder(Module& ir, neutro::PolymorphicArenaAllocator& arena)
+        : module_(ir), arena_(arena) {}
 
     [[nodiscard]] const Function& getCurrentFunction() const { return *currentFunction_; }
     [[nodiscard]] const Function& getFunction(const std::string_view name) const {
@@ -74,8 +77,10 @@ class Builder {
 
     Value& createSyscallInstr(int64_t syscallNumber, std::vector<Value*>&& arguments);
 
-    [[nodiscard]] BasicBlock& createBasicBlock() const {
-        return currentFunction_->newBlock(voidType());
+    [[nodiscard]] BasicBlock& createBasicBlock() {
+        auto& stored = static_cast<BasicBlock&>(registerValue(BasicBlock{voidType()}));
+        currentFunction_->addBlock(stored);
+        return stored;
     }
     void setInsertionPoint(BasicBlock& block) { currentBlock_ = &block; }
 

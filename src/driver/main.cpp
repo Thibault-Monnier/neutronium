@@ -142,11 +142,14 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
 
     neutro::FastStringStream assembly;
     if (opts.useIrPipeline_) {
-        const IR::Module ir = [&] {
+        IR::Module ir;
+        neutro::PolymorphicArenaAllocator irArena;
+
+        {
             const Stage stage("Lowering to IR", verbose);
-            ASTLowerer lowerer(*ast, typeManager);
-            return lowerer.lower();
-        }();
+            ASTLowerer lowerer(*ast, typeManager, ir, irArena);
+            lowerer.lower();
+        }
 
         if (opts.endStage_ == PipelineEndStage::LOWER) return;
 
@@ -236,7 +239,7 @@ void link() {
 
 }  // namespace
 
-int main(const int argc, const char** argv) {
+int main(const int argc, const char* const* argv) {
     const CompilerOptions opts = parseCli(argc, argv);
     const auto startTime = Clock::now();
 

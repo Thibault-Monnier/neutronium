@@ -12,7 +12,6 @@ class ASTLowerer {
     const AST::CompilationUnit& ast_;
     const TypeManager& typeManager_;
 
-    IR::Module ir_;
     IR::Builder builder_;
 
     IR::BasicBlock* currentBreakBlock_ = nullptr;
@@ -21,10 +20,11 @@ class ASTLowerer {
     std::vector<std::unordered_map<std::string_view, IR::Value*>> scopedSymbolAdresses_;
 
    public:
-    explicit ASTLowerer(const AST::CompilationUnit& ast, const TypeManager& typeManager)
-        : ast_(ast), typeManager_(typeManager), builder_(ir_) {}
+    explicit ASTLowerer(const AST::CompilationUnit& ast, const TypeManager& typeManager,
+                        IR::Module& ir, neutro::PolymorphicArenaAllocator& arena)
+        : ast_(ast), typeManager_(typeManager), builder_(ir, arena) {}
 
-    [[nodiscard]] IR::Module&& lower();
+    void lower();
 
    private:
     [[nodiscard]] const IR::Type& convertPrimitiveType(const Type& type) const;

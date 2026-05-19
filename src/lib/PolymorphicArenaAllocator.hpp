@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <new>
 #include <type_traits>
 #include <utility>
@@ -69,6 +70,22 @@ class PolymorphicArenaAllocator {
     T* insertArray(const size_t count) {
         uintptr_t mem = allocate(sizeof(T) * count, alignof(T));
         return reinterpret_cast<T*>(mem);
+    }
+
+    /** Inserts a vector of trivially constructible and destructible objects into the arena and
+     * returns a span to it.
+     * @tparam T The type of the elements in the vector.
+     * @param vec The vector to insert.
+     * @return A span to the inserted vector.
+     */
+    template <typename T>
+        requires std::is_trivially_copyable_v<T>
+    [[nodiscard]] std::span<T> insertVector(std::vector<T>&& vec) {
+        if (vec.empty()) return {};
+
+        T* data = insertArray<T>(vec.size());
+        std::memcpy(reinterpret_cast<void*>(data), vec.data(), vec.size() * sizeof(T));
+        return {data, vec.size()};
     }
 
    private:

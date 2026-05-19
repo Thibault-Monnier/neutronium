@@ -30,7 +30,7 @@ neutro::FastStringStream CodeGen::generate() {
         generateExit();
     }
 
-    for (const std::unique_ptr<IR::Function>& func : ir_.getFunctions()) {
+    for (const IR::Function* func : ir_.getFunctions()) {
         if (func->isExternal()) continue;
         generateFunction(*func);
     }
@@ -103,15 +103,15 @@ int32_t CodeGen::getStoredStackOffsetOrGenerate(const IR::Value* value) {
 }
 
 void CodeGen::generateValue(const IR::Value& value) {
-    if (auto* func = dynamic_cast<const IR::Function*>(&value)) {
+    if (auto* func = value.dynCast<const IR::Function>()) {
         generateFunction(*func);
-    } else if (auto* bb = dynamic_cast<const IR::BasicBlock*>(&value)) {
+    } else if (auto* bb = value.dynCast<const IR::BasicBlock>()) {
         generateBasicBlock(*bb);
-    } else if (auto* instr = dynamic_cast<const IR::Instruction*>(&value)) {
+    } else if (auto* instr = value.dynCast<const IR::Instruction>()) {
         generateInstruction(*instr);
-    } else if (auto* constant = dynamic_cast<const IR::ConstantValue*>(&value)) {
+    } else if (auto* constant = value.dynCast<const IR::ConstantValue>()) {
         generateConstant(*constant);
-    } else if (auto* _ = dynamic_cast<const IR::Argument*>(&value)) {
+    } else if (auto* _ = value.dynCast<const IR::Argument>()) {
         // Should never have to generate an argument
         std::unreachable();
     } else {
@@ -136,10 +136,10 @@ void CodeGen::generateFunction(const IR::Function& func) {
     output_ << "mov rbp, rsp\n";
 
     // Assign labels
-    for (const auto& bb : func.getBasicBlocks()) {
+    for (const IR::BasicBlock* bb = func.getFirstBasicBlock(); bb; bb = bb->getNext()) {
         const size_t nbLabels = labels_.size();
         const std::string newLabel = ".L" + std::to_string(nbLabels);
-        labels_.emplace(bb.get(), newLabel);
+        labels_.emplace(bb, newLabel);
     }
 
     // Reg arguments stack offsets
@@ -151,13 +151,15 @@ void CodeGen::generateFunction(const IR::Function& func) {
     }
 
     // Generate
-    for (const auto& bb : func.getBasicBlocks()) generateBasicBlock(*bb);
+    for (const auto* bb = func.getFirstBasicBlock(); bb; bb = bb->getNext())
+        generateBasicBlock(*bb);
 }
 
 void CodeGen::generateBasicBlock(const IR::BasicBlock& bb) {
     output_ << labels_.at(&bb) << ":\n";
 
-    for (const auto* instr : bb.getInstructions()) generateInstruction(*instr);
+    for (const auto* instr = bb.getFirstInstruction(); instr; instr = instr->getNext())
+        generateInstruction(*instr);
 }
 
 void CodeGen::generateInstruction(const IR::Instruction& instr) {
@@ -218,7 +220,7 @@ void CodeGen::generateInstruction(const IR::Instruction& instr) {
 void CodeGen::generateConstant(const IR::ConstantValue& constant) {
     if (storedStackOffsets_.contains(&constant)) return;
 
-    if (auto* integerConst = dynamic_cast<const IR::IntegerConstant*>(&constant)) {
+    if (auto* integerConst = constant.dynCast<const IR::IntegerConstant>()) {
         const std::string loc = stackAllocate(constant);
         const int64_t val = integerConst->getValue();
         mov(val, loc, constant.getType().computeSizeBits());
@@ -331,7 +333,7 @@ void CodeGen::generateAlloca(const IR::Instruction& alloca) {
     const uint32_t elementSize = type.getSubtype().computeSizeBytes() * 8;
 
     assert(alloca.getOperands().size() == 1);
-    const auto* nbElementsValue = dynamic_cast<const IR::IntegerConstant*>(alloca.getOperands()[0]);
+    const auto* nbElementsValue = alloca.getOperands()[0]->dynCast<const IR::IntegerConstant>();
     assert(nbElementsValue);
     const uint32_t nbElements = nbElementsValue->getValue();
 
@@ -426,15 +428,15 @@ void CodeGen::generateBr(const IR::Instruction& br) {
     const size_t nbOps = br.getOperands().size();
     if (nbOps == 1) {  // Unconditional jump
 
-        const auto* bb = dynamic_cast<const IR::BasicBlock*>(br.getOperands()[0]);
+        const auto* bb = br.getOperands()[0]->dynCast<const IR::BasicBlock>();
         assert(bb);
         output_ << "jmp " << labels_.at(bb) << "\n";
 
     } else if (nbOps == 3) {  // Conditional jump
 
         const IR::Value* condition = br.getOperands()[0];
-        const auto* bbTrue = dynamic_cast<const IR::BasicBlock*>(br.getOperands()[1]);
-        const auto* bbFalse = dynamic_cast<const IR::BasicBlock*>(br.getOperands()[2]);
+        const auto* bbTrue = br.getOperands()[1]->dynCast<const IR::BasicBlock>();
+        const auto* bbFalse = br.getOperands()[2]->dynCast<const IR::BasicBlock>();
         assert(condition->getType().isBoolean());
         assert(bbTrue && bbFalse);
 
@@ -470,7 +472,7 @@ void CodeGen::generateCall(const IR::Instruction& call) {
     assert(call.getOpcode() == IR::OpCode::CALL);
     assert(call.getOperands().size() >= 1);
 
-    const auto* callee = dynamic_cast<const IR::Function*>(call.getOperands()[0]);
+    const auto* callee = call.getOperands()[0]->dynCast<const IR::Function>();
     assert(callee);
     const std::string_view calleeName = callee->getName();
 
@@ -515,7 +517,7 @@ void CodeGen::generateSyscall(const IR::Instruction& sysc) {
     assert(sysc.getOpcode() == IR::OpCode::SYSCALL);
     assert(sysc.getOperands().size() == 2);
 
-    const auto* syscNumberVal = dynamic_cast<const IR::IntegerConstant*>(sysc.getOperands()[0]);
+    const auto* syscNumberVal = sysc.getOperands()[0]->dynCast<const IR::IntegerConstant>();
     assert(syscNumberVal);
     const uint32_t syscNumber = syscNumberVal->getValue();
     assert(syscNumber == 60);  // Only `exit` is supported for now

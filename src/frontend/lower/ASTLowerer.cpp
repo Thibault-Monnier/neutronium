@@ -18,7 +18,7 @@
 #include "ir/core/IR.hpp"
 #include "ir/core/Type.hpp"
 
-IR::Module&& ASTLowerer::lower() {
+void ASTLowerer::lower() {
     for (const auto& externalFuncDecl : ast_.externalFunctions_) {
         lowerExternalFunction(*externalFuncDecl);
     }
@@ -26,8 +26,6 @@ IR::Module&& ASTLowerer::lower() {
     for (const auto* funcDef : ast_.functions_) {
         lowerFunction(*funcDef);
     }
-
-    return std::move(ir_);
 }
 
 const IR::Type& ASTLowerer::convertPrimitiveType(const Type& type) const {
