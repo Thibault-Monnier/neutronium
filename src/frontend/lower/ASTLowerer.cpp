@@ -73,15 +73,13 @@ const IR::Type& ASTLowerer::convertType(const TypeID typeID) {
 }
 
 void ASTLowerer::declareSymbol(std::string_view name, IR::Value* value) {
-    [[maybe_unused]] auto [_, inserted] = scopedSymbolAdresses_.back().emplace(name, value);
-    assert(inserted);
+    scopedSymbolAdresses_.emplace_back(name, value);
 }
 
 IR::Value& ASTLowerer::lookupSymbolAddress(const std::string_view name) const {
-    // Innermost scopes have a higher chance of containing the symbol
-    for (const auto& scope : std::ranges::reverse_view(scopedSymbolAdresses_)) {
-        const auto it = scope.find(name);
-        if (it != scope.end()) return *it->second;
+    // Last declared symbols have a higher chance of being what we're looking for
+    for (const auto& [symName, value] : std::ranges::reverse_view(scopedSymbolAdresses_)) {
+        if (symName == name) return *value;
     }
 
     std::unreachable();
@@ -92,6 +90,8 @@ void ASTLowerer::declareFunction(const std::string_view name,
                                  const TypeID returnTypeID, const bool isExported,
                                  const bool isExternal) {
     std::vector<IR::Argument*> args;
+    args.reserve(parameters.size() + 1);  // In case we add the hidden return pointer
+
     bool usingHiddenReturnPointer = false;
 
     const IR::Type* returnType = &convertType(returnTypeID);
@@ -394,6 +394,7 @@ IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier)
 
 IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     std::vector<IR::Value*> arguments;
+    arguments.reserve(funcCall.arguments_.size() + 1);  // In case we add the hidden return pointer
 
     const Type& returnType = typeManager_.getType(funcCall.typeID_);
     if (returnType.isArray()) {
