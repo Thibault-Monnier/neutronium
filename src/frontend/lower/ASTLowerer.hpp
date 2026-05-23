@@ -28,7 +28,10 @@ class ASTLowerer {
 
    private:
     [[nodiscard]] const IR::Type& convertPrimitiveType(const Type& type) const;
-    const IR::Type& convertType(TypeID typeID);
+    const IR::Type& convertType(const Type& type);
+    const IR::Type& convertType(const TypeID typeID) {
+        return convertType(typeManager_.getType(typeID));
+    }
 
     /// RAII helper to manage entering and exiting scopes. Enters a new scope on construction and
     /// exits it on destruction.
@@ -68,6 +71,8 @@ class ASTLowerer {
     void lowerContinueStatement();
     void lowerReturnStatement(const AST::ReturnStatement& returnStmt);
     void lowerExitStatement(const AST::ExitStatement& exitStmt);
+
+    void copyValue(IR::Value& destPtr, IR::Value& value, TypeID valueTypeID);
 
     IR::Value& lowerValueExpression(const AST::Expression& expr, std::optional<IR::Value*> place);
     IR::Value& lowerValueExpression(const AST::Expression& expr) {
