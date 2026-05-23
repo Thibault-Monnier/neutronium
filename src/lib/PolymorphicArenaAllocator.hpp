@@ -97,6 +97,8 @@ class PolymorphicArenaAllocator {
     template <typename T>
         requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>
     [[nodiscard]] std::span<T> insertVector(std::vector<T>&& vec) {
+        if (vec.empty()) return {};
+
         T* data = reserveArray<T>(vec.size());
         std::memcpy(reinterpret_cast<void*>(data), vec.data(), vec.size() * sizeof(T));
         return {data, vec.size()};

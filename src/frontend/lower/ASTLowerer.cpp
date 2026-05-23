@@ -397,10 +397,11 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     arguments.reserve(funcCall.arguments_.size() + 1);  // In case we add the hidden return pointer
 
     const Type& returnType = typeManager_.getType(funcCall.typeID_);
+    IR::Value* returnValueAddress;
     if (returnType.isArray()) {
         // For arrays, allocate space and pass a pointer as a hidden first argument.
-        IR::Value& returnValueAddress = builder_.createAllocaInstr(convertType(funcCall.typeID_));
-        arguments.push_back(&returnValueAddress);
+        returnValueAddress = &builder_.createAllocaInstr(convertType(funcCall.typeID_));
+        arguments.push_back(returnValueAddress);
     }
 
     for (const auto* arg : funcCall.arguments_) {
@@ -414,7 +415,7 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     IR::Value& call = builder_.createCallInstr(funcCall.callee_->name_, std::move(arguments));
 
     if (returnType.isArray()) {
-        return *arguments[0];
+        return *returnValueAddress;
     } else {
         return call;
     }
