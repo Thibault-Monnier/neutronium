@@ -296,6 +296,12 @@ class Module {
     }
 
     const Type& registerType(Type type) {
+        for (size_t i = 0; i < types_.count(); ++i) {
+            const Type& elem = types_.at(i);
+            if (type == elem) {
+                return elem;
+            }
+        }
         const uint32_t idx = types_.insert(std::move(type));
         return types_.at(idx);
     }
