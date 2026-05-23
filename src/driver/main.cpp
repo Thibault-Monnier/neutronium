@@ -81,18 +81,14 @@ void runOrDie(const std::string& cmd) {
     }
 }
 
-void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool verbose) {
+void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, const bool verbose) {
     FileID fileID = 0;
     std::string_view fileContents;
 
     try {
-        {
-            const Stage stage("Loading source file", verbose);
-            std::tie(fileID, fileContents) =
-                sourceManager.loadNewSourceFile(std::move(opts.sourceFilename_));
-        }
+        const Stage stage("Loading source file", verbose);
+        std::tie(fileID, fileContents) = sourceManager.loadNewSourceFile(opts.sourceFilename_);
 
-        opts.sourceFilename_.clear();
     } catch (const std::exception& e) {
         printError(e.what());
         std::exit(EXIT_FAILURE);
@@ -194,7 +190,7 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
     }
 }
 
-void compileRuntime(SourceManager& sourceManager) {
+void compileRuntime(SourceManager& sourceManager, const CompilerOptions& opts) {
     const std::filesystem::path runtimePath = std::filesystem::path(PROJECT_ROOT_DIR) / "runtime";
 
     {
@@ -207,12 +203,10 @@ void compileRuntime(SourceManager& sourceManager) {
             std::string src = entry.path().string();
 
             if (extension == ".nt") {
-                compileFile(
-                    CompilerOptions{
-                        .sourceFilename_ = std::move(src),
-                        .targetType_ = TargetType::LIBRARY,
-                    },
-                    sourceManager, false);
+                compileFile(CompilerOptions{.sourceFilename_ = std::move(src),
+                                            .targetType_ = TargetType::LIBRARY,
+                                            .useIrPipeline_ = opts.useIrPipeline_},
+                            sourceManager, false);
             } else if (extension == ".asm") {
                 const std::string obj = "neutro/" + entry.path().stem().string() + ".o";
 
@@ -245,7 +239,7 @@ int main(const int argc, const char** argv) {
     compileFile(opts, sourceManager, true);
 
     if (opts.endStage_ == PipelineEndStage::ALL) {
-        compileRuntime(sourceManager);
+        compileRuntime(sourceManager, opts);
         link();
     }
 
