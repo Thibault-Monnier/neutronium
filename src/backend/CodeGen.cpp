@@ -135,11 +135,10 @@ void CodeGen::generateFunction(const IR::Function& func) {
     output_ << "push rbp\n";
     output_ << "mov rbp, rsp\n";
 
-    // Assign labels
+    // Assign IDs
     for (const IR::BasicBlock* bb = func.getFirstBasicBlock(); bb; bb = bb->getNext()) {
-        const size_t nbLabels = labels_.size();
-        const std::string newLabel = ".L" + std::to_string(nbLabels);
-        labels_.emplace(bb, newLabel);
+        const uint32_t id = basicBlockIDs_.size();
+        basicBlockIDs_.emplace(bb, id);
     }
 
     // Reg arguments stack offsets
@@ -156,7 +155,7 @@ void CodeGen::generateFunction(const IR::Function& func) {
 }
 
 void CodeGen::generateBasicBlock(const IR::BasicBlock& bb) {
-    output_ << labels_.at(&bb) << ":\n";
+    output_ << labelForBasicBlock(bb) << ":\n";
 
     for (const auto* instr = bb.getFirstInstruction(); instr; instr = instr->getNext())
         generateInstruction(*instr);
@@ -430,7 +429,7 @@ void CodeGen::generateBr(const IR::Instruction& br) {
 
         const auto* bb = br.getOperands()[0]->dynCast<const IR::BasicBlock>();
         assert(bb);
-        output_ << "jmp " << labels_.at(bb) << "\n";
+        output_ << "jmp " << labelForBasicBlock(*bb) << "\n";
 
     } else if (nbOps == 3) {  // Conditional jump
 
@@ -444,8 +443,8 @@ void CodeGen::generateBr(const IR::Instruction& br) {
         const Reg reg = regForValue(Reg::RAX, *condition);
         loadTo(reg, conditionStackOffset);
         output_ << "test " << reg.toString() << ", " << reg.toString() << "\n";
-        output_ << "jne " << labels_.at(bbTrue) << "\n";
-        output_ << "jmp " << labels_.at(bbFalse) << "\n";
+        output_ << "jne " << labelForBasicBlock(*bbTrue) << "\n";
+        output_ << "jmp " << labelForBasicBlock(*bbFalse) << "\n";
 
     } else {
         std::unreachable();

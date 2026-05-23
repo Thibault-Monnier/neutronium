@@ -2,6 +2,13 @@
 
 #include <ankerl/unordered_dense.h>
 
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <ranges>
+#include <string>
+#include <string_view>
+
 #include "Reg.hpp"
 #include "driver/Cli.hpp"
 #include "ir/core/IR.hpp"
@@ -23,7 +30,7 @@ class CodeGen {
     uint32_t stackOffset_ = 0;
 
     ankerl::unordered_dense::map<const IR::Value*, int32_t> storedStackOffsets_;
-    std::unordered_map<const IR::BasicBlock*, std::string> labels_;
+    ankerl::unordered_dense::map<const IR::BasicBlock*, uint32_t> basicBlockIDs_;
 
    public:
     explicit CodeGen(const IR::Module& ir, const TargetType targetType)
@@ -81,6 +88,15 @@ class CodeGen {
     /// Creates a Reg with the size of the given value.
     [[nodiscard]] static Reg regForValue(const Reg::Name name, const IR::Value& value) {
         return Reg{name, value.getType().computeSizeBits()};
+    }
+
+    [[nodiscard]] static std::string labelForBasicBlockID(const uint32_t id) {
+        return ".L" + std::to_string(id);
+    }
+
+    [[nodiscard]] std::string labelForBasicBlock(const IR::BasicBlock& bb) const {
+        const uint32_t id = basicBlockIDs_.at(&bb);
+        return labelForBasicBlockID(id);
     }
 
    private:
