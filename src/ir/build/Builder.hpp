@@ -1,6 +1,7 @@
 #pragma once
 
-#include <unordered_map>
+#include <ankerl/unordered_dense.h>
+
 #include <vector>
 
 #include "ir/core/IR.hpp"
@@ -13,7 +14,7 @@ class Builder {
     Module& module_;
     neutro::PolymorphicArenaAllocator& arena_;
 
-    std::unordered_map<std::string_view, Function&> functionTable_;
+    ankerl::unordered_dense::map<std::string_view, Function&> functionTable_;
     Function* currentFunction_{};
     BasicBlock* currentBlock_{};
 
@@ -28,14 +29,6 @@ class Builder {
 
     Function& beginFunction(std::string_view name, std::vector<Argument*>&& arguments,
                             const Type& returnType, bool isExported, bool isExternal);
-
-    Value& createIntegerConstant(const Type& type, const int64_t value) {
-        return registerValue(IntegerConstant{type, value});
-    }
-    Value& createBooleanConstant(const bool value) {
-        return registerValue(IntegerConstant{boolType(), value ? 1 : 0});
-    }
-    Argument& createArgument(const Type& type) { return registerValue(Argument{type}); }
 
     Value& createAddInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::ADD); }
     Value& createSubInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::SUB); }
@@ -108,17 +101,34 @@ class Builder {
     Value& createComparisonExpr(Value& a, Value& b, OpCode opCode);
 
    public:
-    [[nodiscard]] const Type& intType(const uint32_t sizeBits) const {
-        return module_.registerType(Type::intType(sizeBits));
+    __attribute__((always_inline)) Value& createIntegerConstant(const Type& type,
+                                                                const int64_t value) {
+        return registerValue(IntegerConstant{type, value});
     }
-    [[nodiscard]] const Type& boolType() const { return module_.registerType(Type::boolean()); }
-    [[nodiscard]] const Type& voidType() const { return module_.registerType(Type::voidType()); }
-    [[nodiscard]] const Type& ptrType(const Type& pointeeType) const {
-        return module_.registerType(Type::pointer(&pointeeType));
+    __attribute__((always_inline)) Value& createBooleanConstant(const bool value) {
+        return registerValue(IntegerConstant{boolType(), value ? 1 : 0});
     }
-    [[nodiscard]] const Type& arrayType(const Type& elementType,
-                                        const uint32_t elementCount) const {
-        return module_.registerType(Type::array(&elementType, elementCount));
+    __attribute__((always_inline)) Argument& createArgument(const Type& type) {
+        return registerValue(Argument{type});
+    }
+
+    [[nodiscard]] __attribute__((always_inline)) const Type& intType(
+        const uint32_t sizeBits) const {
+        return registerType(Type::intType(sizeBits));
+    }
+    [[nodiscard]] __attribute__((always_inline)) const Type& boolType() const {
+        return registerType(Type::boolean());
+    }
+    [[nodiscard]] __attribute__((always_inline)) const Type& voidType() const {
+        return registerType(Type::voidType());
+    }
+    [[nodiscard]] __attribute__((always_inline)) const Type& ptrType(
+        const Type& pointeeType) const {
+        return registerType(Type::pointer(&pointeeType));
+    }
+    [[nodiscard]] __attribute__((always_inline)) const Type& arrayType(
+        const Type& elementType, const uint32_t elementCount) const {
+        return registerType(Type::array(&elementType, elementCount));
     }
 };
 

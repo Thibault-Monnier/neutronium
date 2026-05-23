@@ -1,6 +1,6 @@
 #pragma once
 
-#include <unordered_map>
+#include <ankerl/unordered_dense.h>
 
 #include "Reg.hpp"
 #include "driver/Cli.hpp"
@@ -22,7 +22,7 @@ class CodeGen {
     /// In bits.
     uint32_t stackOffset_ = 0;
 
-    std::unordered_map<const IR::Value*, int32_t> storedStackOffsets_;
+    ankerl::unordered_dense::map<const IR::Value*, int32_t> storedStackOffsets_;
     std::unordered_map<const IR::BasicBlock*, std::string> labels_;
 
    public:
