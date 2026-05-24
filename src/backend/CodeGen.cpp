@@ -73,10 +73,6 @@ std::string CodeGen::stackOffsetOperand(const int32_t stackOffsetBits) {
     }
 }
 
-std::string CodeGen::getNameWithPrefix(const std::string_view name) {
-    return "__" + std::string(name);
-}
-
 std::string CodeGen::stackAllocate(const uint32_t sizeBits) {
     stackOffset_ += toBytes(sizeBits) * 8;  // Align to bytes
     return stackOffsetOperand(stackOffset_);
@@ -84,8 +80,7 @@ std::string CodeGen::stackAllocate(const uint32_t sizeBits) {
 
 std::string CodeGen::stackAllocate(const IR::Value& value) {
     const std::string operand = stackAllocate(value.getType().computeSizeBits());
-    [[maybe_unused]] auto [_, inserted] = storedStackOffsets_.emplace(&value, stackOffset_);
-    assert(inserted);
+    storedStackOffsets_[value.getID()] = static_cast<int32_t>(stackOffset_);
     return operand;
 }
 
@@ -95,11 +90,11 @@ void CodeGen::loadTo(const Reg reg, const int32_t stackOffset) {
 }
 
 int32_t CodeGen::getStoredStackOffsetOrGenerate(const IR::Value* value) {
-    const auto it = storedStackOffsets_.find(value);
-    if (it != storedStackOffsets_.end()) return it->second;
+    const int32_t offset = storedStackOffsets_[value->getID()];
+    if (offset != UNINITIALIZED_STACK_OFFSET) return offset;
 
     generateValue(*value);
-    return storedStackOffsets_.at(value);
+    return storedStackOffsets_[value->getID()];
 }
 
 void CodeGen::generateValue(const IR::Value& value) {
@@ -121,7 +116,6 @@ void CodeGen::generateValue(const IR::Value& value) {
 
 void CodeGen::generateFunction(const IR::Function& func) {
     stackOffset_ = 0;
-    storedStackOffsets_.clear();
 
     output_ << "\n";
 
@@ -135,34 +129,26 @@ void CodeGen::generateFunction(const IR::Function& func) {
     output_ << "push rbp\n";
     output_ << "mov rbp, rsp\n";
 
-    // Assign IDs
-    for (const IR::BasicBlock* bb = func.getFirstBasicBlock(); bb; bb = bb->getNext()) {
-        const uint32_t id = basicBlockIDs_.size();
-        basicBlockIDs_.emplace(bb, id);
-    }
-
-    // Reg arguments stack offsets
     int32_t currOffset = -16 * 8;  // [rbp] is the saved rbp, [rbp + 8] is the return address
     for (const auto* arg : std::views::reverse(func.getArguments())) {
-        storedStackOffsets_.emplace(arg, currOffset);
+        storedStackOffsets_[arg->getID()] = currOffset;
         currOffset -=
             static_cast<int32_t>(arg->getType().computeSizeBytes()) * 8;  // Align to bytes
     }
 
-    // Generate
-    for (const auto* bb = func.getFirstBasicBlock(); bb; bb = bb->getNext())
+    for (const IR::BasicBlock* bb = func.getFirstBasicBlock(); bb; bb = bb->getNext())
         generateBasicBlock(*bb);
 }
 
 void CodeGen::generateBasicBlock(const IR::BasicBlock& bb) {
-    output_ << labelForBasicBlock(bb) << ":\n";
+    output_ << labelForBasicBlockID(bb.getID()) << ":\n";
 
     for (const auto* instr = bb.getFirstInstruction(); instr; instr = instr->getNext())
         generateInstruction(*instr);
 }
 
 void CodeGen::generateInstruction(const IR::Instruction& instr) {
-    if (storedStackOffsets_.contains(&instr)) return;
+    if (storedStackOffsets_[instr.getID()] != UNINITIALIZED_STACK_OFFSET) return;
 
     switch (instr.getOpcode()) {
         case IR::OpCode::ADD:
@@ -217,7 +203,7 @@ void CodeGen::generateInstruction(const IR::Instruction& instr) {
 }
 
 void CodeGen::generateConstant(const IR::ConstantValue& constant) {
-    if (storedStackOffsets_.contains(&constant)) return;
+    if (storedStackOffsets_[constant.getID()] != UNINITIALIZED_STACK_OFFSET) return;
 
     if (auto* integerConst = constant.dynCast<const IR::IntegerConstant>()) {
         const std::string loc = stackAllocate(constant);
@@ -429,7 +415,7 @@ void CodeGen::generateBr(const IR::Instruction& br) {
 
         const auto* bb = br.getOperands()[0]->dynCast<const IR::BasicBlock>();
         assert(bb);
-        output_ << "jmp " << labelForBasicBlock(*bb) << "\n";
+        output_ << "jmp " << labelForBasicBlockID(bb->getID()) << "\n";
 
     } else if (nbOps == 3) {  // Conditional jump
 
@@ -443,8 +429,8 @@ void CodeGen::generateBr(const IR::Instruction& br) {
         const Reg reg = regForValue(Reg::RAX, *condition);
         loadTo(reg, conditionStackOffset);
         output_ << "test " << reg.toString() << ", " << reg.toString() << "\n";
-        output_ << "jne " << labelForBasicBlock(*bbTrue) << "\n";
-        output_ << "jmp " << labelForBasicBlock(*bbFalse) << "\n";
+        output_ << "jne " << labelForBasicBlockID(bbTrue->getID()) << "\n";
+        output_ << "jmp " << labelForBasicBlockID(bbFalse->getID()) << "\n";
 
     } else {
         std::unreachable();

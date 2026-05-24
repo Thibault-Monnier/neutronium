@@ -1,7 +1,5 @@
 #pragma once
 
-#include <ankerl/unordered_dense.h>
-
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
@@ -29,12 +27,17 @@ class CodeGen {
     /// In bits.
     uint32_t stackOffset_ = 0;
 
-    ankerl::unordered_dense::map<const IR::Value*, int32_t> storedStackOffsets_;
-    ankerl::unordered_dense::map<const IR::BasicBlock*, uint32_t> basicBlockIDs_;
+    static constexpr int32_t UNINITIALIZED_STACK_OFFSET = INT32_MAX;
+
+    /// Maps value ID to the stack offset where it's stored. If it is not stored, the value is
+    /// UNINITIALIZED_STACK_OFFSET.
+    std::vector<int32_t> storedStackOffsets_;
 
    public:
     explicit CodeGen(const IR::Module& ir, const TargetType targetType)
-        : ir_(ir), targetType_(targetType) {}
+        : ir_(ir),
+          targetType_(targetType),
+          storedStackOffsets_(ir.getValuesCount(), UNINITIALIZED_STACK_OFFSET) {}
 
     [[nodiscard]] neutro::FastStringStream generate();
 
@@ -83,7 +86,9 @@ class CodeGen {
     [[nodiscard]] static std::string stackOffsetOperand(const uint32_t stackOffsetBits) {
         return stackOffsetOperand(static_cast<int32_t>(stackOffsetBits));
     }
-    [[nodiscard]] static std::string getNameWithPrefix(std::string_view name);
+    [[nodiscard]] static std::string getNameWithPrefix(const std::string_view name) {
+        return "__" + std::string(name);
+    }
 
     /// Creates a Reg with the size of the given value.
     [[nodiscard]] static Reg regForValue(const Reg::Name name, const IR::Value& value) {
@@ -92,11 +97,6 @@ class CodeGen {
 
     [[nodiscard]] static std::string labelForBasicBlockID(const uint32_t id) {
         return ".L" + std::to_string(id);
-    }
-
-    [[nodiscard]] std::string labelForBasicBlock(const IR::BasicBlock& bb) const {
-        const uint32_t id = basicBlockIDs_.at(&bb);
-        return labelForBasicBlockID(id);
     }
 
    private:

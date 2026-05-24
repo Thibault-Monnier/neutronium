@@ -113,6 +113,7 @@ class Value {
    private:
     const Type* type_;
     const Kind kind_;
+    uint32_t id_ = 0;
 
    protected:
     explicit Value(const Type& type, const Kind kind) : type_(&type), kind_(kind) {}
@@ -151,6 +152,9 @@ class Value {
    public:
     [[nodiscard]] const Type& getType() const { return *type_; }
     [[nodiscard]] Kind getKind() const { return kind_; }
+    [[nodiscard]] uint32_t getID() const { return id_; }
+
+    void setID(const uint32_t id) { id_ = id; }
 };
 
 class ConstantValue : public Value {
@@ -279,6 +283,8 @@ class Module {
     neutro::PolymorphicArenaAllocator values_;
     neutro::SpecializedArenaAllocator<Type> types_;
 
+    uint32_t valuesCount_ = 0;
+
    public:
     Function& addFunction(Function&& func) {
         Function* inserted = &registerValue(std::move(func));
@@ -292,7 +298,9 @@ class Module {
     template <class T>
         requires std::derived_from<T, Value>
     T& registerValue(T&& value) {
-        return *values_.insert(std::forward<T>(value));
+        T* ptr = values_.insert(std::forward<T>(value));
+        ptr->setID(valuesCount_++);
+        return *ptr;
     }
 
     const Type& registerType(Type type) {
@@ -307,6 +315,7 @@ class Module {
     }
 
     [[nodiscard]] const std::vector<Function*>& getFunctions() const { return functions_; }
+    [[nodiscard]] uint32_t getValuesCount() const { return valuesCount_; }
 };
 
 }  // namespace IR
