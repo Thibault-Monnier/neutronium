@@ -28,8 +28,8 @@ class SpecializedArenaAllocator {
     SpecializedArenaAllocator(const SpecializedArenaAllocator&) = delete;
     SpecializedArenaAllocator& operator=(const SpecializedArenaAllocator&) = delete;
 
-    SpecializedArenaAllocator(SpecializedArenaAllocator&&) = delete;
-    SpecializedArenaAllocator& operator=(SpecializedArenaAllocator&&) = delete;
+    SpecializedArenaAllocator(SpecializedArenaAllocator&&) = default;
+    SpecializedArenaAllocator& operator=(SpecializedArenaAllocator&&) = default;
 
     ~SpecializedArenaAllocator() {
         for (void* block : blocks_) {
@@ -48,6 +48,19 @@ class SpecializedArenaAllocator {
         return static_cast<uint32_t>(count_ - 1);
     }
 
+    /** Insert a range of elements into the arena.
+     *
+     * @param elems The elements to insert.
+     * @return The index of the first newly inserted element.
+     */
+    uint32_t insertRange(std::span<const T> elems) {
+        const uint32_t startIndex = count_;
+        for (T elem : elems) {
+            insert(std::move(elem));
+        }
+        return startIndex;
+    }
+
     /** Access an element in the arena by index.
      *
      * @param index The index of the element to access.
@@ -60,11 +73,18 @@ class SpecializedArenaAllocator {
         return blocks_[block][idx];
     }
 
-    /** Get the number of elements in the arena.
-     *
-     * @return The number of elements in the arena.
-     */
+    /// Get the number of elements in the arena.
     [[nodiscard]] size_t count() const { return count_; }
+
+    /// Get the number of blocks allocated by the arena.
+    [[nodiscard]] size_t blocksCount() const { return blocks_.size(); }
+
+    /// Get a span representing the elements in the specified block.
+    [[nodiscard]] std::span<T> block(size_t blockIndex) const {
+        assert(blockIndex < blocks_.size() && "Block index out of bounds");
+        return {blocks_[blockIndex],
+                std::min(count_ - blockIndex * BLOCK_SIZE_ELEMS, BLOCK_SIZE_ELEMS)};
+    }
 
    private:
     uintptr_t allocate() {
