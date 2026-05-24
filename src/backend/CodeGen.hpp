@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <deque>
 #include <memory>
 #include <ranges>
 #include <string>
@@ -32,6 +33,11 @@ class CodeGen {
     /// Maps value ID to the stack offset where it's stored. If it is not stored, the value is
     /// UNINITIALIZED_STACK_OFFSET.
     std::vector<int32_t> storedStackOffsets_;
+
+    /// Index is the stack offset in bytes.
+    std::deque<std::string> cachedStackOffsetOperandsPos_;
+    /// Index is the absolute value of the stack offset in bytes.
+    std::deque<std::string> cachedStackOffsetOperandsNeg_;
 
    public:
     explicit CodeGen(const IR::Module& ir, const TargetType targetType)
@@ -82,8 +88,8 @@ class CodeGen {
         }
     }
 
-    [[nodiscard]] static std::string stackOffsetOperand(int32_t stackOffsetBits);
-    [[nodiscard]] static std::string stackOffsetOperand(const uint32_t stackOffsetBits) {
+    [[nodiscard]] std::string stackOffsetOperand(int32_t stackOffsetBits);
+    [[nodiscard]] std::string stackOffsetOperand(const uint32_t stackOffsetBits) {
         return stackOffsetOperand(static_cast<int32_t>(stackOffsetBits));
     }
     [[nodiscard]] static std::string getNameWithPrefix(const std::string_view name) {

@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -20,7 +21,7 @@ namespace neutro {
  * @tparam T The type of the elements to store in the arena. Must be trivially destructible.
  */
 template <typename T>
-    requires std::is_trivially_destructible_v<T>
+    requires std::is_trivially_destructible_v<T> && std::is_trivially_copyable_v<T>
 class SpecializedArenaAllocator {
    public:
     SpecializedArenaAllocator() = default;
@@ -55,9 +56,17 @@ class SpecializedArenaAllocator {
      */
     uint32_t insertRange(std::span<const T> elems) {
         const uint32_t startIndex = count_;
-        for (T elem : elems) {
-            insert(std::move(elem));
+
+        const size_t remainingInBlock = BLOCK_SIZE_ELEMS - (count_ % BLOCK_SIZE_ELEMS);
+        if (elems.size() > remainingInBlock) {
+            for (T elem : elems) {
+                insert(std::move(elem));
+            }
+        } else {
+            void* pos = reinterpret_cast<void*>(allocate(elems.size()));
+            std::memcpy(static_cast<T*>(pos), elems.data(), elems.size() * sizeof(T));
         }
+
         return startIndex;
     }
 
@@ -87,21 +96,25 @@ class SpecializedArenaAllocator {
     }
 
    private:
-    uintptr_t allocate() {
+    uintptr_t allocate(const uint32_t numElems) {
         uintptr_t pos = currentBlockPos_;
-        uintptr_t newPos = pos + sizeof(T);
+        uintptr_t newPos = pos + numElems * sizeof(T);
 
         if (newPos > currentBlockEnd_) {
             allocateBlock();
 
             pos = currentBlockPos_;
-            newPos = pos + sizeof(T);
+            newPos = pos + numElems * sizeof(T);
+
+            assert(newPos <= currentBlockEnd_ && "New block should have enough space");
         }
 
         currentBlockPos_ = newPos;
-        count_++;
+        count_ += numElems;
         return pos;
     }
+
+    uintptr_t allocate() { return allocate(1); }
 
     void allocateBlock() {
         void* block = ::operator new(BLOCK_SIZE_BYTES, static_cast<std::align_val_t>(ALIGNMENT));

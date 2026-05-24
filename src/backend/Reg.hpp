@@ -1,7 +1,11 @@
 #pragma once
 
+#include <array>
+#include <bit>
+#include <cassert>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace Backend {
@@ -23,101 +27,39 @@ class Reg {
     uint32_t sizeBits_;
 
    public:
-    explicit Reg(const Name name, const uint32_t sizeBits) : name_(name), sizeBits_(sizeBits) {}
+    explicit constexpr Reg(const Name name, const uint32_t sizeBits)
+        : name_(name), sizeBits_(sizeBits) {}
 
-    [[nodiscard]] Name getName() const { return name_; }
-    [[nodiscard]] uint32_t sizeBits() const { return sizeBits_; }
+    [[nodiscard]] constexpr Name getName() const { return name_; }
+    [[nodiscard]] constexpr uint32_t sizeBits() const { return sizeBits_; }
 
-    [[nodiscard]] constexpr std::string toString() const { return toString(name_, sizeBits_); }
+    [[nodiscard]] constexpr std::string_view toString() const { return toString(name_, sizeBits_); }
 
-    [[nodiscard]] constexpr std::string deref() const { return "[" + toString(name_, 64) + "]"; }
+    [[nodiscard]] constexpr std::string deref() const {
+        return "[" + std::string(toString(name_, 64)) + "]";
+    }
 
    private:
-    [[nodiscard]] static constexpr std::string toString(const Name name, uint32_t sizeBits) {
+    [[nodiscard]] static constexpr std::string_view toString(const Name name, uint32_t sizeBits) {
         sizeBits = (sizeBits + 7) / 8 * 8;
 
-        switch (name) {
-            case RAX:
-                switch (sizeBits) {
-                    case 8:
-                        return "al";
-                    case 16:
-                        return "ax";
-                    case 32:
-                        return "eax";
-                    case 64:
-                        return "rax";
-                    default:
-                        std::unreachable();
-                }
-            case RBX:
-                switch (sizeBits) {
-                    case 8:
-                        return "bl";
-                    case 16:
-                        return "bx";
-                    case 32:
-                        return "ebx";
-                    case 64:
-                        return "rbx";
-                    default:
-                        std::unreachable();
-                }
-            case RCX:
-                switch (sizeBits) {
-                    case 8:
-                        return "cl";
-                    case 16:
-                        return "cx";
-                    case 32:
-                        return "ecx";
-                    case 64:
-                        return "rcx";
-                    default:
-                        std::unreachable();
-                }
-            case RSI:
-                switch (sizeBits) {
-                    case 8:
-                        return "sil";
-                    case 16:
-                        return "si";
-                    case 32:
-                        return "esi";
-                    case 64:
-                        return "rsi";
-                    default:
-                        std::unreachable();
-                }
-            case RDI:
-                switch (sizeBits) {
-                    case 8:
-                        return "dil";
-                    case 16:
-                        return "di";
-                    case 32:
-                        return "edi";
-                    case 64:
-                        return "rdi";
-                    default:
-                        std::unreachable();
-                }
-            case RSP:
-                switch (sizeBits) {
-                    case 8:
-                        return "spl";
-                    case 16:
-                        return "sp";
-                    case 32:
-                        return "esp";
-                    case 64:
-                        return "rsp";
-                    default:
-                        std::unreachable();
-                }
-        }
+        static constexpr std::array TABLE = {
+            // 8-bit, 16-bit, 32-bit, 64-bit
+            std::array<std::string_view, 4>{"al", "ax", "eax", "rax"},   // RAX
+            std::array<std::string_view, 4>{"bl", "bx", "ebx", "rbx"},   // RBX
+            std::array<std::string_view, 4>{"cl", "cx", "ecx", "rcx"},   // RCX
+            std::array<std::string_view, 4>{"sil", "si", "esi", "rsi"},  // RSI
+            std::array<std::string_view, 4>{"dil", "di", "edi", "rdi"},  // RDI
+            std::array<std::string_view, 4>{"spl", "sp", "esp", "rsp"},  // RSP
+        };
 
-        std::unreachable();
+        assert((sizeBits == 8 || sizeBits == 16 || sizeBits == 32 || sizeBits == 64) &&
+               "Invalid register size");
+        assert(static_cast<size_t>(name) < TABLE.size() && "Invalid register name");
+
+        const size_t sizeIdx = std::countr_zero(sizeBits) - 3;
+        assert(sizeIdx < 4 && "Invalid size index");
+        return TABLE[static_cast<size_t>(name)][sizeIdx];
     }
 };
 

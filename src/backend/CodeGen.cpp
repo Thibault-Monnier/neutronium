@@ -65,12 +65,18 @@ void CodeGen::lea(const std::string& loc, const Reg::Name dst) {
 void CodeGen::updateRsp() { lea(stackOffsetOperand(stackOffset_), Reg::RSP); }
 
 std::string CodeGen::stackOffsetOperand(const int32_t stackOffsetBits) {
-    const std::string val = std::to_string(toBytes(std::abs(stackOffsetBits)));
-    if (stackOffsetBits >= 0) {
-        return "[rbp - " + val + "]";
-    } else {
-        return "[rbp + " + val + "]";
+    const bool isPos = stackOffsetBits >= 0;
+    std::deque<std::string>& cache =
+        isPos ? cachedStackOffsetOperandsPos_ : cachedStackOffsetOperandsNeg_;
+
+    const size_t bytes = toBytes(std::abs(stackOffsetBits));
+    if (bytes >= cache.size() || cache[bytes].empty()) {
+        cache.resize(bytes + 1);
+        const std::string val = std::to_string(bytes);
+        cache[bytes] = (isPos ? "[rbp - " : "[rbp + ") + val + "]";
     }
+
+    return cache[bytes];
 }
 
 std::string CodeGen::stackAllocate(const uint32_t sizeBits) {
@@ -269,10 +275,10 @@ void CodeGen::generateBinaryOperation(const IR::OpCode opcode, Reg locA, const s
         if (opcode == IR::OpCode::MUL && locA.sizeBits() == 8) {
             // imul doesn't support 8-bit registers
             locA = Reg{locA.getName(), 64};
-            const Reg reg{Reg::RBX, 64};
-            assert(locA.getName() != reg.getName());
-            mov(locB, reg);
-            output_ << prefix << " " << locA.toString() << ", " << reg.toString() << "\n";
+            constexpr Reg REG{Reg::RBX, 64};
+            assert(locA.getName() != REG.getName());
+            mov(locB, REG);
+            output_ << prefix << " " << locA.toString() << ", " << REG.toString() << "\n";
         } else {
             output_ << prefix << " " << locA.toString() << ", " << locBPrefix << " " << locB
                     << "\n";
@@ -339,11 +345,11 @@ void CodeGen::generateLoad(const IR::Instruction& load) {
     const int32_t stackOffset = getStoredStackOffsetOrGenerate(address);
     const std::string writeLoc = stackAllocate(load);
 
-    const Reg addrReg{Reg::RAX, PTR_SIZE_BITS};
+    constexpr Reg ADDR_REG{Reg::RAX, PTR_SIZE_BITS};
     const Reg valReg = regForValue(Reg::RAX, load);
 
-    loadTo(addrReg, stackOffset);
-    mov(addrReg.deref(), valReg);
+    loadTo(ADDR_REG, stackOffset);
+    mov(ADDR_REG.deref(), valReg);
     mov(valReg, writeLoc);
 }
 
@@ -357,12 +363,12 @@ void CodeGen::generateStore(const IR::Instruction& store) {
     const int32_t addressStackOffset = getStoredStackOffsetOrGenerate(address);
     const int32_t valueStackOffset = getStoredStackOffsetOrGenerate(value);
 
-    const Reg addrReg{Reg::RAX, PTR_SIZE_BITS};
+    constexpr Reg ADDR_REG{Reg::RAX, PTR_SIZE_BITS};
     const Reg valReg = regForValue(Reg::RBX, *value);
 
-    loadTo(addrReg, addressStackOffset);
+    loadTo(ADDR_REG, addressStackOffset);
     loadTo(valReg, valueStackOffset);
-    mov(valReg, addrReg.deref());
+    mov(valReg, ADDR_REG.deref());
 }
 
 void CodeGen::generateGep(const IR::Instruction& gep) {
