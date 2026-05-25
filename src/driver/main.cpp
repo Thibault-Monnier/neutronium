@@ -153,6 +153,10 @@ void compileFile(CompilerOptions opts, SourceManager& sourceManager, const bool 
             lowerer.lower();
         }
 
+        // Clear frontend data to free memory and improve cache locality for codegen.
+        typeManager.clear();
+        astArena.clear();
+
         if (opts.endStage_ == PipelineEndStage::LOWER) return;
 
         assembly = [&] {

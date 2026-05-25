@@ -7,9 +7,9 @@
 
 #include "Type.hpp"
 #include "frontend/diagnostics/DiagnosticsEngine.hpp"
+#include "frontend/type/TypeID.hpp"
 #include "inference/TypeSolver.hpp"
 #include "lib/SpecializedArenaAllocator.hpp"
-#include "frontend/type/TypeID.hpp"
 
 /**
  * @class TypeManager
@@ -25,6 +25,13 @@ class TypeManager {
    public:
     explicit TypeManager(DiagnosticsEngine& diagnosticsEngine)
         : typeSolver_(*this, diagnosticsEngine) {}
+
+    /** Clears all registered types and resets the state. */
+    void clear() {
+        typeArena_.clear();
+        typeSolver_.clear();
+        linkingTable_ = std::vector<TypeID>();
+    }
 
     /**
      * @brief Registers a new type in the type manager.

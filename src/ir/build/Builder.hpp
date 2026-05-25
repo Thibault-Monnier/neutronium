@@ -101,33 +101,24 @@ class Builder {
     Value& createComparisonExpr(Value& a, Value& b, OpCode opCode);
 
    public:
-    __attribute__((always_inline)) Value& createIntegerConstant(const Type& type,
-                                                                const int64_t value) {
+    Value& createIntegerConstant(const Type& type, const int64_t value) {
         return registerValue(IntegerConstant{type, value});
     }
-    __attribute__((always_inline)) Value& createBooleanConstant(const bool value) {
+    Value& createBooleanConstant(const bool value) {
         return registerValue(IntegerConstant{boolType(), value ? 1 : 0});
     }
-    __attribute__((always_inline)) Argument& createArgument(const Type& type) {
-        return registerValue(Argument{type});
-    }
+    Argument& createArgument(const Type& type) { return registerValue(Argument{type}); }
 
-    [[nodiscard]] __attribute__((always_inline)) const Type& intType(
-        const uint32_t sizeBits) const {
+    [[nodiscard]] const Type& intType(const uint32_t sizeBits) const {
         return registerType(Type::intType(sizeBits));
     }
-    [[nodiscard]] __attribute__((always_inline)) const Type& boolType() const {
-        return registerType(Type::boolean());
-    }
-    [[nodiscard]] __attribute__((always_inline)) const Type& voidType() const {
-        return registerType(Type::voidType());
-    }
-    [[nodiscard]] __attribute__((always_inline)) const Type& ptrType(
-        const Type& pointeeType) const {
+    [[nodiscard]] const Type& boolType() const { return registerType(Type::boolean()); }
+    [[nodiscard]] const Type& voidType() const { return registerType(Type::voidType()); }
+    [[nodiscard]] const Type& ptrType(const Type& pointeeType) const {
         return registerType(Type::pointer(&pointeeType));
     }
-    [[nodiscard]] __attribute__((always_inline)) const Type& arrayType(
-        const Type& elementType, const uint32_t elementCount) const {
+    [[nodiscard]] const Type& arrayType(const Type& elementType,
+                                        const uint32_t elementCount) const {
         return registerType(Type::array(&elementType, elementCount));
     }
 };

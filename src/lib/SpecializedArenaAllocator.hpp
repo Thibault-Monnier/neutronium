@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/mman.h>
+
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -32,10 +34,17 @@ class SpecializedArenaAllocator {
     SpecializedArenaAllocator(SpecializedArenaAllocator&&) = default;
     SpecializedArenaAllocator& operator=(SpecializedArenaAllocator&&) = default;
 
-    ~SpecializedArenaAllocator() {
+    ~SpecializedArenaAllocator() { clear(); }
+
+    /** Clears all allocated memory. */
+    void clear() {
         for (void* block : blocks_) {
             ::operator delete(block, static_cast<std::align_val_t>(ALIGNMENT));
         }
+        blocks_.clear();
+        currentBlockPos_ = 0;
+        currentBlockEnd_ = 0;
+        count_ = 0;
     }
 
     /** Insert a new element into the arena.

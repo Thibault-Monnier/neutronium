@@ -28,10 +28,16 @@ class PolymorphicArenaAllocator {
     PolymorphicArenaAllocator(PolymorphicArenaAllocator&&) = delete;
     PolymorphicArenaAllocator& operator=(PolymorphicArenaAllocator&&) = delete;
 
-    ~PolymorphicArenaAllocator() {
+    ~PolymorphicArenaAllocator() { clear(); }
+
+    /** Clears all allocated memory. */
+    void clear() {
         for (void* block : blocks_) {
             ::operator delete(block, static_cast<std::align_val_t>(MAX_ALIGNMENT));
         }
+        blocks_.clear();
+        currentBlockPos_ = 0;
+        currentBlockEnd_ = 0;
     }
 
     /** Insert a new element into the arena.

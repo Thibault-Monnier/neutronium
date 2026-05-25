@@ -8,10 +8,10 @@
 #include "Constraint.hpp"
 #include "frontend/ast/AST.hpp"
 #include "frontend/diagnostics/DiagnosticsEngine.hpp"
-#include "lib/PolymorphicArenaAllocator.hpp"
 #include "frontend/type/Trait.hpp"
 #include "frontend/type/Type.hpp"
 #include "frontend/type/TypeID.hpp"
+#include "lib/PolymorphicArenaAllocator.hpp"
 
 class TypeManager;
 
@@ -27,6 +27,13 @@ class TypeSolver {
    public:
     TypeSolver(TypeManager& typeManager, DiagnosticsEngine& diagnosticsEngine)
         : typeManager_(typeManager), diagnosticsEngine_(diagnosticsEngine) {}
+
+    /** Clears all registered constraints and resets the state. */
+    void clear() {
+        constraintArena_.clear();
+        pendingConstraints_ = std::vector<Constraint*>();
+        nodes_ = std::vector<Node>();
+    }
 
     /**
      * @brief Registers a new type constraint to the collection of constraints.
