@@ -224,7 +224,7 @@ class Type {
      *
      * @return The `TypeID` of the array's element type.
      */
-    [[nodiscard]] TypeID arrayElementTypeId() const {
+    [[nodiscard]] TypeID arrayElementTypeID() const {
         assert(isArray());
         return arrayElementTypeID_;
     }

@@ -48,8 +48,8 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sour
             return dstType.mergeWith(srcType);
         case TypeKind::ARRAY: {
             if (!dstType.matches(srcType)) return false;
-            addConstraint<EqualityConstraint>(dstType.arrayElementTypeId(),
-                                              srcType.arrayElementTypeId(), sourceNode);
+            addConstraint<EqualityConstraint>(dstType.arrayElementTypeID(),
+                                              srcType.arrayElementTypeID(), sourceNode);
             return true;
         }
         default:
@@ -93,7 +93,7 @@ bool TypeSolver::solveSubscriptConstraint(const SubscriptConstraint& subscriptCo
     const Type& type = typeManager_.getType(subscriptConstraint.container());
 
     if (type.kind() == TypeKind::ARRAY) {
-        const TypeID expectedElementTypeID = type.arrayElementTypeId();
+        const TypeID expectedElementTypeID = type.arrayElementTypeID();
         const TypeID actualElementTypeID = subscriptConstraint.element();
 
         addConstraint(EqualityConstraint(expectedElementTypeID, actualElementTypeID,
@@ -136,7 +136,7 @@ bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConst
         }
 
         case TypeKind::ARRAY: {
-            const TypeID elementTypeID = type.arrayElementTypeId();
+            const TypeID elementTypeID = type.arrayElementTypeID();
             addConstraint(StorableConstraint(elementTypeID, storableConstraint.sourceNode()));
             return true;
         }

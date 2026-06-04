@@ -47,6 +47,7 @@ Value& Builder::createAllocaInstr(const Type& type, const uint32_t nbElements) {
 Value& Builder::createStoreInstr(Value& location, Value& value) {
     assert(location.getType().isPointer());
     assert(value.getType().isScalar());
+    assert(location.getType().getSubtype() == value.getType());
     std::array operands = {&location, &value};
     return addInstr(
         Instruction{OpCode::STORE, voidType(), arena_.insertArray(std::move(operands))});
@@ -71,6 +72,8 @@ Value& Builder::createMemcpyInstr(Value& dest, Value& src, Value& size) {
     assert(dest.getType().isPointer());
     assert(src.getType().isPointer());
     assert(size.getType().isInteger());
+    assert(dest.getType() == src.getType());
+
     std::array operands = {&dest, &src, &size};
     return addInstr(
         Instruction{OpCode::MEMCPY, voidType(), arena_.insertArray(std::move(operands))});

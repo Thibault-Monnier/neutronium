@@ -52,15 +52,13 @@ const IR::Type& ASTLowerer::convertPrimitiveType(const Type& type) const {
     std::unreachable();
 }
 
-const IR::Type& ASTLowerer::convertType(const TypeID typeID) {
-    const Type& type = typeManager_.getType(typeID);
-
+const IR::Type& ASTLowerer::convertType(const Type& type) {
     switch (type.kind()) {
         case TypeKind::PRIMITIVE:
             return convertPrimitiveType(type);
 
         case TypeKind::ARRAY: {
-            const IR::Type& elementType = convertType(type.arrayElementTypeId());
+            const IR::Type& elementType = convertType(type.arrayElementTypeID());
             const uint32_t elementCount = type.arrayLength();
             return builder_.arrayType(elementType, elementCount);
         }
@@ -307,6 +305,18 @@ void ASTLowerer::lowerExitStatement(const AST::ExitStatement& exitStmt) {
     builder_.createSyscallInstr(60, {&exitCode});
 }
 
+void ASTLowerer::copyValue(IR::Value& destPtr, IR::Value& value, const TypeID valueTypeID) {
+    const Type& type = typeManager_.getType(valueTypeID);
+    if (type.isArray()) {
+        // For arrays, we use memcpy.
+        const uint32_t size = convertType(type).computeSizeBytes();
+        IR::Value& arraySizeBytes = builder_.createIntegerConstant(builder_.intType(64), size);
+        builder_.createMemcpyInstr(destPtr, value, arraySizeBytes);
+    } else {
+        builder_.createStoreInstr(destPtr, value);
+    }
+}
+
 IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr,
                                             const std::optional<IR::Value*> place) {
     IR::Value* value;
@@ -352,17 +362,7 @@ IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr,
             std::unreachable();
     }
 
-    if (place) {
-        const IR::Type& type = value->getType();
-        if (type.holdsSubtype() && type.getSubtype().isArray()) {
-            // For arrays, we use memcpy.
-            const uint32_t size = type.getSubtype().computeSizeBytes();
-            IR::Value& arraySizeBytes = builder_.createIntegerConstant(builder_.intType(64), size);
-            builder_.createMemcpyInstr(*place.value(), *value, arraySizeBytes);
-        } else {
-            builder_.createStoreInstr(*place.value(), *value);
-        }
-    }
+    if (place) copyValue(*place.value(), *value, expr.typeID_);
 
     return *value;
 }
@@ -447,7 +447,8 @@ IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit,
 
 IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit,
                                                const std::optional<IR::Value*> place) {
-    const IR::Type& type = convertType(repeatArrayLit.typeID_);
+    const Type& arrayLitType = typeManager_.getType(repeatArrayLit.typeID_);
+    const IR::Type& type = convertType(arrayLitType);
 
     IR::Value& arrayPtr = place ? *place.value() : builder_.createAllocaInstr(type);
     IR::Value& elementValue = lowerValueExpression(*repeatArrayLit.element_);
@@ -459,8 +460,8 @@ IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& re
         const IR::Type& indexType = builder_.intType(64);
         IR::Value& indexValue = builder_.createIntegerConstant(indexType, static_cast<int64_t>(i));
         IR::Value& elementPtr = builder_.createGetElementPtrInstr(arrayPtr, indexValue);
-        builder_.createStoreInstr(elementPtr, elementValue);
-        // TODO: Handle non-scalar elements (e.g. for multidimensional arrays) by using memcpy.
+
+        copyValue(elementPtr, elementValue, arrayLitType.arrayElementTypeID());
     }
 
     return arrayPtr;

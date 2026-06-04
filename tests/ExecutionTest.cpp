@@ -1055,6 +1055,19 @@ TEST_F(NeutroniumTester, RepeatArrayLiteral) {
         )";
         EXPECT_EQ(run(code), 2);
     }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let arr = [[1, 2, 3]; 3];
+                let x = arr[1][2];
+                let y = arr[0][0];
+                let z = arr[2][1];
+                exit x * z + y * z; # 3 * 2 + 1 * 2 = 8
+            }
+        )";
+        EXPECT_EQ(run(code), 8);
+    }
 }
 
 TEST_F(NeutroniumTester, EmptyReturnStatement) {

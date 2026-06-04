@@ -68,11 +68,12 @@ class Type {
         std::unreachable();
     }
 
+    /// Calculates the total storage space required for this type, in bytes.
     [[nodiscard]] uint32_t computeSizeBytes() const {
         switch (kind_) {
             case Kind::PTR:
             case Kind::INT:
-                return (computeSizeBits() + 7) / 8;  // Align to bytes
+                return (computeSizeBits() + 7) / 8;  // Align to the nearest byte
             case Kind::ARRAY:
                 return getArrayElementCount() * subtype_->computeSizeBytes();
             case Kind::VOID:
