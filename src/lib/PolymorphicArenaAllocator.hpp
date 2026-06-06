@@ -113,7 +113,7 @@ class PolymorphicArenaAllocator {
     }
 
    private:
-    __attribute__((noinline)) uintptr_t allocate(const size_t size, const size_t alignment) {
+    uintptr_t allocate(const size_t size, const size_t alignment) {
         assert((alignment & (alignment - 1)) == 0 && "Alignment must be power of two");
         assert(alignment <= MAX_ALIGNMENT && "Alignment exceeds maximum supported alignment");
 
@@ -135,7 +135,7 @@ class PolymorphicArenaAllocator {
         return alignedPos;
     }
 
-    void allocateBlock(const size_t size) {
+    __attribute__((noinline)) void allocateBlock(const size_t size) {
         void* block = ::operator new(size, static_cast<std::align_val_t>(MAX_ALIGNMENT));
         blocks_.push_back(block);
         currentBlockPos_ = reinterpret_cast<uintptr_t>(block);

@@ -134,7 +134,7 @@ class SpecializedArenaAllocator {
 
     uintptr_t allocate() { return allocate(1); }
 
-    void allocateBlock() {
+    __attribute__((noinline)) void allocateBlock() {
         void* block = ::operator new(BLOCK_SIZE_BYTES, static_cast<std::align_val_t>(ALIGNMENT));
         blocks_.push_back(static_cast<T*>(block));
         currentBlockPos_ = reinterpret_cast<uintptr_t>(block);
