@@ -1,13 +1,13 @@
 #pragma once
 
-#include <sys/mman.h>
-
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <memory>
 #include <new>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -31,9 +31,21 @@ class SpecializedArenaAllocator {
     SpecializedArenaAllocator(const SpecializedArenaAllocator&) = delete;
     SpecializedArenaAllocator& operator=(const SpecializedArenaAllocator&) = delete;
 
-    SpecializedArenaAllocator(SpecializedArenaAllocator&&) = default;
-    SpecializedArenaAllocator& operator=(SpecializedArenaAllocator&&) = default;
-
+    SpecializedArenaAllocator(SpecializedArenaAllocator&& other) noexcept
+        : blocks_(std::move(other.blocks_)),
+          currentBlockPos_(other.currentBlockPos_),
+          currentBlockEnd_(other.currentBlockEnd_),
+          count_(other.count_) {
+        other.reset();
+    }
+    SpecializedArenaAllocator& operator=(SpecializedArenaAllocator&& other) noexcept {
+        blocks_ = std::move(other.blocks_);
+        currentBlockPos_ = other.currentBlockPos_;
+        currentBlockEnd_ = other.currentBlockEnd_;
+        count_ = other.count_;
+        other.reset();
+        return *this;
+    }
     ~SpecializedArenaAllocator() { clear(); }
 
     /** Clears all allocated memory. */
@@ -41,10 +53,7 @@ class SpecializedArenaAllocator {
         for (void* block : blocks_) {
             ::operator delete(block, static_cast<std::align_val_t>(ALIGNMENT));
         }
-        blocks_.clear();
-        currentBlockPos_ = 0;
-        currentBlockEnd_ = 0;
-        count_ = 0;
+        reset();
     }
 
     /** Insert a new element into the arena.
@@ -98,7 +107,7 @@ class SpecializedArenaAllocator {
     [[nodiscard]] size_t blocksCount() const { return blocks_.size(); }
 
     /// Get a span representing the elements in the specified block.
-    [[nodiscard]] std::span<T> block(size_t blockIndex) const {
+    [[nodiscard]] std::span<const T> block(size_t blockIndex) const {
         assert(blockIndex < blocks_.size() && "Block index out of bounds");
         return {blocks_[blockIndex],
                 std::min(count_ - blockIndex * BLOCK_SIZE_ELEMS, BLOCK_SIZE_ELEMS)};
@@ -130,6 +139,13 @@ class SpecializedArenaAllocator {
         blocks_.push_back(static_cast<T*>(block));
         currentBlockPos_ = reinterpret_cast<uintptr_t>(block);
         currentBlockEnd_ = reinterpret_cast<uintptr_t>(block) + BLOCK_SIZE_BYTES;
+    }
+
+    void reset() {
+        blocks_.clear();
+        currentBlockPos_ = 0;
+        currentBlockEnd_ = 0;
+        count_ = 0;
     }
 
    private:

@@ -1,11 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <new>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -87,7 +89,7 @@ class PolymorphicArenaAllocator {
      * @return A pointer to the first object in the newly inserted array.
      */
     template <typename T, size_t N>
-        requires std::is_trivially_constructible_v<T> && std::is_trivially_destructible_v<T>
+        requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>
     std::span<T> insertArray(std::array<T, N>&& arr) {
         T* data = reserveArray<T>(N);
         std::memcpy(reinterpret_cast<void*>(data), arr.data(), sizeof(arr));
