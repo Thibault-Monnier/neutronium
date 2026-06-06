@@ -12,19 +12,20 @@ class ASTLowerer {
     const AST::CompilationUnit& ast_;
     const TypeManager& typeManager_;
 
-    IR::Module ir_;
     IR::Builder builder_;
 
     IR::BasicBlock* currentBreakBlock_ = nullptr;
     IR::BasicBlock* currentContinueBlock_ = nullptr;
 
-    std::vector<std::unordered_map<std::string_view, IR::Value*>> scopedSymbolAdresses_;
+    std::vector<std::pair<std::string_view, IR::Value*>> scopedSymbolAdresses_;
+    std::vector<size_t> scopeBoundaries_;
 
    public:
-    explicit ASTLowerer(const AST::CompilationUnit& ast, const TypeManager& typeManager)
-        : ast_(ast), typeManager_(typeManager), builder_(ir_) {}
+    explicit ASTLowerer(const AST::CompilationUnit& ast, const TypeManager& typeManager,
+                        IR::Module& ir, neutro::PolymorphicArenaAllocator& arena)
+        : ast_(ast), typeManager_(typeManager), builder_(ir, arena) {}
 
-    [[nodiscard]] IR::Module&& lower();
+    void lower();
 
    private:
     [[nodiscard]] const IR::Type& convertPrimitiveType(const Type& type) const;
@@ -43,8 +44,11 @@ class ASTLowerer {
         ~ScopeGuard() { lowerer_.exitScope(); }
     };
 
-    void enterScope() { scopedSymbolAdresses_.emplace_back(); }
-    void exitScope() { scopedSymbolAdresses_.pop_back(); }
+    void enterScope() { scopeBoundaries_.push_back(scopedSymbolAdresses_.size()); }
+    void exitScope() {
+        scopedSymbolAdresses_.resize(scopeBoundaries_.back());
+        scopeBoundaries_.pop_back();
+    }
 
     void declareSymbol(std::string_view name, IR::Value* value);
     [[nodiscard]] IR::Value& lookupSymbolAddress(std::string_view name) const;

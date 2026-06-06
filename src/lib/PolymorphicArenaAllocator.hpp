@@ -1,10 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <new>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -27,10 +30,16 @@ class PolymorphicArenaAllocator {
     PolymorphicArenaAllocator(PolymorphicArenaAllocator&&) = delete;
     PolymorphicArenaAllocator& operator=(PolymorphicArenaAllocator&&) = delete;
 
-    ~PolymorphicArenaAllocator() {
+    ~PolymorphicArenaAllocator() { clear(); }
+
+    /** Clears all allocated memory. */
+    void clear() {
         for (void* block : blocks_) {
             ::operator delete(block, static_cast<std::align_val_t>(MAX_ALIGNMENT));
         }
+        blocks_.clear();
+        currentBlockPos_ = 0;
+        currentBlockEnd_ = 0;
     }
 
     /** Insert a new element into the arena.
@@ -54,6 +63,7 @@ class PolymorphicArenaAllocator {
      * @return A pointer to the newly inserted element.
      */
     template <typename T, typename... Args>
+        requires std::is_trivially_destructible_v<T>
     T* insert(Args&&... args) {
         return insert<T>(T(std::forward<Args>(args)...));
     }
@@ -66,9 +76,40 @@ class PolymorphicArenaAllocator {
      */
     template <typename T>
         requires std::is_trivially_constructible_v<T> && std::is_trivially_destructible_v<T>
-    T* insertArray(const size_t count) {
+    T* reserveArray(const size_t count) {
+        assert(count > 0);
         uintptr_t mem = allocate(sizeof(T) * count, alignof(T));
         return reinterpret_cast<T*>(mem);
+    }
+
+    /** Insert an array of trivially constructible and destructible objects into the arena.
+     *
+     * @tparam T The type of object to insert. Must be trivially constructible and destructible.
+     * @param arr The array to insert.
+     * @return A pointer to the first object in the newly inserted array.
+     */
+    template <typename T, size_t N>
+        requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>
+    std::span<T> insertArray(std::array<T, N>&& arr) {
+        T* data = reserveArray<T>(N);
+        std::memcpy(reinterpret_cast<void*>(data), arr.data(), sizeof(arr));
+        return {data, N};
+    }
+
+    /** Inserts a vector of trivially constructible and destructible objects into the arena and
+     * returns a span to it.
+     * @tparam T The type of the elements in the vector.
+     * @param vec The vector to insert.
+     * @return A span to the inserted vector.
+     */
+    template <typename T>
+        requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>
+    [[nodiscard]] std::span<T> insertVector(std::vector<T>&& vec) {
+        if (vec.empty()) return {};
+
+        T* data = reserveArray<T>(vec.size());
+        std::memcpy(reinterpret_cast<void*>(data), vec.data(), vec.size() * sizeof(T));
+        return {data, vec.size()};
     }
 
    private:
@@ -94,7 +135,7 @@ class PolymorphicArenaAllocator {
         return alignedPos;
     }
 
-    void allocateBlock(const size_t size) {
+    __attribute__((noinline)) void allocateBlock(const size_t size) {
         void* block = ::operator new(size, static_cast<std::align_val_t>(MAX_ALIGNMENT));
         blocks_.push_back(block);
         currentBlockPos_ = reinterpret_cast<uintptr_t>(block);

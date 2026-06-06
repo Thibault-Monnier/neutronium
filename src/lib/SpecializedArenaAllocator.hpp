@@ -1,10 +1,13 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <new>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -20,7 +23,7 @@ namespace neutro {
  * @tparam T The type of the elements to store in the arena. Must be trivially destructible.
  */
 template <typename T>
-    requires std::is_trivially_destructible_v<T>
+    requires std::is_trivially_destructible_v<T> && std::is_trivially_copyable_v<T>
 class SpecializedArenaAllocator {
    public:
     SpecializedArenaAllocator() = default;
@@ -28,13 +31,29 @@ class SpecializedArenaAllocator {
     SpecializedArenaAllocator(const SpecializedArenaAllocator&) = delete;
     SpecializedArenaAllocator& operator=(const SpecializedArenaAllocator&) = delete;
 
-    SpecializedArenaAllocator(SpecializedArenaAllocator&&) = delete;
-    SpecializedArenaAllocator& operator=(SpecializedArenaAllocator&&) = delete;
+    SpecializedArenaAllocator(SpecializedArenaAllocator&& other) noexcept
+        : blocks_(std::move(other.blocks_)),
+          currentBlockPos_(other.currentBlockPos_),
+          currentBlockEnd_(other.currentBlockEnd_),
+          count_(other.count_) {
+        other.reset();
+    }
+    SpecializedArenaAllocator& operator=(SpecializedArenaAllocator&& other) noexcept {
+        blocks_ = std::move(other.blocks_);
+        currentBlockPos_ = other.currentBlockPos_;
+        currentBlockEnd_ = other.currentBlockEnd_;
+        count_ = other.count_;
+        other.reset();
+        return *this;
+    }
+    ~SpecializedArenaAllocator() { clear(); }
 
-    ~SpecializedArenaAllocator() {
+    /** Clears all allocated memory. */
+    void clear() {
         for (void* block : blocks_) {
             ::operator delete(block, static_cast<std::align_val_t>(ALIGNMENT));
         }
+        reset();
     }
 
     /** Insert a new element into the arena.
@@ -46,6 +65,27 @@ class SpecializedArenaAllocator {
         void* pos = reinterpret_cast<void*>(allocate());
         std::construct_at(static_cast<T*>(pos), std::move(elem));
         return static_cast<uint32_t>(count_ - 1);
+    }
+
+    /** Insert a range of elements into the arena.
+     *
+     * @param elems The elements to insert.
+     * @return The index of the first newly inserted element.
+     */
+    uint32_t insertRange(std::span<const T> elems) {
+        const uint32_t startIndex = count_;
+
+        const size_t remainingInBlock = BLOCK_SIZE_ELEMS - (count_ % BLOCK_SIZE_ELEMS);
+        if (elems.size() > remainingInBlock) {
+            for (T elem : elems) {
+                insert(std::move(elem));
+            }
+        } else {
+            void* pos = reinterpret_cast<void*>(allocate(elems.size()));
+            std::memcpy(static_cast<T*>(pos), elems.data(), elems.size() * sizeof(T));
+        }
+
+        return startIndex;
     }
 
     /** Access an element in the arena by index.
@@ -60,34 +100,52 @@ class SpecializedArenaAllocator {
         return blocks_[block][idx];
     }
 
-    /** Get the number of elements in the arena.
-     *
-     * @return The number of elements in the arena.
-     */
+    /// Get the number of elements in the arena.
     [[nodiscard]] size_t count() const { return count_; }
 
+    /// Get the number of blocks allocated by the arena.
+    [[nodiscard]] size_t blocksCount() const { return blocks_.size(); }
+
+    /// Get a span representing the elements in the specified block.
+    [[nodiscard]] std::span<const T> block(size_t blockIndex) const {
+        assert(blockIndex < blocks_.size() && "Block index out of bounds");
+        return {blocks_[blockIndex],
+                std::min(count_ - blockIndex * BLOCK_SIZE_ELEMS, BLOCK_SIZE_ELEMS)};
+    }
+
    private:
-    uintptr_t allocate() {
+    uintptr_t allocate(const uint32_t numElems) {
         uintptr_t pos = currentBlockPos_;
-        uintptr_t newPos = pos + sizeof(T);
+        uintptr_t newPos = pos + numElems * sizeof(T);
 
         if (newPos > currentBlockEnd_) {
             allocateBlock();
 
             pos = currentBlockPos_;
-            newPos = pos + sizeof(T);
+            newPos = pos + numElems * sizeof(T);
+
+            assert(newPos <= currentBlockEnd_ && "New block should have enough space");
         }
 
         currentBlockPos_ = newPos;
-        count_++;
+        count_ += numElems;
         return pos;
     }
 
-    void allocateBlock() {
+    uintptr_t allocate() { return allocate(1); }
+
+    __attribute__((noinline)) void allocateBlock() {
         void* block = ::operator new(BLOCK_SIZE_BYTES, static_cast<std::align_val_t>(ALIGNMENT));
         blocks_.push_back(static_cast<T*>(block));
         currentBlockPos_ = reinterpret_cast<uintptr_t>(block);
         currentBlockEnd_ = reinterpret_cast<uintptr_t>(block) + BLOCK_SIZE_BYTES;
+    }
+
+    void reset() {
+        blocks_.clear();
+        currentBlockPos_ = 0;
+        currentBlockEnd_ = 0;
+        count_ = 0;
     }
 
    private:

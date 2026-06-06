@@ -9,7 +9,7 @@
 
 #include "utils/Log.hpp"
 
-CompilerOptions parseCli(const int argc, const char** argv) {
+CompilerOptions parseCli(const int argc, const char* const* argv) {
     cxxopts::Options options(argv[0], "Neutronium language compiler");
     options.positional_help("<input-file>").show_positional_help();
 
@@ -22,8 +22,9 @@ CompilerOptions parseCli(const int argc, const char** argv) {
         cxxopts::value<std::vector<std::string>>()->implicit_value(""))(
         "input", "Specify the source file", cxxopts::value<std::string>())(
         "only-lex", "Run the lexer, then stop")("only-parse", "Run the parser, then stop")(
-        "only-sema", "Run semantic analysis, then stop")("only-codegen",
-                                                         "Run code generation, then stop")(
+        "only-sema", "Run semantic analysis, then stop")(
+        "only-lower", "Run AST lowering, then stop")("only-codegen",
+                                                     "Run code generation, then stop")(
         "enable-ir", "Use the work-in-progress IR pipeline instead of the main codegen pipeline");
 
     options.parse_positional({"input"});
@@ -93,25 +94,34 @@ CompilerOptions parseCli(const int argc, const char** argv) {
     }
     opts.sourceFilename_ = result["input"].as<std::string>();
 
+    if (result.count("enable-ir")) {
+        printWarning(
+            "IR pipeline is a work in progress and may produce incorrect codegen output, fail to "
+            "compile, or crash.");
+        opts.useIrPipeline_ = true;
+    }
+
     if (result.count("only-lex")) {
         opts.endStage_ = PipelineEndStage::LEX;
     } else if (result.count("only-parse")) {
         opts.endStage_ = PipelineEndStage::PARSE;
     } else if (result.count("only-sema")) {
         opts.endStage_ = PipelineEndStage::SEMA;
+    } else if (result.count("only-lower")) {
+        if (opts.useIrPipeline_) {
+            opts.endStage_ = PipelineEndStage::LOWER;
+        } else {
+            printWarning(
+                "Lowering end stage is only available with the IR pipeline. Consider using "
+                "--enable-ir.");
+        }
+
     } else if (result.count("only-codegen")) {
         opts.endStage_ = PipelineEndStage::CODEGEN;
     }
 
     if (opts.logTokens_ && opts.endStage_ != PipelineEndStage::LEX) {
-        printWarning("Token logging requires the --only-lex option");
-    }
-
-    if (result.count("enable-ir")) {
-        printWarning(
-            "IR pipeline is a work in progress and may produce incorrect codegen output, fail to "
-            "compile, or crash.");
-        opts.useIrPipeline_ = true;
+        printWarning("Token logging requires the --only-lex option.");
     }
 
     return opts;

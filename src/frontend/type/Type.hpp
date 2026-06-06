@@ -41,22 +41,8 @@ class Type {
         initializeTraits();
     }
 
-    Type(const Type& other) { copyFrom(other); }
-
-    /**
-     * @brief Assigns the values from another `Type` instance to the current instance.
-     *
-     * This operator performs a deep copy of all properties from the given `other` instance
-     * to the current instance. It ensures no self-assignment occurs by checking object identity
-     * before proceeding with the copy operation.
-     *
-     * @param other The `Type` object whose values should be assigned to the current instance.
-     * @return A reference to the current `Type` instance after assignment.
-     */
-    Type& operator=(const Type& other) {
-        if (this != &other) copyFrom(other);
-        return *this;
-    }
+    Type(const Type& other) = default;
+    Type& operator=(const Type& other) = default;
 
     /**
      * @brief Retrieves the predefined type representing the integer family of primitive types.
@@ -325,16 +311,5 @@ class Type {
                 traits_ = 0;
                 break;
         }
-    }
-
-    // IMPORTANT NOTE:
-    // All members must be copied here when adding new ones.
-    void copyFrom(const Type& other) {
-        kind_ = other.kind_;
-        hasFamily_ = other.hasFamily_;
-        primitive_ = other.primitive_;
-        arrayElementTypeID_ = other.arrayElementTypeID_;
-        arrayLength_ = other.arrayLength_;
-        traits_ = other.traits_;
     }
 };

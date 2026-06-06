@@ -185,7 +185,7 @@ AST::Expression* Parser::parseArrayLiteral() {
         const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
         return astArena_.insert<AST::ArrayLiteral>(
-            insertVector(std::move(elements.value())), lBracket.byteOffsetStart(),
+            astArena_.insertVector(std::move(elements.value())), lBracket.byteOffsetStart(),
             rBracket.byteOffsetEnd(), fileID_, generateAnyType());
     }
 }
@@ -202,8 +202,8 @@ AST::Expression* Parser::parseIdentifierOrFunctionCall() {
 
         const uint32_t startIndex = ident->sourceStartIndex();
         return astArena_.insert<AST::FunctionCall>(
-            ident, insertVector(std::move(arguments.value())), startIndex, rParen.byteOffsetEnd(),
-            fileID_, generateAnyType());
+            ident, astArena_.insertVector(std::move(arguments.value())), startIndex,
+            rParen.byteOffsetEnd(), fileID_, generateAnyType());
     } else {
         // Identifier
         return ident;
@@ -424,8 +424,8 @@ AST::BlockStatement* Parser::parseElseClause() {
         std::vector<AST::Statement*> stmts;
         stmts.push_back(elif);
 
-        return astArena_.insert<AST::BlockStatement>(insertVector(std::move(stmts)), start, end,
-                                                     fileID_);
+        return astArena_.insert<AST::BlockStatement>(astArena_.insertVector(std::move(stmts)),
+                                                     start, end, fileID_);
     }
 
     std::unreachable();
@@ -537,7 +537,7 @@ AST::BlockStatement* Parser::parseBlockStatement() {
 
     const Token rBrace = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACE);
 
-    return astArena_.insert<AST::BlockStatement>(insertVector(std::move(statements)),
+    return astArena_.insert<AST::BlockStatement>(astArena_.insertVector(std::move(statements)),
                                                  lBrace.byteOffsetStart(), rBrace.byteOffsetEnd(),
                                                  fileID_);
 }
@@ -602,7 +602,7 @@ AST::ExternalFunctionDeclaration* Parser::parseExternalFunctionDeclaration() {
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
     return astArena_.insert<AST::ExternalFunctionDeclaration>(
-        signature->identifier_, insertVector(std::move(signature->parameters_)),
+        signature->identifier_, astArena_.insertVector(std::move(signature->parameters_)),
         signature->returnTypeID_, externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
 }
 
@@ -622,7 +622,7 @@ AST::FunctionDefinition* Parser::parseFunctionDefinition() {
 
     const uint32_t endIndex = body->sourceEndIndex();
     return astArena_.insert<AST::FunctionDefinition>(
-        signature->identifier_, insertVector(std::move(signature->parameters_)),
+        signature->identifier_, astArena_.insertVector(std::move(signature->parameters_)),
         signature->returnTypeID_, isExported, body, sourceStartIndex, endIndex, fileID_);
 }
 
@@ -655,7 +655,7 @@ AST::CompilationUnit* Parser::parseCompilationUnit() {
         }
     }
 
-    return astArena_.insert<AST::CompilationUnit>(insertVector(std::move(externalFunctions)),
-                                                  insertVector(std::move(functions)), fileID_,
-                                                  sourceCode_.size());
+    return astArena_.insert<AST::CompilationUnit>(
+        astArena_.insertVector(std::move(externalFunctions)),
+        astArena_.insertVector(std::move(functions)), fileID_, sourceCode_.size());
 }

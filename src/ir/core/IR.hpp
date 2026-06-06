@@ -2,9 +2,12 @@
 
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "Type.hpp"
+#include "lib/PolymorphicArenaAllocator.hpp"
+#include "lib/SpecializedArenaAllocator.hpp"
 
 namespace IR {
 
@@ -98,19 +101,67 @@ inline bool isBinaryOp(const OpCode op) {
 }
 
 class Value {
+   public:
+    enum class Kind : uint8_t {
+        INTEGER_CONSTANT,
+        ARGUMENT,
+        INSTRUCTION,
+        BASIC_BLOCK,
+        FUNCTION,
+    };
+
+   private:
     const Type* type_;
+    const Kind kind_;
+    uint32_t id_ = 0;
 
    protected:
-    explicit Value(const Type& type) : type_(&type) {}
+    explicit Value(const Type& type, const Kind kind) : type_(&type), kind_(kind) {}
+
+    Value(Value&&) = default;
 
    public:
-    virtual ~Value() = default;
+    Value(const Value&) = delete;
+    Value& operator=(const Value&) = delete;
+    Value& operator=(Value&&) = delete;
 
+    template <class T>
+        requires std::derived_from<T, Value>
+    [[nodiscard]] bool isa() const {
+        return T::classof(*this);
+    }
+
+    /** Returns a pointer to the value if it is of type T, or nullptr otherwise. */
+    template <class T>
+        requires std::derived_from<T, Value>
+    [[nodiscard]] T* dynCast() {
+        return isa<T>() ? static_cast<T*>(this) : nullptr;
+    }
+    /** Returns a pointer to the value if it is of type T, or nullptr otherwise. */
+    template <class T>
+        requires std::derived_from<T, Value>
+    [[nodiscard]] const T* dynCast() const {
+        return isa<T>() ? static_cast<const T*>(this) : nullptr;
+    }
+
+    static bool classof([[maybe_unused]] const Value& value) {
+        assert(false && "classof should be implemented in derived classes");
+        std::unreachable();
+    }
+
+   public:
     [[nodiscard]] const Type& getType() const { return *type_; }
+    [[nodiscard]] Kind getKind() const { return kind_; }
+    [[nodiscard]] uint32_t getID() const { return id_; }
+
+    void setID(const uint32_t id) { id_ = id; }
 };
 
 class ConstantValue : public Value {
     using Value::Value;
+
+   public:
+    static bool classof(const Value& value) { return value.getKind() == Kind::INTEGER_CONSTANT; }
 };
 
 class IntegerConstant : public ConstantValue {
@@ -118,84 +169,127 @@ class IntegerConstant : public ConstantValue {
 
    public:
     explicit IntegerConstant(const Type& type, const int64_t value)
-        : ConstantValue(type), value_(value) {
+        : ConstantValue(type, Kind::INTEGER_CONSTANT), value_(value) {
         assert(type.isInteger());
     }
 
     [[nodiscard]] int64_t getValue() const { return value_; }
+
+    static bool classof(const Value& value) { return value.getKind() == Kind::INTEGER_CONSTANT; }
 };
 
 class Argument : public Value {
    public:
-    explicit Argument(const Type& type) : Value(type) {}
+    explicit Argument(const Type& type) : Value(type, Kind::ARGUMENT) {}
+
+    static bool classof(const Value& value) { return value.getKind() == Kind::ARGUMENT; }
 };
 
 class Instruction : public Value {
     const OpCode opcode_;
-    std::vector<Value*> operands_;
+    const std::span<Value*> operands_;
+
+    const Instruction* next_ = nullptr;
 
    public:
-    explicit Instruction(const OpCode opcode, const Type& type, std::vector<Value*>&& operands)
-        : Value(type), opcode_(opcode), operands_(std::move(operands)) {}
+    explicit Instruction(const OpCode opcode, const Type& type, const std::span<Value*> operands)
+        : Value(type, Kind::INSTRUCTION), opcode_(opcode), operands_(operands) {}
+
+    // Forbid these to avoid accidental local references bugs.
+    template <typename T, typename Alloc>
+    Instruction(OpCode, const Type&, const std::vector<T, Alloc>&) = delete;
+    template <typename T, size_t N>
+    Instruction(OpCode, const Type&, const std::array<T, N>&) = delete;
+
+    void setNext(const Instruction& next) { next_ = &next; }
+    [[nodiscard]] const Instruction* getNext() const { return next_; }
 
     [[nodiscard]] OpCode getOpcode() const { return opcode_; }
-    [[nodiscard]] const std::vector<Value*>& getOperands() const { return operands_; }
+    [[nodiscard]] std::span<Value*> getOperands() const { return operands_; }
+
+    static bool classof(const Value& value) { return value.getKind() == Kind::INSTRUCTION; }
 };
 
 class BasicBlock : public Value {
-    std::vector<Instruction*> instructions_;
+    Instruction* firstInstruction_ = nullptr;
+    Instruction* lastInstruction_ = nullptr;
+
+    const BasicBlock* next_ = nullptr;
 
    public:
-    explicit BasicBlock(const Type& type) : Value(type) {}
+    explicit BasicBlock(const Type& type) : Value(type, Kind::BASIC_BLOCK) {}
 
-    void addInstruction(Instruction& instr) { instructions_.push_back(&instr); }
+    void addInstruction(Instruction& instr) {
+        if (!firstInstruction_)
+            firstInstruction_ = &instr;
+        else
+            lastInstruction_->setNext(instr);
 
-    [[nodiscard]] const std::vector<Instruction*>& getInstructions() const { return instructions_; }
+        lastInstruction_ = &instr;
+    }
+
+    void setNext(const BasicBlock& next) { next_ = &next; }
+    [[nodiscard]] const BasicBlock* getNext() const { return next_; }
+
+    [[nodiscard]] Instruction* getFirstInstruction() const { return firstInstruction_; }
+
+    static bool classof(const Value& value) { return value.getKind() == Kind::BASIC_BLOCK; }
 };
 
 class Function : public Value {
     std::string_view name_;
-    std::vector<Argument*> arguments_;
-    std::vector<std::unique_ptr<BasicBlock>> basicBlocks_;
+
+    const std::span<Argument*> arguments_;
+
+    BasicBlock* firstBlock_ = nullptr;
+    BasicBlock* lastBlock_ = nullptr;
 
     bool isExported_;
     bool isExternal_;
 
    public:
-    explicit Function(const std::string_view name, std::vector<Argument*>&& arguments,
+    explicit Function(const std::string_view name, const std::span<Argument*> arguments,
                       const Type& returnType, const bool isExported, const bool isExternal)
-        : Value(returnType),
+        : Value(returnType, Kind::FUNCTION),
           name_(name),
-          arguments_(std::move(arguments)),
+          arguments_(arguments),
           isExported_(isExported),
           isExternal_(isExternal) {}
 
-    BasicBlock& newBlock(const Type& voidTypeInstance) {
-        return *basicBlocks_.emplace_back(std::make_unique<BasicBlock>(voidTypeInstance));
+    void addBlock(BasicBlock& bb) {
+        if (!firstBlock_)
+            firstBlock_ = &bb;
+        else
+            lastBlock_->setNext(bb);
+
+        lastBlock_ = &bb;
     }
 
     [[nodiscard]] std::string_view getName() const { return name_; }
 
-    [[nodiscard]] const std::vector<Argument*>& getArguments() const { return arguments_; }
+    [[nodiscard]] std::span<Argument*> getArguments() const { return arguments_; }
 
-    [[nodiscard]] const std::vector<std::unique_ptr<BasicBlock>>& getBasicBlocks() const {
-        return basicBlocks_;
-    }
+    [[nodiscard]] const BasicBlock* getFirstBasicBlock() const { return firstBlock_; }
 
     [[nodiscard]] bool isExported() const { return isExported_; }
     [[nodiscard]] bool isExternal() const { return isExternal_; }
+
+    static bool classof(const Value& value) { return value.getKind() == Kind::FUNCTION; }
 };
 
 class Module {
-    std::vector<std::unique_ptr<Function>> functions_;
+    std::vector<Function*> functions_;
 
-    std::vector<std::unique_ptr<Value>> values_;
-    std::vector<std::unique_ptr<Type>> types_;
+    neutro::PolymorphicArenaAllocator values_;
+    neutro::SpecializedArenaAllocator<Type> types_;
+
+    uint32_t valuesCount_ = 0;
 
    public:
     Function& addFunction(Function&& func) {
-        functions_.push_back(std::make_unique<Function>(std::move(func)));
-        return *functions_.back();
+        Function* inserted = &registerValue(std::move(func));
+        functions_.push_back(inserted);
+        return *inserted;
     }
 
     template <class T>
@@ -204,18 +298,24 @@ class Module {
     template <class T>
         requires std::derived_from<T, Value>
     T& registerValue(T&& value) {
-        values_.push_back(std::make_unique<T>(std::forward<T>(value)));
-        return static_cast<T&>(*values_.back());
+        T* ptr = values_.insert(std::forward<T>(value));
+        ptr->setID(valuesCount_++);
+        return *ptr;
     }
 
-    const Type& registerType(const Type type) {
-        types_.push_back(std::make_unique<Type>(type));
-        return *types_.back();
+    const Type& registerType(Type type) {
+        for (size_t i = 0; i < types_.count(); ++i) {
+            const Type& elem = types_.at(i);
+            if (type == elem) {
+                return elem;
+            }
+        }
+        const uint32_t idx = types_.insert(std::move(type));
+        return types_.at(idx);
     }
 
-    [[nodiscard]] const std::vector<std::unique_ptr<Function>>& getFunctions() const {
-        return functions_;
-    }
+    [[nodiscard]] const std::vector<Function*>& getFunctions() const { return functions_; }
+    [[nodiscard]] uint32_t getValuesCount() const { return valuesCount_; }
 };
 
 }  // namespace IR

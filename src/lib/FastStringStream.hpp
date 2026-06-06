@@ -6,13 +6,15 @@
 #include <string_view>
 #include <type_traits>
 
+#include "SpecializedArenaAllocator.hpp"
+
 namespace neutro {
 
 /**
  * @brief A fast string stream optimized for appending strings and integral types.
  */
 class FastStringStream {
-    std::string buffer_;
+    SpecializedArenaAllocator<char> buffer_;
 
    public:
     FastStringStream() = default;
@@ -47,19 +49,27 @@ class FastStringStream {
         }
     }
 
-    /// @brief Returns a constant reference to the internal string buffer.
-    [[nodiscard]] const std::string& str() const { return buffer_; }
+    /// Returns the contents of the stream as a string. **This is a costly operation** that copies
+    /// all the data.
+    [[nodiscard]] std::string str() const {
+        std::string str;
+        str.reserve(buffer_.count());
+        for (size_t i = 0; i < buffer_.blocksCount(); ++i) {
+            str += std::string_view(buffer_.block(i));
+        }
+        return str;
+    }
 
    private:
     template <typename T>
         requires std::is_convertible_v<T, std::string_view>
     FastStringStream& append(const T& value) {
-        buffer_.append(value);
+        buffer_.insertRange(std::string_view(value));
         return *this;
     }
 
-    FastStringStream& append(const char c) {
-        buffer_.push_back(c);
+    FastStringStream& append(char c) {
+        buffer_.insert(std::move(c));
         return *this;
     }
 };

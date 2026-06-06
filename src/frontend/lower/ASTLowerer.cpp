@@ -18,7 +18,7 @@
 #include "ir/core/IR.hpp"
 #include "ir/core/Type.hpp"
 
-IR::Module&& ASTLowerer::lower() {
+void ASTLowerer::lower() {
     for (const auto& externalFuncDecl : ast_.externalFunctions_) {
         lowerExternalFunction(*externalFuncDecl);
     }
@@ -26,8 +26,6 @@ IR::Module&& ASTLowerer::lower() {
     for (const auto* funcDef : ast_.functions_) {
         lowerFunction(*funcDef);
     }
-
-    return std::move(ir_);
 }
 
 const IR::Type& ASTLowerer::convertPrimitiveType(const Type& type) const {
@@ -73,15 +71,13 @@ const IR::Type& ASTLowerer::convertType(const Type& type) {
 }
 
 void ASTLowerer::declareSymbol(std::string_view name, IR::Value* value) {
-    [[maybe_unused]] auto [_, inserted] = scopedSymbolAdresses_.back().emplace(name, value);
-    assert(inserted);
+    scopedSymbolAdresses_.emplace_back(name, value);
 }
 
 IR::Value& ASTLowerer::lookupSymbolAddress(const std::string_view name) const {
-    // Innermost scopes have a higher chance of containing the symbol
-    for (const auto& scope : std::ranges::reverse_view(scopedSymbolAdresses_)) {
-        const auto it = scope.find(name);
-        if (it != scope.end()) return *it->second;
+    // Last declared symbols have a higher chance of being what we're looking for
+    for (const auto& [symName, value] : std::ranges::reverse_view(scopedSymbolAdresses_)) {
+        if (symName == name) return *value;
     }
 
     std::unreachable();
@@ -92,6 +88,8 @@ void ASTLowerer::declareFunction(const std::string_view name,
                                  const TypeID returnTypeID, const bool isExported,
                                  const bool isExternal) {
     std::vector<IR::Argument*> args;
+    args.reserve(parameters.size() + 1);  // In case we add the hidden return pointer
+
     bool usingHiddenReturnPointer = false;
 
     const IR::Type* returnType = &convertType(returnTypeID);
@@ -396,12 +394,14 @@ IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier)
 
 IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     std::vector<IR::Value*> arguments;
+    arguments.reserve(funcCall.arguments_.size() + 1);  // In case we add the hidden return pointer
 
     const Type& returnType = typeManager_.getType(funcCall.typeID_);
+    IR::Value* returnValueAddress;
     if (returnType.isArray()) {
         // For arrays, allocate space and pass a pointer as a hidden first argument.
-        IR::Value& returnValueAddress = builder_.createAllocaInstr(convertType(funcCall.typeID_));
-        arguments.push_back(&returnValueAddress);
+        returnValueAddress = &builder_.createAllocaInstr(convertType(funcCall.typeID_));
+        arguments.push_back(returnValueAddress);
     }
 
     for (const auto* arg : funcCall.arguments_) {
@@ -415,7 +415,7 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     IR::Value& call = builder_.createCallInstr(funcCall.callee_->name_, std::move(arguments));
 
     if (returnType.isArray()) {
-        return *arguments[0];
+        return *returnValueAddress;
     } else {
         return call;
     }

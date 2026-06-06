@@ -87,7 +87,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(magic_enum)
 
-target_link_libraries(neutronium_lib PUBLIC cxxopts magic_enum)
+FetchContent_Declare(
+        unordered_dense
+        GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
+        GIT_TAG v4.4.0
+)
+FetchContent_MakeAvailable(unordered_dense)
+
+target_link_libraries(neutronium_lib PUBLIC cxxopts magic_enum unordered_dense)
 
 # --- Tests ---
 FetchContent_Declare(

@@ -16,11 +16,11 @@
 #include "frontend/lex/Lexer.hpp"
 #include "frontend/lex/Token.hpp"
 #include "frontend/lex/TokenKind.hpp"
-#include "lib/PolymorphicArenaAllocator.hpp"
 #include "frontend/source/FileID.hpp"
 #include "frontend/type/Type.hpp"
 #include "frontend/type/TypeID.hpp"
 #include "frontend/type/TypeManager.hpp"
+#include "lib/PolymorphicArenaAllocator.hpp"
 
 struct ParsedFunctionSignature {
     AST::Identifier* identifier_;
@@ -107,21 +107,6 @@ class Parser {
      */
     [[nodiscard]] TypeID generateAnyType() const {
         return typeManager_.createType(Type::anyFamilyType());
-    }
-
-    /** Inserts a vector into the ASTArena and returns a span to it.
-     * @tparam T The type of the elements in the vector.
-     * @param vec The vector to insert.
-     * @return A span to the inserted vector.
-     */
-    template <typename T>
-        requires std::is_trivially_copyable_v<T>
-    [[nodiscard]] std::span<T> insertVector(std::vector<T>&& vec) {
-        if (vec.empty()) return {};
-
-        T* data = astArena_.insertArray<T>(vec.size());
-        std::memcpy(reinterpret_cast<void*>(data), vec.data(), vec.size() * sizeof(T));
-        return {data, vec.size()};
     }
 
     template <class T>
