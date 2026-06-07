@@ -141,7 +141,7 @@ std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotat
 AST::Identifier* Parser::parseIdentifier() {
     const Token ident = EXPECT_OR_RETURN_NULLPTR(TokenKind::IDENTIFIER);
     return astArena_.insert<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
-                                             ident.byteOffsetEnd(), fileID_, generateAnyType());
+                                             ident.byteOffsetEnd(), fileID_, generateTypeVariable());
 }
 
 AST::NumberLiteral* Parser::parseNumberLiteral() {
@@ -163,7 +163,7 @@ AST::NumberLiteral* Parser::parseNumberLiteral() {
     }
 
     return astArena_.insert<AST::NumberLiteral>(value, token.byteOffsetStart(),
-                                                token.byteOffsetEnd(), fileID_, generateAnyType());
+                                                token.byteOffsetEnd(), fileID_, generateTypeVariable());
 }
 
 AST::Expression* Parser::parseArrayLiteral() {
@@ -179,14 +179,14 @@ AST::Expression* Parser::parseArrayLiteral() {
 
         return astArena_.insert<AST::RepeatArrayLiteral>(
             elements.value()[0], countLiteral, lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
-            fileID_, generateAnyType());
+            fileID_, generateTypeVariable());
     } else {
         // Regular array literal
         const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
         return astArena_.insert<AST::ArrayLiteral>(
             astArena_.insertVector(std::move(elements.value())), lBracket.byteOffsetStart(),
-            rBracket.byteOffsetEnd(), fileID_, generateAnyType());
+            rBracket.byteOffsetEnd(), fileID_, generateTypeVariable());
     }
 }
 
@@ -203,7 +203,7 @@ AST::Expression* Parser::parseIdentifierOrFunctionCall() {
         const uint32_t startIndex = ident->sourceStartIndex();
         return astArena_.insert<AST::FunctionCall>(
             ident, astArena_.insertVector(std::move(arguments.value())), startIndex,
-            rParen.byteOffsetEnd(), fileID_, generateAnyType());
+            rParen.byteOffsetEnd(), fileID_, generateTypeVariable());
     } else {
         // Identifier
         return ident;
@@ -218,7 +218,7 @@ AST::ArrayAccess* Parser::parseArrayAccess(const AST::Expression* base) {
 
     const uint32_t startIndex = base->sourceStartIndex();
     return astArena_.insert<AST::ArrayAccess>(base, index, startIndex, rBracket.byteOffsetEnd(),
-                                              fileID_, generateAnyType());
+                                              fileID_, generateTypeVariable());
 }
 
 AST::Expression* Parser::parsePrimaryExpression() {
@@ -236,7 +236,7 @@ AST::Expression* Parser::parsePrimaryExpression() {
             const bool value = token.kind() == TokenKind::TRUE;
             advance();
             return astArena_.insert<AST::BooleanLiteral>(
-                value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateAnyType());
+                value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateTypeVariable());
         }
 
         case TokenKind::IDENTIFIER:
@@ -283,7 +283,7 @@ AST::Expression* Parser::parseUnaryExpression() {
 
         const uint32_t endIndex = operand->sourceEndIndex();
         return astArena_.insert<AST::UnaryExpression>(op, operand, token.byteOffsetStart(),
-                                                      endIndex, fileID_, generateAnyType());
+                                                      endIndex, fileID_, generateTypeVariable());
     }
 
     return parsePostfixExpression();
@@ -306,7 +306,7 @@ AST::Expression* Parser::parseBinaryExpression(
         const uint32_t startIndex = left->sourceStartIndex();
         const uint32_t endIndex = right->sourceEndIndex();
         left = astArena_.insert<AST::BinaryExpression>(left, op, right, startIndex, endIndex,
-                                                       fileID_, generateAnyType());
+                                                       fileID_, generateTypeVariable());
         if (!allowMultiple) break;
     }
 
@@ -351,7 +351,7 @@ AST::Expression* Parser::parseLogicalExpression() {
         const uint32_t startIndex = left->sourceStartIndex();
         const uint32_t endIndex = right->sourceEndIndex();
         left = astArena_.insert<AST::BinaryExpression>(left, exprOp, right, startIndex, endIndex,
-                                                       fileID_, generateAnyType());
+                                                       fileID_, generateTypeVariable());
     }
 
     return left;
@@ -367,10 +367,14 @@ AST::VariableDefinition* Parser::parseVariableDefinition() {
     auto identifier = parseIdentifier();
     if (!identifier) return nullptr;
 
-    const auto parsedType = maybeParseTypeAnnotation(TokenKind::COLON, Type::anyFamilyType());
-    if (!parsedType) return nullptr;
-
-    const TypeID typeID = typeManager_.createType(*parsedType);
+    TypeID typeID;
+    if (advanceIf(TokenKind::COLON)) {
+        const auto parsedType = parseTypeSpecifier();
+        if (!parsedType) return nullptr;
+        typeID = typeManager_.createType(*parsedType);
+    } else {
+        typeID = typeManager_.createTypeVariable();
+    }
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::EQUAL);
     auto value = parseExpression();

@@ -6,13 +6,13 @@
 #include <string_view>
 
 #include "SymbolTable.hpp"
+#include "driver/Cli.hpp"
 #include "frontend/ast/AST.hpp"
 #include "frontend/ast/Operator.hpp"
-#include "driver/Cli.hpp"
-#include "lib/FastStringStream.hpp"
 #include "frontend/type/Type.hpp"
 #include "frontend/type/TypeID.hpp"
 #include "frontend/type/TypeManager.hpp"
+#include "lib/FastStringStream.hpp"
 
 namespace CodeGen {
 
@@ -55,7 +55,7 @@ class Generator {
     }
 
     [[nodiscard]] uint32_t typeSize(const TypeID typeID) const {
-        const Type& type = typeManager_.getType(typeID);
+        const Type& type = typeManager_.getTypeResolved(typeID);
         return typeSize(type);
     }
 
@@ -63,7 +63,7 @@ class Generator {
      * @brief Computes the size of the provided expression in bytes.
      */
     [[nodiscard]] uint32_t exprSize(const AST::Expression& expr) const {
-        const Type& type = typeManager_.getType(expr.typeID_);
+        const Type& type = typeManager_.getTypeResolved(expr.typeID_);
         return typeSize(type);
     }
 
@@ -71,7 +71,7 @@ class Generator {
      * @brief Computes the size of the provided variable definition in bytes.
      */
     [[nodiscard]] uint32_t varDefSize(const AST::VariableDefinition& varDef) const {
-        const Type& type = typeManager_.getType(varDef.typeID_);
+        const Type& type = typeManager_.getTypeResolved(varDef.typeID_);
         return typeSize(type);
     }
 
@@ -80,7 +80,7 @@ class Generator {
      */
     [[nodiscard]] uint32_t getVariableSize(const std::string_view name) const {
         const TypeID typeID = symbolTable_.at(name).typeID_;
-        const Type& type = typeManager_.getType(typeID);
+        const Type& type = typeManager_.getTypeResolved(typeID);
         return typeSize(type);
     }
 

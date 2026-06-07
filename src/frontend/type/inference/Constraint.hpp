@@ -17,7 +17,7 @@ class Constraint {
    public:
     enum class Kind : uint8_t { EQUALITY, SUBSCRIPT, HAS_TRAIT, STORABLE };
 
-    [[nodiscard]] virtual Kind kind() const = 0;
+    [[nodiscard]] Kind kind() const { return kind_; }
     [[nodiscard]] const AST::Node& sourceNode() const { return sourceNode_; }
 
     template <typename T>
@@ -30,11 +30,13 @@ class Constraint {
     }
 
    protected:
-    explicit Constraint(const AST::Node& sourceNode) : sourceNode_(sourceNode) {}
+    explicit Constraint(const AST::Node& sourceNode, const Kind kind)
+        : sourceNode_(sourceNode), kind_(kind) {}
     ~Constraint() = default;
 
    private:
     const AST::Node& sourceNode_;
+    const Kind kind_;
 };
 
 /**
@@ -46,9 +48,7 @@ class Constraint {
 class EqualityConstraint final : public Constraint {
    public:
     EqualityConstraint(const TypeID a, const TypeID b, const AST::Node& sourceNode)
-        : Constraint(sourceNode), a_(a), b_(b) {}
-
-    [[nodiscard]] Kind kind() const override { return Kind::EQUALITY; }
+        : Constraint(sourceNode, Kind::EQUALITY), a_(a), b_(b) {}
 
     [[nodiscard]] TypeID a() const { return a_; }
     [[nodiscard]] TypeID b() const { return b_; }
@@ -67,9 +67,7 @@ class EqualityConstraint final : public Constraint {
 class SubscriptConstraint final : public Constraint {
    public:
     SubscriptConstraint(const TypeID container, const TypeID element, const AST::Node& sourceNode)
-        : Constraint(sourceNode), container_(container), element_(element) {}
-
-    [[nodiscard]] Kind kind() const override { return Kind::SUBSCRIPT; }
+        : Constraint(sourceNode, Kind::SUBSCRIPT), container_(container), element_(element) {}
 
     [[nodiscard]] TypeID container() const { return container_; }
     [[nodiscard]] TypeID element() const { return element_; }
@@ -88,9 +86,7 @@ class SubscriptConstraint final : public Constraint {
 class HasTraitConstraint final : public Constraint {
    public:
     HasTraitConstraint(const TypeID type, const Trait trait, const AST::Node& sourceNode)
-        : Constraint(sourceNode), type_(type), trait_(trait) {}
-
-    [[nodiscard]] Kind kind() const override { return Kind::HAS_TRAIT; }
+        : Constraint(sourceNode, Kind::HAS_TRAIT), type_(type), trait_(trait) {}
 
     [[nodiscard]] TypeID type() const { return type_; }
     [[nodiscard]] Trait trait() const { return trait_; }
@@ -109,9 +105,7 @@ class HasTraitConstraint final : public Constraint {
 class StorableConstraint final : public Constraint {
    public:
     StorableConstraint(const TypeID type, const AST::Node& sourceNode)
-        : Constraint(sourceNode), type_(type) {}
-
-    [[nodiscard]] Kind kind() const override { return Kind::STORABLE; }
+        : Constraint(sourceNode, Kind::STORABLE), type_(type) {}
 
     [[nodiscard]] TypeID type() const { return type_; }
 

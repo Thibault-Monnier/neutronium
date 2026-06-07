@@ -13,9 +13,9 @@
 #include <vector>
 
 #include "SymbolTable.hpp"
+#include "driver/Cli.hpp"
 #include "frontend/ast/AST.hpp"
 #include "frontend/ast/Operator.hpp"
-#include "driver/Cli.hpp"
 #include "frontend/type/Trait.hpp"
 #include "frontend/type/Type.hpp"
 #include "frontend/type/TypeID.hpp"
@@ -209,7 +209,7 @@ TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
 
     const auto info = getFunctionSymbolInfoOrError(name, *funcCall.callee_);
     if (!info.has_value()) {
-        return registerAnyType();
+        return registerTypeVariable();
     }
     assert(info.value()->kind() == SymbolKind::FUNCTION);
 
@@ -280,7 +280,7 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
             const auto& arrayLiteral = *expr.as<AST::ArrayLiteral>();
             if (arrayLiteral.elements_.empty()) {
                 emptyArrayLiteralError(arrayLiteral);
-                verifier = registerAnyType();
+                verifier = registerTypeVariable();
                 break;
             }
 
@@ -298,7 +298,7 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
             const auto elementCount = repeatArrayLit.count_->value_;
             if (elementCount == 0) {
                 emptyArrayLiteralError(repeatArrayLit);
-                verifier = registerAnyType();
+                verifier = registerTypeVariable();
                 break;
             }
 
@@ -311,7 +311,7 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
             const auto& identifier = *expr.as<AST::Identifier>();
             const auto info = getVariableSymbolInfoOrError(identifier.name_, identifier);
             if (!info.has_value()) {
-                verifier = registerAnyType();
+                verifier = registerTypeVariable();
                 break;
             } else if (info.value()->kind() != SymbolKind::VARIABLE) {
                 std::unreachable();
@@ -329,7 +329,7 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
             const TypeID integerTypeID = registerIntegerType();
             checkExpression(*arrayAccess.index_, integerTypeID);
 
-            const TypeID elementTypeID = registerAnyType();
+            const TypeID elementTypeID = registerTypeVariable();
             subscriptConstraint(arrayType, elementTypeID, arrayAccess);
 
             verifier = elementTypeID;
@@ -554,7 +554,8 @@ void SemanticAnalyser::analyseFunctionDefinition(const AST::FunctionDefinition& 
     currentFunctionReturnTypeID_ = funcDef.returnTypeID_;
 
     const TypeID returnTypeID = currentFunctionReturnTypeID_;
-    const Type& returnType = typeManager_.getType(returnTypeID);
+    const Type& returnType =
+        typeManager_.getTypeResolved(returnTypeID);  // Return types are always explicit
     handleFunctionDeclaration(&funcDef, funcDef.identifier_->name_, funcDef.parameters_);
 
     analyseStatement(*funcDef.body_);

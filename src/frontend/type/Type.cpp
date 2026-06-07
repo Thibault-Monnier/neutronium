@@ -26,19 +26,14 @@ uint32_t Type::sizeBits(const TypeManager& typeManager) const {
                     return 64;
                 case Primitive::Kind::VOID:
                     return 0;
-                case Primitive::Kind::UNKNOWN:
-                    std::unreachable();
             }
             break;
         }
 
         case TypeKind::ARRAY: {
-            const Type& arrayElement = typeManager.getType(arrayElementTypeID_);
+            const Type& arrayElement = typeManager.getTypeResolved(arrayElementTypeID_);
             return arrayElement.sizeBits(typeManager) * arrayLength_;
         }
-
-        case TypeKind::UNKNOWN:
-            std::unreachable();
     }
     std::unreachable();
 }
@@ -69,23 +64,18 @@ std::string Type::toString(const TypeManager& typeManager) const {
                 case Primitive::Kind::VOID:
                     result += "void";
                     break;
-                case Primitive::Kind::UNKNOWN:
-                    result += "unknown";
-                    break;
             }
             break;
         }
 
         case TypeKind::ARRAY: {
-            const Type& arrayElement = typeManager.getType(arrayElementTypeID_);
-            result += "array[" + arrayElement.toString(typeManager) + " * " +
-                      std::to_string(arrayLength_) + "]";
+            const Type* arrayElement = typeManager.getType(arrayElementTypeID_);
+            const std::string elemStr =
+                arrayElement ? arrayElement->toString(typeManager) : "unknown";
+
+            result += "array[" + elemStr + " * " + std::to_string(arrayLength_) + "]";
             break;
         }
-
-        case TypeKind::UNKNOWN:
-            result += "unknown";
-            break;
     }
 
     if (family()->kind() != PrimitiveTypeFamily::Kind::NONE) {
@@ -104,8 +94,7 @@ bool Type::mergeWith(const Type& other) {
     // We only need to modify `this`
     if (!hasFamily_ || other.family()->isInFamily(primitive_)) return true;
 
-    assert(kind_ == TypeKind::UNKNOWN || !other.hasFamily_ ||
-           family()->isInFamily(other.primitive_));
+    assert(!other.hasFamily_ || family()->isInFamily(other.primitive_));
 
     *this = other;
     return true;
@@ -131,8 +120,6 @@ bool Type::matches(const Type& other) const {
 
         case TypeKind::ARRAY:
             return arrayLength_ == other.arrayLength_;
-        case TypeKind::UNKNOWN:
-            return true;
     }
 
     std::unreachable();

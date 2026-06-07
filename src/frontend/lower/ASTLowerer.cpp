@@ -44,9 +44,6 @@ const IR::Type& ASTLowerer::convertPrimitiveType(const Type& type) const {
 
         case Primitive::Kind::VOID:
             return builder_.voidType();
-
-        case Primitive::Kind::UNKNOWN:
-            break;
     }
 
     std::unreachable();
@@ -62,9 +59,6 @@ const IR::Type& ASTLowerer::convertType(const Type& type) {
             const uint32_t elementCount = type.arrayLength();
             return builder_.arrayType(elementType, elementCount);
         }
-
-        case TypeKind::UNKNOWN:
-            break;
     }
 
     std::unreachable();
@@ -138,7 +132,7 @@ void ASTLowerer::lowerFunction(const AST::FunctionDefinition& funcDef) {
 
     lowerStatement(*funcDef.body_);
 
-    const Type& type = typeManager_.getType(returnTypeID);
+    const Type& type = typeManager_.getTypeResolved(returnTypeID);
     if (type.isVoid()) {
         // Add a trailing return in case there isn't one before
         builder_.createRetInstr();
@@ -287,7 +281,7 @@ void ASTLowerer::lowerReturnStatement(const AST::ReturnStatement& returnStmt) {
         return;
     }
 
-    const Type& returnType = typeManager_.getType(returnStmt.returnValue_->typeID_);
+    const Type& returnType = typeManager_.getTypeResolved(returnStmt.returnValue_->typeID_);
     if (returnType.isArray()) {
         // Arrays are returned via a hidden pointer argument, so we should write there.
         IR::Value* returnValueAddress = builder_.getCurrentFunction().getArguments()[0];
@@ -306,7 +300,7 @@ void ASTLowerer::lowerExitStatement(const AST::ExitStatement& exitStmt) {
 }
 
 void ASTLowerer::copyValue(IR::Value& destPtr, IR::Value& value, const TypeID valueTypeID) {
-    const Type& type = typeManager_.getType(valueTypeID);
+    const Type& type = typeManager_.getTypeResolved(valueTypeID);
     if (type.isArray()) {
         // For arrays, we use memcpy.
         const uint32_t size = convertType(type).computeSizeBytes();
@@ -396,7 +390,7 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
     std::vector<IR::Value*> arguments;
     arguments.reserve(funcCall.arguments_.size() + 1);  // In case we add the hidden return pointer
 
-    const Type& returnType = typeManager_.getType(funcCall.typeID_);
+    const Type& returnType = typeManager_.getTypeResolved(funcCall.typeID_);
     IR::Value* returnValueAddress;
     if (returnType.isArray()) {
         // For arrays, allocate space and pass a pointer as a hidden first argument.
@@ -447,7 +441,7 @@ IR::Value& ASTLowerer::lowerArrayLiteral(const AST::ArrayLiteral& arrayLit,
 
 IR::Value& ASTLowerer::lowerRepeatArrayLiteral(const AST::RepeatArrayLiteral& repeatArrayLit,
                                                const std::optional<IR::Value*> place) {
-    const Type& arrayLitType = typeManager_.getType(repeatArrayLit.typeID_);
+    const Type& arrayLitType = typeManager_.getTypeResolved(repeatArrayLit.typeID_);
     const IR::Type& type = convertType(arrayLitType);
 
     IR::Value& arrayPtr = place ? *place.value() : builder_.createAllocaInstr(type);

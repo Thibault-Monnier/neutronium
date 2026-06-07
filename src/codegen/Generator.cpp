@@ -13,12 +13,12 @@
 #include <utility>
 
 #include "SymbolTable.hpp"
+#include "driver/Cli.hpp"
 #include "frontend/ast/AST.hpp"
 #include "frontend/ast/Operator.hpp"
-#include "driver/Cli.hpp"
-#include "lib/FastStringStream.hpp"
 #include "frontend/type/Type.hpp"
 #include "frontend/type/TypeID.hpp"
+#include "lib/FastStringStream.hpp"
 
 using namespace CodeGen;
 
@@ -119,7 +119,7 @@ void Generator::updateRsp() {
 }
 
 void Generator::copyTo(const TypeID typeID, const std::string_view to) {
-    const Type& type = typeManager_.getType(typeID);
+    const Type& type = typeManager_.getTypeResolved(typeID);
     const uint32_t size = typeSize(type);
     switch (type.kind()) {
         case TypeKind::PRIMITIVE:
@@ -135,7 +135,8 @@ void Generator::copyTo(const TypeID typeID, const std::string_view to) {
 }
 
 void Generator::insertSymbol(const std::string_view name, const TypeID typeID) {
-    assert(!typeManager_.getType(typeID).isVoid() && "Void type cannot be stored in a variable");
+    assert(!typeManager_.getTypeResolved(typeID).isVoid() &&
+           "Void type cannot be stored in a variable");
 
     symbolTable_.erase(name);
     currentSymbolsStackOffset_ += typeSize(typeID);
@@ -307,7 +308,7 @@ void Generator::generateFunctionCall(const AST::FunctionCall& funcCall,
 
     if (!destinationStackOffset.has_value()) return;
 
-    const Type& returnType = typeManager_.getType(funcCall.typeID_);
+    const Type& returnType = typeManager_.getTypeResolved(funcCall.typeID_);
     const uint32_t size = typeSize(returnType);
     switch (returnType.kind()) {
         case TypeKind::PRIMITIVE: {
@@ -327,7 +328,7 @@ void Generator::generateFunctionCall(const AST::FunctionCall& funcCall,
 }
 
 void Generator::allocateAndGenerateFunctionCall(const AST::FunctionCall& funcCall) {
-    assert(typeManager_.getType(funcCall.typeID_).kind() == TypeKind::ARRAY &&
+    assert(typeManager_.getTypeResolved(funcCall.typeID_).kind() == TypeKind::ARRAY &&
            "Only function calls returning arrays require allocation");
     allocateStackSpace(exprSize(funcCall));
     output_ << "    lea rax, " << stackTopMemoryOperand() << "\n";
@@ -508,7 +509,7 @@ void Generator::evaluateExpressionToRax(const AST::Expression& expr) {
 
 void Generator::generateExpression(const AST::Expression& expr,
                                    const std::optional<uint32_t>& destinationStackOffset) {
-    const Type& exprType = typeManager_.getType(expr.typeID_);
+    const Type& exprType = typeManager_.getTypeResolved(expr.typeID_);
     switch (exprType.kind()) {
         case TypeKind::PRIMITIVE:
             generatePrimitiveExpression(expr, destinationStackOffset);
@@ -749,7 +750,7 @@ void Generator::generateFunctionDefinition(const AST::FunctionDefinition& funcDe
 
     generateStmt(*funcDef.body_);
 
-    const Type& returnType = typeManager_.getType(funcDef.returnTypeID_);
+    const Type& returnType = typeManager_.getTypeResolved(funcDef.returnTypeID_);
     if (returnType.isVoid()) {
         output_ << "\n";
         output_ << "    xor rax, rax\n";  // Return 0

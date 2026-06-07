@@ -31,6 +31,7 @@ class TypeManager {
         typeArena_.clear();
         typeSolver_.clear();
         linkingTable_ = std::vector<TypeID>();
+        linkingTableTypeVariables_ = std::vector<TypeID>();
     }
 
     /**
@@ -43,7 +44,7 @@ class TypeManager {
      * @return The unique TypeID assigned to the newly registered type.
      */
     [[nodiscard]] TypeID createType(Type type) {
-        const auto id = typeArena_.insert(std::move(type));
+        const TypeID id = {typeArena_.insert(std::move(type)), false};
         linkingTable_.push_back(id);
         return id;
     }
@@ -64,41 +65,81 @@ class TypeManager {
     }
 
     /**
-     * @brief Retrieves a reference to a previously registered type.
+     * @brief Creates a new type variable and registers it in the type manager.
+     *
+     * A type variable is a type that has no known properties. Its only purpose is to be merged with
+     * other types. This is faster than creating a normal initialized type by saving memory.
+     *
+     * @return The unique TypeID assigned to the newly created type variable.
+     */
+    [[nodiscard]] TypeID createTypeVariable() {
+        const TypeID id = {static_cast<uint32_t>(linkingTableTypeVariables_.size()), true};
+        linkingTableTypeVariables_.push_back(id);
+        return id;
+    }
+
+    /**
+     * @brief Retrieves a pointer to a previously registered type.
+     *
+     * This function fetches the type corresponding to the provided TypeID from the managed
+     * collection of types. If it is a type variable, it returns nullptr.
+     */
+    [[nodiscard]] const Type* getType(const TypeID id) const {
+        const TypeID resolvedID = linkedTypeID(id);
+        if (resolvedID.isVariable()) {
+            return nullptr;
+        }
+        return &typeArena_.at(resolvedID.value());
+    }
+
+    /**
+     * @brief Retrieves a pointer to a previously registered type.
      *
      * This function fetches the type corresponding to the provided TypeID
      * from the managed collection of types.
-     *
-     * @param id The unique TypeID of the type to retrieve.
-     * @return A constant reference to the Type object associated with the provided TypeID.
      */
-    [[nodiscard]] const Type& getType(const TypeID id) const {
-        const TypeID resolvedID = linkingTable_.at(id);
-        return typeArena_.at(resolvedID);
+    [[nodiscard]] Type* getType(const TypeID id) {
+        return const_cast<Type*>(std::as_const(*this).getType(id));
     }
 
     /**
      * @brief Retrieves a reference to a previously registered type.
      *
-     * This function fetches the type corresponding to the provided TypeID
-     * from the managed collection of types.
-     *
-     * @param id The unique TypeID of the type to retrieve.
-     * @return A mutable reference to the Type object associated with the provided TypeID.
+     * This function fetches the type corresponding to the provided TypeID from the managed
+     * collection of types. It asserts that the type isn't a type variable.
      */
-    [[nodiscard]] Type& getType(const TypeID id) {
-        return const_cast<Type&>(std::as_const(*this).getType(id));
+    [[nodiscard]] const Type& getTypeResolved(const TypeID id) const {
+        const Type* type = getType(id);
+        assert(type != nullptr);
+        return *type;
     }
 
     /**
-     * @brief Retrieves the total number of registered types.
+     * @brief Retrieves a constant reference to a previously registered type.
+     *
+     * This function fetches the type corresponding to the provided TypeID from the managed
+     * collection of types. It asserts that the type isn't a type variable.
+     */
+    [[nodiscard]] Type& getTypeResolved(const TypeID id) {
+        return const_cast<Type&>(std::as_const(*this).getTypeResolved(id));
+    }
+
+    /**
+     * @brief Retrieves the total number of non-variable types registered in the TypeManager.
      *
      * @warning This includes types that may have been linked to others via the linking table. It
      * does not reflect the number of unique types that result from the type-merging.
      *
      * @return The number of types registered in the TypeManager.
      */
-    [[nodiscard]] size_t getTypeCount() const { return typeArena_.count(); }
+    [[nodiscard]] size_t getRealTypesCount() const { return typeArena_.count(); }
+
+    /**
+     * @brief Retrieves the total number of type variables registered in the TypeManager.
+     *
+     * @return The number of type variables registered in the TypeManager.
+     */
+    [[nodiscard]] size_t getTypeVariablesCount() const { return linkingTableTypeVariables_.size(); }
 
     /**
      * @brief Provides access to the TypeSolver instance within the TypeManager.
@@ -118,7 +159,7 @@ class TypeManager {
      * @note If dst is later linked to another TypeID, src will NOT automatically update to point to
      * that new TypeID. It will be left invalid.
      */
-    void linkTypes(const TypeID dst, const TypeID src) { linkingTable_[src] = dst; }
+    void linkTypes(const TypeID dst, const TypeID src) { linkedTypeID(src) = dst; }
 
    private:
     neutro::SpecializedArenaAllocator<Type> typeArena_;
@@ -130,5 +171,15 @@ class TypeManager {
      * another. This is used to allow type equivalence, where modifying one type affects all linked
      * types. Initially, every TypeID maps to itself.
      */
-    std::vector<TypeID> linkingTable_;
+    std::vector<TypeID> linkingTable_, linkingTableTypeVariables_;
+
+    [[nodiscard]] const TypeID& linkedTypeID(const TypeID id) const {
+        auto& linkingTable = id.isVariable() ? linkingTableTypeVariables_ : linkingTable_;
+        assert(id.value() < linkingTable.size());
+        return linkingTable[id.value()];
+    }
+
+    [[nodiscard]] TypeID& linkedTypeID(const TypeID id) {
+        return const_cast<TypeID&>(std::as_const(*this).linkedTypeID(id));
+    }
 };

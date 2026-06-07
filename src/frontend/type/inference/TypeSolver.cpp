@@ -3,7 +3,6 @@
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
 #include "Constraint.hpp"
@@ -17,12 +16,12 @@
 TypeID TypeSolver::findRoot(TypeID x) {
     // Find the root of the set containing x
     TypeID root = x;
-    while (root != nodes_[root].parent_) root = nodes_[root].parent_;
+    while (root != node(root).parent_) root = node(root).parent_;
 
     // Path compression
     while (x != root) {
-        const TypeID parent = nodes_[x].parent_;
-        nodes_[x].parent_ = root;
+        const TypeID parent = node(x).parent_;
+        node(x).parent_ = root;
         x = parent;
     }
 
@@ -30,19 +29,21 @@ TypeID TypeSolver::findRoot(TypeID x) {
 }
 
 bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sourceNode) {
-    nodes_[src].parent_ = dst;
-    nodes_[dst].setSize_ += nodes_[src].setSize_;
+    assert(!dst.isVariable() || src.isVariable());
 
-    Type& dstType = typeManager_.getType(dst);
-    const Type& srcType = typeManager_.getType(src);
+    node(src).parent_ = dst;
+    node(dst).setSize_ += node(src).setSize_;
 
-    // The following modifies dstType only, but it is fine since src will never be root
-    // again, so we don't care about its type anymore
+    if (src.isVariable() || dst.isVariable()) return true;
 
-    if (dstType.isUnknownKind() || srcType.isUnknownKind()) return dstType.mergeWith(srcType);
+    // A real type should never end up linked to a type variable.
+    Type& dstType = typeManager_.getTypeResolved(dst);
+    const Type& srcType = typeManager_.getTypeResolved(src);
 
     if (dstType.kind() != srcType.kind()) return false;
 
+    // The following modifies dstType only, but it is fine since src will never be root
+    // again, so we don't care about its type anymore
     switch (dstType.kind()) {
         case TypeKind::PRIMITIVE:
             return dstType.mergeWith(srcType);
@@ -52,17 +53,19 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sour
                                               srcType.arrayElementTypeID(), sourceNode);
             return true;
         }
-        default:
-            std::unreachable();
     }
 }
 
 void TypeSolver::prepareUnionFind() {
-    nodes_.clear();
-    nodes_.resize(typeManager_.getTypeCount());
-    for (TypeID i = 0; i < nodes_.size(); ++i) {
-        nodes_[i] = {.parent_ = i, .setSize_ = 1};
-    }
+    auto initNodes = [&](const bool isVariable, auto& nodes, size_t nodeCount) {
+        nodes.clear();
+        nodes.resize(nodeCount);
+        for (TypeID id = {0, isVariable}; id.value() < nodes.size(); id.incrementValue()) {
+            node(id) = {.parent_ = id, .setSize_ = 1};
+        }
+    };
+    initNodes(false, nodes_, typeManager_.getRealTypesCount());
+    initNodes(true, nodesTypeVariables_, typeManager_.getTypeVariablesCount());
 }
 
 std::true_type TypeSolver::solveEqualityConstraint(const EqualityConstraint& equalityConstraint) {
@@ -77,7 +80,8 @@ std::true_type TypeSolver::solveEqualityConstraint(const EqualityConstraint& equ
 
     if (rootA == rootB) return std::true_type{};
 
-    if (nodes_[rootA].setSize_ < nodes_[rootB].setSize_) std::swap(rootA, rootB);
+    if (node(rootA).setSize_ < node(rootB).setSize_) std::swap(rootA, rootB);
+    if (rootA.isVariable() && !rootB.isVariable()) std::swap(rootA, rootB);
 
     if (!unify(rootA, rootB, equalityConstraint.sourceNode())) [[unlikely]] {
         // Types are not compatible
@@ -90,31 +94,28 @@ std::true_type TypeSolver::solveEqualityConstraint(const EqualityConstraint& equ
 bool TypeSolver::solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint) {
     assert(subscriptConstraint.kind() == Constraint::Kind::SUBSCRIPT);
 
-    const Type& type = typeManager_.getType(subscriptConstraint.container());
+    const Type* type = typeManager_.getType(subscriptConstraint.container());
+    if (!type || type->kind() != TypeKind::ARRAY) return false;
 
-    if (type.kind() == TypeKind::ARRAY) {
-        const TypeID expectedElementTypeID = type.arrayElementTypeID();
-        const TypeID actualElementTypeID = subscriptConstraint.element();
+    const TypeID expectedElementTypeID = type->arrayElementTypeID();
+    const TypeID actualElementTypeID = subscriptConstraint.element();
 
-        addConstraint(EqualityConstraint(expectedElementTypeID, actualElementTypeID,
-                                         subscriptConstraint.sourceNode()));
+    addConstraint(EqualityConstraint(expectedElementTypeID, actualElementTypeID,
+                                     subscriptConstraint.sourceNode()));
 
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint) const {
     assert(hasTraitConstraint.kind() == Constraint::Kind::HAS_TRAIT);
 
-    const Type& type = typeManager_.getType(hasTraitConstraint.type());
+    const Type* type = typeManager_.getType(hasTraitConstraint.type());
     const Trait& trait = hasTraitConstraint.trait();
 
-    if (type.isUnknownKind()) return false;
+    if (!type) return false;
 
-    if (!type.hasTrait(trait)) {
-        hasTraitConstraintError(type, trait, hasTraitConstraint.sourceNode());
+    if (!type->hasTrait(trait)) {
+        hasTraitConstraintError(*type, trait, hasTraitConstraint.sourceNode());
     }
 
     return true;
@@ -123,20 +124,21 @@ bool TypeSolver::solveHasTraitConstraint(const HasTraitConstraint& hasTraitConst
 bool TypeSolver::solveStorableConstraint(const StorableConstraint& storableConstraint) {
     assert(storableConstraint.kind() == Constraint::Kind::STORABLE);
 
-    const Type& type = typeManager_.getType(storableConstraint.type());
+    const Type* type = typeManager_.getType(storableConstraint.type());
+    if (!type) return false;
 
-    switch (type.kind()) {
+    switch (type->kind()) {
         case TypeKind::PRIMITIVE: {
-            if (type.primitive() == Primitive::Kind::VOID) {
+            if (type->primitive() == Primitive::Kind::VOID) {
                 const AST::Node& sourceNode = storableConstraint.sourceNode();
-                storableConstraintError(type, sourceNode);
+                storableConstraintError(*type, sourceNode);
             } else {
                 return true;
             }
         }
 
         case TypeKind::ARRAY: {
-            const TypeID elementTypeID = type.arrayElementTypeID();
+            const TypeID elementTypeID = type->arrayElementTypeID();
             addConstraint(StorableConstraint(elementTypeID, storableConstraint.sourceNode()));
             return true;
         }
@@ -176,12 +178,14 @@ void TypeSolver::solve() {
             }
         }
 
-        for (TypeID node = 0; node < nodes_.size(); ++node) {
-            const TypeID root = findRoot(node);
-            if (root == node) continue;
-
-            typeManager_.linkTypes(root, node);
-        }
+        auto linkNodes = [&](const size_t count, const bool isTypeVariable) {
+            for (TypeID node = {0, isTypeVariable}; node.value() < count; node.incrementValue()) {
+                const TypeID root = findRoot(node);
+                if (root != node) typeManager_.linkTypes(root, node);
+            }
+        };
+        linkNodes(nodes_.size(), false);
+        linkNodes(nodesTypeVariables_.size(), true);
 
         pendingConstraints_.swap(nextConstraints);
         nextConstraints.clear();
@@ -189,6 +193,7 @@ void TypeSolver::solve() {
 }
 
 void TypeSolver::prepareForConstraints() {
-    const size_t typeCount = typeManager_.getTypeCount();
+    const size_t typeCount =
+        typeManager_.getRealTypesCount() + typeManager_.getTypeVariablesCount();
     pendingConstraints_.reserve(2 * typeCount);  // Rough estimate
 }

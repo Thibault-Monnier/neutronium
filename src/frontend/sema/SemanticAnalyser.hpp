@@ -45,7 +45,7 @@ class SemanticAnalyser {
     int loopDepth_ = 0;
 
     std::string_view currentFunctionName_;
-    TypeID currentFunctionReturnTypeID_ = 0;
+    TypeID currentFunctionReturnTypeID_;
 
     static constexpr std::string_view ENTRY_POINT_NAME = "main";
 
@@ -56,9 +56,7 @@ class SemanticAnalyser {
     void storableConstraint(TypeID type, const AST::Node& node) const;
 
     // Register new type helpers
-    [[nodiscard]] TypeID registerAnyType() const {
-        return typeManager_.createType(Type::anyFamilyType());
-    }
+    [[nodiscard]] TypeID registerTypeVariable() const { return typeManager_.createTypeVariable(); }
     [[nodiscard]] TypeID registerIntegerType() const {
         return typeManager_.createType(Type::integerFamilyType());
     }

@@ -10,8 +10,9 @@
 
 __attribute__((cold, noinline)) void TypeSolver::equalityConstraintError(
     const TypeID a, const TypeID b, const AST::Node& sourceNode) const {
-    const Type& aType = typeManager_.getType(a);
-    const Type& bType = typeManager_.getType(b);
+    // Safe because there can't be a solving error for type variables
+    const Type& aType = typeManager_.getTypeResolved(a);
+    const Type& bType = typeManager_.getTypeResolved(b);
 
     diagnosticsEngine_.reportError(
         std::format("Type mismatch: cannot unify types '{}' and '{}'", aType.toString(typeManager_),

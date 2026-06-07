@@ -102,12 +102,10 @@ class Parser {
     inline bool advanceIf(TokenKind expected);
     inline bool expect(TokenKind expected, Token& outToken);
 
-    /** Gets an instance of Type::anyFamilyType() and registers it in the TypeManager.
+    /** Registers a new type variable in the TypeManager.
      * @return The TypeID of the newly created Type.
      */
-    [[nodiscard]] TypeID generateAnyType() const {
-        return typeManager_.createType(Type::anyFamilyType());
-    }
+    [[nodiscard]] TypeID generateTypeVariable() const { return typeManager_.createTypeVariable(); }
 
     template <class T>
     std::optional<std::vector<T*>> parseCommaSeparatedList(TokenKind endDelimiter,

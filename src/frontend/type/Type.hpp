@@ -14,7 +14,6 @@ class TypeManager;
 enum class TypeKind : uint8_t {
     PRIMITIVE,
     ARRAY,
-    UNKNOWN,
 };
 
 /**
@@ -54,19 +53,6 @@ class Type {
      */
     static const Type& integerFamilyType() {
         static const Type instance(Primitive::Kind::INT, true);
-        return instance;
-    }
-
-    /**
-     * @brief Retrieves the predefined type representing any family of primitive types.
-     *
-     * This method returns a constant reference to a singleton instance of the `Type` class
-     * that represents the "any" family.
-     *
-     * @return A constant reference to the singleton instance of the "any" family type.
-     */
-    static const Type& anyFamilyType() {
-        static const Type instance(Primitive::Kind::UNKNOWN, true, TypeKind::UNKNOWN);
         return instance;
     }
 
@@ -184,13 +170,6 @@ class Type {
         return kind_ == TypeKind::PRIMITIVE && primitive_ == Primitive::Kind::VOID;
     }
 
-    /**
-     * @brief Determines if the type is of kind `UNKNOWN`.
-     *
-     * @return True if the type is of kind `UNKNOWN`, false otherwise.
-     */
-    [[nodiscard]] bool isUnknownKind() const { return kind_ == TypeKind::UNKNOWN; }
-
     [[nodiscard]] bool isArray() const { return kind_ == TypeKind::ARRAY; }
 
     [[nodiscard]] bool isPrimitive() const { return kind_ == TypeKind::PRIMITIVE; }
@@ -289,16 +268,11 @@ class Type {
     uint16_t traits_ : 15;
     uint16_t hasFamily_ : 1;
 
-    TypeID arrayElementTypeID_{0};
+    TypeID arrayElementTypeID_;
     uint32_t arrayLength_{0};
 
-    /**
-     * @brief Initializes the traits of the type based on its kind and primitive kind.
-     *
-     * This method sets the `traits_` member variable according to the `kind_` and the `primitive_`
-     * of the type. It assigns appropriate default traits for primitive Type and array Type, while
-     * clearing traits for unknown Type.
-     */
+    /// Initializes the traits of the type based on its kind and primitive kind. It assigns the
+    /// default traits for built-in types.
     void initializeTraits() {
         switch (kind_) {
             case TypeKind::PRIMITIVE:
@@ -306,9 +280,6 @@ class Type {
                 break;
             case TypeKind::ARRAY:
                 traits_ = Trait::EQ | Trait::SUBSCRIPT;
-                break;
-            case TypeKind::UNKNOWN:
-                traits_ = 0;
                 break;
         }
     }

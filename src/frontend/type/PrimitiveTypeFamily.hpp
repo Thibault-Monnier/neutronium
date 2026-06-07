@@ -43,25 +43,6 @@ class IntegerTypeFamily final : public PrimitiveTypeFamily {
     }
 };
 
-/**
- * @class AnyTypeFamily
- * @brief Represents a special primitive type family encompassing all possible primitive kinds.
- *
- * This class is an implementation of the `PrimitiveTypeFamily` interface, providing
- * functionality to represent a type family that includes all types defined in the system.
- */
-class AnyTypeFamily final : public PrimitiveTypeFamily {
-   public:
-    static const AnyTypeFamily& getInstance() {
-        static const AnyTypeFamily instance;
-        return instance;
-    }
-
-    [[nodiscard]] Kind kind() const override { return Kind::ANY; }
-
-    [[nodiscard]] bool isInFamily(const Primitive::Kind) const override { return true; }
-};
-
 class NoTypeFamily final : public PrimitiveTypeFamily {
    public:
     static const NoTypeFamily& getInstance() {
@@ -83,10 +64,8 @@ inline const PrimitiveTypeFamily* PrimitiveTypeFamily::familyForType(const Primi
         case Primitive::Kind::INT64: {
             return &IntegerTypeFamily::getInstance();
         }
-        case Primitive::Kind::UNKNOWN: {
-            return &AnyTypeFamily::getInstance();
-        }
-        default: {
+        case Primitive::Kind::BOOL:
+        case Primitive::Kind::VOID: {
             return &NoTypeFamily::getInstance();
         }
     }

@@ -31,7 +31,7 @@ class ASTLowerer {
     [[nodiscard]] const IR::Type& convertPrimitiveType(const Type& type) const;
     const IR::Type& convertType(const Type& type);
     const IR::Type& convertType(const TypeID typeID) {
-        return convertType(typeManager_.getType(typeID));
+        return convertType(typeManager_.getTypeResolved(typeID));
     }
 
     /// RAII helper to manage entering and exiting scopes. Enters a new scope on construction and

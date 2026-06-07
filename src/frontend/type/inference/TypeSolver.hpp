@@ -12,6 +12,7 @@
 #include "frontend/type/Type.hpp"
 #include "frontend/type/TypeID.hpp"
 #include "lib/PolymorphicArenaAllocator.hpp"
+#include "lib/SpecializedArenaAllocator.hpp"
 
 class TypeManager;
 
@@ -33,6 +34,7 @@ class TypeSolver {
         constraintArena_.clear();
         pendingConstraints_ = std::vector<Constraint*>();
         nodes_ = std::vector<Node>();
+        nodesTypeVariables_ = std::vector<Node>();
     }
 
     /**
@@ -82,6 +84,13 @@ class TypeSolver {
     };
 
     std::vector<Node> nodes_;
+    std::vector<Node> nodesTypeVariables_;
+
+    [[nodiscard]] Node& node(const TypeID id) {
+        auto& nodes = id.isVariable() ? nodesTypeVariables_ : nodes_;
+        assert(id.value() < nodes.size());
+        return nodes[id.value()];
+    }
 
     // ------------------------------
     // --- Error handling methods ---

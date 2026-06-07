@@ -16,7 +16,6 @@ enum class Kind : uint8_t {
     INT64,
     BOOL,
     VOID,
-    UNKNOWN,
 };
 
 inline uint16_t defaultTraits(const Kind kind) {
@@ -34,7 +33,6 @@ inline uint16_t defaultTraits(const Kind kind) {
         case Kind::BOOL:
             return Trait::EQ | Trait::NOT | Trait::OR | Trait::AND;
         case Kind::VOID:
-        case Kind::UNKNOWN:
             return 0;
     }
 
