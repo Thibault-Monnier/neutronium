@@ -58,6 +58,10 @@ void logExpression(const Expression& expr, const std::string& prefix, const bool
         const auto& booleanLit = *expr.as<BooleanLiteral>();
         std::cout << prefix << branch
                   << "BooleanLiteral: " << (booleanLit.value() ? "true" : "false") << "\n";
+    } else if (expr.kind_ == NodeKind::CHARACTER_LITERAL) {
+        const auto& charLit = *expr.as<CharacterLiteral>();
+        std::cout << prefix << branch << "CharacterLiteral: " << static_cast<int>(charLit.value())
+                  << "\n";
     } else if (expr.kind_ == NodeKind::IDENTIFIER) {
         const auto& identifier = *expr.as<Identifier>();
         std::cout << prefix << branch << "Identifier: " << identifier.name_ << "\n";

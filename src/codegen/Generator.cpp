@@ -204,6 +204,13 @@ void Generator::moveBooleanLitToRax(const AST::BooleanLiteral& booleanLit) {
     cleanRax(size);
 }
 
+void Generator::moveCharacterLitToRax(const AST::CharacterLiteral& characterLit) {
+    const uint32_t size = exprSize(characterLit);
+    const uint32_t charValue = static_cast<uint32_t>(characterLit.value());
+    output_ << "    mov " << registerAForSize(size) << ", " << charValue << "\n";
+    cleanRax(size);
+}
+
 void Generator::evaluatePlaceExpressionAddressToRax(const AST::Expression& place) {
     if (place.kind_ == AST::NodeKind::IDENTIFIER) {
         const auto& identifier = *place.as<const AST::Identifier>();
@@ -427,6 +434,11 @@ void Generator::generatePrimitiveExpression(const AST::Expression& expr,
         case AST::NodeKind::BOOLEAN_LITERAL: {
             const auto& booleanLit = *expr.as<AST::BooleanLiteral>();
             moveBooleanLitToRax(booleanLit);
+            break;
+        }
+        case AST::NodeKind::CHARACTER_LITERAL: {
+            const auto& charLit = *expr.as<AST::CharacterLiteral>();
+            moveCharacterLitToRax(charLit);
             break;
         }
         case AST::NodeKind::IDENTIFIER: {

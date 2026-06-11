@@ -148,6 +148,19 @@ class Type {
     }
 
     /**
+     * @brief Retrieves the predefined type representing the char primitive type.
+     *
+     * This method returns a constant reference to a singleton instance of the `Type` class
+     * that represents the char primitive type.
+     *
+     * @return A constant reference to the singleton instance of the char type.
+     */
+    static const Type& charType() {
+        static const Type instance(Primitive::Kind::CHAR);
+        return instance;
+    }
+
+    /**
      * @brief Retrieves the family of the primitive type.
      *
      * @return A const pointer to the `PrimitiveTypeFamily` associated with this type.

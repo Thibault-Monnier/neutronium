@@ -2,7 +2,6 @@
 
 #include <emmintrin.h>
 #include <smmintrin.h>
-#include <stdio.h>
 
 #include <cstdint>
 #include <cstdio>
@@ -39,6 +38,12 @@ __attribute__((noinline, cold)) void Lexer::invalidCharacterError(const char c) 
         std::format("Invalid character -> got `{}` (ASCII code {}) at beginning of word", c,
                     static_cast<int>(c));
     diagnosticsEngine_.reportError(errorMessage, currentIndex() - 1, currentIndex() - 1, fileID_);
+}
+
+__attribute__((noinline, cold)) void Lexer::unclosedCharacterLiteralError() const {
+    const std::string errorMessage = std::format("Unterminated character literal", *tokenStartPtr_);
+    diagnosticsEngine_.reportError(errorMessage, tokenStartPtr_ - sourceStart_, currentIndex() - 1,
+                                   fileID_);
 }
 
 __attribute__((always_inline)) void Lexer::createToken(const TokenKind kind) {
@@ -97,6 +102,30 @@ __attribute__((always_inline)) void Lexer::lexNumberLiteralContinuation() {
     skipWhile(IS_NUMBER_CHAR);
 }
 
+__attribute__((always_inline)) void Lexer::lexCharacterLiteralContinuation() {
+    for (const char* ptr = currentPtr_; ptr < sourceEnd_; ptr++) {
+        const unsigned char c = *ptr;
+
+        if (c == '\\') {
+            // Escape char: skip next two chars
+            ptr++;
+            continue;
+        }
+
+        if (c == '\'') {
+            // End of character literal
+            ptr++;
+            currentPtr_ = ptr;
+            return;
+        }
+    }
+
+    // Unterminated character literal
+    skipToNextLine();  // Avoid the error spanning the rest of the file
+    currentPtr_--;
+    unclosedCharacterLiteralError();
+}
+
 __attribute__((always_inline)) TokenKind Lexer::classifyIdentifier(const char* const s,
                                                                    const std::size_t len) {
     const TokenKind tokenKind = neutro::StringSwitch<TokenKind>(neutro::FastStringView(s, len))
@@ -111,6 +140,7 @@ __attribute__((always_inline)) TokenKind Lexer::classifyIdentifier(const char* c
                                     .newCase("exit", TokenKind::EXIT)
                                     .newCase("int8", TokenKind::INT8)
                                     .newCase("bool", TokenKind::BOOL)
+                                    .newCase("char", TokenKind::CHAR)
                                     .newCase("false", TokenKind::FALSE)
                                     .newCase("break", TokenKind::BREAK)
                                     .newCase("while", TokenKind::WHILE)
@@ -216,7 +246,7 @@ __attribute__((always_inline)) bool Lexer::lexNextChar(const char c) {
 
             const std::string_view lexeme = currentLexeme();
             const size_t length = lexeme.length();
-            if (length >= 2 && length <= 8) {
+            if (length >= 2 && length <= 8) {  // All keywords are between 2 and 8 characters
                 kind = classifyIdentifier(lexeme.data(), length);
             } else {
                 kind = TokenKind::IDENTIFIER;
@@ -228,6 +258,12 @@ __attribute__((always_inline)) bool Lexer::lexNextChar(const char c) {
             // Number literal
             lexNumberLiteralContinuation();
             kind = TokenKind::NUMBER_LITERAL;
+            break;
+
+        case '\'':
+            // Character literal
+            lexCharacterLiteralContinuation();
+            kind = TokenKind::CHARACTER_LITERAL;
             break;
 
         case '+':

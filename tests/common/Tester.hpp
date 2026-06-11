@@ -37,10 +37,11 @@ class NeutroniumTester : public testing::Test {
         if (!pipe) {
             return {.exit = -1, .output = "Failed to run binary"};
         }
-        std::array<char, 256> buffer;
+        char buffer[256];
         std::string result;
-        while (fgets(buffer.data(), buffer.size(), pipe)) {
-            result += buffer.data();
+        size_t bytesRead;
+        while ((bytesRead = fread(buffer, 1, sizeof(buffer), pipe))) {
+            result.append(buffer, bytesRead);
         }
         const int exitCode = WEXITSTATUS(pclose(pipe));
 

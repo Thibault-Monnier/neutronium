@@ -10,6 +10,9 @@
       "include": "#comments"
     },
     {
+      "include": "#strings"
+    },
+    {
       "include": "#functions"
     },
     {
@@ -70,6 +73,9 @@
               "include": "#keywords"
             },
             {
+              "include": "#strings"
+            },
+            {
               "include": "#types"
             },
             {
@@ -96,6 +102,21 @@
         {
           "name": "constant.language.boolean.neutronium",
           "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.neutronium",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.neutronium",
+              "match": "\\\\."
+            }
+          ]
         }
       ]
     },

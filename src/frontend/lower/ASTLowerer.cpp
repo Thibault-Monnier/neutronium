@@ -37,6 +37,7 @@ const IR::Type& ASTLowerer::convertPrimitiveType(const Type& type) const {
         case Primitive::Kind::INT16:
         case Primitive::Kind::INT32:
         case Primitive::Kind::INT64:
+        case Primitive::Kind::CHAR:
             return builder_.intType(type.sizeBits(typeManager_));
 
         case Primitive::Kind::BOOL:
@@ -322,6 +323,9 @@ IR::Value& ASTLowerer::lowerValueExpression(const AST::Expression& expr,
         case AST::NodeKind::BOOLEAN_LITERAL:
             value = &lowerBooleanLiteral(*expr.as<AST::BooleanLiteral>());
             break;
+        case AST::NodeKind::CHARACTER_LITERAL:
+            value = &lowerCharacterLiteral(*expr.as<AST::CharacterLiteral>());
+            break;
         case AST::NodeKind::FUNCTION_CALL:
             value = &lowerFunctionCall(*expr.as<AST::FunctionCall>());
             break;
@@ -380,6 +384,11 @@ IR::Value& ASTLowerer::lowerNumberLiteral(const AST::NumberLiteral& numberLit) {
 
 IR::Value& ASTLowerer::lowerBooleanLiteral(const AST::BooleanLiteral& boolLit) {
     return builder_.createBooleanConstant(boolLit.value());
+}
+
+IR::Value& ASTLowerer::lowerCharacterLiteral(const AST::CharacterLiteral& charLit) {
+    const IR::Type& type = convertType(charLit.typeID_);
+    return builder_.createIntegerConstant(type, charLit.value());
 }
 
 IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier) const {

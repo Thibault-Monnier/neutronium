@@ -276,6 +276,10 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
             verifier = registerBoolType();
             break;
         }
+        case AST::NodeKind::CHARACTER_LITERAL: {
+            verifier = registerCharType();
+            break;
+        }
         case AST::NodeKind::ARRAY_LITERAL: {
             const auto& arrayLiteral = *expr.as<AST::ArrayLiteral>();
             if (arrayLiteral.elements_.empty()) {

@@ -59,11 +59,16 @@ class Parser {
     // Error handling
     // --------------
 
-    /** Emits an error with the given message at the location of the given token.
-     * @param errorMessage The error message to emit.
-     * @param token The token where the error occurred.
-     */
-    void emitError(const std::string& errorMessage, const Token& token) const;
+    /// Emits an error with the given message at the given location.
+    void emitError(const std::string& errorMessage, const uint32_t byteOffsetStart,
+                   const uint32_t byteOffsetEnd) const {
+        diagnosticsEngine_.reportError(errorMessage, byteOffsetStart, byteOffsetEnd, fileID_);
+    }
+
+    /// Emits an error with the given message at the location of the given token.
+    void emitError(const std::string& errorMessage, const Token& token) const {
+        emitError(errorMessage, token.byteOffsetStart(), token.byteOffsetEnd());
+    }
 
     /** Emits an error and returns nullptr of the template type.
      * @param errorMessage The error message to emit.
@@ -90,6 +95,10 @@ class Parser {
     [[nodiscard]] std::unique_ptr<Type> invalidTypeSpecifierError() const;
     [[nodiscard]] AST::Expression* invalidPrimaryExpressionError() const;
     [[nodiscard]] AST::NumberLiteral* invalidNumberLiteralError(const Token& token) const;
+    [[nodiscard]] AST::CharacterLiteral* invalidEscapeSequenceError(uint32_t byteOffsetStart,
+                                                                    uint32_t byteOffsetEnd) const;
+    AST::CharacterLiteral* forbiddenCharacterLiteralError(const Token& token) const;
+    AST::CharacterLiteral* invalidCharacterLiteralSizeError(const Token& token) const;
 
     // ---------------
     // Parsing helpers
@@ -122,6 +131,7 @@ class Parser {
                                                  Type defaultType);
 
     AST::NumberLiteral* parseNumberLiteral();
+    AST::CharacterLiteral* parseCharacterLiteral();
     AST::Expression* parseArrayLiteral();
 
     AST::Identifier* parseIdentifier();

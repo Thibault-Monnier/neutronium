@@ -63,6 +63,9 @@ class SemanticAnalyser {
     [[nodiscard]] TypeID registerBoolType() const {
         return typeManager_.createType(Type::boolType());
     }
+    [[nodiscard]] TypeID registerCharType() const {
+        return typeManager_.createType(Type::charType());
+    }
     [[nodiscard]] TypeID registerVoidType() const {
         return typeManager_.createType(Type::voidType());
     }

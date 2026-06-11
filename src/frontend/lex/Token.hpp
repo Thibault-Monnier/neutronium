@@ -23,6 +23,7 @@ class alignas(4) Token {
 
     [[nodiscard]] uint32_t byteOffsetStart() const { return startByteOffset_; }
     [[nodiscard]] uint32_t byteOffsetEnd() const { return startByteOffset_ + length_ - 1; }
+    [[nodiscard]] uint16_t length() const { return length_; }
 
     [[nodiscard]] std::string_view lexeme(const std::string_view source) const {
         return {source.data() + startByteOffset_, length_};

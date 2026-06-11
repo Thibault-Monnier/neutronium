@@ -12,7 +12,8 @@ All of the following is subject to change.
 ### 1) Literals
 
 - [ ] Floating-point numbers: `float32` and `float64`
-- [ ] Characters and strings: `'a'`, `"hello world"`
+- [X] Characters: `'a'`
+- [ ] Strings: `"hello world"`
 - [ ] Unsigned integers: `uint8/16/32/64`
 - [ ] Numeric literals improvements:
     - [X] `_` digit separator (`1_000_000`)
@@ -31,6 +32,7 @@ All of the following is subject to change.
 - [ ] Increment/decrement: `++` and `--` (postfix) as syntactic sugar for `+= 1` and `-= 1`. They are statements, not
   expressions.
 - [ ] Bitwise operators: `&`, `|`, `^`, `~`, `<<`, `>>`
+- [ ] Type casting: `42 as char`
 
 ### 4) Control flow
 

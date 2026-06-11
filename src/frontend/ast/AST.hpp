@@ -14,6 +14,7 @@ namespace AST {
 enum class NodeKind : uint8_t {
     NUMBER_LITERAL,
     BOOLEAN_LITERAL,
+    CHARACTER_LITERAL,
     ARRAY_LITERAL,
     REPEAT_ARRAY_LITERAL,
     IDENTIFIER,
@@ -92,6 +93,15 @@ struct BooleanLiteral final : Expression {
                      static_cast<uint8_t>(value)} {}
 
     [[nodiscard]] bool value() const { return flags_; }
+};
+
+struct CharacterLiteral final : Expression {
+    CharacterLiteral(const unsigned char value, const uint32_t start, const uint32_t end,
+                     const FileID fileID, const TypeID typeID)
+        : Expression{NodeKind::CHARACTER_LITERAL, start, end, fileID, typeID,
+                     static_cast<uint8_t>(value)} {}
+
+    [[nodiscard]] unsigned char value() const { return flags_; }
 };
 
 struct ArrayLiteral final : Expression {

@@ -10,10 +10,10 @@
 .type __print_num, @function
 
 # ------------------------------------------------
-# fn print_c(char: int);
+# fn print_c(c: char);
 # ------------------------------------------------
 __print_c:
-    mov rax, [rsp + 8]    # load full int64 argument
+    movzx rax, byte ptr [rsp + 8]    # load char (8-bit) argument
     push rax              # store it on the stack (temporary buffer)
 
     mov rdi, 1            # file descriptor: stdout

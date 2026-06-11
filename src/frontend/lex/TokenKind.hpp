@@ -9,6 +9,7 @@ enum class TokenKind : uint8_t {
     // Primary tokens
     IDENTIFIER,
     NUMBER_LITERAL,
+    CHARACTER_LITERAL,
 
     // Operators
     PLUS,
@@ -54,6 +55,7 @@ enum class TokenKind : uint8_t {
     INT32,
     INT64,
     BOOL,
+    CHAR,
     MUT,
     IF,
     ELIF,

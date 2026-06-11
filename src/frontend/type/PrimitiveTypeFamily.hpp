@@ -65,6 +65,7 @@ inline const PrimitiveTypeFamily* PrimitiveTypeFamily::familyForType(const Primi
             return &IntegerTypeFamily::getInstance();
         }
         case Primitive::Kind::BOOL:
+        case Primitive::Kind::CHAR:
         case Primitive::Kind::VOID: {
             return &NoTypeFamily::getInstance();
         }

@@ -16,6 +16,7 @@ uint32_t Type::sizeBits(const TypeManager& typeManager) const {
             switch (primitive_) {
                 case Primitive::Kind::INT8:
                 case Primitive::Kind::BOOL:
+                case Primitive::Kind::CHAR:
                     return 8;
                 case Primitive::Kind::INT16:
                     return 16;
@@ -60,6 +61,9 @@ std::string Type::toString(const TypeManager& typeManager) const {
                     break;
                 case Primitive::Kind::BOOL:
                     result += "bool";
+                    break;
+                case Primitive::Kind::CHAR:
+                    result += "char";
                     break;
                 case Primitive::Kind::VOID:
                     result += "void";

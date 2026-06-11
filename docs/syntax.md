@@ -1,8 +1,14 @@
 # Grammar
 
+- {a} means zero of more repetitions of a
+- [a] means zero or one occurrence of a
+- a | b means either a or b
+- 'a' and "a" mean the string a
+- ~['a' 'b'] means any character except a and b
+
 <details><summary>Formal EBNF Grammar</summary>
 
-```sh
+```bnf
 compilation-unit ::= { external-function-declaration } { function-definition } EOF
 
 function-signature ::= identifier '(' parameter-list ')' [ '->' type-specifier ]
@@ -27,8 +33,9 @@ block-statement ::= '{' { statement } '}'
 
 type-specifier ::= 'int' | 'int8' | 'int16' | 'int32' | 'int64'
                  | 'bool'
+                 | 'char'
                  | array-type
-                 
+
 array-type ::= '[' type-specifier ';' integer-literal ']'
 
 variable-definition ::= 'let' [ 'mut' ] identifier [ ':' type-specifier ] '=' expression ';'
@@ -58,7 +65,7 @@ exit-statement ::= 'exit' expression ';'
 
 expression-statement ::= expression ';'
 
-comment ::= '#' { any-character-except-newline }
+comment ::= '#' { ~['\n'] }
 
 expression ::= logical-expression
 
@@ -92,7 +99,7 @@ primary-expression ::= literal
                      | function-call
                      | '(' expression ')'
 
-literal ::= integer-literal | boolean-literal | array-literal | repeat-array-literal
+literal ::= integer-literal | boolean-literal | char-literal | array-literal | repeat-array-literal
 
 array-literal ::= '[' expression-list ']'
 
@@ -108,9 +115,19 @@ integer-literal ::= digit { digit }
 
 boolean-literal ::= 'true' | 'false'
 
+char-literal ::= SQ (~[SQ '\' LF CR TAB] | quote-escape | escape-sequence) SQ
+
+quote-escape ::= '\' (SQ | DQ)
+
+escape-sequence ::= '\' ('\' | 'n' | 'r' | 't' | '0')
+
 letter ::= 'a'..'z' | 'A'..'Z'
 
 digit ::= '0'..'9'
+
+SQ ::= "'"
+
+DQ ::= '"'
 ```
 
 </details>

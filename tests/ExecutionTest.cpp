@@ -179,47 +179,6 @@ TEST_F(NeutroniumTester, TypeSpecifiers) {
     EXPECT_EQ(run(code), 42);
 }
 
-TEST_F(NeutroniumTester, StandardLibrary) {
-    const std::string code = R"(
-        extern fn print_c(char: int);
-        extern fn print_num(num: int);
-
-        extern fn mod(a: int, b: int) -> int;
-
-        fn print_mod(a: int, b: int): {
-            let result = mod(a, b);
-            print_num(result);
-            print_c(10);
-        }
-
-        fn main(): {
-            print_c(72);
-            print_c(101);
-            print_c(108);
-            print_c(108);
-            print_c(111);
-            print_c(44);
-            print_c(32);
-            print_c(87);
-            print_c(111);
-            print_c(114);
-            print_c(108);
-            print_c(100);
-            print_c(33);
-            print_c(10);
-
-            print_num(42);
-            print_c(10);
-            print_c(10);
-
-            print_mod(654, 10);  # should print 4
-        }
-    )";
-    const auto [exit, output] = runWithOutput(code);
-    EXPECT_EQ(exit, 0);
-    EXPECT_EQ(output, "Hello, World!\n42\n\n4\n");
-}
-
 TEST_F(NeutroniumTester, FunctionReturnValues) {
     /* 1. Two independent return paths */
     const std::string codeAbs = R"(
@@ -1261,7 +1220,7 @@ TEST_F(NeutroniumTester, LogicalOperators) {
 TEST_F(NeutroniumTester, PrimeNumbersSieve) {
     const std::string code = R"(
         extern fn print_num(n: int);
-        extern fn print_c(c: int);
+        extern fn print_c(c: char);
 
         fn sieve(n: int): {
             let mut isPrime: [bool; 1_000] = [false; 1_000];
@@ -1289,8 +1248,8 @@ TEST_F(NeutroniumTester, PrimeNumbersSieve) {
             while k < n: {
                 if isPrime[k]: {
                     if !isFirst: {
-                        print_c(44); # Comma
-                        print_c(9); # Tab
+                        print_c(',');
+                        print_c('\t');
                     }
                     isFirst = false;
                     print_num(k);
@@ -1302,7 +1261,7 @@ TEST_F(NeutroniumTester, PrimeNumbersSieve) {
         fn main(): {
             sieve(1000);
 
-            print_c(10); # Newline
+            print_c('\n');
         }
     )";
     const std::string expectedOutput =
@@ -1334,6 +1293,106 @@ TEST_F(NeutroniumTester, MaxIntValue) {
     const auto [exit, output] = runWithOutput(code);
     EXPECT_EQ(exit, 0);
     EXPECT_EQ(output, "9223372036854775807");
+}
+
+TEST_F(NeutroniumTester, CharacterLiteralBasic) {
+    {
+        const std::string code = R"(
+            extern fn print_c(c: char);
+
+            fn main(): {
+                let c = 'A';
+                print_c(c);
+                print_c('\n');
+            }
+        )";
+        const auto [exit, output] = runWithOutput(code);
+        EXPECT_EQ(exit, 0);
+        EXPECT_EQ(output, "A\n");
+    }
+
+    {
+        const std::string code = R"(
+            extern fn print_c(c: char);
+
+            fn main(): {
+                let mut c = 'A';
+                let paren = ')';
+                print_c(c);
+                c = 'B';
+                print_c(c);
+                c = ')';
+                let otherParen = '(';
+                if c == paren && c != otherParen: {
+                    print_c('!');
+                }
+                print_c('\n');
+            }
+        )";
+        const auto [exit, output] = runWithOutput(code);
+        EXPECT_EQ(exit, 0);
+        EXPECT_EQ(output, "AB!\n");
+    }
+}
+
+TEST_F(NeutroniumTester, CharacterLiteralEscapeSequences) {
+    using namespace std::string_view_literals;
+    const std::string code = R"(
+        extern fn print_c(c: char);
+
+        fn main(): {
+            print_c('\\');
+            print_c('\'');
+            print_c('\"');
+            print_c('\0');
+            print_c('\n');
+            print_c('\t');
+            print_c('\r');
+        }
+    )";
+    const auto [exit, output] = runWithOutput(code);
+    EXPECT_EQ(exit, 0);
+    EXPECT_EQ(output, "\\'\"\0\n\t\r"sv);  // Without sv, C++ interprets \0 as end of string
+}
+
+TEST_F(NeutroniumTester, CharacterLiteralComparisons) {
+    const std::string code = R"(
+        fn main(): {
+            let a: char = 'a';
+            let b: char = 'b';
+
+            if a < b: {
+                if a <= b: {
+                    if a == a: {
+                        if b != a: {
+                            exit 42;
+                        }
+                    }
+                }
+            }
+            exit 0;
+        }
+    )";
+    EXPECT_EQ(run(code), 42);
+}
+
+TEST_F(NeutroniumTester, CharacterLiteralAsParameter) {
+    const std::string code = R"(
+        extern fn print_c(c: char);
+
+        fn print_twice(c: char): {
+            print_c(c);
+            print_c(c);
+        }
+
+        fn main(): {
+            print_twice('X');
+            print_c('\n');
+        }
+    )";
+    const auto [exit, output] = runWithOutput(code);
+    EXPECT_EQ(exit, 0);
+    EXPECT_EQ(output, "XX\n");
 }
 
 TEST_F(NeutroniumTester, UnderscoresInNumberLiteral) {

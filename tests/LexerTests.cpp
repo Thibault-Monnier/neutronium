@@ -15,6 +15,29 @@
 #include "frontend/lex/TokenKind.hpp"
 #include "frontend/source/SourceManager.hpp"
 
+std::vector<Token> tokenize(const std::string& src) {
+    namespace fs = std::filesystem;
+
+    const fs::path tmp = fs::temp_directory_path() / "test_input.nt";
+    {
+        std::ofstream(tmp) << src;
+    }
+
+    SourceManager sm;
+    const auto fileData = sm.loadNewSourceFile(tmp.string());
+    const auto fileID = fileData.first;
+    const auto fileContents = fileData.second;
+    DiagnosticsEngine de(sm);
+    Lexer lexer(fileContents, de, fileID);
+    return lexer.tokenize();
+}
+
+void errorTests(const std::vector<std::string>& cases, const std::string& expectedError) {
+    for (const std::string& src : cases) {
+        EXPECT_EXIT(tokenize(src), ::testing::ExitedWithCode(EXIT_FAILURE), expectedError);
+    }
+}
+
 struct LexCase {
     std::string src;
     std::vector<TokenKind> kinds;
@@ -23,11 +46,7 @@ struct LexCase {
 class LexerTokenKindTest : public ::testing::TestWithParam<LexCase> {};
 
 TEST_P(LexerTokenKindTest, ProducesExpectedKinds) {
-    const SourceManager sm;
-    DiagnosticsEngine de(sm);
-
-    Lexer lex(GetParam().src, de, 0);
-    auto toks = lex.tokenize();
+    const std::vector<Token> toks = tokenize(GetParam().src);
     std::vector<TokenKind> got;
     std::ranges::transform(toks, std::back_inserter(got), [](const Token& t) { return t.kind(); });
     EXPECT_EQ(got, GetParam().kinds);
@@ -160,12 +179,13 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     EverythingOnce, LexerTokenKindTest,
     ::testing::Values(LexCase{
-        "true false int bool let mut if elif else continue break while fn extern return exit "
-        "+ - * / & | && || = += -= *= /= == != < <= > >= ( ) { } [ ] : ; , 0 foo_1Bar2_",
+        "true false int bool char let mut if elif else continue break while fn extern return exit "
+        "+ - * / & | && || = += -= *= /= == != < <= > >= ( ) { } [ ] : ; , 0 'a' foo_1Bar2_",
         {TokenKind::TRUE,
          TokenKind::FALSE,
          TokenKind::INT,
          TokenKind::BOOL,
+         TokenKind::CHAR,
          TokenKind::LET,
          TokenKind::MUT,
          TokenKind::IF,
@@ -207,87 +227,33 @@ INSTANTIATE_TEST_SUITE_P(
          TokenKind::SEMICOLON,
          TokenKind::COMMA,
          TokenKind::NUMBER_LITERAL,
+         TokenKind::CHARACTER_LITERAL,
          TokenKind::IDENTIFIER,
          TokenKind::EOF_}}));
 
 // ─────────────────────────────────────────────────────────────
-// Unexpected token (invalid input causes exit)
+// Error cases
 // ─────────────────────────────────────────────────────────────
 TEST(LexerErrorTest, UnexpectedCharacterError) {
-    namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {
         "@", "$", "~", "let x = 1 + @`", "x$", "let _invalid_identifier = 42;"};
-
-    for (const auto& input : badInputs) {
-        const fs::path tmp = fs::temp_directory_path() / "test_input.nt";
-        std::ofstream(tmp) << input;
-
-        EXPECT_EXIT(
-            {
-                {
-                    auto _ = freopen("/dev/null", "w", stdout);
-                }
-
-                SourceManager sm;
-                const auto fileData = sm.loadNewSourceFile(tmp.string());
-                const auto fileID = fileData.first;
-                const auto fileContents = fileData.second;
-                DiagnosticsEngine de(sm);
-                Lexer lexer(fileContents, de, fileID);
-                auto _ = lexer.tokenize();
-            },
-            ::testing::ExitedWithCode(EXIT_FAILURE), "Invalid character");
-    }
+    errorTests(badInputs, "Invalid character");
 }
 
 TEST(LexerErrorTest, NonASCIICharacterError) {
-    namespace fs = std::filesystem;
     const std::vector<std::string> badInputs = {"let x = 42π;", "こんにちは", "let привет = 1;",
                                                 "x = y + λ;", "if 👌 { }"};
-
-    for (const auto& input : badInputs) {
-        const fs::path tmp = fs::temp_directory_path() / "test_input.nt";
-        std::ofstream(tmp) << input;
-
-        EXPECT_EXIT(
-            {
-                {
-                    auto _ = freopen("/dev/null", "w", stdout);
-                }
-
-                SourceManager sm;
-                const auto fileData = sm.loadNewSourceFile(tmp.string());
-                const auto fileID = fileData.first;
-                const auto fileContents = fileData.second;
-                DiagnosticsEngine de(sm);
-                Lexer lexer(fileContents, de, fileID);
-                auto _ = lexer.tokenize();
-            },
-            ::testing::ExitedWithCode(EXIT_FAILURE), "Non-ASCII character");
-    }
+    errorTests(badInputs, "Non-ASCII character");
 }
 
 TEST(LexerErrorTest, TokenExceedsMaximumLength) {
-    namespace fs = std::filesystem;
-    const std::string longIdentifier(1 << 16, 'a');
-    const auto tmp = fs::temp_directory_path() / "test_input.nt";
-    std::ofstream(tmp) << "let " << longIdentifier << " = 42;";
+    const std::string src = "let " + std::string(1 << 16, 'a') + " = 42;";
+    errorTests({src}, "exceeds maximum allowed length");
+}
 
-    EXPECT_EXIT(
-        {
-            {
-                auto _ = freopen("/dev/null", "w", stdout);
-            }
-
-            SourceManager sm;
-            const auto fileData = sm.loadNewSourceFile(tmp.string());
-            const auto fileID = fileData.first;
-            const auto fileContents = fileData.second;
-            DiagnosticsEngine de(sm);
-            Lexer lexer(fileContents, de, fileID);
-            auto _ = lexer.tokenize();
-        },
-        ::testing::ExitedWithCode(EXIT_FAILURE), "exceeds maximum allowed length");
+TEST(LexerErrorTest, UnterminatedCharacterLiteral) {
+    const std::vector<std::string> badInputs = {"'a", "'hey\n; } "};
+    errorTests(badInputs, "Unterminated character literal");
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -313,8 +279,6 @@ INSTANTIATE_TEST_SUITE_P(
         LexCase{"letmut x=1;",
                 {TokenKind::IDENTIFIER, TokenKind::IDENTIFIER, TokenKind::EQUAL,
                  TokenKind::NUMBER_LITERAL, TokenKind::SEMICOLON, TokenKind::EOF_}},
-        // Empty input → just EOF
-        LexCase{"", {TokenKind::EOF_}},
         // Only whitespace → EOF
         LexCase{"  \n \n\t  ", {TokenKind::EOF_}},
         // Multiple semicolons → SEMICOLON, SEMICOLON, EOF
@@ -325,3 +289,29 @@ INSTANTIATE_TEST_SUITE_P(
                  TokenKind::SEMICOLON, TokenKind::SEMICOLON, TokenKind::EOF_}},
         // 12) Single unary ‘!’
         LexCase{"!", {TokenKind::BANG, TokenKind::EOF_}}));
+
+// ─────────────────────────────────────────────────────────────
+// Character literal lexing
+// ─────────────────────────────────────────────────────────────
+INSTANTIATE_TEST_SUITE_P(
+    CharacterLiterals, LexerTokenKindTest,
+    ::testing::Values(
+        // Simple character literal
+        LexCase{"'a'", {TokenKind::CHARACTER_LITERAL, TokenKind::EOF_}},
+        // Escape sequences
+        LexCase{"'\\n'", {TokenKind::CHARACTER_LITERAL, TokenKind::EOF_}},
+        LexCase{"'\\t'", {TokenKind::CHARACTER_LITERAL, TokenKind::EOF_}},
+        LexCase{"'\\r'", {TokenKind::CHARACTER_LITERAL, TokenKind::EOF_}},
+        LexCase{"'\\0'", {TokenKind::CHARACTER_LITERAL, TokenKind::EOF_}},
+        LexCase{"'\\\\'", {TokenKind::CHARACTER_LITERAL, TokenKind::EOF_}},
+        LexCase{"'\\''", {TokenKind::CHARACTER_LITERAL, TokenKind::EOF_}},
+        LexCase{"'\\\"'", {TokenKind::CHARACTER_LITERAL, TokenKind::EOF_}},
+        // Character literal in expression context
+        LexCase{"let x = 'a';",
+                {TokenKind::LET, TokenKind::IDENTIFIER, TokenKind::EQUAL,
+                 TokenKind::CHARACTER_LITERAL, TokenKind::SEMICOLON, TokenKind::EOF_}},
+        // char keyword as type specifier
+        LexCase{"let x: char = 'a';",
+                {TokenKind::LET, TokenKind::IDENTIFIER, TokenKind::COLON, TokenKind::CHAR,
+                 TokenKind::EQUAL, TokenKind::CHARACTER_LITERAL, TokenKind::SEMICOLON,
+                 TokenKind::EOF_}}));

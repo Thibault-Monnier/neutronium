@@ -8,11 +8,6 @@
 #include "frontend/lex/TokenKind.hpp"
 #include "frontend/type/Type.hpp"
 
-void Parser::emitError(const std::string& errorMessage, const Token& token) const {
-    diagnosticsEngine_.reportError(errorMessage, token.byteOffsetStart(), token.byteOffsetEnd(),
-                                   fileID_);
-}
-
 __attribute__((noinline, cold)) void Parser::expectError(const TokenKind expected) const {
     const Token& token = peek();
 
@@ -43,4 +38,42 @@ __attribute__((noinline, cold)) AST::NumberLiteral* Parser::invalidNumberLiteral
     const Token& token) const {
     const std::string errorMessage = "Invalid number literal";
     return emitError<AST::NumberLiteral>(errorMessage, token);
+}
+
+__attribute__((noinline, cold)) AST::CharacterLiteral* Parser::invalidEscapeSequenceError(
+    const uint32_t byteOffsetStart, const uint32_t byteOffsetEnd) const {
+    const std::string_view str =
+        std::string_view(sourceCode_).substr(byteOffsetStart, byteOffsetEnd - byteOffsetStart + 1);
+    const std::string errorMessage = std::format("Invalid escape sequence: `{}`", str);
+
+    emitError(errorMessage, byteOffsetStart, byteOffsetEnd);
+    return nullptr;
+}
+
+__attribute__((noinline, cold)) AST::CharacterLiteral* Parser::forbiddenCharacterLiteralError(
+    const Token& token) const {
+    assert(token.length() - 2 == 1);  // Length 1 without the quotes
+    const char value = token.lexeme(sourceCode_)[1];
+
+    std::string_view regexName;
+    if (value == '\n')
+        regexName = "\\n";
+    else if (value == '\t')
+        regexName = "\\t";
+    else if (value == '\r')
+        regexName = "\\r";
+    else
+        std::unreachable();
+
+    const std::string errorMessage = std::format("Character must be escaped: `{}`", regexName);
+    return emitError<AST::CharacterLiteral>(errorMessage, token);
+}
+
+__attribute__((noinline, cold)) AST::CharacterLiteral* Parser::invalidCharacterLiteralSizeError(
+    const Token& token) const {
+    const uint32_t size = token.length() - 2;  // Ignore the quotes
+    assert(size != 1);
+    const std::string errorMessage =
+        size == 0 ? "Empty character literal" : "Character literal is too long";
+    return emitError<AST::CharacterLiteral>(errorMessage, token);
 }

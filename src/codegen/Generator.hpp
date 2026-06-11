@@ -153,6 +153,7 @@ class Generator {
     void moveVariableToRax(std::string_view name);
     void moveNumberLitToRax(const AST::NumberLiteral& numberLit);
     void moveBooleanLitToRax(const AST::BooleanLiteral& booleanLit);
+    void moveCharacterLitToRax(const AST::CharacterLiteral& characterLit);
 
     void evaluatePlaceExpressionAddressToRax(const AST::Expression& place);
 

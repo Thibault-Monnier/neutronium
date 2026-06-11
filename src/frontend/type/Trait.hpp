@@ -38,11 +38,11 @@ struct magic_enum::customize::enum_range<Trait> {
     static_assert(min < max && (max - min) <= UINT16_MAX);  // Magic enum requirement
 };
 
-inline uint16_t operator|(Trait a, Trait b) {
+constexpr uint16_t operator|(Trait a, Trait b) {
     return static_cast<uint16_t>(a) | static_cast<uint16_t>(b);
 }
 
-inline uint16_t operator|(const std::underlying_type_t<Trait> a, Trait b) {
+constexpr uint16_t operator|(const std::underlying_type_t<Trait> a, Trait b) {
     return a | static_cast<std::underlying_type_t<Trait>>(b);
 }
 

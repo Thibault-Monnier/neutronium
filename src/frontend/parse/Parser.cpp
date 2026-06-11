@@ -98,6 +98,8 @@ std::optional<Type> Parser::tryParsePrimitiveType(const TokenKind tokenKind) {
             return Type::int64Type();
         case TokenKind::BOOL:
             return Type::boolType();
+        case TokenKind::CHAR:
+            return Type::charType();
         default:
             return std::nullopt;
     }
@@ -141,7 +143,8 @@ std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotat
 AST::Identifier* Parser::parseIdentifier() {
     const Token ident = EXPECT_OR_RETURN_NULLPTR(TokenKind::IDENTIFIER);
     return astArena_.insert<AST::Identifier>(ident.lexeme(sourceCode_), ident.byteOffsetStart(),
-                                             ident.byteOffsetEnd(), fileID_, generateTypeVariable());
+                                             ident.byteOffsetEnd(), fileID_,
+                                             generateTypeVariable());
 }
 
 AST::NumberLiteral* Parser::parseNumberLiteral() {
@@ -162,8 +165,55 @@ AST::NumberLiteral* Parser::parseNumberLiteral() {
         }
     }
 
-    return astArena_.insert<AST::NumberLiteral>(value, token.byteOffsetStart(),
-                                                token.byteOffsetEnd(), fileID_, generateTypeVariable());
+    return astArena_.insert<AST::NumberLiteral>(
+        value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateTypeVariable());
+}
+
+AST::CharacterLiteral* Parser::parseCharacterLiteral() {
+    const Token token = EXPECT_OR_RETURN_NULLPTR(TokenKind::CHARACTER_LITERAL);
+    const std::string_view lexeme = token.lexeme(sourceCode_);
+
+    unsigned char value;
+    const std::string_view content = lexeme.substr(1, lexeme.size() - 2);  // Strip the quotes
+    if (content.size() == 1) {
+        value = content[0];
+        if (value == '\n' || value == '\t' || value == '\r') [[unlikely]] {
+            return forbiddenCharacterLiteralError(token);
+        }
+    } else if (content.size() == 2 && content[0] == '\\') {
+        // Escape sequence
+        switch (content[1]) {
+            case 'n':
+                value = '\n';
+                break;
+            case 't':
+                value = '\t';
+                break;
+            case 'r':
+                value = '\r';
+                break;
+            case '\\':
+                value = '\\';
+                break;
+            case '\'':
+                value = '\'';
+                break;
+            case '"':
+                value = '"';
+                break;
+            case '0':
+                value = '\0';
+                break;
+            default:
+                return invalidEscapeSequenceError(token.byteOffsetStart() + 1,
+                                                  token.byteOffsetStart() + 2);
+        }
+    } else {
+        return invalidCharacterLiteralSizeError(token);
+    }
+
+    return astArena_.insert<AST::CharacterLiteral>(
+        value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateTypeVariable());
 }
 
 AST::Expression* Parser::parseArrayLiteral() {
@@ -228,6 +278,9 @@ AST::Expression* Parser::parsePrimaryExpression() {
         case TokenKind::NUMBER_LITERAL:
             return parseNumberLiteral();
 
+        case TokenKind::CHARACTER_LITERAL:
+            return parseCharacterLiteral();
+
         case TokenKind::LEFT_BRACKET:
             return parseArrayLiteral();
 
@@ -235,8 +288,9 @@ AST::Expression* Parser::parsePrimaryExpression() {
         case TokenKind::FALSE: {
             const bool value = token.kind() == TokenKind::TRUE;
             advance();
-            return astArena_.insert<AST::BooleanLiteral>(
-                value, token.byteOffsetStart(), token.byteOffsetEnd(), fileID_, generateTypeVariable());
+            return astArena_.insert<AST::BooleanLiteral>(value, token.byteOffsetStart(),
+                                                         token.byteOffsetEnd(), fileID_,
+                                                         generateTypeVariable());
         }
 
         case TokenKind::IDENTIFIER:

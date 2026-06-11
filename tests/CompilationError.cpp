@@ -191,6 +191,24 @@ TEST_F(NeutroniumTester, ReassignmentDifferentTypeFails) {
     EXPECT_TRUE(error4.contains("Type mismatch") && error4.contains("bool") &&
                 error4.contains("int"));
 
+    const std::string codeCharInt = R"(
+        fn main(): {
+            let mut x = '_';
+            x = 1;       # illegal: char -> int
+        }
+    )";
+    const std::string errorCharInt = compileFail(codeCharInt);
+    EXPECT_TRUE(errorCharInt.contains("Type mismatch") && errorCharInt.contains("char") &&
+                errorCharInt.contains("int"));
+
+    const std::string codeInt8Char = R"(
+        fn getChar() -> char: { return '\0'; }
+        fn main(): {
+            let mut x: int8 = 1;
+            x = getChar();       # illegal: int8 -> char
+        }
+    )";
+
     const std::string codeArrayLength = R"(
         fn main(): {
             let mut arr = [[1,0], [2,5], [3,8]];
@@ -880,12 +898,12 @@ TEST_F(NeutroniumTester, UnmatchedParenthesesFails) {
 TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
     {
         const std::string code = R"(
-        fn main(): {
-            let x = 1;
-            let y = !x;
-            exit 0;
-        }
-    )";
+            fn main(): {
+                let x = 1;
+                let y = !x;
+                exit 0;
+            }
+        )";
         const std::string error = compileFail(code);
         EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
                     error.contains(traitToString(Trait::NOT)) && error.contains("int"));
@@ -893,11 +911,11 @@ TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
 
     {
         const std::string code = R"(
-        fn main(): {
-            let x = true;
-            let y = -x;
-        }
-    )";
+            fn main(): {
+                let x = true;
+                let y = -x;
+            }
+        )";
         const std::string error = compileFail(code);
         EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
                     error.contains(traitToString(Trait::SUB)) && error.contains("bool"));
@@ -926,60 +944,92 @@ TEST_F(NeutroniumTester, UnaryOperatorOnWrongTypeFails) {
         )";
         const std::string error = compileFail(code);
         EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
-                    error.contains(traitToString(Trait::NOT)));
+                    error.contains(traitToString(Trait::NOT)) && error.contains("int"));
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let c = -'a';
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::SUB)) && error.contains("char"));
     }
 }
 
 TEST_F(NeutroniumTester, BinaryOperatorOnWrongTypeFails) {
-    const std::string code = R"(
-        fn main(): {
-            let x = true + false;
-        }
-    )";
-    const std::string error = compileFail(code);
-    EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
-                error.contains(traitToString(Trait::ADD)) && error.contains("bool"));
+    {
+        const std::string code = R"(
+            fn main(): {
+                let x = true + false;
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::ADD)) && error.contains("bool"));
+    }
 
-    const std::string code2 = R"(
-        fn main(): {
-            let x = true > false;
-        }
-    )";
-    const std::string error2 = compileFail(code2);
-    EXPECT_TRUE(error2.contains("Type") && error2.contains("trait") &&
-                error2.contains(traitToString(Trait::GT)) && error2.contains("bool"));
+    {
+        const std::string code = R"(
+            fn main(): {
+                let x = true > false;
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::GT)) && error.contains("bool"));
+    }
 
-    const std::string code3 = R"(
-        fn x(): {}
+    {
+        const std::string code = R"(
+            fn x(): {}
 
-        fn main(): {
-            let y = (x() != x());
-        }
-    )";
-    const std::string error3 = compileFail(code3);
-    EXPECT_TRUE(error3.contains("Type") && error3.contains("trait") &&
-                error3.contains(traitToString(Trait::EQ)) && error3.contains("void"));
+            fn main(): {
+                let y = (x() != x());
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::EQ)) && error.contains("void"));
+    }
 
-    const std::string code4 = R"(
-        fn x(): {}
+    {
+        const std::string code = R"(
+            fn x(): {}
 
-        fn main(): {
-            let y = (x() >= x());
-        }
-    )";
-    const std::string error4 = compileFail(code4);
-    EXPECT_TRUE(error4.contains("Type") && error4.contains("trait") &&
-                error4.contains(traitToString(Trait::GTE)) && error4.contains("void"));
+            fn main(): {
+                let y = (x() >= x());
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::GTE)) && error.contains("void"));
+    }
 
-    const std::string code5 = R"(
-        fn main(): {
-            let a: int16 = 3;
-            let x = a && 5;
-        }
-    )";
-    const std::string error5 = compileFail(code5);
-    EXPECT_TRUE(error5.contains("Type") && error5.contains("trait") &&
-                error5.contains(traitToString(Trait::AND)) && error5.contains("int16"));
+    {
+        const std::string code = R"(
+            fn main(): {
+                let a: int16 = 3;
+                let x = a && 5;
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::AND)) && error.contains("int16"));
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let c: char = 'a' / '\n';
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Type") && error.contains("trait") &&
+                    error.contains(traitToString(Trait::DIV)) && error.contains("char"));
+    }
 }
 
 TEST_F(NeutroniumTester, BreakWhenNotInLoopFails) {
@@ -1147,4 +1197,88 @@ TEST_F(NeutroniumTester, InvalidRepeatArrayLiteral) {
         EXPECT_TRUE(error.contains("token") && error.contains("expected") &&
                     error.contains("RIGHT_BRACKET"));
     }
+}
+
+TEST_F(NeutroniumTester, EmptyCharacterLiteral) {
+    const std::string code = R"(
+        fn main(): {
+            let c = '';
+        }
+    )";
+    const std::string error = compileFail(code);
+    EXPECT_TRUE(error.contains("Empty character literal"));
+}
+
+TEST_F(NeutroniumTester, TooLongCharacterLiteral) {
+    {
+        const std::string code = R"(
+            fn main(): {
+                let c = 'ab';
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Character literal is too long"));
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let c = '\\a';
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Character literal is too long"));
+    }
+}
+
+TEST_F(NeutroniumTester, InvalidEscapeSequence) {
+    {
+        const std::string code = R"(
+            fn main(): {
+                let c = '\x';
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Invalid escape sequence") && error.contains("\\x"));
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let c = '\9';
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Invalid escape sequence") && error.contains("\\9"));
+    }
+
+    {
+        const std::string code = R"(
+            fn main(): {
+                let c = '\.';
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Invalid escape sequence") && error.contains("\\"));
+    }
+}
+
+TEST_F(NeutroniumTester, ForbiddenUnescapedCharacter) {
+    const std::string code = R"(
+        fn main(): {
+            let c = '{val}';
+        }
+    )";
+
+    const auto testForbiddenChar = [&](const std::string& character, const std::string& escapeSeq) {
+        std::string finalCode = code;
+        finalCode.replace(code.find("{val}"), 5, character);
+        const std::string error = compileFail(finalCode);
+
+        EXPECT_TRUE(error.contains("Character must be escaped") && error.contains(escapeSeq));
+    };
+
+    testForbiddenChar("\n", "\\n");
+    testForbiddenChar("\t", "\\t");
+    testForbiddenChar("\r", "\\r");
 }

@@ -24,6 +24,7 @@ class Lexer {
     [[nodiscard]] Token lex();
 
     /// Lexes the entire source code and returns a vector of all tokens.
+    /// @note This is @b SLOW. It is preferred to use the `lex` method when possible.
     [[nodiscard]] std::vector<Token> tokenize();
 
    private:
@@ -46,6 +47,7 @@ class Lexer {
     void createTokenError() const;
     void handleNonAsciiChar();
     void invalidCharacterError(char c) const;
+    void unclosedCharacterLiteralError() const;
 
     [[nodiscard]] int currentIndex() const { return static_cast<int>(currentPtr_ - sourceStart_); }
 
@@ -61,10 +63,11 @@ class Lexer {
 
     inline void skipWhile(const auto& predicate);
 
-    /** Skips to the next non-whitespace character
-     */
+    /// Skips to the next non-whitespace character
     inline void skipWhitespace();
     inline void lexNumberLiteralContinuation();
+
+    inline void lexCharacterLiteralContinuation();
 
     [[nodiscard]] static inline TokenKind classifyIdentifier(const char* s, std::size_t len);
     inline void lexIdentifierContinuation();
