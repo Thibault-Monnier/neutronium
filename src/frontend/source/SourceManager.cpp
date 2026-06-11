@@ -21,6 +21,8 @@
 #include "FileID.hpp"
 
 std::pair<FileID, std::string_view> SourceManager::loadNewSourceFile(std::string path) {
+    // TODO: Handle empty files correctly
+
     const int fd = open(path.c_str(), O_RDONLY);
     if (fd == -1) {
         throw std::runtime_error(
@@ -47,9 +49,20 @@ std::pair<uint32_t, uint32_t> SourceManager::getLineColumn(const FileID fileID,
     assert(offset <= sourceFiles_.at(fileID).contents().size());
 
     const SourceFile& file = sourceFiles_[fileID];
+
+    if (offset == file.contents().size()) {
+        const uint32_t line =
+            static_cast<int>(file.linesStarts().size() - 2);  // Ignore the sentinel value
+        assert(offset >= file.linesStarts()[line]);
+        const uint32_t column = offset - file.linesStarts()[line];
+        return {line, column};  // 0-based
+    }
+
     const auto it = std::ranges::upper_bound(file.linesStarts(), offset) - 1;
     const uint32_t line = static_cast<int>(std::distance(file.linesStarts().begin(), it));
     const uint32_t column = offset - *it;
+
+    assert(line < file.linesStarts().size() - 1);
 
     return {line, column};  // 0-based
 }
