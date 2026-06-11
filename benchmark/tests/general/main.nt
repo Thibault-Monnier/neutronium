@@ -12,7 +12,7 @@
 # --------------------------------
 
 # I/O functions imported from standard library
-extern fn print_c(char: int);
+extern fn print_c(c: char);
 extern fn print_num(num: int);
 
 # Math functions imported from standard library
