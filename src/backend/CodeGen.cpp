@@ -64,14 +64,17 @@ void CodeGen::lea(const std::string& loc, const Reg::Name dst) {
 
 void CodeGen::updateRsp() { lea(stackOffsetOperand(stackOffset_), Reg::RSP); }
 
-std::string CodeGen::stackOffsetOperand(const int32_t stackOffsetBits) {
+const std::string& CodeGen::stackOffsetOperand(const int32_t stackOffsetBits) {
     const bool isPos = stackOffsetBits >= 0;
     std::deque<std::string>& cache =
         isPos ? cachedStackOffsetOperandsPos_ : cachedStackOffsetOperandsNeg_;
 
     const size_t bytes = toBytes(std::abs(stackOffsetBits));
-    if (bytes >= cache.size() || cache[bytes].empty()) {
-        cache.resize(bytes + 1);
+
+    const bool isOutOfBounds = bytes >= cache.size();
+    if (isOutOfBounds || cache[bytes].empty()) {
+        if (isOutOfBounds) cache.resize(bytes + 1);
+
         const std::string val = std::to_string(bytes);
         cache[bytes] = (isPos ? "[rbp - " : "[rbp + ") + val + "]";
     }
@@ -79,19 +82,19 @@ std::string CodeGen::stackOffsetOperand(const int32_t stackOffsetBits) {
     return cache[bytes];
 }
 
-std::string CodeGen::stackAllocate(const uint32_t sizeBits) {
+const std::string& CodeGen::stackAllocate(const uint32_t sizeBits) {
     stackOffset_ += toBytes(sizeBits) * 8;  // Align to bytes
     return stackOffsetOperand(stackOffset_);
 }
 
-std::string CodeGen::stackAllocate(const IR::Value& value) {
-    const std::string operand = stackAllocate(value.getType().computeSizeBits());
+const std::string& CodeGen::stackAllocate(const IR::Value& value) {
+    const std::string& operand = stackAllocate(value.getType().computeSizeBits());
     storedStackOffsets_[value.getID()] = static_cast<int32_t>(stackOffset_);
     return operand;
 }
 
 void CodeGen::loadTo(const Reg reg, const int32_t stackOffset) {
-    const std::string src = stackOffsetOperand(stackOffset);
+    const std::string& src = stackOffsetOperand(stackOffset);
     mov(src, reg);
 }
 
@@ -212,7 +215,7 @@ void CodeGen::generateConstant(const IR::ConstantValue& constant) {
     if (storedStackOffsets_[constant.getID()] != UNINITIALIZED_STACK_OFFSET) return;
 
     if (auto* integerConst = constant.dynCast<const IR::IntegerConstant>()) {
-        const std::string loc = stackAllocate(constant);
+        const std::string& loc = stackAllocate(constant);
         const int64_t val = integerConst->getValue();
         mov(val, loc, constant.getType().computeSizeBits());
     } else {
@@ -312,7 +315,7 @@ void CodeGen::generateBinaryOperation(const IR::Instruction& binOp) {
                             stackOffsetOperand(stackOffsetB),
                             operandA->getType().computeSizeBits());
 
-    const std::string loc = stackAllocate(binOp);
+    const std::string& loc = stackAllocate(binOp);
     mov(regForValue(Reg::RAX, binOp), loc);
 }
 
@@ -329,9 +332,9 @@ void CodeGen::generateAlloca(const IR::Instruction& alloca) {
     const uint32_t nbElements = nbElementsValue->getValue();
 
     const uint32_t allocateSize = elementSize * nbElements;
-    const std::string allocatedLoc = stackAllocate(allocateSize);
+    const std::string& allocatedLoc = stackAllocate(allocateSize);
 
-    const std::string writeLoc = stackAllocate(alloca);
+    const std::string& writeLoc = stackAllocate(alloca);
     const Reg reg = regForValue(Reg::RAX, alloca);
     lea(allocatedLoc, reg.getName());
     mov(reg, writeLoc);
@@ -343,7 +346,7 @@ void CodeGen::generateLoad(const IR::Instruction& load) {
 
     const IR::Value* address = load.getOperands()[0];
     const int32_t stackOffset = getStoredStackOffsetOrGenerate(address);
-    const std::string writeLoc = stackAllocate(load);
+    const std::string& writeLoc = stackAllocate(load);
 
     constexpr Reg ADDR_REG{Reg::RAX, PTR_SIZE_BITS};
     const Reg valReg = regForValue(Reg::RAX, load);
@@ -389,7 +392,7 @@ void CodeGen::generateGep(const IR::Instruction& gep) {
                             std::to_string(toBytes(elemSize)), idx->getType().computeSizeBits());
     generateBinaryOperation(IR::OpCode::ADD, regA, stackOffsetOperand(baseStackOffset));
 
-    const std::string writeLoc = stackAllocate(gep);
+    const std::string& writeLoc = stackAllocate(gep);
     mov(regA, writeLoc);
 }
 
@@ -467,17 +470,17 @@ void CodeGen::generateCall(const IR::Instruction& call) {
     assert(callee);
     const std::string_view calleeName = callee->getName();
 
-    std::vector<int32_t> argumentStackOffsets;
+    callGenerationArgumentStackOffsets_.clear();
     for (const auto* arg : call.getOperands() | std::views::drop(1)) {
         const int32_t stackOffset = getStoredStackOffsetOrGenerate(arg);
-        argumentStackOffsets.push_back(stackOffset);
+        callGenerationArgumentStackOffsets_.push_back(stackOffset);
     }
 
-    for (size_t i = 0; i < argumentStackOffsets.size(); ++i) {
+    for (size_t i = 0; i < callGenerationArgumentStackOffsets_.size(); ++i) {
         const IR::Value* arg = call.getOperands()[i + 1];
         assert(arg->getType().isPointer());
 
-        const int32_t stackOffset = argumentStackOffsets[i];
+        const int32_t stackOffset = callGenerationArgumentStackOffsets_[i];
         Reg reg = regForValue(Reg::RAX, *arg);
         loadTo(reg, stackOffset);
 
@@ -490,7 +493,7 @@ void CodeGen::generateCall(const IR::Instruction& call) {
             reg = Reg{reg.getName(), argType->computeSizeBits()};
         }
 
-        const std::string writeLoc = stackAllocate(argType->computeSizeBits());
+        const std::string& writeLoc = stackAllocate(argType->computeSizeBits());
         mov(reg, writeLoc);
     }
 
@@ -500,7 +503,7 @@ void CodeGen::generateCall(const IR::Instruction& call) {
 
     if (call.getType().isVoid()) return;
 
-    const std::string writeLoc = stackAllocate(call);
+    const std::string& writeLoc = stackAllocate(call);
     mov(regForValue(Reg::RAX, call), writeLoc);
 }
 

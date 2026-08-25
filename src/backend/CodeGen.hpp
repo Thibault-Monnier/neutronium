@@ -7,6 +7,7 @@
 #include <ranges>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "Reg.hpp"
 #include "driver/Cli.hpp"
@@ -69,8 +70,6 @@ class CodeGen {
 
     void updateRsp();
 
-    [[nodiscard]] static std::string deref(const std::string& loc) { return '[' + loc + ']'; }
-
     [[nodiscard]] static constexpr std::string_view ptrPrefix(uint32_t sizeBits) {
         sizeBits = (sizeBits + 7) / 8 * 8;
 
@@ -88,8 +87,8 @@ class CodeGen {
         }
     }
 
-    [[nodiscard]] std::string stackOffsetOperand(int32_t stackOffsetBits);
-    [[nodiscard]] std::string stackOffsetOperand(const uint32_t stackOffsetBits) {
+    [[nodiscard]] const std::string& stackOffsetOperand(int32_t stackOffsetBits);
+    [[nodiscard]] const std::string& stackOffsetOperand(const uint32_t stackOffsetBits) {
         return stackOffsetOperand(static_cast<int32_t>(stackOffsetBits));
     }
     [[nodiscard]] static std::string getNameWithPrefix(const std::string_view name) {
@@ -106,8 +105,8 @@ class CodeGen {
     }
 
    private:
-    std::string stackAllocate(uint32_t sizeBits);
-    std::string stackAllocate(const IR::Value& value);
+    const std::string& stackAllocate(uint32_t sizeBits);
+    const std::string& stackAllocate(const IR::Value& value);
 
     void loadTo(Reg reg, int32_t stackOffset);
 
@@ -138,6 +137,7 @@ class CodeGen {
 
     void generateRet(const IR::Instruction& ret);
 
+    std::vector<int32_t> callGenerationArgumentStackOffsets_;
     void generateCall(const IR::Instruction& call);
     void generateSyscall(const IR::Instruction& sysc);
     void generateExit();

@@ -8,6 +8,8 @@
 #include <string_view>
 #include <utility>
 
+#include "magic_enum/magic_enum.hpp"
+
 namespace Backend {
 
 class Reg {
@@ -35,8 +37,16 @@ class Reg {
 
     [[nodiscard]] constexpr std::string_view toString() const { return toString(name_, sizeBits_); }
 
-    [[nodiscard]] constexpr std::string deref() const {
-        return "[" + std::string(toString(name_, 64)) + "]";
+    [[nodiscard]] constexpr const std::string& deref() const {
+        constexpr size_t ENUM_SIZE = magic_enum::enum_count<Name>();
+        static std::array<std::string, ENUM_SIZE> cached;
+
+        const auto idx = static_cast<size_t>(name_);
+        if (cached[idx].empty()) [[unlikely]] {
+            cached[idx] = "[" + std::string(toString(name_, 64)) + "]";
+        }
+
+        return cached[idx];
     }
 
    private:
