@@ -18,7 +18,11 @@ Function& Builder::beginFunction(std::string_view name, std::vector<Argument*>&&
                                                   returnType, isExported, isExternal});
     functionTable_.emplace(name, func);
     currentFunction_ = &func;
-    setInsertionPoint(createBasicBlock());
+
+    if (!isExternal)
+        setInsertionPoint(createBasicBlock());
+    else
+        currentBlock_ = nullptr;
 
     return *currentFunction_;
 }

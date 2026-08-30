@@ -86,7 +86,7 @@ class PolymorphicArenaAllocator {
      *
      * @tparam T The type of object to insert. Must be trivially constructible and destructible.
      * @param arr The array to insert.
-     * @return A pointer to the first object in the newly inserted array.
+     * @return A span to the inserted array.
      */
     template <typename T, size_t N>
         requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>

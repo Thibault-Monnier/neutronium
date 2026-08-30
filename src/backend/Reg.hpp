@@ -37,7 +37,7 @@ class Reg {
 
     [[nodiscard]] constexpr std::string_view toString() const { return toString(name_, sizeBits_); }
 
-    [[nodiscard]] constexpr const std::string& deref() const {
+    [[nodiscard]] std::string_view deref() const {
         constexpr size_t ENUM_SIZE = magic_enum::enum_count<Name>();
         static std::array<std::string, ENUM_SIZE> cached;
 

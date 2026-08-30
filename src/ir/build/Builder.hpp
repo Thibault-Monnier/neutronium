@@ -92,6 +92,7 @@ class Builder {
 
     /// Adds an instruction to the end of currentBlock_ and returns a reference to it.
     Value& addInstr(Instruction&& instr) {
+        assert(currentBlock_ && "No insertion point set");
         auto& stored = static_cast<Instruction&>(registerValue(std::move(instr)));
         currentBlock_->addInstruction(stored);
         return stored;

@@ -40,6 +40,15 @@ class CodeGen {
     /// Index is the absolute value of the stack offset in bytes.
     std::deque<std::string> cachedStackOffsetOperandsNeg_;
 
+    class StackOffset {
+        int32_t offsetBits_;
+
+       public:
+        explicit StackOffset(const int32_t value) : offsetBits_(value) {}
+
+        [[nodiscard]] int32_t offsetBits() const { return offsetBits_; }
+    };
+
    public:
     explicit CodeGen(const IR::Module& ir, const TargetType targetType)
         : ir_(ir),
@@ -51,24 +60,36 @@ class CodeGen {
    private:
     [[nodiscard]] static uint32_t toBytes(const uint32_t sizeBits) { return (sizeBits + 7) / 8; }
 
-    // --- Asm writing helpers
+    // --- Asm writing helpers ---
+
+    /// Moves an immediate `srcVal` into a register `dst`.
     void mov(int64_t srcVal, Reg dst);
-    void mov(const std::string& src, Reg dst);
-    void mov(Reg src, const std::string& dst);
-    void mov(const int64_t srcVal, const std::string& dst, const uint32_t sizeBits) {
+    /// Moves a stack operand `src` into a register `dst`.
+    void mov(StackOffset src, Reg dst);
+    /// Moves a register `src` into a stack operand `dst`.
+    void mov(Reg src, StackOffset dst);
+    /// Moves an immediate `srcVal` with size `sizeBits` into a stack operand `dst`.
+    void mov(const int64_t srcVal, const StackOffset dst, const uint32_t sizeBits) {
         const Reg reg{Reg::RAX, sizeBits};
         mov(srcVal, reg);
         mov(reg, dst);
     }
-    void mov(const std::string& src, const std::string& dst, const uint32_t sizeBits) {
+    /// Moves a stack operand `src` with size `sizeBits` into another stack operand `dst`.
+    void mov(const StackOffset src, const StackOffset dst, const uint32_t sizeBits) {
         const Reg reg{Reg::RAX, sizeBits};
         mov(src, reg);
         mov(reg, dst);
     }
+    /// Moves a register `src` into the memory address pointed to by `address`.
+    void movToAddress(Reg src, Reg address);
 
-    void lea(const std::string& loc, Reg::Name dst);
+    void deref(Reg reg, Reg dst);
 
-    void updateRsp();
+    /// Loads the effective address of a stack operand `loc` into a register `dst`.
+    void lea(StackOffset loc, Reg::Name dst);
+
+    /// Updates the stack pointer to the current stack offset.
+    void updateRsp() { lea(stackOffset(), Reg::RSP); }
 
     [[nodiscard]] static constexpr std::string_view ptrPrefix(uint32_t sizeBits) {
         sizeBits = (sizeBits + 7) / 8 * 8;
@@ -87,10 +108,8 @@ class CodeGen {
         }
     }
 
-    [[nodiscard]] const std::string& stackOffsetOperand(int32_t stackOffsetBits);
-    [[nodiscard]] const std::string& stackOffsetOperand(const uint32_t stackOffsetBits) {
-        return stackOffsetOperand(static_cast<int32_t>(stackOffsetBits));
-    }
+    [[nodiscard]] std::string_view getOperand(StackOffset stackOffset);
+
     [[nodiscard]] static std::string getNameWithPrefix(const std::string_view name) {
         return "__" + std::string(name);
     }
@@ -104,13 +123,15 @@ class CodeGen {
         return ".L" + std::to_string(id);
     }
 
+    [[nodiscard]] StackOffset stackOffset() const {
+        return StackOffset{static_cast<int32_t>(stackOffset_)};
+    }
+
    private:
-    const std::string& stackAllocate(uint32_t sizeBits);
-    const std::string& stackAllocate(const IR::Value& value);
+    StackOffset stackAllocate(uint32_t sizeBits);
+    StackOffset stackAllocate(const IR::Value& value);
 
-    void loadTo(Reg reg, int32_t stackOffset);
-
-    int32_t getStoredStackOffsetOrGenerate(const IR::Value* value);
+    StackOffset getStoredStackOffsetOrGenerate(const IR::Value* value);
 
     void generateValue(const IR::Value& value);
 
@@ -120,10 +141,15 @@ class CodeGen {
     void generateConstant(const IR::ConstantValue& constant);
 
     /// Stores the result in rax.
-    void generateBinaryOperation(IR::OpCode opcode, Reg locA, const std::string& locB);
+    template <typename LocBType>
+        requires std::same_as<LocBType, StackOffset> || std::same_as<LocBType, int64_t>
+    void generateBinaryOperation(IR::OpCode opcode, Reg locA, LocBType locB);
     /// Stores the result in rax.
-    void generateBinaryOperation(IR::OpCode opcode, const std::string& locA,
-                                 const std::string& locB, uint32_t sizeBits);
+    void generateBinaryOperation(IR::OpCode opcode, StackOffset locA, StackOffset locB,
+                                 uint32_t sizeBits);
+    /// Stores the result in rax.
+    void generateBinaryOperation(IR::OpCode opcode, StackOffset loc, int64_t val,
+                                 uint32_t sizeBits);
     void generateBinaryOperation(const IR::Instruction& binOp);
 
     void generateAlloca(const IR::Instruction& alloca);
@@ -137,7 +163,7 @@ class CodeGen {
 
     void generateRet(const IR::Instruction& ret);
 
-    std::vector<int32_t> callGenerationArgumentStackOffsets_;
+    std::vector<StackOffset> callGenerationArgumentStackOffsets_;
     void generateCall(const IR::Instruction& call);
     void generateSyscall(const IR::Instruction& sysc);
     void generateExit();
