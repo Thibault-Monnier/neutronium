@@ -160,7 +160,7 @@ void Lexer::lexIdentifierContinuation() {
     // Use SIMD to check for identifier continuation characters
     // This is highly efficient, as it checks 16 characters at a time
 
-    alignas(16) static constexpr char VALID_RANGES[8] = {'_', '_', 'A', 'Z', 'a', 'z', '0', '9'};
+    alignas(16) static constexpr char VALID_RANGES[16] = {'_', '_', 'A', 'Z', 'a', 'z', '0', '9'};
     static constexpr ssize_t BYTES_PER_REG = 16;
 
     const char* const sourceEnd = sourceEnd_;
