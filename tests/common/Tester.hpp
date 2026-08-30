@@ -110,8 +110,8 @@ class NeutroniumTester : public testing::Test {
     void SetUp() override {
         using namespace std::filesystem;
         originalCwd_ = current_path();
-        projectRoot_ = std::filesystem::path(PROJECT_ROOT_DIR);
-        compiler_ = projectRoot_ / "build" / "neutronium";
+        projectRoot_ = path(PROJECT_ROOT_DIR);
+        compiler_ = path(NEUTRONIUM_EXEC_PATH);
         sourceFile_ = projectRoot_ / "tmp_test.nt";
         outputBinary_ = projectRoot_ / "neutro" / "out";
 

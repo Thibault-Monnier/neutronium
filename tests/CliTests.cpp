@@ -8,7 +8,7 @@
 #include <string>
 
 const std::string projectRoot = PROJECT_ROOT_DIR;
-const std::string neutroniumPath = projectRoot + "/build/neutronium";
+const std::string neutroniumPath = NEUTRONIUM_EXEC_PATH;
 
 namespace {
 

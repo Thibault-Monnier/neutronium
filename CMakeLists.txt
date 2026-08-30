@@ -115,5 +115,9 @@ file(GLOB_RECURSE TEST_SOURCES "tests/*.cpp")
 add_executable(tests ${TEST_SOURCES})
 target_link_libraries(tests PRIVATE neutronium_lib gtest_main)
 
+target_compile_definitions(tests PRIVATE
+        NEUTRONIUM_EXEC_PATH="$<TARGET_FILE:neutronium>"
+)
+
 include(GoogleTest)
 gtest_discover_tests(tests)
