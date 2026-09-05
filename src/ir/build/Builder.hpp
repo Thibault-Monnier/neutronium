@@ -27,7 +27,7 @@ class Builder {
         return functionTable_.at(name);
     }
 
-    Function& beginFunction(std::string_view name, std::vector<Argument*>&& arguments,
+    Function& beginFunction(std::string_view name, std::span<Argument*> arguments,
                             const Type& returnType, bool isExported, bool isExternal);
 
     Value& createAddInstr(Value& a, Value& b) { return createArithmeticExpr(a, b, OpCode::ADD); }
@@ -63,12 +63,12 @@ class Builder {
                                         BasicBlock& falseBlock);
     Value& createUnconditionalBranchInstr(BasicBlock& targetBlock);
 
-    Value& createCallInstr(std::string_view calleeName, std::vector<Value*>&& arguments);
+    Value& createCallInstr(std::string_view calleeName, std::span<Value*> arguments);
 
     Value& createRetInstr(Value& value);
     Value& createRetInstr();
 
-    Value& createSyscallInstr(int64_t syscallNumber, std::vector<Value*>&& arguments);
+    Value& createSyscallInstr(int64_t syscallNumber, std::span<Value*> arguments);
 
     [[nodiscard]] BasicBlock& createBasicBlock() {
         auto& stored = static_cast<BasicBlock&>(registerValue(BasicBlock{voidType()}));

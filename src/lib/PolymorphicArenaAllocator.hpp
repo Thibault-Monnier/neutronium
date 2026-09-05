@@ -68,48 +68,33 @@ class PolymorphicArenaAllocator {
         return insert<T>(T(std::forward<Args>(args)...));
     }
 
-    /** Insert an array of trivially constructible and destructible objects into the arena.
-     *
-     * @tparam T The type of object to insert. Must be trivially constructible and destructible.
-     * @param count The number of objects to insert.
-     * @return A pointer to the first object in the newly inserted array.
+    /** Inserts a contiguous range of trivially constructible and destructible objects into the
+     * arena and returns a span to it.
+     * @tparam R The type of the elements in the range.
+     * @param range The contiguous range to insert.
+     * @return A span to the inserted range.
      */
+    template <std::ranges::contiguous_range R>
+        requires std::is_trivially_copyable_v<std::ranges::range_value_t<R>> &&
+                 std::is_trivially_destructible_v<std::ranges::range_value_t<R>>
+    [[nodiscard]] auto insertRange(R&& range) {
+        using T = std::ranges::range_value_t<R>;
+
+        if (std::ranges::empty(range)) return std::span<T>{};
+
+        T* data = allocateElems<T>(std::ranges::size(range));
+        std::memcpy(data, std::ranges::data(range), std::ranges::size(range) * sizeof(T));
+        return std::span<T>{data, std::ranges::size(range)};
+    }
+
+    /// Allocates memory for `count` elements of type `T`. Returns a pointer to the allocated
+    /// memory.
     template <typename T>
         requires std::is_trivially_constructible_v<T> && std::is_trivially_destructible_v<T>
-    T* reserveArray(const size_t count) {
+    T* allocateElems(const size_t count) {
         assert(count > 0);
-        uintptr_t mem = allocate(sizeof(T) * count, alignof(T));
+        const uintptr_t mem = allocate(sizeof(T) * count, alignof(T));
         return reinterpret_cast<T*>(mem);
-    }
-
-    /** Insert an array of trivially constructible and destructible objects into the arena.
-     *
-     * @tparam T The type of object to insert. Must be trivially constructible and destructible.
-     * @param arr The array to insert.
-     * @return A span to the inserted array.
-     */
-    template <typename T, size_t N>
-        requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>
-    std::span<T> insertArray(std::array<T, N>&& arr) {
-        T* data = reserveArray<T>(N);
-        std::memcpy(reinterpret_cast<void*>(data), arr.data(), sizeof(arr));
-        return {data, N};
-    }
-
-    /** Inserts a vector of trivially constructible and destructible objects into the arena and
-     * returns a span to it.
-     * @tparam T The type of the elements in the vector.
-     * @param vec The vector to insert.
-     * @return A span to the inserted vector.
-     */
-    template <typename T>
-        requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>
-    [[nodiscard]] std::span<T> insertVector(std::vector<T>&& vec) {
-        if (vec.empty()) return {};
-
-        T* data = reserveArray<T>(vec.size());
-        std::memcpy(reinterpret_cast<void*>(data), vec.data(), vec.size() * sizeof(T));
-        return {data, vec.size()};
     }
 
    private:
