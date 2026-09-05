@@ -8,7 +8,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include "frontend/ast/AST.hpp"
 #include "frontend/ast/Operator.hpp"
@@ -21,10 +20,11 @@
 #include "frontend/type/TypeID.hpp"
 #include "frontend/type/TypeManager.hpp"
 #include "lib/PolymorphicArenaAllocator.hpp"
+#include "lib/SmallVector.hpp"
 
 struct ParsedFunctionSignature {
     AST::Identifier* identifier_;
-    std::vector<AST::VariableDefinition*> parameters_;
+    neutro::SmallVector<AST::VariableDefinition*> parameters_;
     TypeID returnTypeID_;
 };
 
@@ -117,9 +117,10 @@ class Parser {
     [[nodiscard]] TypeID generateTypeVariable() const { return typeManager_.createTypeVariable(); }
 
     template <class T>
-    std::optional<std::vector<T*>> parseCommaSeparatedList(TokenKind endDelimiter,
-                                                           const std::function<T*()>& parseElement);
-    std::optional<std::vector<AST::Expression*>> parseExpressionList(TokenKind endDelimiter);
+    std::optional<neutro::SmallVector<T*>> parseCommaSeparatedList(
+        TokenKind endDelimiter, const std::function<T*()>& parseElement);
+    std::optional<neutro::SmallVector<AST::Expression*>> parseExpressionList(
+        TokenKind endDelimiter);
 
     static std::optional<Type> tryParsePrimitiveType(TokenKind tokenKind);
     std::unique_ptr<Type> parseTypeSpecifier();

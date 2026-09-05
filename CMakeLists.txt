@@ -43,7 +43,7 @@ add_link_options(-fno-lto)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-stdlib=libc++ -fdiagnostics-color=always -fdiagnostics-show-template-tree -fstandalone-debug)
-    add_link_options(-stdlib=libc++ -lc++ -lc++abi)
+    add_link_options(-stdlib=libc++)
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_compile_options(-fdiagnostics-color=always)
     message(WARNING "Using GNU compiler. Consider using Clang which is better tested and optimized.")

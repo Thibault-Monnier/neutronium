@@ -8,7 +8,6 @@
 #include <span>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include "frontend/ast/AST.hpp"
 #include "frontend/ast/Operator.hpp"
@@ -17,6 +16,7 @@
 #include "frontend/type/TypeID.hpp"
 #include "ir/core/IR.hpp"
 #include "ir/core/Type.hpp"
+#include "lib/SmallVector.hpp"
 
 void ASTLowerer::lower() {
     for (const auto& externalFuncDecl : ast_.externalFunctions_) {
@@ -82,7 +82,7 @@ void ASTLowerer::declareFunction(const std::string_view name,
                                  const std::span<AST::VariableDefinition*> parameters,
                                  const TypeID returnTypeID, const bool isExported,
                                  const bool isExternal) {
-    std::vector<IR::Argument*> args;
+    neutro::SmallVector<IR::Argument*> args;
     args.reserve(parameters.size() + 1);  // In case we add the hidden return pointer
 
     bool usingHiddenReturnPointer = false;
@@ -109,7 +109,7 @@ void ASTLowerer::declareFunction(const std::string_view name,
     }
 
     const IR::Function& func =
-        builder_.beginFunction(name, std::move(args), *returnType, isExported, isExternal);
+        builder_.beginFunction(name, args, *returnType, isExported, isExternal);
 
     if (isExternal) return;
 
@@ -297,7 +297,8 @@ void ASTLowerer::lowerReturnStatement(const AST::ReturnStatement& returnStmt) {
 
 void ASTLowerer::lowerExitStatement(const AST::ExitStatement& exitStmt) {
     IR::Value& exitCode = lowerValueExpression(*exitStmt.exitCode_);
-    builder_.createSyscallInstr(60, {&exitCode});
+    std::array operands = {&exitCode};
+    builder_.createSyscallInstr(60, operands);
 }
 
 void ASTLowerer::copyValue(IR::Value& destPtr, IR::Value& value, const TypeID valueTypeID) {
@@ -396,7 +397,7 @@ IR::Value& ASTLowerer::lowerIdentifierAddress(const AST::Identifier& identifier)
 }
 
 IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
-    std::vector<IR::Value*> arguments;
+    neutro::SmallVector<IR::Value*> arguments;
     arguments.reserve(funcCall.arguments_.size() + 1);  // In case we add the hidden return pointer
 
     const Type& returnType = typeManager_.getTypeResolved(funcCall.typeID_);
@@ -415,7 +416,7 @@ IR::Value& ASTLowerer::lowerFunctionCall(const AST::FunctionCall& funcCall) {
         arguments.push_back(&address);
     }
 
-    IR::Value& call = builder_.createCallInstr(funcCall.callee_->name_, std::move(arguments));
+    IR::Value& call = builder_.createCallInstr(funcCall.callee_->name_, arguments);
 
     if (returnType.isArray()) {
         return *returnValueAddress;

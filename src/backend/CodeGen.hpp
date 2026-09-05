@@ -13,6 +13,7 @@
 #include "driver/Cli.hpp"
 #include "ir/core/IR.hpp"
 #include "lib/FastStringStream.hpp"
+#include "lib/SmallVector.hpp"
 
 namespace Backend {
 
@@ -163,7 +164,7 @@ class CodeGen {
 
     void generateRet(const IR::Instruction& ret);
 
-    std::vector<StackOffset> callGenerationArgumentStackOffsets_;
+    neutro::SmallVector<StackOffset> callGenerationArgumentStackOffsets_;
     void generateCall(const IR::Instruction& call);
     void generateSyscall(const IR::Instruction& sysc);
     void generateExit();

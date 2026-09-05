@@ -18,6 +18,7 @@
 #include "frontend/lex/TokenKind.hpp"
 #include "frontend/type/Type.hpp"
 #include "frontend/type/TypeID.hpp"
+#include "lib/SmallVector.hpp"
 
 #if defined(__GNUC__) || defined(__clang__)
 #define EXPECT_OR_RETURN_NULLPTR(tokenKind)            \
@@ -66,9 +67,9 @@ __attribute__((always_inline)) bool Parser::expect(const TokenKind expected, Tok
 }
 
 template <typename T>
-std::optional<std::vector<T*>> Parser::parseCommaSeparatedList(
+std::optional<neutro::SmallVector<T*>> Parser::parseCommaSeparatedList(
     const TokenKind endDelimiter, const std::function<T*()>& parseElement) {
-    std::vector<T*> elements;
+    neutro::SmallVector<T*> elements;
     while (peek().kind() != endDelimiter) {
         auto elem = parseElement();
         if (!elem) return std::nullopt;
@@ -78,7 +79,7 @@ std::optional<std::vector<T*>> Parser::parseCommaSeparatedList(
     return elements;
 }
 
-std::optional<std::vector<AST::Expression*>> Parser::parseExpressionList(
+std::optional<neutro::SmallVector<AST::Expression*>> Parser::parseExpressionList(
     const TokenKind endDelimiter) {
     return parseCommaSeparatedList<AST::Expression>(endDelimiter,
                                                     [this] { return parseExpression(); });
@@ -235,7 +236,7 @@ AST::Expression* Parser::parseArrayLiteral() {
         const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
         return astArena_.insert<AST::ArrayLiteral>(
-            astArena_.insertVector(std::move(elements.value())), lBracket.byteOffsetStart(),
+            astArena_.insertRange(elements.value()), lBracket.byteOffsetStart(),
             rBracket.byteOffsetEnd(), fileID_, generateTypeVariable());
     }
 }
@@ -251,9 +252,9 @@ AST::Expression* Parser::parseIdentifierOrFunctionCall() {
         const Token rParen = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
 
         const uint32_t startIndex = ident->sourceStartIndex();
-        return astArena_.insert<AST::FunctionCall>(
-            ident, astArena_.insertVector(std::move(arguments.value())), startIndex,
-            rParen.byteOffsetEnd(), fileID_, generateTypeVariable());
+        return astArena_.insert<AST::FunctionCall>(ident, astArena_.insertRange(arguments.value()),
+                                                   startIndex, rParen.byteOffsetEnd(), fileID_,
+                                                   generateTypeVariable());
     } else {
         // Identifier
         return ident;
@@ -482,8 +483,8 @@ AST::BlockStatement* Parser::parseElseClause() {
         std::vector<AST::Statement*> stmts;
         stmts.push_back(elif);
 
-        return astArena_.insert<AST::BlockStatement>(astArena_.insertVector(std::move(stmts)),
-                                                     start, end, fileID_);
+        return astArena_.insert<AST::BlockStatement>(astArena_.insertRange(stmts), start, end,
+                                                     fileID_);
     }
 
     std::unreachable();
@@ -595,7 +596,7 @@ AST::BlockStatement* Parser::parseBlockStatement() {
 
     const Token rBrace = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACE);
 
-    return astArena_.insert<AST::BlockStatement>(astArena_.insertVector(std::move(statements)),
+    return astArena_.insert<AST::BlockStatement>(astArena_.insertRange(statements),
                                                  lBrace.byteOffsetStart(), rBrace.byteOffsetEnd(),
                                                  fileID_);
 }
@@ -646,6 +647,7 @@ std::unique_ptr<ParsedFunctionSignature> Parser::parseFunctionSignature() {
     const auto returnType = maybeParseTypeAnnotation(TokenKind::RIGHT_ARROW, Type::voidType());
     if (!returnType) return nullptr;
 
+    // TODO: Consider avoiding memory allocation here
     return std::make_unique<ParsedFunctionSignature>(identifier, std::move(parameters.value()),
                                                      typeManager_.createType(returnType.value()));
 }
@@ -660,7 +662,7 @@ AST::ExternalFunctionDeclaration* Parser::parseExternalFunctionDeclaration() {
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
     return astArena_.insert<AST::ExternalFunctionDeclaration>(
-        signature->identifier_, astArena_.insertVector(std::move(signature->parameters_)),
+        signature->identifier_, astArena_.insertRange(signature->parameters_),
         signature->returnTypeID_, externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
 }
 
@@ -680,7 +682,7 @@ AST::FunctionDefinition* Parser::parseFunctionDefinition() {
 
     const uint32_t endIndex = body->sourceEndIndex();
     return astArena_.insert<AST::FunctionDefinition>(
-        signature->identifier_, astArena_.insertVector(std::move(signature->parameters_)),
+        signature->identifier_, astArena_.insertRange(signature->parameters_),
         signature->returnTypeID_, isExported, body, sourceStartIndex, endIndex, fileID_);
 }
 
@@ -713,7 +715,7 @@ AST::CompilationUnit* Parser::parseCompilationUnit() {
         }
     }
 
-    return astArena_.insert<AST::CompilationUnit>(
-        astArena_.insertVector(std::move(externalFunctions)),
-        astArena_.insertVector(std::move(functions)), fileID_, sourceCode_.size());
+    return astArena_.insert<AST::CompilationUnit>(astArena_.insertRange(externalFunctions),
+                                                  astArena_.insertRange(functions), fileID_,
+                                                  sourceCode_.size());
 }
