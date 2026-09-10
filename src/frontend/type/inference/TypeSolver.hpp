@@ -96,11 +96,14 @@ class TypeSolver {
     // --- Error handling methods ---
     // ------------------------------
 
-    [[noreturn]] void equalityConstraintError(TypeID a, TypeID b,
-                                              const AST::Node& sourceNode) const;
+    /// Updates everything to the latest state before emitting an error, ensuring accurate type
+    /// information.
+    void prepareEmitError();
+
+    [[noreturn]] void equalityConstraintError(TypeID a, TypeID b, const AST::Node& sourceNode);
     [[noreturn]] void hasTraitConstraintError(const Type& type, Trait trait,
-                                              const AST::Node& sourceNode) const;
-    [[noreturn]] void storableConstraintError(const Type& type, const AST::Node& sourceNode) const;
+                                              const AST::Node& sourceNode);
+    [[noreturn]] void storableConstraintError(const Type& type, const AST::Node& sourceNode);
 
     /**
      * @brief Adds a type constraint to the pending constraints list.
@@ -121,9 +124,19 @@ class TypeSolver {
     [[nodiscard]] TypeID findRoot(TypeID x);
     [[nodiscard]] bool unify(TypeID dst, TypeID src, const AST::Node& sourceNode);
     void prepareUnionFind();
+
+    /// Retrieves the type associated with the provided TypeID. Uses the union-find data to fetch
+    /// the root type.
+    /// @note This method does NOT necessarily return the same type as typeManager_.getType()
+    /// which may be outdated. This method ensures the latest type information is retrieved.
+    [[nodiscard]] Type* getType(TypeID id);
+
+    /// Write all node links to the type manager.
+    void linkAllNodes();
+
     std::true_type solveEqualityConstraint(const EqualityConstraint& equalityConstraint);
 
     [[nodiscard]] bool solveSubscriptConstraint(const SubscriptConstraint& subscriptConstraint);
-    [[nodiscard]] bool solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint) const;
+    [[nodiscard]] bool solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint);
     [[nodiscard]] bool solveStorableConstraint(const StorableConstraint& storableConstraint);
 };
