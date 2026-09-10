@@ -27,8 +27,20 @@
         if (!expect(tokenKind, _tok_)) return nullptr; \
         _tok_;                                         \
     })
+#define EXPECT_OR_RETURN_NULLOPT(tokenKind)                 \
+    __extension__({                                         \
+        Token _tok_ = Token::dummy();                       \
+        if (!expect(tokenKind, _tok_)) return std::nullopt; \
+        _tok_;                                              \
+    })
+#define EXPECT_OR_RETURN_FALSE(tokenKind)            \
+    __extension__({                                  \
+        Token _tok_ = Token::dummy();                \
+        if (!expect(tokenKind, _tok_)) return false; \
+        _tok_;                                       \
+    })
 #else
-#error "EXPECT_OR_RETURN_NULLPTR is not supported by your compiler."
+#error "Macro unsupported by this compiler. Please use GCC or Clang."
 #endif
 
 AST::CompilationUnit* Parser::parse() {
@@ -106,39 +118,28 @@ std::optional<Type> Parser::tryParsePrimitiveType(const TokenKind tokenKind) {
     }
 }
 
-std::unique_ptr<Type> Parser::parseTypeSpecifier() {
+std::optional<TypeID> Parser::parseTypeSpecifier() {
     const TokenKind tokenKind = peek().kind();
 
     if (auto type = tryParsePrimitiveType(tokenKind)) {
         advance();
-        return std::make_unique<Type>(*type);
+        return typeManager_.createType(*type);
     }
 
     if (advanceIf(TokenKind::LEFT_BRACKET)) {
-        const auto elementType = parseTypeSpecifier();
-        if (!elementType) return nullptr;
+        const auto elementTypeID = parseTypeSpecifier();
+        if (!elementTypeID) return std::nullopt;
 
-        const TypeID elementTypeID = typeManager_.createType(*elementType);
-        EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
+        EXPECT_OR_RETURN_NULLOPT(TokenKind::SEMICOLON);
 
         const auto arrayLength = parseNumberLiteral();
-        if (!arrayLength) return nullptr;
+        if (!arrayLength) return std::nullopt;
 
-        EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
-        return std::make_unique<Type>(elementTypeID, arrayLength->value_);
+        EXPECT_OR_RETURN_NULLOPT(TokenKind::RIGHT_BRACKET);
+        return typeManager_.createType(*elementTypeID, arrayLength->value_);
     }
 
     return invalidTypeSpecifierError();
-}
-
-std::optional<Type> Parser::maybeParseTypeAnnotation(const TokenKind typeAnnotationIndicator,
-                                                     Type defaultType) {
-    if (advanceIf(typeAnnotationIndicator)) {
-        const auto parsedType = parseTypeSpecifier();
-        if (!parsedType) return std::nullopt;
-        return *parsedType;
-    }
-    return defaultType;
 }
 
 AST::Identifier* Parser::parseIdentifier() {
@@ -229,15 +230,15 @@ AST::Expression* Parser::parseArrayLiteral() {
         const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
         return astArena_.insert<AST::RepeatArrayLiteral>(
-            elements.value()[0], countLiteral, lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
+            (*elements)[0], countLiteral, lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
             fileID_, generateTypeVariable());
     } else {
         // Regular array literal
         const Token rBracket = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_BRACKET);
 
         return astArena_.insert<AST::ArrayLiteral>(
-            astArena_.insertRange(elements.value()), lBracket.byteOffsetStart(),
-            rBracket.byteOffsetEnd(), fileID_, generateTypeVariable());
+            astArena_.insertRange(*elements), lBracket.byteOffsetStart(), rBracket.byteOffsetEnd(),
+            fileID_, generateTypeVariable());
     }
 }
 
@@ -252,7 +253,7 @@ AST::Expression* Parser::parseIdentifierOrFunctionCall() {
         const Token rParen = EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
 
         const uint32_t startIndex = ident->sourceStartIndex();
-        return astArena_.insert<AST::FunctionCall>(ident, astArena_.insertRange(arguments.value()),
+        return astArena_.insert<AST::FunctionCall>(ident, astArena_.insertRange(*arguments),
                                                    startIndex, rParen.byteOffsetEnd(), fileID_,
                                                    generateTypeVariable());
     } else {
@@ -424,9 +425,9 @@ AST::VariableDefinition* Parser::parseVariableDefinition() {
 
     TypeID typeID;
     if (advanceIf(TokenKind::COLON)) {
-        const auto parsedType = parseTypeSpecifier();
-        if (!parsedType) return nullptr;
-        typeID = typeManager_.createType(*parsedType);
+        const auto parsedTypeID = parseTypeSpecifier();
+        if (!parsedTypeID) return nullptr;
+        typeID = *parsedTypeID;
     } else {
         typeID = typeManager_.createTypeVariable();
     }
@@ -625,45 +626,51 @@ AST::VariableDefinition* Parser::parseFunctionParameter() {
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);
 
-    const auto parsedType = parseTypeSpecifier();
-    if (!parsedType) return nullptr;
-    const TypeID typeID = typeManager_.createType(*parsedType);
+    const auto parsedTypeID = parseTypeSpecifier();
+    if (!parsedTypeID) return nullptr;
 
     const uint32_t endIndex = identifier->sourceEndIndex();
-    return astArena_.insert<AST::VariableDefinition>(identifier, typeID, isMutable,
+    return astArena_.insert<AST::VariableDefinition>(identifier, *parsedTypeID, isMutable,
                                                      sourceStartIndex, endIndex, fileID_);
 }
 
-std::unique_ptr<ParsedFunctionSignature> Parser::parseFunctionSignature() {
+bool Parser::parseFunctionSignature(ParsedFunctionSignature& outSignature) {
     auto identifier = parseIdentifier();
-    if (!identifier) return nullptr;
+    if (!identifier) return false;
 
-    EXPECT_OR_RETURN_NULLPTR(TokenKind::LEFT_PAREN);
+    EXPECT_OR_RETURN_FALSE(TokenKind::LEFT_PAREN);
     auto parameters = parseCommaSeparatedList<AST::VariableDefinition>(
         TokenKind::RIGHT_PAREN, [this] { return parseFunctionParameter(); });
-    if (!parameters) return nullptr;
-    EXPECT_OR_RETURN_NULLPTR(TokenKind::RIGHT_PAREN);
+    if (!parameters) return false;
+    EXPECT_OR_RETURN_FALSE(TokenKind::RIGHT_PAREN);
 
-    const auto returnType = maybeParseTypeAnnotation(TokenKind::RIGHT_ARROW, Type::voidType());
-    if (!returnType) return nullptr;
+    TypeID returnTypeID;
+    if (advanceIf(TokenKind::RIGHT_ARROW)) {
+        const auto parsedTypeID = parseTypeSpecifier();
+        if (!parsedTypeID) return false;
+        returnTypeID = *parsedTypeID;
+    } else {
+        returnTypeID = typeManager_.createType(Type::voidType());
+    }
 
-    // TODO: Consider avoiding memory allocation here
-    return std::make_unique<ParsedFunctionSignature>(identifier, std::move(parameters.value()),
-                                                     typeManager_.createType(returnType.value()));
+    outSignature.identifier_ = identifier;
+    outSignature.parameters_ = std::move(*parameters);
+    outSignature.returnTypeID_ = returnTypeID;
+    return true;
 }
 
 AST::ExternalFunctionDeclaration* Parser::parseExternalFunctionDeclaration() {
     const Token externTok = EXPECT_OR_RETURN_NULLPTR(TokenKind::EXTERN);
     EXPECT_OR_RETURN_NULLPTR(TokenKind::FN);
 
-    const auto signature = parseFunctionSignature();
-    if (!signature) return nullptr;
+    ParsedFunctionSignature signature;
+    if (!parseFunctionSignature(signature)) return nullptr;
 
     const Token semi = EXPECT_OR_RETURN_NULLPTR(TokenKind::SEMICOLON);
 
     return astArena_.insert<AST::ExternalFunctionDeclaration>(
-        signature->identifier_, astArena_.insertRange(signature->parameters_),
-        signature->returnTypeID_, externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
+        signature.identifier_, astArena_.insertRange(signature.parameters_),
+        signature.returnTypeID_, externTok.byteOffsetStart(), semi.byteOffsetEnd(), fileID_);
 }
 
 AST::FunctionDefinition* Parser::parseFunctionDefinition() {
@@ -673,8 +680,8 @@ AST::FunctionDefinition* Parser::parseFunctionDefinition() {
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::FN);
 
-    const auto signature = parseFunctionSignature();
-    if (!signature) return nullptr;
+    ParsedFunctionSignature signature;
+    if (!parseFunctionSignature(signature)) return nullptr;
 
     EXPECT_OR_RETURN_NULLPTR(TokenKind::COLON);
     auto body = parseBlockStatement();
@@ -682,8 +689,8 @@ AST::FunctionDefinition* Parser::parseFunctionDefinition() {
 
     const uint32_t endIndex = body->sourceEndIndex();
     return astArena_.insert<AST::FunctionDefinition>(
-        signature->identifier_, astArena_.insertRange(signature->parameters_),
-        signature->returnTypeID_, isExported, body, sourceStartIndex, endIndex, fileID_);
+        signature.identifier_, astArena_.insertRange(signature.parameters_),
+        signature.returnTypeID_, isExported, body, sourceStartIndex, endIndex, fileID_);
 }
 
 AST::CompilationUnit* Parser::parseCompilationUnit() {

@@ -17,12 +17,12 @@ __attribute__((noinline, cold)) void Parser::expectError(const TokenKind expecte
     emitError(errorMessage, token);
 }
 
-__attribute__((noinline, cold)) std::unique_ptr<Type> Parser::invalidTypeSpecifierError() const {
+__attribute__((noinline, cold)) std::optional<TypeID> Parser::invalidTypeSpecifierError() const {
     const TokenKind tokenKind = peek().kind();
 
     const std::string errorMessage = std::format("Invalid token -> expected type specifier, got {}",
                                                  tokenKindToString(tokenKind));
-    return std::unique_ptr<Type>(emitError<Type>(errorMessage));
+    return emitError<Type>(errorMessage);
 }
 
 __attribute__((noinline, cold)) AST::Expression* Parser::invalidPrimaryExpressionError() const {

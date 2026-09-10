@@ -110,9 +110,9 @@ void SemanticAnalyser::exitScope() { scopes_.pop_back(); }
 __attribute__((cold)) void SemanticAnalyser::handleUndeclaredSymbolError(
     std::string_view name, const AST::Node& node, [[maybe_unused]] const SymbolKind kind) const {
     const auto info = getSymbolInfo(name);
-    if (info.has_value()) {
-        assert(info.value()->kind() != kind);
-        switch (info.value()->kind()) {
+    if (info) {
+        assert((*info)->kind() != kind);
+        switch ((*info)->kind()) {
             case SymbolKind::FUNCTION:
                 error(std::format("Function `{}` used as variable", name), node);
                 break;
@@ -147,10 +147,10 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getVariableSymbolInfo(
 std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(
     const std::string_view name) const {
     const auto varInfo = getVariableSymbolInfo(name);
-    if (varInfo.has_value()) return varInfo;
+    if (varInfo) return varInfo;
 
     const auto funcInfo = getFunctionSymbolInfo(name);
-    if (funcInfo.has_value()) return funcInfo;
+    if (funcInfo) return funcInfo;
 
     return std::nullopt;
 }
@@ -159,7 +159,7 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getFunctionSymbolInfoOrError(
     const std::string_view name, const AST::Node& node) const {
     const auto info = getFunctionSymbolInfo(name);
 
-    if (!info.has_value()) handleUndeclaredSymbolError(name, node, SymbolKind::FUNCTION);
+    if (!info) handleUndeclaredSymbolError(name, node, SymbolKind::FUNCTION);
     return info;
 }
 
@@ -167,13 +167,13 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getVariableSymbolInfoOrError(
     const std::string_view name, const AST::Node& node) const {
     const auto info = getVariableSymbolInfo(name);
 
-    if (!info.has_value()) handleUndeclaredSymbolError(name, node, SymbolKind::VARIABLE);
+    if (!info) handleUndeclaredSymbolError(name, node, SymbolKind::VARIABLE);
     return info;
 }
 
 void SemanticAnalyser::ensureSymbolUndeclaredOrError(const AST::Node* declarationNode,
                                                      const std::string_view name) const {
-    if (getSymbolInfo(name).has_value()) {
+    if (getSymbolInfo(name)) {
         fatalError(std::format("Redeclaration of symbol: `{}`", name), *declarationNode);
     }
 }
@@ -208,12 +208,12 @@ TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
     const std::string_view name = funcCall.callee_->name_;
 
     const auto info = getFunctionSymbolInfoOrError(name, *funcCall.callee_);
-    if (!info.has_value()) {
+    if (!info) {
         return registerTypeVariable();
     }
-    assert(info.value()->kind() == SymbolKind::FUNCTION);
+    assert((*info)->kind() == SymbolKind::FUNCTION);
 
-    const auto& params = info.value()->parameters();
+    const auto& params = (*info)->parameters();
 
     if (funcCall.arguments_.size() != params.size()) {
         error(std::format("Function `{}` called with incorrect number of arguments: expected {}, "
@@ -229,15 +229,15 @@ TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
         equalityConstraint(argType, paramType, *funcCall.arguments_[i]);
     }
 
-    return info.value()->typeID();
+    return (*info)->typeID();
 }
 
 TypeID SemanticAnalyser::checkUnaryExpression(const AST::UnaryExpression& unaryExpr) {
     const TypeID operandType = checkExpression(*unaryExpr.operand_);
 
     const std::optional<Trait> requiredTrait = traitFromOperator(unaryExpr.operator_);
-    if (requiredTrait.has_value()) {
-        traitConstraint(operandType, requiredTrait.value(), unaryExpr);
+    if (requiredTrait) {
+        traitConstraint(operandType, *requiredTrait, unaryExpr);
     }
 
     return operandType;
@@ -250,8 +250,8 @@ TypeID SemanticAnalyser::checkBinaryExpression(const AST::BinaryExpression& bina
 
     const AST::Operator op = binaryExpr.operator_;
     const std::optional<Trait> trait = traitFromOperator(op);
-    if (trait.has_value()) {
-        traitConstraint(leftType, trait.value(), binaryExpr);
+    if (trait) {
+        traitConstraint(leftType, *trait, binaryExpr);
     }
 
     if (AST::isArithmeticOperator(op)) return leftType;
@@ -314,14 +314,14 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
         case AST::NodeKind::IDENTIFIER: {
             const auto& identifier = *expr.as<AST::Identifier>();
             const auto info = getVariableSymbolInfoOrError(identifier.name_, identifier);
-            if (!info.has_value()) {
+            if (!info) {
                 verifier = registerTypeVariable();
                 break;
-            } else if (info.value()->kind() != SymbolKind::VARIABLE) {
+            } else if ((*info)->kind() != SymbolKind::VARIABLE) {
                 std::unreachable();
             }
 
-            verifier = info.value()->typeID();
+            verifier = (*info)->typeID();
             break;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
@@ -382,10 +382,10 @@ bool SemanticAnalyser::verifyIsAssignable(const AST::Expression& expr) {
         case AST::NodeKind::IDENTIFIER: {
             const std::string_view varName = expr.as<const AST::Identifier>()->name_;
             const auto& declarationInfo = getVariableSymbolInfoOrError(varName, expr);
-            if (!declarationInfo.has_value()) return false;
+            if (!declarationInfo) return false;
 
-            assert(declarationInfo.value()->kind() == SymbolKind::VARIABLE);
-            if (!declarationInfo.value()->isMutable()) {
+            assert((*declarationInfo)->kind() == SymbolKind::VARIABLE);
+            if (!(*declarationInfo)->isMutable()) {
                 error(std::format("Assignment to immutable: `{}`", varName), expr);
                 return false;
             }
@@ -416,7 +416,9 @@ void SemanticAnalyser::analyseAssignment(const AST::Assignment& assignment) {
     equalityConstraint(placeType, valueType, assignment);
 
     if (assignment.operator_ != AST::Operator::ASSIGN) {
-        traitConstraint(placeType, traitFromOperator(assignment.operator_).value(), assignment);
+        const auto requiredTrait = traitFromOperator(assignment.operator_);
+        assert(requiredTrait);
+        traitConstraint(placeType, *requiredTrait, assignment);
     }
 }
 

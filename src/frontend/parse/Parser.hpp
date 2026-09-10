@@ -5,7 +5,6 @@
 #include <initializer_list>
 #include <memory>
 #include <optional>
-#include <span>
 #include <string>
 #include <string_view>
 
@@ -59,6 +58,20 @@ class Parser {
     // Error handling
     // --------------
 
+    struct [[nodiscard]] ErrorSentinel {
+        template <typename T>
+        operator T*() const {
+            return nullptr;
+        }
+
+        template <typename T>
+        operator std::optional<T>() const {
+            return std::nullopt;
+        }
+
+        operator bool() const { return false; }
+    };
+
     /// Emits an error with the given message at the given location.
     void emitError(const std::string& errorMessage, const uint32_t byteOffsetStart,
                    const uint32_t byteOffsetEnd) const {
@@ -77,9 +90,10 @@ class Parser {
      * @return nullptr of type T.
      */
     template <class T>
-    [[nodiscard]] T* emitError(const std::string& errorMessage, const Token& token) const {
+    [[nodiscard]] ErrorSentinel emitError(const std::string& errorMessage,
+                                          const Token& token) const {
         emitError(errorMessage, token);
-        return nullptr;
+        return {};
     }
     /** Emits an error at the current token and returns nullptr of the template type.
      * @param errorMessage The error message to emit.
@@ -87,18 +101,18 @@ class Parser {
      * @return nullptr of type T.
      */
     template <class T>
-    [[nodiscard]] T* emitError(const std::string& errorMessage) const {
+    [[nodiscard]] ErrorSentinel emitError(const std::string& errorMessage) const {
         return emitError<T>(errorMessage, peek());
     }
 
     void expectError(TokenKind expected) const;
-    [[nodiscard]] std::unique_ptr<Type> invalidTypeSpecifierError() const;
+    [[nodiscard]] std::optional<TypeID> invalidTypeSpecifierError() const;
     [[nodiscard]] AST::Expression* invalidPrimaryExpressionError() const;
     [[nodiscard]] AST::NumberLiteral* invalidNumberLiteralError(const Token& token) const;
     [[nodiscard]] AST::CharacterLiteral* invalidEscapeSequenceError(uint32_t byteOffsetStart,
                                                                     uint32_t byteOffsetEnd) const;
-    AST::CharacterLiteral* forbiddenCharacterLiteralError(const Token& token) const;
-    AST::CharacterLiteral* invalidCharacterLiteralSizeError(const Token& token) const;
+    [[nodiscard]] AST::CharacterLiteral* forbiddenCharacterLiteralError(const Token& token) const;
+    [[nodiscard]] AST::CharacterLiteral* invalidCharacterLiteralSizeError(const Token& token) const;
 
     // ---------------
     // Parsing helpers
@@ -123,13 +137,7 @@ class Parser {
         TokenKind endDelimiter);
 
     static std::optional<Type> tryParsePrimitiveType(TokenKind tokenKind);
-    std::unique_ptr<Type> parseTypeSpecifier();
-    /** Parses a type annotation if the next token matches `typeAnnotationIndicator`, and returns it
-     * or std::nullopt if parsing failed.
-     * If the next token does not match `typeAnnotationIndicator`, returns `defaultType`.
-     */
-    std::optional<Type> maybeParseTypeAnnotation(TokenKind typeAnnotationIndicator,
-                                                 Type defaultType);
+    std::optional<TypeID> parseTypeSpecifier();
 
     AST::NumberLiteral* parseNumberLiteral();
     AST::CharacterLiteral* parseCharacterLiteral();
@@ -167,7 +175,7 @@ class Parser {
 
     AST::Statement* parseStatement();
 
-    std::unique_ptr<ParsedFunctionSignature> parseFunctionSignature();
+    bool parseFunctionSignature(ParsedFunctionSignature& outSignature);
     AST::ExternalFunctionDeclaration* parseExternalFunctionDeclaration();
 
     AST::FunctionDefinition* parseFunctionDefinition();
