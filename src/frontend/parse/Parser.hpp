@@ -149,9 +149,9 @@ class Parser {
     AST::Expression* parsePrimaryExpression();
     AST::Expression* parsePostfixExpression();
     AST::Expression* parseUnaryExpression();
-    AST::Expression* parseBinaryExpression(const std::function<AST::Expression*()>& parseOperand,
-                                           std::initializer_list<AST::Operator> allowedOps,
-                                           bool allowMultiple);
+    template <AST::Expression* (Parser::*ParseOperandFunc)(), bool AllowMultiple,
+              AST::Operator... AllowedOps>
+    AST::Expression* parseBinaryExpression();
     AST::Expression* parseMultiplicativeExpression();
     AST::Expression* parseAdditiveExpression();
     AST::Expression* parseComparisonExpression();

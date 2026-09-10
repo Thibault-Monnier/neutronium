@@ -345,47 +345,48 @@ AST::Expression* Parser::parseUnaryExpression() {
     return parsePostfixExpression();
 }
 
-AST::Expression* Parser::parseBinaryExpression(
-    const std::function<AST::Expression*()>& parseOperand,
-    const std::initializer_list<AST::Operator> allowedOps, const bool allowMultiple) {
-    auto left = parseOperand();
+template <AST::Expression* (Parser::*ParseOperandFunc)(), bool AllowMultiple,
+          AST::Operator... AllowedOps>
+AST::Expression* Parser::parseBinaryExpression() {
+    auto left = (this->*ParseOperandFunc)();
     if (!left) return nullptr;
 
     while (true) {
         const AST::Operator op = AST::tokenKindToOperator(peek().kind());
-        if (std::ranges::find(allowedOps, op) == allowedOps.end()) break;
+
+        const bool isAllowed = ((op == AllowedOps) || ...);
+        if (!isAllowed) break;
 
         advance();
-        auto right = parseOperand();
+        auto right = (this->*ParseOperandFunc)();
         if (!right) return nullptr;
 
         const uint32_t startIndex = left->sourceStartIndex();
         const uint32_t endIndex = right->sourceEndIndex();
         left = astArena_.insert<AST::BinaryExpression>(left, op, right, startIndex, endIndex,
                                                        fileID_, generateTypeVariable());
-        if (!allowMultiple) break;
+
+        if (!AllowMultiple) break;
     }
 
     return left;
 }
 
 AST::Expression* Parser::parseMultiplicativeExpression() {
-    return parseBinaryExpression([this] { return parseUnaryExpression(); },
-                                 {AST::Operator::MULTIPLY, AST::Operator::DIVIDE}, true);
+    return parseBinaryExpression<&Parser::parseUnaryExpression, true, AST::Operator::MULTIPLY,
+                                 AST::Operator::DIVIDE>();
 }
 
 AST::Expression* Parser::parseAdditiveExpression() {
-    return parseBinaryExpression([this] { return parseMultiplicativeExpression(); },
-                                 {AST::Operator::ADD, AST::Operator::SUBTRACT}, true);
+    return parseBinaryExpression<&Parser::parseMultiplicativeExpression, true, AST::Operator::ADD,
+                                 AST::Operator::SUBTRACT>();
 }
 
 AST::Expression* Parser::parseComparisonExpression() {
-    return parseBinaryExpression(
-        [this] { return parseAdditiveExpression(); },
-        {AST::Operator::EQUALS, AST::Operator::NOT_EQUALS, AST::Operator::LESS_THAN,
-         AST::Operator::GREATER_THAN, AST::Operator::LESS_THAN_OR_EQUAL,
-         AST::Operator::GREATER_THAN_OR_EQUAL},
-        false);
+    return parseBinaryExpression<&Parser::parseAdditiveExpression, false, AST::Operator::EQUALS,
+                                 AST::Operator::NOT_EQUALS, AST::Operator::LESS_THAN,
+                                 AST::Operator::GREATER_THAN, AST::Operator::LESS_THAN_OR_EQUAL,
+                                 AST::Operator::GREATER_THAN_OR_EQUAL>();
 }
 
 AST::Expression* Parser::parseLogicalExpression() {
