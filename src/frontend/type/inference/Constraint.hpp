@@ -17,8 +17,11 @@ class Constraint {
    public:
     enum class Kind : uint8_t { EQUALITY, SUBSCRIPT, HAS_TRAIT, STORABLE };
 
-    [[nodiscard]] Kind kind() const { return kind_; }
-    [[nodiscard]] const AST::Node& sourceNode() const { return sourceNode_; }
+    [[nodiscard]] Kind kind() const { return static_cast<Kind>(data_ & KIND_MASK); }
+
+    [[nodiscard]] const AST::Node& sourceNode() const {
+        return *reinterpret_cast<const AST::Node*>(data_ & PTR_MASK);
+    }
 
     template <typename T>
     [[nodiscard]] T& as() {
@@ -31,12 +34,17 @@ class Constraint {
 
    protected:
     explicit Constraint(const AST::Node& sourceNode, const Kind kind)
-        : sourceNode_(sourceNode), kind_(kind) {}
+        : data_(reinterpret_cast<uintptr_t>(&sourceNode) |
+                (static_cast<uintptr_t>(kind) & KIND_MASK)) {}
     ~Constraint() = default;
 
    private:
-    const AST::Node& sourceNode_;
-    const Kind kind_;
+    uintptr_t data_;
+
+    // Pointer is 8-byte aligned, so we don't care about the last 3 bits. We can use them to store
+    // the kind of constraint.
+    static constexpr uintptr_t KIND_MASK = 0b111;
+    static constexpr uintptr_t PTR_MASK = ~KIND_MASK;
 };
 
 /**
@@ -86,14 +94,14 @@ class SubscriptConstraint final : public Constraint {
 class HasTraitConstraint final : public Constraint {
    public:
     HasTraitConstraint(const TypeID type, const Trait trait, const AST::Node& sourceNode)
-        : Constraint(sourceNode, Kind::HAS_TRAIT), type_(type), trait_(trait) {}
+        : Constraint(sourceNode, Kind::HAS_TRAIT), trait_(trait), type_(type) {}
 
     [[nodiscard]] TypeID type() const { return type_; }
     [[nodiscard]] Trait trait() const { return trait_; }
 
    private:
-    const TypeID type_;
     const Trait trait_;
+    const TypeID type_;
 };
 
 /**

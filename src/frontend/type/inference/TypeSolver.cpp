@@ -68,11 +68,17 @@ bool TypeSolver::unify(const TypeID dst, const TypeID src, const AST::Node& sour
 void TypeSolver::prepareUnionFind() {
     auto initNodes = [](const bool isVariable, std::vector<Node>& nodes, const size_t nodeCount) {
         nodes.clear();
-        nodes.reserve(nodeCount);
-        for (TypeID id = {0, isVariable}; nodes.size() < nodeCount; id.incrementValue()) {
-            nodes.emplace_back(id, 1);
+        nodes.resize(nodeCount);
+
+        [[assume(nodeCount < (1u << 31))]];
+
+        Node* data = nodes.data();
+        for (uint32_t i = 0; i < nodeCount; ++i) {
+            assert(i < nodes.size());
+            data[i] = Node{.parent_ = TypeID{i, isVariable}, .setSize_ = 1};
         }
     };
+
     initNodes(false, nodes_, typeManager_.getRealTypesCount());
     initNodes(true, nodesTypeVariables_, typeManager_.getTypeVariablesCount());
 }
