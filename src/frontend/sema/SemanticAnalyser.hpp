@@ -39,8 +39,10 @@ class SemanticAnalyser {
     const FileID fileID_;
     TypeManager& typeManager_;
 
-    std::vector<SymbolTable> scopes_;
-    SymbolTable functionsTable_;
+    SymbolTableList scopedVariables_;
+    std::vector<size_t> scopeBoundaries_;
+
+    SymbolTableMap functionsTable_;
 
     int loopDepth_ = 0;
 
@@ -107,23 +109,20 @@ class SemanticAnalyser {
     void handleUndeclaredSymbolError(std::string_view name, const AST::Node& node,
                                      SymbolKind kind) const;
 
-    [[nodiscard]] std::optional<const SymbolInfo*> getFunctionSymbolInfo(
-        std::string_view name) const;
-    [[nodiscard]] std::optional<const SymbolInfo*> getVariableSymbolInfo(
-        std::string_view name) const;
-    [[nodiscard]] std::optional<const SymbolInfo*> getSymbolInfo(std::string_view name) const;
-    [[nodiscard]] std::optional<const SymbolInfo*> getFunctionSymbolInfoOrError(
+    [[nodiscard]] std::optional<SymbolInfo> getFunctionSymbolInfo(std::string_view name) const;
+    [[nodiscard]] std::optional<SymbolInfo> getVariableSymbolInfo(std::string_view name) const;
+    [[nodiscard]] std::optional<SymbolInfo> getSymbolInfo(std::string_view name) const;
+    [[nodiscard]] std::optional<SymbolInfo> getFunctionSymbolInfoOrError(
         std::string_view name, const AST::Node& node) const;
-    [[nodiscard]] std::optional<const SymbolInfo*> getVariableSymbolInfoOrError(
+    [[nodiscard]] std::optional<SymbolInfo> getVariableSymbolInfoOrError(
         std::string_view name, const AST::Node& node) const;
 
     void ensureSymbolUndeclaredOrError(const AST::Node* declarationNode,
                                        std::string_view name) const;
 
-    SymbolInfo& handleFunctionDeclaration(const AST::Node* declNode, std::string_view name,
-                                          std::span<AST::VariableDefinition*> params);
-    SymbolInfo& handleVariableDeclaration(const AST::VariableDefinition* declNode,
-                                          std::string_view name);
+    void handleFunctionDeclaration(const AST::Node* declNode, std::string_view name,
+                                   std::span<AST::VariableDefinition*> params);
+    void handleVariableDeclaration(const AST::VariableDefinition* declNode, std::string_view name);
 
     TypeID checkFunctionCall(const AST::FunctionCall& funcCall);
     TypeID checkUnaryExpression(const AST::UnaryExpression& unaryExpr);

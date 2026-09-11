@@ -103,16 +103,20 @@ void SemanticAnalyser::fatalError(const std::string& errorMessage, const AST::No
     emitErrorsAndQuit();
 }
 
-void SemanticAnalyser::enterScope() { scopes_.emplace_back(); }
+void SemanticAnalyser::enterScope() { scopeBoundaries_.push_back(scopedVariables_.size()); }
 
-void SemanticAnalyser::exitScope() { scopes_.pop_back(); }
+void SemanticAnalyser::exitScope() {
+    scopedVariables_.erase(scopedVariables_.begin() + scopeBoundaries_.back(),
+                           scopedVariables_.end());
+    scopeBoundaries_.pop_back();
+}
 
 __attribute__((cold)) void SemanticAnalyser::handleUndeclaredSymbolError(
     std::string_view name, const AST::Node& node, [[maybe_unused]] const SymbolKind kind) const {
     const auto info = getSymbolInfo(name);
     if (info) {
-        assert((*info)->kind() != kind);
-        switch ((*info)->kind()) {
+        assert(info->kind() != kind);
+        switch (info->kind()) {
             case SymbolKind::FUNCTION:
                 error(std::format("Function `{}` used as variable", name), node);
                 break;
@@ -126,26 +130,24 @@ __attribute__((cold)) void SemanticAnalyser::handleUndeclaredSymbolError(
     }
 }
 
-std::optional<const SymbolInfo*> SemanticAnalyser::getFunctionSymbolInfo(
+std::optional<SymbolInfo> SemanticAnalyser::getFunctionSymbolInfo(
     const std::string_view name) const {
     const auto it = functionsTable_.find(name);
-    if (it != functionsTable_.end()) return &it->second;
+    if (it != functionsTable_.end()) return it->second;
     return std::nullopt;
 }
 
-std::optional<const SymbolInfo*> SemanticAnalyser::getVariableSymbolInfo(
+std::optional<SymbolInfo> SemanticAnalyser::getVariableSymbolInfo(
     const std::string_view name) const {
-    // Innermost scopes have the highest chance of containing the symbol
-    for (const auto& scope : std::ranges::reverse_view(scopes_)) {
-        const auto it = scope.find(name);
-        if (it != scope.end()) return &it->second;
+    // Last declared symbols have a higher chance of being what we're looking for
+    for (const auto& [symName, value] : std::ranges::reverse_view(scopedVariables_)) {
+        if (symName == name) return value;
     }
 
     return std::nullopt;
 }
 
-std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(
-    const std::string_view name) const {
+std::optional<SymbolInfo> SemanticAnalyser::getSymbolInfo(const std::string_view name) const {
     const auto varInfo = getVariableSymbolInfo(name);
     if (varInfo) return varInfo;
 
@@ -155,7 +157,7 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getSymbolInfo(
     return std::nullopt;
 }
 
-std::optional<const SymbolInfo*> SemanticAnalyser::getFunctionSymbolInfoOrError(
+std::optional<SymbolInfo> SemanticAnalyser::getFunctionSymbolInfoOrError(
     const std::string_view name, const AST::Node& node) const {
     const auto info = getFunctionSymbolInfo(name);
 
@@ -163,7 +165,7 @@ std::optional<const SymbolInfo*> SemanticAnalyser::getFunctionSymbolInfoOrError(
     return info;
 }
 
-std::optional<const SymbolInfo*> SemanticAnalyser::getVariableSymbolInfoOrError(
+std::optional<SymbolInfo> SemanticAnalyser::getVariableSymbolInfoOrError(
     const std::string_view name, const AST::Node& node) const {
     const auto info = getVariableSymbolInfo(name);
 
@@ -178,9 +180,9 @@ void SemanticAnalyser::ensureSymbolUndeclaredOrError(const AST::Node* declaratio
     }
 }
 
-SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
-    const AST::Node* declNode, const std::string_view name,
-    const std::span<AST::VariableDefinition*> params) {
+void SemanticAnalyser::handleFunctionDeclaration(const AST::Node* declNode,
+                                                 const std::string_view name,
+                                                 const std::span<AST::VariableDefinition*> params) {
     assert(declNode->kind_ == AST::NodeKind::FUNCTION_DEFINITION ||
            declNode->kind_ == AST::NodeKind::EXTERNAL_FUNCTION_DECLARATION);
 
@@ -191,17 +193,15 @@ SymbolInfo& SemanticAnalyser::handleFunctionDeclaration(
     ensureSymbolUndeclaredOrError(declNode, name);
 
     const SymbolInfo info(declNode);
-    auto [it, _] = functionsTable_.emplace(name, info);
-    return it->second;
+    functionsTable_.emplace(name, info);
 }
 
-SymbolInfo& SemanticAnalyser::handleVariableDeclaration(const AST::VariableDefinition* declNode,
-                                                        const std::string_view name) {
+void SemanticAnalyser::handleVariableDeclaration(const AST::VariableDefinition* declNode,
+                                                 const std::string_view name) {
     ensureSymbolUndeclaredOrError(declNode, name);
 
     const SymbolInfo info(declNode);
-    auto [it, _] = scopes_.back().emplace(name, info);
-    return it->second;
+    scopedVariables_.emplace_back(name, info);
 }
 
 TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
@@ -211,9 +211,9 @@ TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
     if (!info) {
         return registerTypeVariable();
     }
-    assert((*info)->kind() == SymbolKind::FUNCTION);
+    assert(info->kind() == SymbolKind::FUNCTION);
 
-    const auto& params = (*info)->parameters();
+    const auto& params = info->parameters();
 
     if (funcCall.arguments_.size() != params.size()) {
         error(std::format("Function `{}` called with incorrect number of arguments: expected {}, "
@@ -229,7 +229,7 @@ TypeID SemanticAnalyser::checkFunctionCall(const AST::FunctionCall& funcCall) {
         equalityConstraint(argType, paramType, *funcCall.arguments_[i]);
     }
 
-    return (*info)->typeID();
+    return info->typeID();
 }
 
 TypeID SemanticAnalyser::checkUnaryExpression(const AST::UnaryExpression& unaryExpr) {
@@ -317,11 +317,11 @@ TypeID SemanticAnalyser::checkExpression(const AST::Expression& expr) {
             if (!info) {
                 verifier = registerTypeVariable();
                 break;
-            } else if ((*info)->kind() != SymbolKind::VARIABLE) {
+            } else if (info->kind() != SymbolKind::VARIABLE) {
                 std::unreachable();
             }
 
-            verifier = (*info)->typeID();
+            verifier = info->typeID();
             break;
         }
         case AST::NodeKind::ARRAY_ACCESS: {
@@ -384,8 +384,8 @@ bool SemanticAnalyser::verifyIsAssignable(const AST::Expression& expr) {
             const auto& declarationInfo = getVariableSymbolInfoOrError(varName, expr);
             if (!declarationInfo) return false;
 
-            assert((*declarationInfo)->kind() == SymbolKind::VARIABLE);
-            if (!(*declarationInfo)->isMutable()) {
+            assert(declarationInfo->kind() == SymbolKind::VARIABLE);
+            if (!declarationInfo->isMutable()) {
                 error(std::format("Assignment to immutable: `{}`", varName), expr);
                 return false;
             }

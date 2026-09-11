@@ -1,10 +1,11 @@
 #pragma once
 
+#include <ankerl/unordered_dense.h>
+
 #include <cassert>
 #include <cstdint>
 #include <span>
 #include <string_view>
-#include <unordered_map>
 #include <utility>
 
 #include "frontend/ast/AST.hpp"
@@ -84,4 +85,5 @@ class SymbolInfo {
     }
 };
 
-using SymbolTable = std::unordered_map<std::string_view, SymbolInfo>;
+using SymbolTableList = std::vector<std::pair<std::string_view, SymbolInfo>>;
+using SymbolTableMap = ankerl::unordered_dense::map<std::string_view, SymbolInfo>;
