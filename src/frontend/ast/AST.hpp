@@ -128,6 +128,7 @@ struct Identifier final : Expression {
                const FileID fileID, const TypeID typeID)
         : Expression{NodeKind::IDENTIFIER, start, end, fileID, typeID}, name_(name) {}
 
+    // TODO: use lexeme instead to save memory
     const std::string_view name_;
 };
 

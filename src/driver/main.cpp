@@ -117,7 +117,8 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, cons
     }
 
     neutro::PolymorphicArenaAllocator astArena;
-    TypeManager typeManager(diagnosticsEngine);
+    TypeManager typeManager;
+    Sema::TypeSolver typeSolver(typeManager, diagnosticsEngine);
 
     AST::CompilationUnit* const ast = [&] {
         const Stage stage("Parsing", verbose);
@@ -132,7 +133,8 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, cons
     {
         const Stage stage("Semantic Analysis", verbose);
 
-        SemanticAnalyser sema(*ast, opts.targetType_, diagnosticsEngine, fileID, typeManager);
+        Sema::SemanticAnalyser sema(*ast, opts.targetType_, diagnosticsEngine, fileID, typeManager,
+                                    typeSolver);
         sema.analyse();
     }
 
@@ -151,6 +153,7 @@ void compileFile(const CompilerOptions& opts, SourceManager& sourceManager, cons
 
         // Clear frontend data to free memory and improve cache locality for codegen.
         typeManager.clear();
+        typeSolver.clear();
         astArena.clear();
 
         if (opts.endStage_ == PipelineEndStage::LOWER) return;

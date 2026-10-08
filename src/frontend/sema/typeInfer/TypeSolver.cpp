@@ -13,6 +13,8 @@
 #include "frontend/type/TypeID.hpp"
 #include "frontend/type/TypeManager.hpp"
 
+using namespace Sema;
+
 TypeID TypeSolver::findRoot(TypeID x) {
     // Find the root of the set containing x
     TypeID root = x;

@@ -16,6 +16,8 @@
 
 class TypeManager;
 
+namespace Sema {
+
 /**
  * @class TypeSolver
  * @brief A class responsible for managing and resolving type constraints.
@@ -140,3 +142,5 @@ class TypeSolver {
     [[nodiscard]] bool solveHasTraitConstraint(const HasTraitConstraint& hasTraitConstraint);
     [[nodiscard]] bool solveStorableConstraint(const StorableConstraint& storableConstraint);
 };
+
+}  // namespace Sema

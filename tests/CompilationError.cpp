@@ -71,8 +71,7 @@ TEST_F(NeutroniumTester, MainFunctionErrors) {
             }
         )";
         const std::string error = compileFail(code);
-        EXPECT_TRUE(error.contains("Type mismatch") && error.contains("int") &&
-                    error.contains("void"));
+        EXPECT_TRUE(error.contains("main") && error.contains("return") && error.contains("void"));
     }
 
     {
@@ -80,8 +79,8 @@ TEST_F(NeutroniumTester, MainFunctionErrors) {
             extern fn main(n: int);
 
             fn main2(): {
-                let a = [5];
-                let b = a;
+                let mut a = [5];
+                let mut b = a;
                 b[0] = 10;
                 exit a[0]; # should be 10
             }
@@ -89,6 +88,14 @@ TEST_F(NeutroniumTester, MainFunctionErrors) {
         const std::string error = compileFail(code);
         EXPECT_TRUE(error.contains("main") && error.contains("function") &&
                     error.contains("parameter"));
+    }
+
+    {
+        const std::string code = R"(
+            extern fn main(n: int) -> int;
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("main") && error.contains("return") && error.contains("void"));
     }
 }
 
@@ -1132,40 +1139,58 @@ TEST_F(NeutroniumTester, MultipleParseErrorsAllReported) {
 }
 
 TEST_F(NeutroniumTester, MultipleSemaErrorsAllReported) {
-    const std::string code = R"(
-        extern fn mod(a: int, b: int) -> int;
+    {
+        const std::string code = R"(
+            extern fn mod(a: int, b: int) -> int;
 
-        fn foo(a: int, b: int, c: bool) -> int8: {}
+            fn foo(a: int, b: int, c: bool): {}
 
-        fn mains(): {
-            foo(1, true);
-            let mut arr = [];
-            arr[0] = 1;
-            foo+1 = 3;
-            let x = foso();
-            x = 1;
-            x = 3;
-            {
-                let mut y = x + 2;
+            fn main(): {
+                foo(1, true);
+                let mut arr = [];
+                arr[0] = 1;
+                foo+1 = 3;
+                let x = foso();
+                x = 1;
+                x = 3;
+                {
+                    let mut y = x + 2;
+                }
+                y += false - truer;
+                exit -mod(-x+true, 256*false);
             }
-            y += false - truer;
-            exit -mod(-x+true, 256*false);
-        }
-    )";
-    const std::string error = compileFail(code);
+        )";
+        const std::string error = compileFail(code);
 
-    EXPECT_TRUE(error.contains("Function") && error.contains("foo") && error.contains("return"));
-    EXPECT_TRUE(error.contains("foo") && error.contains("arguments") &&
-                error.contains("expected 3"));
-    EXPECT_TRUE(error.contains("Array") && error.contains("literal") && error.contains("empty"));
-    EXPECT_TRUE(error.contains("Left-hand") && error.contains("assignment") &&
-                error.contains("expression"));
-    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("foso"));
-    EXPECT_TRUE(error.contains("Assignment") && error.contains("immutable") && error.contains("x"));
-    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("y"));
-    EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("truer"));
-    EXPECT_TRUE(error.contains("main") && error.contains("function") &&
-                error.contains("executable target"));
+        EXPECT_TRUE(error.contains("foo") && error.contains("arguments") &&
+                    error.contains("expected 3"));
+        EXPECT_TRUE(error.contains("Array") && error.contains("literal") &&
+                    error.contains("empty"));
+        EXPECT_TRUE(error.contains("Left-hand") && error.contains("assignment") &&
+                    error.contains("expression"));
+        EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("foso"));
+        EXPECT_TRUE(error.contains("Assignment") && error.contains("immutable") &&
+                    error.contains("x"));
+        EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("y"));
+        EXPECT_TRUE(error.contains("Undeclared symbol") && error.contains("truer"));
+    }
+
+    {
+        const std::string code = R"(
+            extern fn mod(a: int, b: int) -> int;
+
+            fn foo(a: int, b: int, c: bool) -> int8: {}
+
+            fn mains(): {
+            }
+        )";
+        const std::string error = compileFail(code);
+
+        EXPECT_TRUE(error.contains("Function") && error.contains("foo") &&
+                    error.contains("return"));
+        EXPECT_TRUE(error.contains("main") && error.contains("function") &&
+                    error.contains("executable target"));
+    }
 }
 
 TEST_F(NeutroniumTester, AssignmentNonExpressionLHSFails) {

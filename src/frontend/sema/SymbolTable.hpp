@@ -11,6 +11,8 @@
 #include "frontend/ast/AST.hpp"
 #include "frontend/type/TypeID.hpp"
 
+namespace Sema {
+
 enum class SymbolKind : uint8_t { FUNCTION, VARIABLE };
 
 class SymbolInfo {
@@ -89,3 +91,5 @@ class SymbolInfo {
 
 using SymbolTableList = std::vector<std::pair<std::string_view, SymbolInfo>>;
 using SymbolTableMap = ankerl::unordered_dense::map<std::string_view, SymbolInfo>;
+
+}  // namespace Sema

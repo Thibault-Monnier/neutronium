@@ -2,9 +2,11 @@
 
 #include <cstdint>
 
-#include "../Trait.hpp"
-#include "../TypeID.hpp"
 #include "frontend/ast/AST.hpp"
+#include "frontend/type/Trait.hpp"
+#include "frontend/type/TypeID.hpp"
+
+namespace Sema {
 
 /**
  * @brief Represents a type constraint for the TypeSolver.
@@ -120,3 +122,5 @@ class StorableConstraint final : public Constraint {
    private:
     const TypeID type_;
 };
+
+}  // namespace Sema

@@ -7,8 +7,8 @@
 
 #include "Type.hpp"
 #include "frontend/diagnostics/DiagnosticsEngine.hpp"
+#include "frontend/sema/typeInfer/TypeSolver.hpp"
 #include "frontend/type/TypeID.hpp"
-#include "inference/TypeSolver.hpp"
 #include "lib/SpecializedArenaAllocator.hpp"
 
 /**
@@ -23,13 +23,11 @@
 
 class TypeManager {
    public:
-    explicit TypeManager(DiagnosticsEngine& diagnosticsEngine)
-        : typeSolver_(*this, diagnosticsEngine) {}
+    explicit TypeManager() = default;
 
     /** Clears all registered types and resets the state. */
     void clear() {
         typeArena_.clear();
-        typeSolver_.clear();
         linkingTable_ = std::vector<TypeID>();
         linkingTableTypeVariables_ = std::vector<TypeID>();
     }
@@ -115,7 +113,7 @@ class TypeManager {
     }
 
     /**
-     * @brief Retrieves a constant reference to a previously registered type.
+     * @brief Retrieves a reference to a previously registered type.
      *
      * This function fetches the type corresponding to the provided TypeID from the managed
      * collection of types. It asserts that the type isn't a type variable.
@@ -142,13 +140,6 @@ class TypeManager {
     [[nodiscard]] size_t getTypeVariablesCount() const { return linkingTableTypeVariables_.size(); }
 
     /**
-     * @brief Provides access to the TypeSolver instance within the TypeManager.
-     *
-     * @return A reference to the TypeSolver managed by the TypeManager.
-     */
-    [[nodiscard]] TypeSolver& getTypeSolver() { return typeSolver_; }
-
-    /**
      * @brief Add a type-equivalence entry to the linking table.
      *
      * Stores a mapping so that any lookup of @p src resolves to @p dst.
@@ -163,7 +154,6 @@ class TypeManager {
 
    private:
     neutro::SpecializedArenaAllocator<Type> typeArena_;
-    TypeSolver typeSolver_;
 
     /** @brief A mapping of TypeIDs to their linked TypeIDs.
      *

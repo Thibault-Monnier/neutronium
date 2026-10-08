@@ -8,6 +8,8 @@
 #include "frontend/type/TypeID.hpp"
 #include "frontend/type/TypeManager.hpp"
 
+using namespace Sema;
+
 void TypeSolver::prepareEmitError() {
     // Before emitting an error, ensure the type manager is up to date to get accurate type
     // information in error messages.
