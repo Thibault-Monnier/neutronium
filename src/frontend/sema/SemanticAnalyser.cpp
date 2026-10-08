@@ -49,34 +49,25 @@ void SemanticAnalyser::analyse() {
         analyseFunctionDefinition(*funcDef);
     }
 
-    const AST::FunctionDefinition* mainDef = nullptr;
-    for (const auto* funcDef : ast_->functions_) {
-        if (funcDef->identifier_->name_ == ENTRY_POINT_NAME) {
-            mainDef = funcDef;
-            break;
-        }
-    }
-
-    const auto mainIt = functionsTable_.find(std::string(ENTRY_POINT_NAME));
+    const auto mainIt = functionsTable_.find(ENTRY_POINT_NAME);
     if (targetType_ == TargetType::EXECUTABLE) {
         if (mainIt == functionsTable_.end() || mainIt->second.kind() != SymbolKind::FUNCTION) {
             error(std::format("No `{}` function found in executable target", ENTRY_POINT_NAME),
                   *ast_);
         } else {
-            assert(mainDef && "mainDef should not be null here");
+            const SymbolInfo info = mainIt->second;
 
-            if (mainIt->second.parameters().size() != 0) {
+            if (info.parameters().size() != 0) {
                 error(std::format("`{}` function must not take any parameters", ENTRY_POINT_NAME),
-                      *mainDef);
+                      *info.declarationNode());
             }
 
-            equalityConstraint(mainIt->second.typeID(), registerVoidType(), *mainDef);
+            equalityConstraint(info.typeID(), registerVoidType(), *info.declarationNode());
         }
     } else {
         if (mainIt != functionsTable_.end()) {
-            assert(mainDef && "mainDef should not be null here");
             error(std::format("`{}` function is not allowed in a library target", ENTRY_POINT_NAME),
-                  *mainDef);
+                  *mainIt->second.declarationNode());
         }
     }
 

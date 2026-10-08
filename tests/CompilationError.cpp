@@ -47,27 +47,49 @@ TEST_F(NeutroniumTester, FunctionDeclarationNotInGlobalScopeFails) {
 }
 
 TEST_F(NeutroniumTester, MainFunctionErrors) {
-    const std::string code = R"(
-        fn x(): {}
-    )";
-    const std::string error = compileFail(code);
-    EXPECT_TRUE(error.contains("No") && error.contains("main") && error.contains("function"));
+    {
+        const std::string code = R"(
+            fn x(): {}
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("No") && error.contains("main") && error.contains("function"));
+    }
 
-    const std::string code2 = R"(
-        fn main(mut x: int): {}
-    )";
-    const std::string error2 = compileFail(code2);
-    EXPECT_TRUE(error2.contains("main") && error2.contains("function") &&
-                error2.contains("parameter"));
+    {
+        const std::string code = R"(
+            fn main(mut x: int): {}
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("main") && error.contains("function") &&
+                    error.contains("parameter"));
+    }
 
-    const std::string code3 = R"(
-        fn main() -> int: {
-            return 1;
-        }
-    )";
-    const std::string error3 = compileFail(code3);
-    EXPECT_TRUE(error3.contains("Type mismatch") && error3.contains("int") &&
-                error3.contains("void"));
+    {
+        const std::string code = R"(
+            fn main() -> int: {
+                return 1;
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("Type mismatch") && error.contains("int") &&
+                    error.contains("void"));
+    }
+
+    {
+        const std::string code = R"(
+            extern fn main(n: int);
+
+            fn main2(): {
+                let a = [5];
+                let b = a;
+                b[0] = 10;
+                exit a[0]; # should be 10
+            }
+        )";
+        const std::string error = compileFail(code);
+        EXPECT_TRUE(error.contains("main") && error.contains("function") &&
+                    error.contains("parameter"));
+    }
 }
 
 TEST_F(NeutroniumTester, NonPlaceExpressionInLeftOfAssignmentFails) {

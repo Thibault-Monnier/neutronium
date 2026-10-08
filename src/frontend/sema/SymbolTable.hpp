@@ -18,6 +18,8 @@ class SymbolInfo {
 
    public:
     explicit SymbolInfo(const AST::Node* declarationNode) : declarationNode_(declarationNode) {}
+    
+    [[nodiscard]] const AST::Node* declarationNode() const { return declarationNode_; }
 
     /// Get the kind of symbol.
     [[nodiscard]] SymbolKind kind() const {
